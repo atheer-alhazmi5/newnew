@@ -1,0 +1,29 @@
+@{
+    ViewBag.Title = "الإشعارات";
+    ViewBag.PageName = "الإشعارات";
+}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h2 class="page-title" style="margin:0;">الإشعارات</h2>
+    <button class="btn btn-outline-secondary btn-sm" onclick="markAllRead()">
+        <i class="bi bi-check-all" style="margin-left:6px;"></i>تعليم الكل كمقروء
+    </button>
+</div>
+
+<div class="d-flex gap-3 mb-4">
+    <select class="form-select" style="max-width:200px;" id="typeFilter" onchange="loadNotifications()">
+        <option value="">جميع الإشعارات</option>
+        <option value="form_received">نماذج مستلمة</option>
+        <option value="form_reply">ردود</option>
+        <option value="fill_request">طلبات تعبئة</option>
+        <option value="approval_request">طلبات اعتماد</option>
+    </select>
+</div>
+
+<div id="notifList">
+    <div class="text-center py-5"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+</div>
+
+@section Scripts {
+<script src="~/js/notifications.js"></script>
+}

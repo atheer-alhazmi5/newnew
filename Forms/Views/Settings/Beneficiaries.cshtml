@@ -1,0 +1,308 @@
+@{
+    ViewBag.Title = "المستفيدين";
+    ViewBag.PageName = "المستفيدين";
+}
+
+<style>
+.bnf-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.bnf-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
+.bnf-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.bnf-modal-header .btn-close-x:hover { color:#fff; }
+.bnf-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.bnf-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
+.bnf-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.bnf-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.bnf-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; }
+.bnf-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.bnf-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.bnf-cancel-btn:hover { background:#4b5563; }
+.bnf-section { background:#fff; border-radius:14px; padding:20px 24px; margin-bottom:20px; border:1px solid var(--gray-200); }
+.bnf-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.bnf-section-title i { font-size:18px; color:var(--sa-600); }
+.required-star { color:#ef4444; margin-right:4px; }
+.bnf-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; }
+.bnf-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.bnf-action-btn-detail:hover { background:var(--info-50); }
+.bnf-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.bnf-action-btn-edit:hover { background:var(--sa-50); }
+.bnf-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.bnf-action-btn-delete:hover { background:var(--error-50); }
+.bnf-form-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+.bnf-form-row:last-child { margin-bottom:0; }
+.bnf-form-row-2 { grid-template-columns:repeat(2,1fr); }
+.bnf-form-row-3 { grid-template-columns:repeat(3,1fr); }
+.bnf-photo-preview { width:90px; height:90px; border-radius:50%; object-fit:cover; border:2px solid var(--gray-200); background:var(--gray-100); }
+.bnf-photo-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.bnf-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.bnf-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
+.bnf-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
+.bnf-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
+.bnf-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); }
+.bnf-attach-preview-wrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.bnf-activation-wrap { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#fff; border-radius:12px; border:2px solid var(--gray-200); }
+.bnf-activation-wrap .form-check-input { width:52px; height:26px; cursor:pointer; }
+.bnf-activation-wrap .form-check-label { font-weight:700; font-size:15px; cursor:pointer; }
+@@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
+@@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
+</style>
+
+<div class="bnf-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">المستفيدين</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة المستفيدين والموظفين</p>
+    </div>
+    <button class="btn btn-primary" onclick="bnfShowAddModal()" style="border-radius:12px;padding:10px 28px;">
+        <i class="bi bi-plus-lg"></i> إضافة
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">#</th>
+                        <th>اسم الموظف</th>
+                        <th style="width:140px;">الهوية</th>
+                        <th style="width:180px;">الدور</th>
+                        <th style="width:260px;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="bnfBody">
+                    <tr><td colspan="5" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="bnfFormModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title" id="bnfModalTitle"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة مستفيد</h5>
+                <div class="bnf-modal-subtitle" id="bnfModalSubtitle">أدخل بيانات المستفيد</div>
+            </div>
+            <div class="bnf-modal-body">
+                <input type="hidden" id="bnfId">
+
+                <!-- قسم الصورة والهوية -->
+                <div class="bnf-section">
+                    <div class="bnf-section-title"><i class="bi bi-person-badge"></i>الصورة الشخصية والهوية</div>
+                    <div class="bnf-form-row">
+                        <div>
+                            <label class="form-label">الصورة الشخصية <small class="text-muted">(صورة واحدة)</small></label>
+                            <div class="bnf-photo-wrap">
+                                <img id="bnfPhotoPreview" class="bnf-photo-preview" src="" alt="" style="display:none;" onerror="this.style.display='none';">
+                                <div id="bnfPhotoPlaceholder" class="bnf-photo-preview d-flex align-items-center justify-content-center" style="display:flex !important;"><i class="bi bi-person" style="font-size:32px;color:var(--gray-400);"></i></div>
+                                <input type="file" class="form-control form-control-sm" id="bnfPhoto" accept="image/*" style="max-width:180px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">الهوية الوطنية<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfNationalId" maxlength="10" placeholder="10 أرقام تبدأ بـ 10 أو 11">
+                        </div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </div>
+
+                <!-- قسم التأشير والتوقيع -->
+                <div class="bnf-section">
+                    <div class="bnf-section-title"><i class="bi bi-pencil-square"></i>التأشير والتوقيع</div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">التأشير<span class="required-star">*</span></label>
+                            <select class="form-select" id="bnfEndorsementType">
+                                <option value="مرفق">مرفق (صورة أو PDF)</option>
+                                <option value="التوقيع بالقلم">التوقيع بالقلم</option>
+                            </select>
+                            <div id="bnfEndorsementFileWrap" class="mt-2">
+                                <label class="form-label small">رفع ملف التأشير</label>
+                                <input type="file" class="form-control" id="bnfEndorsementFile" accept="image/*,.pdf">
+                                <div id="bnfEndorsementPreview" class="bnf-attach-preview-wrap mt-2" style="display:none;"></div>
+                            </div>
+                            <div id="bnfEndorsementCanvasWrap" class="mt-2" style="display:none;">
+                                <label class="form-label small">التوقيع الإلكتروني للتأشير</label>
+                                <div class="bnf-sign-canvas-wrap">
+                                    <canvas id="bnfEndorsementCanvas" class="bnf-sign-canvas" width="280" height="120"></canvas>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="bnfClearCanvas('bnfEndorsementCanvas')">مسح</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">التوقيع<span class="required-star">*</span></label>
+                            <select class="form-select" id="bnfSignatureType">
+                                <option value="مرفق">مرفق (صورة أو PDF)</option>
+                                <option value="التوقيع بالقلم">التوقيع بالقلم</option>
+                            </select>
+                            <div id="bnfSignatureFileWrap" class="mt-2">
+                                <label class="form-label small">رفع ملف التوقيع</label>
+                                <input type="file" class="form-control" id="bnfSignatureFile" accept="image/*,.pdf">
+                                <div id="bnfSignaturePreview" class="bnf-attach-preview-wrap mt-2" style="display:none;"></div>
+                            </div>
+                            <div id="bnfSignatureCanvasWrap" class="mt-2" style="display:none;">
+                                <label class="form-label small">التوقيع الإلكتروني</label>
+                                <div class="bnf-sign-canvas-wrap">
+                                    <canvas id="bnfSignatureCanvas" class="bnf-sign-canvas" width="280" height="120"></canvas>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="bnfClearCanvas('bnfSignatureCanvas')">مسح</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الأسماء -->
+                <div class="bnf-section">
+                    <div class="bnf-section-title"><i class="bi bi-person-lines-fill"></i>الاسم رباعي</div>
+                    <div class="bnf-form-row">
+                        <div>
+                            <label class="form-label">الاسم الأول<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfFirstName">
+                        </div>
+                        <div>
+                            <label class="form-label">الاسم الثاني<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfSecondName">
+                        </div>
+                        <div>
+                            <label class="form-label">الاسم الثالث<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfThirdName">
+                        </div>
+                        <div>
+                            <label class="form-label">الاسم الرابع<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfFourthName">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الوحدة والاتصال -->
+                <div class="bnf-section">
+                    <div class="bnf-section-title"><i class="bi bi-building"></i>الوحدة والاتصال</div>
+                    <div class="bnf-form-row">
+                        <div>
+                            <label class="form-label">الوحدة التنظيمية<span class="required-star">*</span></label>
+                            <select class="form-select" id="bnfOrganizationalUnitId">
+                                <option value="">-- اختر --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">الجوال<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" placeholder="05xxxxxxxx">
+                        </div>
+                        <div>
+                            <label class="form-label">البريد الإلكتروني<span class="required-star">*</span></label>
+                            <input type="email" class="form-control" id="bnfEmail" placeholder="name@gov.sa">
+                        </div>
+                        <div></div>
+                    </div>
+                </div>
+
+                <!-- قسم الأدوار وكلمة المرور -->
+                <div class="bnf-section">
+                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وكلمة المرور</div>
+                    <div class="bnf-form-row">
+                        <div>
+                            <label class="form-label">الدور الرئيسي<span class="required-star">*</span></label>
+                            <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور الرئيسي">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="bnfMainRole" id="bnfMainRoleEmployee" value="موظف" checked>
+                                    <label class="form-check-label" for="bnfMainRoleEmployee">موظف</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="bnfMainRole" id="bnfMainRoleManager" value="مدير">
+                                    <label class="form-check-label" for="bnfMainRoleManager">مدير</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">الدور</label>
+                            <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleNone" value="" checked>
+                                    <label class="form-check-label" for="bnfSubRoleNone">-- اختياري --</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية">
+                                    <label class="form-check-label" for="bnfSubRoleUnit">ممثل الوحدة التنظيمية</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
+                                    <label class="form-check-label" for="bnfSubRoleAdmin">مدير النظام</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="bnfPasswordWrap">
+                            <label class="form-label">كلمة المرور</label>
+                            <input type="password" class="form-control" id="bnfPassword" placeholder="••••••••">
+                        </div>
+                        <div id="bnfConfirmWrap">
+                            <label class="form-label">تأكيد كلمة المرور</label>
+                            <input type="password" class="form-control" id="bnfConfirmPassword" placeholder="••••••••">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bnfError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="bnf-modal-footer">
+                <div class="bnf-activation-wrap">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="bnfIsActive" checked>
+                        <label class="form-check-label" for="bnfIsActive">التفعيل</label>
+                    </div>
+                    <span class="text-muted" style="font-size:13px;" id="bnfActivationStatus">مفعل</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="bnf-save-btn" id="bnfSubmitBtn" onclick="bnfSubmit()">حفظ</button>
+                    <button class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="bnfDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--info-700);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل المستفيد</h5>
+                <div class="bnf-modal-subtitle">عرض جميع البيانات</div>
+            </div>
+            <div class="bnf-modal-body" id="bnfDetailsBody"></div>
+            <div class="bnf-modal-footer" style="justify-content:flex-end;">
+                <button class="bnf-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="bnfDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title">حذف المستفيد</h5>
+            </div>
+            <div class="bnf-modal-body text-center">
+                <input type="hidden" id="bnfDeleteId">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا المستفيد؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="bnfDeleteNameLabel"></p>
+                <div id="bnfDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            </div>
+            <div class="bnf-modal-footer" style="justify-content:center;">
+                <button class="bnf-save-btn" style="background:var(--error-600);" onclick="bnfSubmitDelete()">نعم، حذف</button>
+                <button class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/beneficiaries.js?v=@DateTime.Now.Ticks"></script>
+}

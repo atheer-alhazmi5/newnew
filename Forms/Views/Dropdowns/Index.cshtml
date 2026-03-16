@@ -1,0 +1,450 @@
+@{
+    ViewBag.Title = "القوائم المنسدلة";
+    ViewBag.PageName = "القوائم المنسدلة";
+}
+
+<style>
+.ddl-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.ddl-modal-header { padding:24px 28px; position:relative; }
+.ddl-modal-header.create { background:var(--sa-800); }
+.ddl-modal-header.details { background:var(--info-700); }
+.ddl-modal-header.edit { background:var(--sa-800); }
+.ddl-modal-header.delete { background:var(--error-600); }
+.ddl-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.ddl-modal-header .btn-close-x:hover { color:#fff; }
+.ddl-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.ddl-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.ddl-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.ddl-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.ddl-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; }
+.ddl-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.ddl-save-btn.create { background:var(--sa-600); }
+.ddl-save-btn.create:hover { background:var(--sa-700); }
+.ddl-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.ddl-cancel-btn:hover { background:#4b5563; }
+.ddl-section { background:#fff; border-radius:14px; padding:20px 24px; margin-bottom:20px; border:1px solid var(--gray-200); }
+.ddl-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.ddl-section-title i { font-size:18px; color:var(--sa-600); }
+.required-star { color:#ef4444; margin-right:4px; }
+.ddl-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
+.ddl-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.ddl-action-btn-detail:hover { background:var(--info-50); }
+.ddl-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.ddl-action-btn-edit:hover { background:var(--sa-50); }
+.ddl-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.ddl-action-btn-delete:hover { background:var(--error-50); }
+.ddl-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:16px; }
+.ddl-form-row:last-child { margin-bottom:0; }
+.ddl-form-row-1 { grid-template-columns:1fr; }
+.ddl-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.ddl-create-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:var(--sa-50); color:var(--sa-700); border:2px solid var(--sa-200); white-space:nowrap; }
+.ddl-create-btn:hover { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-300); }
+.ddl-search-box { position:relative; min-width:180px; max-width:280px; }
+.ddl-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; height:40px; width:100%; }
+.ddl-search-box input:focus { border-color:var(--sa-400); }
+.ddl-search-box .ddl-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; }
+.ddl-page-wrap { width:100%; max-width:100%; }
+.ddl-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.ddl-filter-select { min-width:140px; width:auto; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-size:13px; font-family:'Cairo',sans-serif; }
+.ddl-clear-btn { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--gray-100); color:var(--gray-700); border:2px solid var(--gray-200); cursor:pointer; white-space:nowrap; font-family:'Cairo',sans-serif; }
+.ddl-clear-btn:hover { background:var(--gray-200); }
+.ddl-badge-active { background:#dcf5e8; color:#0f9f5c; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
+.ddl-badge-inactive { background:#fde8e8; color:#ef4444; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
+.ddl-badge-public { color:var(--info-600); font-weight:700; }
+.ddl-badge-private { color:var(--warning-600); font-weight:700; }
+.table > :not(caption) > * > * { padding:0.75rem; vertical-align:middle; }
+#ddlTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+#ddlTable tbody td { vertical-align:middle; }
+#ddlTable tbody tr:hover { background:var(--sa-25); }
+.ddl-color-circle { width:24px; height:24px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; }
+.ddl-items-table { font-size:13px; }
+.ddl-add-items-btn { padding:10px 24px; border-radius:10px; font-weight:700; background:var(--sa-100); color:var(--sa-700); border:2px solid var(--sa-200); cursor:pointer; }
+.ddl-add-items-btn:hover { background:var(--sa-200); }
+#ddlTable td { font-size:13px; }
+.ddl-tree-table { width:100%; border-collapse:collapse; }
+.ddl-tree-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); vertical-align:middle; font-size:13px; }
+.ddl-tree-table th { background:var(--gray-50); padding:10px 12px; border-bottom:2px solid var(--gray-200); font-weight:700; font-size:13px; color:var(--gray-700); white-space:nowrap; }
+.ddl-tree-table tr:hover td { background:var(--sa-25); }
+.ddl-tree-level-badge { font-size:11px; padding:2px 10px; border-radius:999px; background:var(--sa-100); color:var(--sa-700); font-weight:700; white-space:nowrap; display:inline-block; }
+.ddl-hier-badges { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ddl-level-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:16px; }
+.ddl-level-tab { padding:10px 20px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:2px solid var(--gray-200); background:#fff; color:var(--gray-600); transition:all 0.2s; }
+.ddl-level-tab:hover { background:var(--sa-25); color:var(--sa-700); border-color:var(--sa-200); }
+.ddl-level-tab.active { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-500); }
+.ddl-level-tab.disabled { opacity:0.6; cursor:not-allowed; pointer-events:none; }
+@@media (max-width:768px) { .ddl-form-row { grid-template-columns:1fr; } }
+</style>
+
+<div class="ddl-page-wrap">
+<div class="ddl-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">القوائم المنسدلة</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة القوائم المنسدلة في النظام</p>
+    </div>
+    <button class="ddl-create-btn" onclick="ddlShowCreateModal()">+ إنشاء قائمة منسدلة</button>
+</div>
+
+<!-- Search and Filters -->
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center ddl-filters">
+    <div class="ddl-search-box">
+        <i class="bi bi-search ddl-search-icon"></i>
+        <input type="text" class="form-control" id="ddlSearchInput" placeholder="بحث بالاسم ..." oninput="ddlApplyFilters()">
+    </div>
+    <select class="ddl-filter-select form-select" id="ddlFilterListType" onchange="ddlApplyFilters()">
+        <option value="">نوع القائمة المنسدلة</option>
+        <option value="قائمة مستقلة">قائمة مستقلة</option>
+        <option value="قائمة فرعية">قائمة فرعية</option>
+        <option value="قائمة هرمية">قائمة هرمية</option>
+    </select>
+    <select class="ddl-filter-select form-select" id="ddlFilterSelectionType" onchange="ddlApplyFilters()">
+        <option value="">خاصية الاختيار</option>
+        <option value="خيار محدد">خيار محدد</option>
+        <option value="متعدد الخيارات">متعدد الخيارات</option>
+    </select>
+    <select class="ddl-filter-select form-select" id="ddlFilterOwnership" onchange="ddlApplyFilters()">
+        <option value="">الملكية</option>
+        <option value="عام">عام</option>
+        <option value="خاص">خاص</option>
+    </select>
+    <select class="ddl-filter-select form-select" id="ddlFilterOrgUnit" onchange="ddlApplyFilters()">
+        <option value="">قائمة بالوحدات التنظيمية</option>
+    </select>
+    <button class="ddl-clear-btn" onclick="ddlClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table mb-0" id="ddlTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;text-align:center;">الترتيب</th>
+                        <th style="text-align:right;">اسم القائمة المنسدلة</th>
+                        <th style="text-align:center;">نوع القائمة المنسدلة</th>
+                        <th style="text-align:center;">خاصية الاختيار</th>
+                        <th style="text-align:right;">الوحدة التنظيمية المالكة</th>
+                        <th style="text-align:center;">الملكية</th>
+                        <th style="text-align:center;">التفعيل</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="ddlBody">
+                    <tr><td colspan="8" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="ddlCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ddl-modal">
+            <div class="ddl-modal-header create">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ddl-modal-title">إنشاء قائمة منسدلة</h5>
+                <div class="ddl-modal-subtitle">أدخل بيانات القائمة المنسدلة الجديدة</div>
+            </div>
+            <div class="ddl-modal-body">
+                <input type="hidden" id="ddlCreateId">
+                <div class="ddl-section">
+                    <div class="ddl-section-title">معلومات القائمة</div>
+                    <div class="ddl-form-row ddl-form-row-1">
+                        <div>
+                            <label class="form-label">اسم القائمة المنسدلة<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="ddlCreateName" >
+                        </div>
+                        <div>
+                            <label class="form-label">الوصف</label>
+                            <textarea class="form-control" id="ddlCreateDescription" rows="2" placeholder="وصف مختصر"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">الملكية</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateOwnership" id="ddlCreateOwnershipPublic" value="عام" checked>
+                            <label class="form-check-label" for="ddlCreateOwnershipPublic">عام</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateOwnership" id="ddlCreateOwnershipPrivate" value="خاص">
+                            <label class="form-check-label" for="ddlCreateOwnershipPrivate">خاص</label>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">الوحدة التنظيمية المالكة: تُحدد تلقائياً حسب منشئ القائمة</small>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">نوع القائمة المنسدلة</div>
+                    <div class="d-flex gap-3 flex-wrap mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateListType" id="ddlCreateListTypeIndependent" value="قائمة مستقلة" checked onchange="ddlToggleCreateTypeFields()">
+                            <label class="form-check-label" for="ddlCreateListTypeIndependent">قائمة مستقلة</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateListType" id="ddlCreateListTypeSub" value="قائمة فرعية" onchange="ddlToggleCreateTypeFields()">
+                            <label class="form-check-label" for="ddlCreateListTypeSub">قائمة فرعية</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateListType" id="ddlCreateListTypeHierarchical" value="قائمة هرمية" onchange="ddlToggleCreateTypeFields()">
+                            <label class="form-check-label" for="ddlCreateListTypeHierarchical">قائمة هرمية</label>
+                        </div>
+                    </div>
+                    <div id="ddlCreateParentListWrap" class="mb-3" style="display:none;">
+                        <label class="form-label">القائمة المستقلة<span class="required-star">*</span></label>
+                        <select class="form-select" id="ddlCreateParentListId">
+                            <option value="">-- اختر --</option>
+                        </select>
+                    </div>
+                    <div id="ddlCreateLevelWrap" class="mb-3" style="display:none;">
+                        <label class="form-label">المستوى<span class="required-star">*</span></label>
+                        <input type="number" class="form-control" id="ddlCreateLevelCount" min="2" max="4" value="2">
+                        <small class="text-muted">من 2 إلى 4 مستويات</small>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">خاصية الاختيار</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateSelectionType" id="ddlCreateSelectionSingle" value="خيار محدد" checked>
+                            <label class="form-check-label" for="ddlCreateSelectionSingle">خيار محدد</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateSelectionType" id="ddlCreateSelectionMulti" value="متعدد الخيارات">
+                            <label class="form-check-label" for="ddlCreateSelectionMulti">متعدد الخيارات</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">حالة التفعيل</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateIsActive" id="ddlCreateIsActiveOn" value="1" checked>
+                            <label class="form-check-label" for="ddlCreateIsActiveOn">مفعل</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ddlCreateIsActive" id="ddlCreateIsActiveOff" value="0">
+                            <label class="form-check-label" for="ddlCreateIsActiveOff">معطل</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="ddlCreateError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="ddl-modal-footer">
+                <button class="ddl-save-btn ddl-save-btn create" onclick="ddlSubmitCreate()">إنشاء</button>
+                <button class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Items Modal -->
+<div class="modal fade" id="ddlItemsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content ddl-modal">
+            <div class="ddl-modal-header edit">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ddl-modal-title">عناصر القائمة: <span id="ddlItemsListName"></span></h5>
+                <div class="ddl-modal-subtitle">إضافة وتعديل عناصر القائمة المنسدلة</div>
+            </div>
+            <div class="ddl-modal-body">
+                <input type="hidden" id="ddlItemsListId">
+                <input type="hidden" id="ddlItemsListType" value="">
+                <input type="hidden" id="ddlItemsLevelCount" value="2">
+                <input type="hidden" id="ddlItemsParentListId" value="">
+                <input type="hidden" id="ddlItemsCreatedBy" value="">
+
+                <!-- Non-hierarchy content (independent + sub lists) -->
+                <div id="ddlNonHierContent">
+                    <button type="button" class="ddl-add-items-btn mb-3" id="ddlAddItemBtn" onclick="ddlShowAddItemForm()">إضافة عناصر القائمة المنسدلة</button>
+                    <div id="ddlAddItemForm" style="display:none;" class="ddl-section mb-3">
+                        <div class="ddl-section-title">إضافة عنصر جديد</div>
+                        <div id="ddlItemSubListFields" style="display:none;" class="mb-3">
+                            <label class="form-label">عنصر القائمة المستقلة<span class="required-star">*</span></label>
+                            <select class="form-select" id="ddlItemParentItemId">
+                                <option value="">-- اختر عنصر القائمة المستقلة --</option>
+                            </select>
+                        </div>
+                        <div id="ddlItemNormalFields">
+                            <div class="ddl-form-row">
+                                <div><label class="form-label">العنصر<span class="required-star">*</span></label><input type="text" class="form-control" id="ddlItemText"></div>
+                                <div><label class="form-label">الوصف</label><input type="text" class="form-control" id="ddlItemDescription"></div>
+                                <div><label class="form-label">اللون</label><input type="color" class="form-control form-control-color" id="ddlItemColor" value="#25935F"></div>
+                                <div>
+                                    <label class="form-label">التفعيل</label>
+                                    <div class="d-flex gap-2 mt-2">
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlItemIsActive" id="ddlItemIsActiveOn" value="1" checked><label class="form-check-label" for="ddlItemIsActiveOn">مفعل</label></div>
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlItemIsActive" id="ddlItemIsActiveOff" value="0"><label class="form-check-label" for="ddlItemIsActiveOff">معطل</label></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button class="btn btn-primary btn-sm" id="ddlItemSubmitBtn" onclick="ddlSubmitNormalItem()">إضافة</button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="ddlHideAddItemForm()">إلغاء</button>
+                        </div>
+                    </div>
+                    <div id="ddlItemsTableWrap">
+                        <table class="table ddl-items-table">
+                            <thead><tr><th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th><th>الإجراءات</th></tr></thead>
+                            <tbody id="ddlItemsBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="ddlItemsEmpty" class="text-center text-muted py-4" style="display:none;">لا توجد عناصر. اضغط "إضافة عناصر القائمة المنسدلة" للبدء.</div>
+                </div>
+
+                <!-- Hierarchy content -->
+                <div id="ddlHierContent" style="display:none;">
+                    <!-- Level Names Setup -->
+                    <div id="ddlHierLevelSetup" class="ddl-section mb-3" style="display:none;">
+                        <div class="ddl-section-title">تسمية المستويات</div>
+                        <p class="text-muted" style="font-size:13px;">حدد اسمًا لكل مستوى في القائمة الهرمية</p>
+                        <div id="ddlHierLevelNameInputs"></div>
+                        <div class="mt-3">
+                            <button class="ddl-save-btn create" style="padding:8px 24px;font-size:13px;" onclick="ddlSaveLevelNames()">حفظ أسماء المستويات</button>
+                        </div>
+                    </div>
+                    <!-- Hierarchy items section -->
+                    <div id="ddlHierItemsSection" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <button type="button" class="ddl-add-items-btn" id="ddlHierAddBtn" onclick="ddlShowHierAddForm()">إضافة عناصر القائمة المنسدلة</button>
+                            <button class="btn btn-sm btn-outline-secondary" style="font-size:11px;" onclick="ddlEditLevelNames()"><i class="bi bi-pencil"></i> تعديل أسماء المستويات</button>
+                        </div>
+                        <div id="ddlHierLevelBadges" class="ddl-hier-badges mb-3"></div>
+                        <p class="text-muted mb-3" style="font-size:13px;">اختر المستوى الذي تريد إضافة عناصره، وأكمل تعبئة عناصر كل مستوى قبل الانتقال للتالي.</p>
+                        <div id="ddlHierLevelTabs" class="ddl-level-tabs"></div>
+                        <!-- Add/Edit item form -->
+                        <div id="ddlHierAddForm" style="display:none;" class="ddl-section mb-3">
+                            <div class="ddl-section-title" id="ddlHierFormTitle">إضافة عنصر جديد</div>
+                            <div id="ddlHierParentSelectors"></div>
+                            <div class="ddl-form-row">
+                                <div><label class="form-label">العنصر<span class="required-star">*</span></label><input type="text" class="form-control" id="ddlHierItemText"></div>
+                                <div><label class="form-label">الوصف</label><input type="text" class="form-control" id="ddlHierItemDesc"></div>
+                                <div><label class="form-label">اللون</label><input type="color" class="form-control form-control-color" id="ddlHierItemColor" value="#25935F"></div>
+                                <div>
+                                    <label class="form-label">التفعيل</label>
+                                    <div class="d-flex gap-2 mt-2">
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlHierItemActive" id="ddlHierItemActiveOn" value="1" checked><label class="form-check-label" for="ddlHierItemActiveOn">مفعل</label></div>
+                                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlHierItemActive" id="ddlHierItemActiveOff" value="0"><label class="form-check-label" for="ddlHierItemActiveOff">معطل</label></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="ddl-save-btn create" style="padding:8px 24px;font-size:13px;" id="ddlHierSubmitBtn" onclick="ddlSubmitHierItem()">إضافة</button>
+                                <button class="ddl-cancel-btn" style="padding:8px 24px;font-size:13px;" onclick="ddlHideHierAddForm()">إلغاء</button>
+                            </div>
+                        </div>
+                        <!-- Tree view -->
+                        <div id="ddlHierTreeWrap"></div>
+                        <div id="ddlHierEmpty" class="text-center text-muted py-4" style="display:none;">لا توجد عناصر. اضغط "إضافة عناصر القائمة المنسدلة" للبدء.</div>
+                    </div>
+                </div>
+
+                <div id="ddlItemsError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="ddlDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ddl-modal">
+            <div class="ddl-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ddl-modal-title">تفاصيل القائمة المنسدلة</h5>
+                <div class="ddl-modal-subtitle">عرض جميع البيانات</div>
+            </div>
+            <div class="ddl-modal-body" id="ddlDetailsBody"></div>
+            <div class="ddl-modal-footer" style="justify-content:flex-end;">
+                <button class="ddl-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Modal -->
+<div class="modal fade" id="ddlEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ddl-modal">
+            <div class="ddl-modal-header edit">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ddl-modal-title">تحديث القائمة المنسدلة</h5>
+                <div class="ddl-modal-subtitle">تعديل بيانات القائمة</div>
+            </div>
+            <div class="ddl-modal-body">
+                <input type="hidden" id="ddlEditId">
+                <div class="ddl-section">
+                    <div class="ddl-form-row ddl-form-row-1">
+                        <div><label class="form-label">اسم القائمة<span class="required-star">*</span></label><input type="text" class="form-control" id="ddlEditName"></div>
+                        <div><label class="form-label">الوصف</label><textarea class="form-control" id="ddlEditDescription" rows="2"></textarea></div>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">الملكية</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditOwnership" id="ddlEditOwnershipPublic" value="عام"><label class="form-check-label" for="ddlEditOwnershipPublic">عام</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditOwnership" id="ddlEditOwnershipPrivate" value="خاص"><label class="form-check-label" for="ddlEditOwnershipPrivate">خاص</label></div>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">نوع القائمة</div>
+                    <div class="d-flex gap-3 flex-wrap mb-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditListType" id="ddlEditListTypeIndependent" value="قائمة مستقلة" onchange="ddlToggleEditTypeFields()"><label class="form-check-label" for="ddlEditListTypeIndependent">قائمة مستقلة</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditListType" id="ddlEditListTypeSub" value="قائمة فرعية" onchange="ddlToggleEditTypeFields()"><label class="form-check-label" for="ddlEditListTypeSub">قائمة فرعية</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditListType" id="ddlEditListTypeHierarchical" value="قائمة هرمية" onchange="ddlToggleEditTypeFields()"><label class="form-check-label" for="ddlEditListTypeHierarchical">قائمة هرمية</label></div>
+                    </div>
+                    <div id="ddlEditParentListWrap" class="mb-3" style="display:none;"><label class="form-label">القائمة المستقلة</label><select class="form-select" id="ddlEditParentListId"><option value="">-- اختر --</option></select></div>
+                    <div id="ddlEditLevelWrap" class="mb-3" style="display:none;"><label class="form-label">المستوى</label><input type="number" class="form-control" id="ddlEditLevelCount" min="2" max="4"></div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">خاصية الاختيار</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditSelectionType" id="ddlEditSelectionSingle" value="خيار محدد"><label class="form-check-label" for="ddlEditSelectionSingle">خيار محدد</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditSelectionType" id="ddlEditSelectionMulti" value="متعدد الخيارات"><label class="form-check-label" for="ddlEditSelectionMulti">متعدد الخيارات</label></div>
+                    </div>
+                </div>
+                <div class="ddl-section">
+                    <div class="ddl-section-title">التفعيل</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditIsActive" id="ddlEditIsActiveOn" value="1"><label class="form-check-label" for="ddlEditIsActiveOn">مفعل</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="ddlEditIsActive" id="ddlEditIsActiveOff" value="0"><label class="form-check-label" for="ddlEditIsActiveOff">معطل</label></div>
+                    </div>
+                </div>
+                <div id="ddlEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="ddl-modal-footer">
+                <button class="ddl-save-btn" onclick="ddlSubmitEdit()">حفظ التعديلات</button>
+                <button class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="ddlDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ddl-modal">
+            <div class="ddl-modal-header delete">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ddl-modal-title">حذف القائمة المنسدلة</h5>
+            </div>
+            <div class="ddl-modal-body text-center">
+                <input type="hidden" id="ddlDeleteId">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذه القائمة؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="ddlDeleteNameLabel"></p>
+                <div id="ddlDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            </div>
+            <div class="ddl-modal-footer" style="justify-content:center;">
+                <button class="ddl-save-btn" style="background:var(--error-600);" onclick="ddlSubmitDelete()">نعم، حذف</button>
+                <button class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/dropdowns.js?v=@DateTime.Now.Ticks"></script>
+}

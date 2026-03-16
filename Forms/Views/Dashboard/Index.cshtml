@@ -1,0 +1,81 @@
+@{
+    ViewBag.Title = "لوحة التحكم";
+    ViewBag.PageName = "لوحة التحكم";
+}
+
+<div style="margin-bottom:32px;">
+    <h2 style="font-weight:700;margin-bottom:4px;">مرحباً بك، @ViewBag.UserFullName</h2>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div style="width:48px;height:3px;background:var(--gold-600);border-radius:2px;"></div>
+        <span style="font-weight:600;color:var(--gold-600);">مؤشرات الأداء الأسبوعية</span>
+    </div>
+    <div style="font-size:14px;color:var(--sa-600);font-weight:600;">@ViewBag.DeptName</div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="kpi-card" data-color="green">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="kpi-label">النماذج المعتمدة</div>
+                    <div class="kpi-value" style="color:var(--sa-600);" id="kpi-approved">@ViewBag.Approved</div>
+                    <div class="kpi-sub">إجمالي</div>
+                </div>
+                <div class="kpi-icon" style="background:var(--sa-100);color:var(--sa-600);">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+            <div class="kpi-progress"><div class="kpi-progress-bar" style="width:75%;background:var(--sa-500);"></div></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="kpi-card" data-color="gold">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="kpi-label">النماذج المرسلة</div>
+                    <div class="kpi-value" style="color:var(--gold-700);" id="kpi-sent">@ViewBag.Sent</div>
+                    <div class="kpi-sub">إجمالي</div>
+                </div>
+                <div class="kpi-icon" style="background:var(--gold-100);color:var(--gold-700);">
+                    <i class="bi bi-send-fill"></i>
+                </div>
+            </div>
+            <div class="kpi-progress"><div class="kpi-progress-bar" style="width:60%;background:var(--gold-500);"></div></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="kpi-card" data-color="blue">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="kpi-label">طلبات بانتظار الإجراء</div>
+                    <div class="kpi-value" style="color:var(--info-700);" id="kpi-pending">@ViewBag.Pending</div>
+                    <div class="kpi-sub">إجمالي</div>
+                </div>
+                <div class="kpi-icon" style="background:var(--info-100);color:var(--info-600);">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+            <div class="kpi-progress"><div class="kpi-progress-bar" style="width:35%;background:var(--info-500);"></div></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="kpi-card" data-color="green">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="kpi-label">الوارد</div>
+                    <div class="kpi-value" style="color:var(--sa-600);" id="kpi-inbox">@ViewBag.Inbox</div>
+                    <div class="kpi-sub">إجمالي</div>
+                </div>
+                <div class="kpi-icon" style="background:var(--sa-100);color:var(--sa-600);">
+                    <i class="bi bi-inbox-fill"></i>
+                </div>
+            </div>
+            <div class="kpi-progress"><div class="kpi-progress-bar" style="width:50%;background:var(--sa-500);"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="info-box">
+    <i class="bi bi-info-circle"></i>
+    <span>ملاحظة: كافة البيانات الموضحة أعلاه تُحدّث أولاً بأول وتعكس النشاط الفعلي للقسم خلال الفترة الحالية.</span>
+</div>

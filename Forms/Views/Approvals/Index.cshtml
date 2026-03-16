@@ -1,0 +1,56 @@
+@{
+    ViewBag.Title = "طلبات الاعتماد";
+    ViewBag.PageName = "طلبات الاعتماد";
+}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+    <h2 class="page-title" style="margin:0;">طلبات الاعتماد</h2>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>النموذج</th>
+                        <th>مقدم الطلب</th>
+                        <th>القسم</th>
+                        <th>تاريخ الطلب</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="approvalsBody">
+                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white">رفض الطلب</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">سبب الرفض (اختياري)</label>
+                <textarea class="form-control" id="rejectReason" rows="3" placeholder="أدخل سبب الرفض..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="btn btn-danger" onclick="confirmReject()">تأكيد الرفض</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/approvals.js"></script>
+}

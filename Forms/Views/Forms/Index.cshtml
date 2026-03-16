@@ -1,0 +1,125 @@
+@{
+    ViewBag.Title = "النماذج الجاهزة";
+    ViewBag.PageName = "النماذج الجاهزة";
+}
+
+<style>
+.forms-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+.f-card { background:#fff; border:1px solid var(--gray-200); border-radius:16px; padding:24px; display:flex; flex-direction:column; transition:box-shadow .2s,transform .2s; }
+.f-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.06); transform:translateY(-2px); }
+.f-icon { width:48px; height:48px; border-radius:12px; background:var(--sa-50); color:var(--sa-700); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:22px; }
+.f-name { font-weight:700; font-size:15px; color:var(--gray-800); margin-bottom:4px; }
+.f-cat { font-size:12px; color:var(--gray-500); margin-bottom:10px; }
+.f-desc { font-size:13px; color:var(--gray-600); line-height:1.6; margin-bottom:14px; flex:1; }
+.f-actions { display:flex; gap:8px; align-items:center; }
+.f-btn { padding:10px 14px; border-radius:10px; border:none; font-family:'Cairo',sans-serif; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.f-btn-primary { background:var(--sa-800); color:#fff; flex:1; }
+.f-btn-primary:hover { background:var(--sa-900); }
+.f-btn-outline { background:var(--gray-100); color:var(--gray-700); width:40px; height:40px; padding:0; }
+.f-btn-outline:hover { background:var(--gray-200); }
+.f-btn-danger { background:var(--error-50,#fef2f2); color:var(--error-600,#dc3545); width:40px; height:40px; padding:0; }
+.f-btn-danger:hover { background:var(--error-100,#fee2e2); }
+.send-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .15s; border:1px solid transparent; margin-bottom:4px; }
+.send-item:hover { background:var(--gray-50); }
+.send-item.picked { background:var(--sa-50); border-color:var(--sa-300); }
+.send-avatar { width:34px; height:34px; border-radius:50%; background:var(--sa-100); color:var(--sa-700); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.send-check { margin-right:auto; font-size:16px; color:var(--sa-600); display:none; }
+.send-item.picked .send-check { display:block; }
+.del-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.del-modal-header { padding:24px 28px 0; display:flex; align-items:center; justify-content:space-between; border:none; }
+.del-modal-title { font-weight:800; font-size:20px; color:#1a1a1a; margin:0; }
+.del-modal-close { background:none; border:none; color:#737373; font-size:20px; cursor:pointer; padding:4px; line-height:1; }
+.del-modal-close:hover { color:#1a1a1a; }
+.del-modal-body { padding:24px 28px; }
+.del-modal-footer { padding:0 28px 24px; display:flex; gap:12px; border:none; }
+.del-modal-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; transition:all .2s; }
+.del-btn-cancel { background:#6b7280; color:#fff; }
+.del-btn-cancel:hover { background:#4b5563; }
+.del-btn-delete { background:#dc3545; color:#fff; }
+.del-btn-delete:hover { background:#b02a37; transform:translateY(-1px); }
+</style>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h2 class="page-title" style="margin:0;">النماذج الجاهزة <span id="forms-count" style="font-size:14px;color:var(--gray-500);font-weight:400;"></span></h2>
+</div>
+
+<!-- Search & Filter -->
+<div class="d-flex gap-3 mb-4 flex-wrap">
+    <input type="text" class="form-control" style="max-width:300px;" id="searchInput" placeholder=" بحث في النماذج...">
+    <select class="form-select" style="max-width:200px;" id="catFilter">
+        <option value="">جميع الفئات</option>
+    </select>
+</div>
+
+<div class="forms-grid" id="formsGrid">
+    <div style="text-align:center;padding:40px;grid-column:1/-1;">
+        <div class="spinner-border" style="color:var(--sa-600);"></div>
+    </div>
+</div>
+
+<div id="paginationContainer"></div>
+
+<!-- Send Modal -->
+<div class="modal fade" id="sendModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white"><i class="bi bi-send" style="margin-left:8px;"></i>إرسال النموذج</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 style="font-weight:700;margin-bottom:12px;">اختر المستلمين</h6>
+                <input type="text" class="form-control mb-3" id="recipientSearch" placeholder="بحث في المستخدمين...">
+                <div id="recipientList" style="max-height:280px;overflow-y:auto;"></div>
+                <div id="selectedCount" style="font-size:13px;color:var(--sa-600);margin-top:8px;font-weight:600;"></div>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <label class="form-label">تاريخ البداية</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">تاريخ الانتهاء</label>
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button class="btn btn-primary" id="confirmSendBtn" onclick="confirmSend()">
+                    <i class="bi bi-send" style="margin-left:6px;"></i>إرسال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Form Modal -->
+<div class="modal fade" id="deleteFormModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content del-modal">
+            <div class="del-modal-header">
+                <h5 class="del-modal-title">حذف نموذج</h5>
+                <button type="button" class="del-modal-close" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="del-modal-body">
+                <p style="font-size:15px;font-weight:600;color:#1a1a1a;margin:0 0 8px;">هل أنت متأكد من حذف هذا النموذج؟</p>
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size:20px;color:#dc3545;flex-shrink:0;"></i>
+                    <div>
+                        <div id="deleteFormName" style="font-size:15px;font-weight:700;color:#1a1a1a;"></div>
+                        <div style="font-size:12px;color:#737373;margin-top:2px;">سيتم حذف النموذج من قائمة النماذج الجاهزة لدى جميع المستخدمين</div>
+                    </div>
+                </div>
+            </div>
+            <div class="del-modal-footer">
+                <button class="del-modal-btn del-btn-cancel" data-bs-dismiss="modal">إلغاء</button>
+                <button class="del-modal-btn del-btn-delete" onclick="confirmDeleteForm()">حذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>window.__userRole = '@(ViewBag.UserRole)';</script>
+<script src="~/js/forms.js?v=@DateTime.Now.Ticks"></script>
+}

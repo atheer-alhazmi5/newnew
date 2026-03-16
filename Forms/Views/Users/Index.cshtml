@@ -1,0 +1,221 @@
+@{
+    ViewBag.Title = "المستخدمون";
+    ViewBag.PageName = "المستخدمون";
+}
+
+<style>
+.edit-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.edit-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
+.edit-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; padding:4px; line-height:1; }
+.edit-modal-header .btn-close-x:hover { color:#fff; }
+.edit-modal-title { color:#fff; font-weight:800; font-size:18px; margin:0; }
+.edit-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:2px; }
+.edit-user-info { background:var(--sa-50); border-radius:12px; padding:16px 20px; margin-bottom:20px; text-align:center; }
+.edit-user-info .info-line { font-size:14px; color:var(--gray-700); margin-bottom:2px; }
+.edit-user-info .info-line strong { color:var(--gray-800); }
+.role-selector { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+.role-btn { padding:10px 20px; border-radius:12px; border:2px solid #e5e5e5; background:#fff; font-family:'Cairo',sans-serif; font-weight:600; font-size:14px; color:var(--gray-600); cursor:pointer; transition:all .2s; flex:1; min-width:120px; text-align:center; }
+.role-btn:hover { border-color:var(--sa-300); color:var(--sa-700); }
+.role-btn.active { border-color:var(--sa-600); color:var(--sa-700); background:var(--sa-50); box-shadow:0 0 0 1px var(--sa-600); }
+.edit-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; }
+.edit-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; }
+.edit-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.edit-close-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
+.edit-close-btn:hover { background:#4b5563; }
+.action-btn { min-width:78px; border-radius:12px; font-weight:700; padding:6px 12px; font-size:12px; line-height:1.2; }
+.action-btn-edit { border:2px solid #0f6b4a; color:#0f6b4a; background:#fff; }
+.action-btn-edit:hover { background:#f0faf5; }
+.action-btn-stop { border:2px solid #c5cbd3; color:#475569; background:#fff; }
+.action-btn-stop:hover { background:#f8fafc; }
+.action-btn-activate { border:none; color:#fff; background:#0f6b4a; }
+.action-btn-activate:hover { background:#0a583c; }
+.status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
+.status-pill.active { background:#dcf5e8; color:#0f9f5c; }
+.status-pill.inactive { background:#fde8e8; color:#ef4444; }
+.status-dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
+.status-pill.active .status-dot { background:#0f9f5c; }
+.status-pill.inactive .status-dot { background:#ef4444; }
+.table > :not(caption) > * > * { padding-top: 0.6rem; padding-bottom: 0.6rem; vertical-align: middle; }
+.add-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.add-modal-header { background:#0f6b4a; padding:20px 28px; position:relative; }
+.add-modal-title { color:#fff; font-size:30px; font-weight:800; line-height:1; margin:0; }
+.add-modal-subtitle { color:rgba(255,255,255,.75); font-size:14px; margin-top:4px; }
+.add-close { position:absolute; top:14px; left:14px; background:none; border:none; color:rgba(255,255,255,.75); font-size:24px; }
+.identity-row { display:flex; gap:10px; align-items:center; }
+.identity-search-btn { min-width:100px; border:none; border-radius:12px; background:#0f6b4a; color:#fff; font-weight:700; padding:10px 12px; }
+.profile-box { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px dashed #d1d5db; border-radius:12px; padding:12px; margin-bottom:12px; }
+.profile-img { width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #d1d5db; background:#fff; }
+.upload-btn { border:1px solid #d1d5db; background:#fff; border-radius:10px; font-weight:600; padding:7px 10px; font-size:12px; cursor:pointer; }
+.required-star { color:#ef4444; margin-right:4px; font-weight:700; }
+.lookup-result-section { display:none; margin-top:14px; border-top:1px solid #eceff3; padding-top:14px; }
+</style>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h2 class="page-title" style="margin:0;">المستخدمون</h2>
+    @if (ViewBag.UserRole?.ToString() == "Admin")
+    {
+        <button class="btn btn-primary" onclick="showAddUserModal()">
+            <i class="bi bi-person-plus" style="margin-left:6px;"></i>إضافة مستخدم
+        </button>
+    }
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap">
+    <select class="form-select" style="max-width:200px;" id="roleFilter" onchange="loadUsers()">
+        <option value="">جميع الأدوار</option>
+        <option value="Admin">مدير النظام</option>
+        <option value="Manager">مدير الوحدة التنظيمية</option>
+        <option value="Employee">ممثل وحدة تنظيمية</option>
+        <option value="Staff">موظف</option>
+    </select>
+    @if (ViewBag.UserRole?.ToString() == "Admin")
+    {
+        <select class="form-select" style="max-width:250px;" id="deptFilter" onchange="loadUsers()">
+            <option value="">جميع الأقسام</option>
+        </select>
+    }
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>البريد</th>
+                        <th>القسم</th>
+                        <th>الدور</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="usersBody">
+                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content add-modal">
+            <div class="add-modal-header">
+                <button type="button" class="add-close" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="add-modal-title">إضافة مستخدم جديد</h5>
+                <div class="add-modal-subtitle">أدخل رقم الهوية ثم اضغط عرض</div>
+            </div>
+            <div class="modal-body" style="padding:24px 28px;">
+                <div class="mb-3">
+                    <label class="form-label">رقم الهوية</label>
+                    <div class="identity-row">
+                        <button class="identity-search-btn" type="button" onclick="lookupNationalId()">عرض</button>
+                        <input type="text" class="form-control" id="newNationalId" maxlength="10" placeholder="أدخل رقم الهوية">
+                    </div>
+                </div>
+
+                <div id="lookupResultSection" class="lookup-result-section">
+                    <div class="profile-box">
+                        <img id="newPhotoPreview" class="profile-img" src="https://via.placeholder.com/54x54.png?text=+" alt="photo">
+                        <div style="flex:1;">
+                            <div style="font-size:13px;color:#6b7280;">الصورة الشخصية</div>
+                            <label class="upload-btn" for="newPhotoUpload">إضافة / تغيير الصورة</label>
+                            <input type="file" id="newPhotoUpload" accept="image/*" style="display:none;" onchange="onUserPhotoSelected(event)">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">الاسم الرباعي<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="newFullName" placeholder="الاسم الرباعي">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">اسم المستخدم</label>
+                        <input type="text" class="form-control" id="newUsername" placeholder="username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">رقم الجوال<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="newPhone" placeholder="05xxxxxxxx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">البريد الإلكتروني<span class="required-star">*</span></label>
+                        <input type="email" class="form-control" id="newEmail" placeholder="user@@emirate.gov.sa">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">كلمة المرور</label>
+                        <input type="password" class="form-control" id="newPassword" placeholder="password123">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الدور<span class="required-star">*</span></label>
+                        <select class="form-select" id="newRole">
+                            <option value="Staff">موظف</option>
+                            <option value="Employee">ممثل وحدة تنظيمية</option>
+                            <option value="Manager">مدير الوحدة التنظيمية</option>
+                            <option value="Admin">مدير النظام</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوحدة التنظيمية<span class="required-star">*</span></label>
+                        <select class="form-select" id="newDept"></select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="newIsActive" checked>
+                            <label class="form-check-label" for="newIsActive">تفعيل المستخدم</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="addUserError" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer" style="padding:20px 28px;border:none;justify-content:flex-start;">
+                <button class="btn btn-primary" style="border-radius:12px;padding:10px 24px;font-weight:700;" onclick="submitAddUser()">
+                    إضافة المستخدم للنظام
+                </button>
+                <button class="btn btn-secondary" style="border-radius:12px;padding:10px 24px;font-weight:700;" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Role Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content edit-modal">
+            <div class="edit-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="edit-modal-title">تعديل دور المستخدم</h5>
+                <div class="edit-modal-subtitle" id="editUserName"></div>
+            </div>
+            <div class="modal-body" style="padding:24px 28px;">
+                <div class="edit-user-info">
+                    <div class="info-line"><strong>الاسم:</strong> <span id="editInfoName"></span></div>
+                    <div class="info-line"><strong>البريد:</strong> <span id="editInfoEmail"></span></div>
+                    <div class="info-line"><strong>القسم:</strong> <span id="editInfoDept"></span></div>
+                </div>
+
+                <div style="font-weight:700;font-size:14px;color:var(--gray-700);margin-bottom:8px;text-align:right;">اختيار الدور:</div>
+                <div class="role-selector" id="roleSelector">
+                    <div class="role-btn" data-role="Manager" onclick="selectRole('Manager')">مدير وحدة تنظيمية</div>
+                    <div class="role-btn" data-role="Employee" onclick="selectRole('Employee')">ممثل وحدة تنظيمية</div>
+                    <div class="role-btn" data-role="Staff" onclick="selectRole('Staff')">موظف</div>
+                </div>
+
+                <div style="font-weight:700;font-size:14px;color:var(--gray-700);margin-bottom:8px;margin-top:20px;text-align:right;">القسم:</div>
+                <select class="form-select" id="editDept"></select>
+            </div>
+            <div class="edit-modal-footer">
+                <button class="edit-save-btn" onclick="submitEditUser()">حفظ التغييرات</button>
+                <button class="edit-close-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>var __currentUserId = @(ViewBag.UserId);</script>
+<script src="~/js/users.js?v=@DateTime.Now.Ticks"></script>
+}

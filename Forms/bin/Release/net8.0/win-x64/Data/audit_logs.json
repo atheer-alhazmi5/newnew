@@ -1,0 +1,1132 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:37:53.4945007+03:00"
+  },
+  {
+    "Id": 2,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:39:29.8558757+03:00"
+  },
+  {
+    "Id": 3,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:39:51.9998241+03:00"
+  },
+  {
+    "Id": 4,
+    "UserId": 5,
+    "UserName": "\u0646\u062C\u0648\u062F \u0627\u0644\u0631\u0634\u064A\u062F\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:40:00.4307239+03:00"
+  },
+  {
+    "Id": 5,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:55:42.228241+03:00"
+  },
+  {
+    "Id": 6,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:56:02.1507828+03:00"
+  },
+  {
+    "Id": 7,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T00:57:45.0167739+03:00"
+  },
+  {
+    "Id": 8,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T01:05:48.9362259+03:00"
+  },
+  {
+    "Id": 9,
+    "UserId": 5,
+    "UserName": "\u0646\u062C\u0648\u062F \u0627\u0644\u0631\u0634\u064A\u062F\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T01:06:25.9527749+03:00"
+  },
+  {
+    "Id": 10,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T01:06:50.6906419+03:00"
+  },
+  {
+    "Id": 11,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:13:13.1786747+03:00"
+  },
+  {
+    "Id": 12,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:14:00.594623+03:00"
+  },
+  {
+    "Id": 13,
+    "UserId": 5,
+    "UserName": "\u0646\u062C\u0648\u062F \u0627\u0644\u0631\u0634\u064A\u062F\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:14:20.6920952+03:00"
+  },
+  {
+    "Id": 14,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:15:52.9238733+03:00"
+  },
+  {
+    "Id": 15,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:50:25.520743+03:00"
+  },
+  {
+    "Id": 16,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T02:57:34.5151577+03:00"
+  },
+  {
+    "Id": 17,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:06:18.5659705+03:00"
+  },
+  {
+    "Id": 18,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:14:36.0441686+03:00"
+  },
+  {
+    "Id": 19,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:22:47.2706063+03:00"
+  },
+  {
+    "Id": 20,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:26:25.3211442+03:00"
+  },
+  {
+    "Id": 21,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:37:23.2344307+03:00"
+  },
+  {
+    "Id": 22,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:46:20.0549599+03:00"
+  },
+  {
+    "Id": 23,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:53:46.7581749+03:00"
+  },
+  {
+    "Id": 24,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u062B\u0628\u064A\u062A \u0646\u0645\u0648\u0630\u062C \u062C\u0627\u0647\u0632",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "\u062B\u0642\u0641\u063A",
+    "CreatedAt": "2026-03-08T03:55:25.4503077+03:00"
+  },
+  {
+    "Id": 25,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:55:38.3638255+03:00"
+  },
+  {
+    "Id": 26,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T03:55:49.7121682+03:00"
+  },
+  {
+    "Id": 27,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:11:05.1367096+03:00"
+  },
+  {
+    "Id": 28,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:11:12.7744518+03:00"
+  },
+  {
+    "Id": 29,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:11:24.0409809+03:00"
+  },
+  {
+    "Id": 30,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:13:38.1620794+03:00"
+  },
+  {
+    "Id": 31,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:15:42.5791117+03:00"
+  },
+  {
+    "Id": 32,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u062B\u0628\u064A\u062A \u0646\u0645\u0648\u0630\u062C \u062C\u0627\u0647\u0632",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "tyuik",
+    "CreatedAt": "2026-03-08T04:17:34.5754949+03:00"
+  },
+  {
+    "Id": 33,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0631\u0633\u0627\u0644 \u0646\u0645\u0648\u0630\u062C",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "\u0625\u0644\u0649 1 \u0645\u0633\u062A\u0644\u0645",
+    "CreatedAt": "2026-03-08T04:18:07.6261295+03:00"
+  },
+  {
+    "Id": 34,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:18:23.6440144+03:00"
+  },
+  {
+    "Id": 35,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:46:31.1738569+03:00"
+  },
+  {
+    "Id": 36,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:47:31.0091372+03:00"
+  },
+  {
+    "Id": 37,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:51:03.3516769+03:00"
+  },
+  {
+    "Id": 38,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:51:55.9692451+03:00"
+  },
+  {
+    "Id": 39,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:52:20.2868923+03:00"
+  },
+  {
+    "Id": 40,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0639\u0628\u0626\u0629 \u0646\u0645\u0648\u0630\u062C",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:52:49.3428061+03:00"
+  },
+  {
+    "Id": 41,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0639\u0628\u0626\u0629 \u0646\u0645\u0648\u0630\u062C",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:52:49.4358576+03:00"
+  },
+  {
+    "Id": 42,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T04:53:07.1550189+03:00"
+  },
+  {
+    "Id": 43,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T06:53:06.8060007+03:00"
+  },
+  {
+    "Id": 44,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T06:53:43.6012403+03:00"
+  },
+  {
+    "Id": 45,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T06:57:18.0301933+03:00"
+  },
+  {
+    "Id": 46,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:00:20.3391781+03:00"
+  },
+  {
+    "Id": 47,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:03:20.9643046+03:00"
+  },
+  {
+    "Id": 48,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:08:13.7607485+03:00"
+  },
+  {
+    "Id": 49,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0646\u0634\u0631 \u0646\u0645\u0648\u0630\u062C",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "\u0625\u0644\u0649 1 \u0645\u0633\u062A\u0644\u0645",
+    "CreatedAt": "2026-03-08T07:08:50.284446+03:00"
+  },
+  {
+    "Id": 50,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:13:31.3782698+03:00"
+  },
+  {
+    "Id": 51,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:14:00.3115839+03:00"
+  },
+  {
+    "Id": 52,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:14:21.6112688+03:00"
+  },
+  {
+    "Id": 53,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:14:31.4174647+03:00"
+  },
+  {
+    "Id": 54,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:20:54.4072901+03:00"
+  },
+  {
+    "Id": 55,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0639\u0628\u0626\u0629 \u0646\u0645\u0648\u0630\u062C",
+    "EntityType": "Form",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:21:33.1187465+03:00"
+  },
+  {
+    "Id": 56,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:25:50.2652329+03:00"
+  },
+  {
+    "Id": 57,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:39:55.4816314+03:00"
+  },
+  {
+    "Id": 58,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:47:07.3814395+03:00"
+  },
+  {
+    "Id": 59,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:56:20.738316+03:00"
+  },
+  {
+    "Id": 60,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:57:50.2672726+03:00"
+  },
+  {
+    "Id": 61,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:58:54.8023568+03:00"
+  },
+  {
+    "Id": 62,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T07:59:33.2223846+03:00"
+  },
+  {
+    "Id": 63,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T08:01:01.9771446+03:00"
+  },
+  {
+    "Id": 64,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T08:01:47.7194504+03:00"
+  },
+  {
+    "Id": 65,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T08:03:44.8611528+03:00"
+  },
+  {
+    "Id": 66,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T08:04:07.4178954+03:00"
+  },
+  {
+    "Id": 67,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T12:09:56.1935423+03:00"
+  },
+  {
+    "Id": 68,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T12:20:10.3696837+03:00"
+  },
+  {
+    "Id": 69,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T14:33:33.1255115+03:00"
+  },
+  {
+    "Id": 70,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T14:59:51.4679751+03:00"
+  },
+  {
+    "Id": 71,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:22:47.63762+03:00"
+  },
+  {
+    "Id": 72,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:23:16.7207678+03:00"
+  },
+  {
+    "Id": 73,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:32:57.912656+03:00"
+  },
+  {
+    "Id": 74,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u062A\u0635\u0646\u064A\u0641",
+    "EntityType": "Classification",
+    "EntityId": "4",
+    "Details": "\u0634\u0639\u0628\u0629",
+    "CreatedAt": "2026-03-08T15:34:03.1051465+03:00"
+  },
+  {
+    "Id": 75,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u062A\u0635\u0646\u064A\u0641",
+    "EntityType": "Classification",
+    "EntityId": "4",
+    "Details": "\u0634\u0639\u0628\u0629",
+    "CreatedAt": "2026-03-08T15:45:15.8335925+03:00"
+  },
+  {
+    "Id": 76,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:53:25.8454233+03:00"
+  },
+  {
+    "Id": 77,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:53:32.4483757+03:00"
+  },
+  {
+    "Id": 78,
+    "UserId": 5,
+    "UserName": "\u0646\u062C\u0648\u062F \u0627\u0644\u0631\u0634\u064A\u062F\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "5",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:53:46.2181315+03:00"
+  },
+  {
+    "Id": 79,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-08T15:53:52.5460348+03:00"
+  },
+  {
+    "Id": 80,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T10:58:55.7686307+03:00"
+  },
+  {
+    "Id": 81,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T11:30:27.9866034+03:00"
+  },
+  {
+    "Id": 82,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T11:31:15.1810257+03:00"
+  },
+  {
+    "Id": 83,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T11:37:08.0363437+03:00"
+  },
+  {
+    "Id": 84,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u062D\u062F\u064A\u062B \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "1",
+    "Details": "\u0648\u062D\u062F\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629",
+    "CreatedAt": "2026-03-09T11:38:04.5055899+03:00"
+  },
+  {
+    "Id": 85,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u062D\u062F\u064A\u062B \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "1",
+    "Details": "\u0648\u062D\u062F\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629",
+    "CreatedAt": "2026-03-09T11:38:14.2283748+03:00"
+  },
+  {
+    "Id": 86,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "4",
+    "Details": "\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:39:54.7166858+03:00"
+  },
+  {
+    "Id": 87,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "5",
+    "Details": "\u0628\u0644\u0627\u062A\u0646",
+    "CreatedAt": "2026-03-09T11:40:05.2791336+03:00"
+  },
+  {
+    "Id": 88,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "6",
+    "Details": "\u0646\u062A\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:40:13.2746888+03:00"
+  },
+  {
+    "Id": 89,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "7",
+    "Details": "\u0646\u062A\u0627\u0644\u0628\u064A",
+    "CreatedAt": "2026-03-09T11:40:25.4185037+03:00"
+  },
+  {
+    "Id": 90,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "8",
+    "Details": "\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:40:42.5348081+03:00"
+  },
+  {
+    "Id": 91,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "9",
+    "Details": "\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:40:58.3815409+03:00"
+  },
+  {
+    "Id": 92,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "9",
+    "Details": "\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:41:04.2673396+03:00"
+  },
+  {
+    "Id": 93,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "8",
+    "Details": "\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:41:07.4480338+03:00"
+  },
+  {
+    "Id": 94,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "7",
+    "Details": "\u0646\u062A\u0627\u0644\u0628\u064A",
+    "CreatedAt": "2026-03-09T11:41:10.0529102+03:00"
+  },
+  {
+    "Id": 95,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "6",
+    "Details": "\u0646\u062A\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:41:12.7694252+03:00"
+  },
+  {
+    "Id": 96,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "5",
+    "Details": "\u0628\u0644\u0627\u062A\u0646",
+    "CreatedAt": "2026-03-09T11:41:15.2924707+03:00"
+  },
+  {
+    "Id": 97,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "EntityType": "OrganizationalUnit",
+    "EntityId": "4",
+    "Details": "\u0627\u0644\u0628\u064A\u0633",
+    "CreatedAt": "2026-03-09T11:41:17.9887145+03:00"
+  },
+  {
+    "Id": 98,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T12:05:30.4429468+03:00"
+  },
+  {
+    "Id": 99,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T12:06:24.7893363+03:00"
+  },
+  {
+    "Id": 100,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T12:09:00.3129624+03:00"
+  },
+  {
+    "Id": 101,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T12:18:17.2094731+03:00"
+  },
+  {
+    "Id": 102,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T12:20:11.3521904+03:00"
+  },
+  {
+    "Id": 103,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062A\u0641\u064A\u062F",
+    "EntityType": "Beneficiary",
+    "EntityId": "1",
+    "Details": "hgf gg gg gg",
+    "CreatedAt": "2026-03-09T12:22:55.7150412+03:00"
+  },
+  {
+    "Id": 104,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062D\u0630\u0641 \u0645\u0633\u062A\u0641\u064A\u062F",
+    "EntityType": "Beneficiary",
+    "EntityId": "1",
+    "Details": "hgf gg gg gg",
+    "CreatedAt": "2026-03-09T12:23:17.2532327+03:00"
+  },
+  {
+    "Id": 105,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T13:02:25.7191593+03:00"
+  },
+  {
+    "Id": 106,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T13:06:12.9168247+03:00"
+  },
+  {
+    "Id": 107,
+    "UserId": 2,
+    "UserName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "2",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:12:03.8238461+03:00"
+  },
+  {
+    "Id": 108,
+    "UserId": 3,
+    "UserName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "3",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:12:29.9477799+03:00"
+  },
+  {
+    "Id": 109,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:13:57.1254035+03:00"
+  },
+  {
+    "Id": 110,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:22:27.2459512+03:00"
+  },
+  {
+    "Id": 111,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:32:04.3914566+03:00"
+  },
+  {
+    "Id": 112,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:34:06.2345256+03:00"
+  },
+  {
+    "Id": 113,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": "",
+    "CreatedAt": "2026-03-09T14:47:59.4714707+03:00"
+  }
+]

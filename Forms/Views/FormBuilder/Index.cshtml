@@ -1,0 +1,383 @@
+@{
+    ViewBag.Title = "إنشاء نموذج جديد";
+    ViewBag.PageName = "إنشاء نموذج جديد";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء نموذج جديد - نظام إدارة النماذج</title>
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/styles.css">
+    <style>
+body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
+
+.wizard-layout { display: flex; min-height: 100vh; }
+
+.wizard-stepper {
+    width: 280px; min-width: 280px;
+    background: #fff; border-left: 1px solid #e5e5e5;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 28px; padding-top: calc(20vh);
+}
+.stepper-steps { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.stepper-step { display: flex; flex-direction: row; align-items: center; gap: 16px; cursor: pointer; }
+.stepper-circle {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700;
+    border: 3px solid #d4d4d4; color: #a3a3a3; background: #fff;
+    transition: all .3s ease; flex-shrink: 0;
+}
+.stepper-step.active .stepper-circle { border-color: var(--sa-600); color: var(--sa-600); }
+.stepper-step.completed .stepper-circle { border-color: var(--sa-600); background: var(--sa-600); color: #fff; }
+.stepper-info { text-align: right; }
+.stepper-title { font-size: 14px; font-weight: 700; color: #a3a3a3; line-height: 1.3; }
+.stepper-step.active .stepper-title, .stepper-step.completed .stepper-title { color: #212529; }
+.stepper-desc { font-size: 12px; color: #a3a3a3; margin-top: 2px; }
+.stepper-step.active .stepper-desc { color: #6c757d; }
+.stepper-line { width: 3px; height: 48px; background: #e5e5e5; margin: 0; }
+.stepper-line.done { background: var(--sa-600); }
+
+.wizard-main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+.wizard-header {
+    background: #fff; border-bottom: 1px solid #e5e5e5;
+    padding: 16px 32px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 10;
+}
+.wizard-body { flex: 1; padding: 32px; max-width: 860px; width: 100%; margin: 0 auto; overflow: visible; }
+.wizard-footer {
+    background: #fff; border-top: 1px solid #e5e5e5;
+    padding: 16px 32px; display: flex; align-items: center;
+    justify-content: center; gap: 16px; position: sticky; bottom: 0; z-index: 10;
+}
+
+.btn-next {
+    background: var(--sa-600); color: #fff; border: none; border-radius: 10px;
+    padding: 14px 48px; font-size: 16px; font-weight: 700; cursor: pointer;
+    font-family: 'Cairo', sans-serif; transition: all .2s;
+}
+.btn-next:hover { background: var(--sa-800); transform: translateY(-1px); color: #fff; }
+.btn-back {
+    background: #fff; color: #404040; border: 2px solid #d4d4d4;
+    border-radius: 10px; padding: 14px 48px; font-size: 16px;
+    font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+.btn-back:hover { background: #f5f5f5; }
+
+.section-card {
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 16px;
+    border-right: 5px solid var(--sa-600); margin-bottom: 24px;
+}
+.section-header { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+.section-title-input {
+    font-size: 18px; font-weight: 700; border: none; outline: none;
+    background: transparent; color: #212529; font-family: 'Cairo', sans-serif; width: 100%;
+}
+.section-title-input:focus { border-bottom: 2px solid var(--sa-600); }
+.section-body { padding: 0 24px 24px; }
+
+.q-card {
+    background: #fafafa; border: 1px solid #e5e5e5; border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; transition: box-shadow .2s, border-color .2s;
+}
+.q-card:hover { border-color: #d4d4d4; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.q-card:focus-within { border-color: var(--sa-600); box-shadow: 0 0 0 2px rgba(31,107,79,.08); }
+.q-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.q-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--sa-600); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.q-text-input {
+    flex: 1; border: 1px solid #e5e5e5; border-radius: 8px;
+    padding: 10px 14px; font-size: 14px; font-weight: 600;
+    font-family: 'Cairo', sans-serif; color: #212529; background: #fff;
+}
+.q-text-input:focus { border-color: var(--sa-600); outline: none; box-shadow: 0 0 0 2px rgba(31,107,79,.08); }
+.q-type-select {
+    width: 180px; border: 1px solid #e5e5e5; border-radius: 8px;
+    padding: 10px 12px; font-size: 13px; font-weight: 600;
+    font-family: 'Cairo', sans-serif; color: #404040; background: #fff;
+}
+.q-options { padding-right: 44px; margin-top: 4px; }
+.q-option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.q-option-icon { color: #a3a3a3; font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+.q-option-input {
+    flex: 1; border: none; border-bottom: 1px solid #e5e5e5;
+    padding: 6px 4px; font-size: 14px; font-family: 'Cairo', sans-serif;
+    color: #212529; background: transparent;
+}
+.q-option-input:focus { border-color: var(--sa-600); outline: none; }
+.q-option-remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px; padding: 4px; opacity: .6; }
+.q-option-remove:hover { opacity: 1; }
+.q-add-option {
+    background: none; border: none; color: var(--sa-600); font-weight: 600;
+    font-size: 13px; cursor: pointer; padding: 4px 0;
+    font-family: 'Cairo', sans-serif; display: flex; align-items: center; gap: 6px;
+}
+.q-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px; padding-top: 12px; border-top: 1px solid #f0f0f0;
+}
+.q-delete-btn {
+    background: none; border: none; color: #dc3545; font-weight: 600;
+    font-size: 13px; cursor: pointer; display: flex; align-items: center;
+    gap: 4px; font-family: 'Cairo', sans-serif; opacity: .7;
+}
+.q-delete-btn:hover { opacity: 1; }
+.add-q-btn {
+    background: #fff; border: 2px dashed #d4d4d4; border-radius: 12px;
+    padding: 16px; text-align: center; cursor: pointer;
+    color: var(--sa-600); font-weight: 600; font-size: 14px;
+    font-family: 'Cairo', sans-serif; display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+}
+.add-q-btn:hover { border-color: var(--sa-600); background: rgba(31,107,79,.03); }
+.preview-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.preview-q-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--sa-600); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; margin-left: 10px;
+}
+
+.icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.icon-picker-item {
+    width: 56px; height: 56px; border: 2px solid #e5e5e5; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s; color: #6c757d;
+}
+.icon-picker-item:hover { border-color: var(--sa-400); background: var(--sa-50); }
+.icon-picker-item.selected { border-color: var(--sa-600); background: var(--sa-50); color: var(--sa-700); }
+.icon-picker-item svg { width: 20px; height: 20px; }
+
+.targets-section { margin-top: 20px; padding-bottom: 8px; }
+.targets-section label.section-label { font-weight: 700; font-size: 15px; margin-bottom: 10px; display: block; }
+.target-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+.target-item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; }
+.target-item label { font-size: 14px; cursor: pointer; }
+
+.grid-inputs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.grid-inputs-row input { flex: 1; }
+.grid-inputs-row .btn-sm { flex-shrink: 0; }
+
+.wizard-cancel-btn {
+    color: #525252; text-decoration: none; display: flex; align-items: center;
+    gap: 8px; font-weight: 700; font-size: 15px; padding: 8px 16px;
+    border-radius: 8px; transition: all .2s;
+}
+.wizard-cancel-btn:hover { background: #f5f5f5; color: #1a1a1a; }
+.wizard-cancel-btn i { font-size: 16px; }
+
+.cat-modal { border-radius: 20px; border: none; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+.cat-modal-header {
+    padding: 24px 28px 0; display: flex; align-items: center;
+    justify-content: space-between; border: none;
+}
+.cat-modal-title { font-weight: 800; font-size: 20px; color: #1a1a1a; margin: 0; }
+.cat-modal-close {
+    background: none; border: none; color: #737373; font-size: 20px;
+    cursor: pointer; padding: 4px; line-height: 1; transition: color .2s;
+}
+.cat-modal-close:hover { color: #1a1a1a; }
+.cat-modal-body { padding: 24px 28px; }
+.cat-modal-input {
+    border: 2px solid #e5e5e5; border-radius: 12px; padding: 14px 16px;
+    font-size: 15px; font-family: 'Cairo', sans-serif; color: #1a1a1a;
+    transition: border-color .2s;
+}
+.cat-modal-input:focus { border-color: var(--sa-600); outline: none; box-shadow: 0 0 0 3px rgba(31,107,79,.1); }
+.cat-modal-input::placeholder { color: #a3a3a3; }
+.cat-modal-footer {
+    padding: 0 28px 24px; display: flex; gap: 12px; border: none;
+    justify-content: flex-start;
+}
+.cat-modal-btn {
+    padding: 12px 32px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    font-family: 'Cairo', sans-serif; border: none; cursor: pointer; transition: all .2s;
+}
+.cat-btn-add { background: var(--sa-600); color: #fff; }
+.cat-btn-add:hover { background: var(--sa-800); transform: translateY(-1px); }
+.cat-btn-cancel { background: #6b7280; color: #fff; }
+.cat-btn-cancel:hover { background: #4b5563; }
+.cat-btn-delete { background: #dc3545; color: #fff; }
+.cat-btn-delete:hover { background: #b02a37; transform: translateY(-1px); }
+
+.cat-action-btn {
+    white-space: nowrap; border-radius: 8px; padding: 8px 14px;
+    font-weight: 600; font-size: 13px; font-family: 'Cairo', sans-serif;
+    display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+    border: 1px solid #e5e5e5; background: #fff; color: #404040; transition: all .15s;
+}
+.cat-action-btn:hover { background: #f5f5f5; border-color: #d4d4d4; }
+.cat-action-btn.add { border-color: var(--sa-600); color: var(--sa-600); }
+.cat-action-btn.add:hover { background: var(--sa-50); }
+.cat-action-btn.del { border-color: #dc3545; color: #dc3545; }
+.cat-action-btn.del:hover { background: #fff5f5; }
+
+.ms-dropdown { position: relative; margin-bottom: 12px; }
+.ms-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid #e5e5e5; border-radius: 10px; padding: 10px 14px;
+    background: #fff; cursor: pointer; font-size: 14px; color: #404040;
+    font-family: 'Cairo', sans-serif; transition: border-color .2s; min-height: 44px;
+}
+.ms-trigger:hover { border-color: #d4d4d4; }
+.ms-trigger.open { border-color: var(--sa-600); box-shadow: 0 0 0 2px rgba(31,107,79,.08); }
+.ms-trigger .ms-count {
+    background: var(--sa-600); color: #fff; border-radius: 6px;
+    padding: 1px 8px; font-size: 12px; font-weight: 700; margin-right: 8px;
+}
+.ms-panel {
+    position: absolute; top: 100%; right: 0; left: 0; z-index: 20;
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 10px;
+    margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.1);
+    max-height: 380px; display: flex; flex-direction: column; overflow: hidden;
+}
+.ms-search {
+    border: none; border-bottom: 1px solid #f0f0f0; padding: 10px 14px;
+    font-size: 14px; font-family: 'Cairo', sans-serif; outline: none; color: #212529;
+}
+.ms-search::placeholder { color: #a3a3a3; }
+.ms-all {
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    border-bottom: 1px solid #f0f0f0; cursor: pointer; font-weight: 700;
+    font-size: 13px; color: var(--sa-600);
+}
+.ms-all:hover { background: var(--sa-50); }
+.ms-list { overflow-y: auto; flex: 1; padding: 4px 0; max-height: 300px; }
+.ms-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+    cursor: pointer; font-size: 14px; transition: background .1s;
+}
+.ms-item:hover { background: #f8f8f8; }
+.ms-item.checked { background: var(--sa-50); }
+.ms-item small { color: #a3a3a3; font-size: 12px; }
+.ms-empty { padding: 16px; text-align: center; color: #a3a3a3; font-size: 13px; }
+
+    </style>
+</head>
+<body>
+<div class="wizard-layout">
+    <!-- STEPPER -->
+    <div class="wizard-stepper">
+        <div class="stepper-steps" id="stepperSteps">
+            <div class="stepper-step active" data-step="1" onclick="goStep(1)">
+                <div class="stepper-circle">1</div>
+                <div class="stepper-info">
+                    <div class="stepper-title">إعدادات النموذج</div>
+                    <div class="stepper-desc">العنوان والتصنيف والمستهدفين</div>
+                </div>
+            </div>
+            <div class="stepper-line" id="line1"></div>
+            <div class="stepper-step" data-step="2" onclick="goStep(2)">
+                <div class="stepper-circle">2</div>
+                <div class="stepper-info">
+                    <div class="stepper-title">تصميم الأسئلة</div>
+                    <div class="stepper-desc">إضافة الأقسام والأسئلة</div>
+                </div>
+            </div>
+            <div class="stepper-line" id="line2"></div>
+            <div class="stepper-step" data-step="3" onclick="goStep(3)">
+                <div class="stepper-circle">3</div>
+                <div class="stepper-info">
+                    <div class="stepper-title">المعاينة والنشر</div>
+                    <div class="stepper-desc">مراجعة النموذج ونشره</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="wizard-main">
+        <!-- HEADER -->
+        <div class="wizard-header">
+            <div style="text-align:right;">
+                <div style="font-weight:800;font-size:20px;color:#1a1a1a;">نموذج جديد</div>
+                <div style="font-size:13px;color:#737373;">إنشاء نموذج جديد</div>
+            </div>
+            <a href="/Outbox/Index" class="wizard-cancel-btn">
+                إلغاء <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+
+        <!-- BODY -->
+        <div class="wizard-body" id="wizardBody">
+            <!-- Steps rendered by JS -->
+        </div>
+
+        <!-- FOOTER -->
+        <div class="wizard-footer" id="wizardFooter">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCatModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cat-modal">
+            <div class="cat-modal-header">
+                <h5 class="cat-modal-title">تصنيف جديد</h5>
+                <button type="button" class="cat-modal-close" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="cat-modal-body">
+                <input type="text" class="form-control cat-modal-input" id="newCatName" placeholder="اسم التصنيف">
+            </div>
+            <div class="cat-modal-footer">
+                <button class="cat-modal-btn cat-btn-cancel" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cat-modal-btn cat-btn-add" onclick="addCategory()">إضافة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Category Confirm Modal -->
+<div class="modal fade" id="deleteCatModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cat-modal">
+            <div class="cat-modal-header">
+                <h5 class="cat-modal-title">حذف تصنيف</h5>
+                <button type="button" class="cat-modal-close" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="cat-modal-body">
+                <p style="font-size:15px;font-weight:600;color:#1a1a1a;margin:0 0 8px;">هل أنت متأكد من حذف هذا التصنيف؟</p>
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size:20px;color:#dc3545;flex-shrink:0;"></i>
+                    <div>
+                        <div id="deleteCatName" style="font-size:15px;font-weight:700;color:#1a1a1a;"></div>
+                        <div style="font-size:12px;color:#737373;margin-top:2px;">سيتم حذف التصنيف نهائياً</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cat-modal-footer">
+                <button class="cat-modal-btn cat-btn-cancel" data-bs-dismiss="modal">إلغاء</button>
+                <button class="cat-modal-btn cat-btn-delete" onclick="confirmDeleteCategory()">حذف</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" style="position:fixed;bottom:24px;left:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js"></script>
+<script>
+    window.EDIT_FORM_ID = @(ViewBag.EditFormId ?? 0);
+    window.USER_ROLE = '@(ViewBag.UserRole)';
+    window.CURRENT_USER_ID = @(ViewBag.UserId);
+    window.INIT_CATEGORIES = @Html.Raw(ViewBag.CategoriesJson ?? "[]");
+    window.INIT_DEPARTMENTS = @Html.Raw(ViewBag.DepartmentsJson ?? "[]");
+    window.INIT_USERS = @Html.Raw(ViewBag.UsersJson ?? "[]");
+</script>
+<script src="~/js/form-builder.js?v=@DateTime.Now.Ticks"></script>
+</body>
+</html>

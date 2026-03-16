@@ -1,0 +1,529 @@
+@{
+    ViewBag.Title = "الجداول الجاهزة";
+    ViewBag.PageName = "الجداول الجاهزة";
+}
+
+<style>
+.rt-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.rt-modal-header { padding:24px 28px; position:relative; }
+.rt-modal-header.create { background:var(--sa-800); }
+.rt-modal-header.details { background:var(--info-700); }
+.rt-modal-header.edit { background:var(--sa-800); }
+.rt-modal-header.delete { background:var(--error-600); }
+.rt-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.rt-modal-header .btn-close-x:hover { color:#fff; }
+.rt-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.rt-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.rt-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.rt-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.rt-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; }
+.rt-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.rt-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.rt-cancel-btn:hover { background:#4b5563; }
+.rt-preview-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:2px solid var(--info-500); cursor:pointer; background:#fff; color:var(--info-600); display:inline-flex; align-items:center; gap:8px; }
+.rt-preview-btn:hover { background:var(--info-50); color:var(--info-700); }
+.rt-preview-inline { margin-top:12px; }
+.rt-preview-wrap { overflow-x:auto; overflow-y:visible; margin-bottom:16px; border:1px solid #e5e7eb; border-radius:12px; -webkit-overflow-scrolling:touch; }
+.rt-preview-form-table { table-layout:auto; width:max-content; min-width:100%; border-collapse:collapse; font-size:14px; }
+.rt-preview-form-table th { font-weight:700; padding:12px 16px; text-align:center; border:1px solid #e5e7eb; min-width:160px !important; white-space:nowrap; position:sticky; top:0; z-index:2; box-shadow:0 1px 0 #e5e7eb; }
+.rt-preview-form-table td { padding:10px 14px; border:1px solid #e5e7eb; vertical-align:middle; min-width:160px !important; }
+.rt-preview-form-table .form-control, .rt-preview-form-table .form-select { font-size:13px; width:100%; min-width:130px; }
+.rt-preview-form-table .required-star { color:#dc2626; font-weight:800; font-size:1.1em; margin-right:2px; }
+#rtPreviewModal .rt-modal-body { max-height:80vh; overflow-y:auto; padding:24px 28px; }
+#rtPreviewModal .modal-dialog { max-width:95vw; }
+#rtPreviewModal .rt-preview-wrap { max-width:100%; }
+.required-star { color:#ef4444; margin-right:4px; }
+.rt-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
+.rt-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.rt-action-btn-detail:hover { background:var(--info-50); }
+.rt-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.rt-action-btn-edit:hover { background:var(--sa-50); }
+.rt-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.rt-action-btn-delete:hover { background:var(--error-50); }
+.rt-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.rt-create-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:var(--sa-50); color:var(--sa-700); border:2px solid var(--sa-200); white-space:nowrap; cursor:pointer; }
+.rt-create-btn:hover { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-300); }
+.rt-search-box { position:relative; min-width:180px; max-width:280px; }
+.rt-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; height:40px; width:100%; }
+.rt-search-box input:focus { border-color:var(--sa-400); }
+.rt-search-box .rt-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; }
+.rt-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.rt-filter-select { min-width:140px; width:auto; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-size:13px; font-family:'Cairo',sans-serif; }
+.rt-clear-btn { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--gray-100); color:var(--gray-700); border:2px solid var(--gray-200); cursor:pointer; white-space:nowrap; font-family:'Cairo',sans-serif; }
+.rt-clear-btn:hover { background:var(--gray-200); }
+.rt-badge-active { background:#dcf5e8; color:#0f9f5c; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
+.rt-badge-inactive { background:#fde8e8; color:#ef4444; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
+.rt-badge-public { color:var(--info-600); font-weight:700; }
+.rt-badge-private { color:var(--warning-600); font-weight:700; }
+.rt-row-open { color:#0f9f5c; font-weight:700; }
+.rt-row-restricted { color:#ef4444; font-weight:700; }
+#rtTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+#rtTable tbody td { vertical-align:middle; font-size:13px; }
+#rtTable tbody tr:hover { background:var(--sa-25); }
+.rt-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:16px; }
+.rt-form-row-1 { grid-template-columns:1fr; }
+.rt-form-row-3 { grid-template-columns:repeat(3,1fr); }
+.rt-section { background:#fff; border-radius:14px; padding:20px 24px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.rt-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.rt-section-title i { font-size:18px; color:var(--sa-600); }
+.rt-add-fields-btn { background:var(--sa-50); color:var(--sa-700); border:2px solid var(--sa-200); border-radius:12px; padding:10px 24px; font-weight:700; font-size:14px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+.rt-add-fields-btn:hover { background:var(--sa-100); border-color:var(--sa-300); }
+.rt-inline-table { width:100%; border-collapse:collapse; font-size:13px; }
+.rt-inline-table thead th { background:var(--gray-50); font-weight:700; padding:10px 12px; text-align:center; border-bottom:2px solid var(--gray-200); white-space:nowrap; font-size:12px; }
+.rt-inline-table tbody td { padding:8px 10px; text-align:center; vertical-align:middle; border-bottom:1px solid var(--gray-100); }
+.rt-inline-table tbody tr:hover { background:var(--sa-25); }
+.rt-add-field-btn { background:var(--sa-600); color:#fff; border:none; border-radius:10px; padding:8px 24px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; }
+.rt-add-field-btn:hover { background:var(--sa-700); }
+.rt-props-area { background:var(--gray-50); border-radius:10px; padding:14px 16px; margin-top:10px; }
+.rt-color-option { display:inline-block; width:32px; height:32px; border-radius:8px; cursor:pointer; border:3px solid transparent; margin:0 4px; transition:all .2s; }
+.rt-color-option:hover { transform:scale(1.15); }
+.rt-color-option.selected { border-color:var(--sa-600); box-shadow:0 0 0 2px var(--sa-300); }
+.rt-field-badge-req { background:#dcf5e8; color:#0f9f5c; padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
+.rt-field-badge-opt { background:var(--gray-100); color:var(--gray-500); padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
+.rt-page-wrap { width:100%; max-width:100%; }
+@@media (max-width:768px) { .rt-form-row { grid-template-columns:1fr; } }
+</style>
+
+<div class="rt-page-wrap">
+<div class="rt-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">الجداول الجاهزة <span id="rtCountBadge" class="text-muted" style="font-size:14px;"></span></h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة الجداول الجاهزة في النظام</p>
+    </div>
+    <button class="rt-create-btn" id="rtCreateBtn" onclick="rtShowCreateModal()">+ إنشاء جدول</button>
+</div>
+
+<!-- Filters & Table -->
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="rt-search-box">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="rtSearchInput" placeholder="بحث بالاسم..." oninput="rtApplyFilters()">
+    </div>
+    <select class="rt-filter-select form-select" id="rtFilterRowCount" onchange="rtApplyFilters()">
+        <option value="">عدد الصفوف</option>
+        <option value="مفتوح">مفتوح</option>
+        <option value="مقيد">مقيد</option>
+    </select>
+    <select class="rt-filter-select form-select" id="rtFilterOwnership" onchange="rtApplyFilters()">
+        <option value="">الملكية</option>
+        <option value="عام">عام</option>
+        <option value="خاص">خاص</option>
+    </select>
+    <select class="rt-filter-select form-select" id="rtFilterOrgUnit" onchange="rtApplyFilters()">
+        <option value="">قائمة بالوحدات التنظيمية</option>
+    </select>
+    <button class="rt-clear-btn" onclick="rtClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table mb-0" id="rtTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;text-align:center;">الترتيب</th>
+                        <th style="text-align:right;">اسم الجدول</th>
+                        <th style="text-align:center;">عدد الحقول</th>
+                        <th style="text-align:center;">عدد الصفوف</th>
+                        <th style="text-align:right;">الوحدة التنظيمية المالكة</th>
+                        <th style="text-align:center;">الملكية</th>
+                        <th style="text-align:center;">التفعيل</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="rtBody">
+                    <tr><td colspan="8" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="rtCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rt-modal">
+            <div class="rt-modal-header create">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="rt-modal-title">إنشاء جدول</h5>
+                <div class="rt-modal-subtitle">أدخل بيانات الجدول الجديد</div>
+            </div>
+            <div class="rt-modal-body">
+                <div class="rt-section">
+                    <div class="rt-section-title"><i class="bi bi-table"></i> معلومات الجدول</div>
+                    <div class="rt-form-row">
+                        <div>
+                            <label class="form-label">اسم الجدول<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="rtcName" placeholder="مثال: جدول ضباط الاتصال">
+                        </div>
+                        <div>
+                            <label class="form-label">الوصف</label>
+                            <textarea class="form-control" id="rtcDesc" rows="2" placeholder="وصف مختصر"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">الملكية</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcOwnership" id="rtcOwPublic" value="عام" checked>
+                            <label class="form-check-label" for="rtcOwPublic">عام</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcOwnership" id="rtcOwPrivate" value="خاص">
+                            <label class="form-check-label" for="rtcOwPrivate">خاص</label>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">الوحدة التنظيمية المالكة: تُحدد تلقائياً حسب منشئ الجدول</small>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">عدد الصفوف</div>
+                    <div class="d-flex gap-3 align-items-center flex-wrap mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcRowMode" id="rtcRowOpen" value="مفتوح" checked onchange="rtcToggleMaxRows()">
+                            <label class="form-check-label" for="rtcRowOpen">مفتوح</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcRowMode" id="rtcRowRestricted" value="مقيد" onchange="rtcToggleMaxRows()">
+                            <label class="form-check-label" for="rtcRowRestricted">مقيد</label>
+                        </div>
+                        <input type="number" class="form-control form-control-sm" id="rtcMaxRows" placeholder="العدد" style="display:none;width:100px;" min="1">
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">خلفية حقول الأعمدة</div>
+                    <div id="rtcColorPicker" class="d-flex flex-wrap gap-1">
+                        <span class="rt-color-option selected" data-color="" style="background:#fff;border:2px solid #ccc;" title="بدون لون" onclick="rtcSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#d1d5db" style="background:#d1d5db;" title="رمادي" onclick="rtcSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#67e8f9" style="background:#67e8f9;" title="سماوي" onclick="rtcSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#fde047" style="background:#fde047;" title="أصفر" onclick="rtcSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#86efac" style="background:#86efac;" title="أخضر" onclick="rtcSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#fca5a5" style="background:#fca5a5;" title="أحمر" onclick="rtcSelectColor(this)"></span>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">التفعيل</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcActive" id="rtcActiveOn" value="1" checked>
+                            <label class="form-check-label" for="rtcActiveOn">مفعل</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="rtcActive" id="rtcActiveOff" value="0">
+                            <label class="form-check-label" for="rtcActiveOff">معطل</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title"><i class="bi bi-columns-gap"></i> إضافة حقول (أعمدة) الجدول</div>
+                    <button class="rt-add-fields-btn mb-3" onclick="rtcShowFieldsSection()"><i class="bi bi-plus-circle"></i> إضافة حقول (أعمدة) الجدول</button>
+                    <div id="rtcFieldsSection" style="display:none;">
+                        <div class="table-responsive mb-3">
+                            <table class="rt-inline-table">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الحقل</th>
+                                        <th>نوع الحقل<span class="required-star">*</span></th>
+                                        <th>اسم الحقل<span class="required-star">*</span></th>
+                                        <th>الحقل إلزامي</th>
+                                        <th>نص التلميح</th>
+                                        <th>الخصائص الإضافية</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span id="rtcFieldNum" class="fw-bold text-muted">1</span></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="rtcFieldType" onchange="rtcOnFieldTypeChange()" style="min-width:130px;">
+                                                <option value="">اختر نوع الحقل</option>
+                                                <option value="الاسم الكامل">الاسم الكامل</option>
+                                                <option value="البريد الإلكتروني">البريد الإلكتروني</option>
+                                                <option value="رقم الهاتف">رقم الهاتف</option>
+                                                <option value="نص قصير">نص قصير</option>
+                                                <option value="نص طويل">نص طويل</option>
+                                                <option value="فقرة">فقرة</option>
+                                                <option value="رقم">رقم</option>
+                                                <option value="قائمة منسدلة">قائمة منسدلة</option>
+                                                <option value="قائمة اختيار الواحد">قائمة اختيار الواحد</option>
+                                                <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
+                                                <option value="تاريخ">تاريخ</option>
+                                                <option value="وقت">وقت</option>
+                                                <option value="رفع ملف">رفع ملف</option>
+                                                <option value="دوار رقمي">دوار رقمي</option>
+                                                <option value="التقييم بالنجوم">التقييم بالنجوم</option>
+                                                <option value="التقييم بالأرقام">التقييم بالأرقام</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtcFieldName" placeholder="اسم الحقل" style="min-width:120px;"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="rtcFieldRequired" style="width:75px;">
+                                                <option value="1">نعم</option>
+                                                <option value="0">لا</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtcFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
+                                        <td id="rtcPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
+                                        <td><button class="rt-add-field-btn" onclick="rtcAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="rtcPropsArea" class="rt-props-area" style="display:none;">
+                            <div class="mb-2 fw-bold" style="font-size:12px;color:var(--sa-700);">الخصائص الإضافية حسب نوع الحقل</div>
+                            <div id="rtcPropsFields"></div>
+                        </div>
+                        <div class="rt-section-title mt-3">الحقول المضافة (<span id="rtcFieldsCount">0</span>)</div>
+                        <div class="table-responsive">
+                            <table class="rt-inline-table" id="rtcFieldsTable">
+                                <thead>
+                                    <tr>
+                                        <th>رقم</th>
+                                        <th>نوع الحقل</th>
+                                        <th>اسم الحقل</th>
+                                        <th>إلزامي</th>
+                                        <th>الخصائص</th>
+                                        <th>التلميح</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rtcFieldsBody">
+                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="rtcCreateError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+                <div id="rtcPreviewInline" class="rt-preview-inline d-none">
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0" style="font-size:14px;">
+                        <i class="bi bi-info-circle fs-5"></i>
+                        <span>يرجى إضافة حقول أولاً لكي تتم المعاينة</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rt-modal-footer">
+                <button class="rt-save-btn" onclick="rtcSubmitTable()">إنشاء</button>
+                <button class="rt-preview-btn" onclick="rtcShowPreview()"><i class="bi bi-eye"></i> معاينة</button>
+                <button class="rt-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="rtPreviewModal" tabindex="-1" data-bs-backdrop="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content rt-modal">
+            <div class="rt-modal-header create">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="rt-modal-title">معاينة الجدول</h5>
+                <div class="rt-modal-subtitle">عرض شكل الجدول قبل الإنشاء</div>
+            </div>
+            <div class="rt-modal-body" id="rtPreviewBody">
+                <p class="text-muted text-center py-4">أضف حقولاً أولاً ثم انقر معاينة</p>
+            </div>
+            <div class="rt-modal-footer" style="justify-content:flex-end;">
+                <button class="rt-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="rtDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rt-modal">
+            <div class="rt-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="rt-modal-title">تفاصيل الجدول</h5>
+                <div class="rt-modal-subtitle">عرض جميع البيانات</div>
+            </div>
+            <div class="rt-modal-body" id="rtDetailsBody"></div>
+            <div class="rt-modal-footer" style="justify-content:flex-end;">
+                <button class="rt-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Modal -->
+<div class="modal fade" id="rtEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rt-modal">
+            <div class="rt-modal-header edit">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="rt-modal-title">تحديث الجدول</h5>
+                <div class="rt-modal-subtitle">تعديل بيانات الجدول</div>
+            </div>
+            <div class="rt-modal-body">
+                <input type="hidden" id="rtEditId">
+                <div class="rt-section">
+                    <div class="rt-section-title"><i class="bi bi-table"></i> معلومات الجدول</div>
+                    <div class="rt-form-row">
+                        <div><label class="form-label">اسم الجدول<span class="required-star">*</span></label><input type="text" class="form-control" id="rtEditName" placeholder="مثال: جدول ضباط الاتصال"></div>
+                        <div><label class="form-label">الترتيب</label><input type="number" class="form-control" id="rtEditSortOrder" min="1"></div>
+                    </div>
+                    <div class="rt-form-row rt-form-row-1">
+                        <div><label class="form-label">الوصف</label><textarea class="form-control" id="rtEditDescription" rows="2" placeholder="وصف مختصر"></textarea></div>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">الملكية</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditOwnership" id="rtEditOwnershipPublic" value="عام"><label class="form-check-label" for="rtEditOwnershipPublic">عام</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditOwnership" id="rtEditOwnershipPrivate" value="خاص"><label class="form-check-label" for="rtEditOwnershipPrivate">خاص</label></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">الوحدة التنظيمية المالكة: تُحدد تلقائياً حسب منشئ الجدول</small>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">عدد الصفوف</div>
+                    <div class="d-flex gap-3 align-items-center flex-wrap mb-2">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditRowMode" id="rtEditRowOpen" value="مفتوح" onchange="rtToggleRowMode('edit')"><label class="form-check-label" for="rtEditRowOpen">مفتوح</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditRowMode" id="rtEditRowRestricted" value="مقيد" onchange="rtToggleRowMode('edit')"><label class="form-check-label" for="rtEditRowRestricted">مقيد</label></div>
+                        <div id="rtEditMaxRowsWrap" style="display:none;">
+                            <input type="number" class="form-control form-control-sm" id="rtEditMaxRows" placeholder="العدد" style="width:100px;" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">خلفية حقول الأعمدة</div>
+                    <div id="rtEditColorPicker" class="d-flex flex-wrap gap-1">
+                        <span class="rt-color-option selected" data-color="" style="background:#fff;border:2px solid #ccc;" title="بدون لون" onclick="rtEditSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#d1d5db" style="background:#d1d5db;" title="رمادي" onclick="rtEditSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#67e8f9" style="background:#67e8f9;" title="سماوي" onclick="rtEditSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#fde047" style="background:#fde047;" title="أصفر" onclick="rtEditSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#86efac" style="background:#86efac;" title="أخضر" onclick="rtEditSelectColor(this)"></span>
+                        <span class="rt-color-option" data-color="#fca5a5" style="background:#fca5a5;" title="أحمر" onclick="rtEditSelectColor(this)"></span>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title">التفعيل</div>
+                    <div class="d-flex gap-3">
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditIsActive" id="rtEditIsActiveOn" value="1"><label class="form-check-label" for="rtEditIsActiveOn">مفعل</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="rtEditIsActive" id="rtEditIsActiveOff" value="0"><label class="form-check-label" for="rtEditIsActiveOff">معطل</label></div>
+                    </div>
+                </div>
+                <div class="rt-section">
+                    <div class="rt-section-title"><i class="bi bi-columns-gap"></i> إضافة حقول (أعمدة) الجدول</div>
+                    <button class="rt-add-fields-btn mb-3" onclick="rtEditShowFieldsSection()"><i class="bi bi-plus-circle"></i> إضافة حقول (أعمدة) الجدول</button>
+                    <div id="rtEditFieldsSection" style="display:none;">
+                        <div class="table-responsive mb-3">
+                            <table class="rt-inline-table">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الحقل</th>
+                                        <th>نوع الحقل<span class="required-star">*</span></th>
+                                        <th>اسم الحقل<span class="required-star">*</span></th>
+                                        <th>الحقل إلزامي</th>
+                                        <th>نص التلميح</th>
+                                        <th>الخصائص الإضافية</th>
+                                        <th>الإجراء</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span id="rtEditFieldNum" class="fw-bold text-muted">1</span></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="rtEditFieldType" onchange="rtEditOnFieldTypeChange()" style="min-width:130px;">
+                                                <option value="">اختر نوع الحقل</option>
+                                                <option value="الاسم الكامل">الاسم الكامل</option>
+                                                <option value="البريد الإلكتروني">البريد الإلكتروني</option>
+                                                <option value="رقم الهاتف">رقم الهاتف</option>
+                                                <option value="نص قصير">نص قصير</option>
+                                                <option value="نص طويل">نص طويل</option>
+                                                <option value="فقرة">فقرة</option>
+                                                <option value="رقم">رقم</option>
+                                                <option value="قائمة منسدلة">قائمة منسدلة</option>
+                                                <option value="قائمة اختيار الواحد">قائمة اختيار الواحد</option>
+                                                <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
+                                                <option value="تاريخ">تاريخ</option>
+                                                <option value="وقت">وقت</option>
+                                                <option value="رفع ملف">رفع ملف</option>
+                                                <option value="دوار رقمي">دوار رقمي</option>
+                                                <option value="التقييم بالنجوم">التقييم بالنجوم</option>
+                                                <option value="التقييم بالأرقام">التقييم بالأرقام</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtEditFieldName" placeholder="اسم الحقل" style="min-width:120px;"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" id="rtEditFieldRequired" style="width:75px;">
+                                                <option value="1">نعم</option>
+                                                <option value="0">لا</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtEditFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
+                                        <td id="rtEditPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
+                                        <td><button class="rt-add-field-btn" onclick="rtEditAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="rtEditPropsArea" class="rt-props-area" style="display:none;">
+                            <div class="mb-2 fw-bold" style="font-size:12px;color:var(--sa-700);">الخصائص الإضافية حسب نوع الحقل</div>
+                            <div id="rtEditPropsFields"></div>
+                        </div>
+                        <div class="rt-section-title mt-3">الحقول المضافة (<span id="rtEditFieldsCount">0</span>)</div>
+                        <div class="table-responsive">
+                            <table class="rt-inline-table" id="rtEditFieldsTable">
+                                <thead>
+                                    <tr>
+                                        <th>رقم</th>
+                                        <th>نوع الحقل</th>
+                                        <th>اسم الحقل</th>
+                                        <th>إلزامي</th>
+                                        <th>الخصائص</th>
+                                        <th>التلميح</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rtEditFieldsBody">
+                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="rtEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+                <div id="rtEditPreviewInline" class="rt-preview-inline d-none">
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0" style="font-size:14px;">
+                        <i class="bi bi-info-circle fs-5"></i>
+                        <span>يرجى إضافة حقول أولاً لكي تتم المعاينة</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rt-modal-footer">
+                <button class="rt-save-btn" onclick="rtSubmitEdit()">حفظ التعديلات</button>
+                <button class="rt-preview-btn" onclick="rtEditShowPreview()"><i class="bi bi-eye"></i> معاينة</button>
+                <button class="rt-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="rtDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rt-modal">
+            <div class="rt-modal-header delete">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="rt-modal-title">حذف الجدول</h5>
+            </div>
+            <div class="rt-modal-body text-center">
+                <input type="hidden" id="rtDeleteId">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا الجدول؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="rtDeleteNameLabel"></p>
+                <div id="rtDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            </div>
+            <div class="rt-modal-footer" style="justify-content:center;">
+                <button class="rt-save-btn" style="background:var(--error-600);" onclick="rtSubmitDelete()">نعم، حذف</button>
+                <button class="rt-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/ready-tables.js?v=@DateTime.Now.Ticks"></script>
+}
