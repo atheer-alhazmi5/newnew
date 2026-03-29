@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 //JSON file-based data store (no EF Core / NuGet required)
-//builder.Services.AddSingleton<AppDbContext>();
+builder.Services.AddSingleton<AppDbContext>();
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
