@@ -1,0 +1,260 @@
+@{
+    ViewBag.Title = "حالات النماذج";
+    ViewBag.PageName = "حالات النماذج";
+}
+
+<style>
+.fst-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.fst-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
+.fst-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+.fst-modal-header .btn-close-x:hover { color:#fff; }
+.fst-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.fst-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
+.fst-modal-body { padding:28px; }
+.fst-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; justify-content:flex-start; flex-wrap:wrap; }
+.fst-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+.fst-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.fst-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
+.fst-cancel-btn:hover { background:#4b5563; }
+.fst-section-title { font-weight:700; font-size:15px; color:var(--sa-800); margin-bottom:20px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:2px solid var(--sa-100); }
+.fst-section-title i { font-size:18px; }
+.required-star { color:#ef4444; margin-right:4px; font-weight:700; }
+.fst-cat-open { color:#15803d !important; font-weight:800; }
+.fst-cat-closed { color:#b91c1c !important; font-weight:800; }
+.fst-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+.fst-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
+.fst-status-pill.inactive { background:#fde8e8; color:#ef4444; }
+.fst-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
+.fst-status-pill.active .fst-status-dot { background:#0f9f5c; }
+.fst-status-pill.inactive .fst-status-dot { background:#ef4444; }
+.fst-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
+.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+.table tbody tr { transition:background .15s; }
+.table tbody tr:hover { background:var(--sa-25); }
+.table tbody td { border-bottom:1px solid var(--gray-100); }
+.fst-color-picker-wrap { position:relative; display:inline-block; }
+.fst-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.fst-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
+.fst-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
+.fst-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
+.fst-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
+.fst-search-box { position:relative; max-width:320px; }
+.fst-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
+.fst-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
+.fst-search-box .fst-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; pointer-events:none; }
+.fst-modal-body .form-control,
+.fst-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; transition:border-color .2s, box-shadow .2s; }
+.fst-modal-body .form-control:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
+.fst-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
+.fst-modal-body .form-check-input:checked { background-color:var(--sa-600); border-color:var(--sa-600); }
+.fst-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.fst-page-header .fst-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.fst-btn-table-update { padding:8px 16px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; background:#198754; color:#fff; font-family:'Cairo',sans-serif; }
+.fst-btn-table-update:hover { background:#157347; }
+.fst-btn-table-delete { padding:8px 16px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; background:#dc3545; color:#fff; font-family:'Cairo',sans-serif; }
+.fst-btn-table-delete:hover { background:#bb2d3b; }
+</style>
+
+<div class="fst-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">حالات النماذج</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إضافة وحالات النماذج</p>
+    </div>
+    <button class="btn btn-primary fst-add-btn" onclick="fstShowAddModal()">
+        <i class="bi bi-plus-lg"></i>إضافة حالة
+    </button>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+    <div class="fst-search-box flex-grow-1" style="max-width:400px;">
+        <i class="bi bi-search fst-search-icon"></i>
+        <input type="text" class="form-control" id="fstSearchInput" placeholder="البحث عن حالة بالاسم..." oninput="fstFilter()">
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:70px;">الترتيب</th>
+                        <th style="width:120px;">تصنيف الحالة</th>
+                        <th>الحالة</th>
+                        <th style="width:130px;">اللون</th>
+                        <th>الوصف</th>
+                        <th style="width:110px;">التفعيل</th>
+                        <th style="width:200px;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="fstBody">
+                    <tr><td colspan="7" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="fstPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="fstAddModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fst-modal">
+            <div class="fst-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fst-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة حالة جديدة</h5>
+                <div class="fst-modal-subtitle">أدخل بيانات الحالة</div>
+            </div>
+            <div class="fst-modal-body">
+                <div class="fst-section-title"><i class="bi bi-sliders"></i>بيانات الحالة</div>
+
+                <div class="mb-3">
+                    <label class="form-label">تصنيف الحالة<span class="required-star">*</span></label>
+                    <div class="d-flex gap-4 flex-wrap align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fstAddCategory" id="fstAddCatOpen" value="مفتوح" checked>
+                            <label class="form-check-label fst-cat-open" for="fstAddCatOpen">مفتوح</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fstAddCategory" id="fstAddCatClosed" value="مغلق">
+                            <label class="form-check-label fst-cat-closed" for="fstAddCatClosed">مغلق</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">اسم الحالة<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="fstAddName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الوصف</label>
+                    <textarea class="form-control" id="fstAddDescription" rows="3" placeholder="وصف اختياري للحالة"></textarea>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">اللون</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="fst-color-picker-wrap">
+                                <input type="color" id="fstAddColor" value="#25935F" oninput="document.getElementById('fstAddColorHex').textContent=this.value">
+                            </div>
+                            <div class="fst-color-hex" id="fstAddColorHex" style="margin-top:0;">#25935F</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">التفعيل</label>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="fstAddIsActive" checked style="width:48px;height:24px;">
+                            </div>
+                            <label class="form-check-label" for="fstAddIsActive" id="fstAddIsActiveLabel" style="font-weight:600;">مفعل</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fstAddError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="fst-modal-footer">
+                <button type="button" class="btn btn-primary" style="padding:12px 32px;border-radius:12px;font-weight:700;font-size:15px;font-family:'Cairo',sans-serif;" onclick="fstSubmitAdd()">إضافة الحالة</button>
+                <button type="button" class="fst-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="fstEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fst-modal">
+            <div class="fst-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fst-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i>تحديث الحالة</h5>
+                <div class="fst-modal-subtitle">تعديل بيانات الحالة</div>
+            </div>
+            <div class="fst-modal-body">
+                <input type="hidden" id="fstEditId">
+                <div class="fst-section-title"><i class="bi bi-sliders"></i>بيانات الحالة</div>
+
+                <div class="mb-3">
+                    <label class="form-label">تصنيف الحالة<span class="required-star">*</span></label>
+                    <div class="d-flex gap-4 flex-wrap align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fstEditCategory" id="fstEditCatOpen" value="مفتوح" checked>
+                            <label class="form-check-label fst-cat-open" for="fstEditCatOpen">مفتوح</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="fstEditCategory" id="fstEditCatClosed" value="مغلق">
+                            <label class="form-check-label fst-cat-closed" for="fstEditCatClosed">مغلق</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">اسم الحالة<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="fstEditName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الوصف</label>
+                    <textarea class="form-control" id="fstEditDescription" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الترتيب</label>
+                    <input type="number" class="form-control" id="fstEditSortOrder" min="1">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">اللون</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="fst-color-picker-wrap">
+                                <input type="color" id="fstEditColor" value="#25935F" oninput="document.getElementById('fstEditColorHex').textContent=this.value">
+                            </div>
+                            <div class="fst-color-hex" id="fstEditColorHex" style="margin-top:0;">#25935F</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">التفعيل</label>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="fstEditIsActive" style="width:48px;height:24px;">
+                            </div>
+                            <label class="form-check-label" for="fstEditIsActive" id="fstEditIsActiveLabel" style="font-weight:600;">مفعل</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fstEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="fst-modal-footer">
+                <button type="button" class="fst-save-btn" onclick="fstSubmitEdit()"><i class="bi bi-check-lg"></i>حفظ التعديلات</button>
+                <button type="button" class="fst-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="fstDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content fst-modal">
+            <div class="fst-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fst-modal-title"><i class="bi bi-trash3" style="margin-left:8px;"></i>حذف الحالة</h5>
+            </div>
+            <div class="fst-modal-body text-center">
+                <input type="hidden" id="fstDeleteId">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذه الحالة؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="fstDeleteNameLabel"></p>
+                <div id="fstDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            </div>
+            <div class="fst-modal-footer" style="justify-content:center;">
+                <button type="button" class="fst-btn-table-delete" style="padding:12px 28px;" onclick="fstSubmitDelete()">نعم، حذف</button>
+                <button type="button" class="fst-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/form-statuses.js?v=@DateTime.Now.Ticks"></script>
+}

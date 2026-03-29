@@ -5,10 +5,6 @@ using FormsSystem.Models.Enums;
 
 namespace FormsSystem.Data;
 
-/// <summary>
-/// JSON file-based data store (replaces EF Core for environments without NuGet access).
-/// Drop-in compatible interface: async methods matching EF Core patterns.
-/// </summary>
 public class AppDbContext
 {
     private readonly string _dataDir;
@@ -50,12 +46,16 @@ public class AppDbContext
     public List<Notification>  Notifications  => Load<Notification>("notifications");
     public List<AuditLog>      AuditLogs      => Load<AuditLog>("audit_logs");
     public List<Classification> Classifications => Load<Classification>("classifications");
+    public List<FormClass> FormClasses => Load<FormClass>("form_classes");
+    public List<FormSection> FormSections => Load<FormSection>("form_sections");
+    public List<FormStatus> FormStatuses => Load<FormStatus>("form_statuses");
     public List<OrganizationalUnit> OrganizationalUnits => Load<OrganizationalUnit>("organizational_units");
     public List<Beneficiary> Beneficiaries => Load<Beneficiary>("beneficiaries");
     public List<DropdownList> DropdownLists => Load<DropdownList>("dropdown_lists");
     public List<DropdownItem> DropdownItems => Load<DropdownItem>("dropdown_items");
     public List<ReadyTable> ReadyTables => Load<ReadyTable>("ready_tables");
     public List<ReadyTableField> ReadyTableFields => Load<ReadyTableField>("ready_table_fields");
+    public List<Workspace> Workspaces => Load<Workspace>("workspaces");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -68,12 +68,16 @@ public class AppDbContext
     public void SaveNotifications(List<Notification> d) => Save("notifications", d);
     public void SaveAuditLogs(List<AuditLog> d)        => Save("audit_logs", d);
     public void SaveClassifications(List<Classification> d) => Save("classifications", d);
+    public void SaveFormClasses(List<FormClass> d) => Save("form_classes", d);
+    public void SaveFormSections(List<FormSection> d) => Save("form_sections", d);
+    public void SaveFormStatuses(List<FormStatus> d) => Save("form_statuses", d);
     public void SaveOrganizationalUnits(List<OrganizationalUnit> d) => Save("organizational_units", d);
     public void SaveBeneficiaries(List<Beneficiary> d) => Save("beneficiaries", d);
     public void SaveDropdownLists(List<DropdownList> d) => Save("dropdown_lists", d);
     public void SaveDropdownItems(List<DropdownItem> d) => Save("dropdown_items", d);
     public void SaveReadyTables(List<ReadyTable> d) => Save("ready_tables", d);
     public void SaveReadyTableFields(List<ReadyTableField> d) => Save("ready_table_fields", d);
+    public void SaveWorkspaces(List<Workspace> d) => Save("workspaces", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

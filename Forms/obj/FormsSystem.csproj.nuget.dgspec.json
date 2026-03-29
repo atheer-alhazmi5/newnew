@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj": {}
+    "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\FormsSystem.csproj": {}
   },
   "projects": {
-    "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj": {
+    "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\FormsSystem.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj",
+        "projectUniqueName": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\FormsSystem.csproj",
         "projectName": "FormsSystem",
-        "projectPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj",
+        "projectPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\FormsSystem.csproj",
         "packagesPath": "C:\\Users\\iosam\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\obj\\",
+        "outputPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\iosam\\AppData\\Roaming\\NuGet\\NuGet.Config"

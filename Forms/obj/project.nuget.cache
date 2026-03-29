@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "BJS74BHGBSU=",
+  "dgSpecHash": "ZJjGdN6lSZY=",
   "success": true,
-  "projectFilePath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj",
+  "projectFilePath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\forms\\FormsSystem.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\iosam\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.24\\microsoft.netcore.app.ref.8.0.24.nupkg.sha512",
     "C:\\Users\\iosam\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.24\\microsoft.windowsdesktop.app.ref.8.0.24.nupkg.sha512",

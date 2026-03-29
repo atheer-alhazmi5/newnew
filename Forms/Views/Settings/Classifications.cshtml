@@ -125,16 +125,16 @@
                     <textarea class="form-control" id="clsAddDescription" rows="3" placeholder="وصف مختصر لهذا التصنيف"></textarea>
                 </div>
                 <div class="row mb-3">
-                    <div class="col-6">
+                    <div class="col-md-6">
                         <label class="form-label">اللون</label>
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
                             <div class="cls-color-picker-wrap">
                                 <input type="color" id="clsAddColor" value="#25935F" oninput="document.getElementById('clsAddColorHex').textContent=this.value">
                             </div>
                             <div class="cls-color-hex" id="clsAddColorHex" style="margin-top:0;">#25935F</div>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-md-6">
                         <label class="form-label">التفعيل</label>
                         <div class="d-flex align-items-center gap-3 mt-2">
                             <div class="form-check form-switch m-0">
@@ -182,18 +182,17 @@
                     <label class="form-label">الترتيب</label>
                     <input type="number" class="form-control" id="clsEditSortOrder" min="1">
                 </div>
-                      <div class="col-6">
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <label class="form-label">اللون</label>
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
                             <div class="cls-color-picker-wrap">
                                 <input type="color" id="clsEditColor" value="#25935F" oninput="document.getElementById('clsEditColorHex').textContent=this.value">
                             </div>
                             <div class="cls-color-hex" id="clsEditColorHex" style="margin-top:0;">#25935F</div>
                         </div>
                     </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-6">
+                    <div class="col-md-6">
                         <label class="form-label">التفعيل</label>
                         <div class="d-flex align-items-center gap-3 mt-2">
                             <div class="form-check form-switch m-0">
@@ -202,7 +201,7 @@
                             <label class="form-check-label" for="clsEditIsActive" id="clsEditIsActiveLabel" style="font-weight:600;">مفعل</label>
                         </div>
                     </div>
-              
+                </div>
 
                 <div id="clsEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>

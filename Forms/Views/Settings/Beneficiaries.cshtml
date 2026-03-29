@@ -20,7 +20,7 @@
 .bnf-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
 .bnf-section-title i { font-size:18px; color:var(--sa-600); }
 .required-star { color:#ef4444; margin-right:4px; }
-.bnf-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; }
+.bnf-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; line-height:1.3; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; box-sizing:border-box; background:transparent; }
 .bnf-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
 .bnf-action-btn-detail:hover { background:var(--info-50); }
 .bnf-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
@@ -42,6 +42,26 @@
 .bnf-activation-wrap { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#fff; border-radius:12px; border:2px solid var(--gray-200); }
 .bnf-activation-wrap .form-check-input { width:52px; height:26px; cursor:pointer; }
 .bnf-activation-wrap .form-check-label { font-weight:700; font-size:15px; cursor:pointer; }
+.bnf-pw-hint { margin-top:10px; padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; font-size:12px; line-height:1.55; color:var(--gray-700); }
+.bnf-pw-hint-title { font-weight:800; font-size:12px; color:var(--sa-800); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.bnf-pw-hint-title i { color:var(--sa-600); font-size:14px; }
+.bnf-pw-hint-note { font-weight:600; color:var(--gray-500); font-size:11px; margin-bottom:8px; }
+.bnf-pw-hint-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.bnf-pw-hint-list li { display:flex; align-items:flex-start; gap:8px; margin:0; }
+.bnf-pw-hint-list .bnf-pw-hint-ic { color:var(--sa-600); flex-shrink:0; margin-top:2px; font-size:13px; }
+.bnf-pw-hint-list strong { color:var(--gray-800); font-weight:700; }
+.bnf-pw-hint-chars { display:inline-block; direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:11px; padding:2px 6px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; margin-top:2px; }
+.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
+.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select: none; border-bottom: 1px solid var(--gray-100); transition: background .15s ease; gap: 8px; }
+.bnf-ou-tree-row:hover { background: var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background: var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink: 0; width: 1.35rem; height: 1.35rem; min-width: 1.35rem; padding: 0; line-height: 1; font-weight: 600; font-size: 11px; color: var(--sa-600); border: 1px solid var(--gray-200); border-radius: 8px; background: linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none !important; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background: var(--sa-50); border-color: var(--sa-300); box-shadow: 0 1px 3px rgba(37,147,95,.1); color: var(--sa-700); }
+.bnf-ou-tree-exp:active { transform: scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink: 0; width: 1.35rem; height: 1.35rem; min-width: 1.35rem; }
+.bnf-ou-tree-name { text-align: right; font-size: 14px; line-height: 1.4; min-width: 0; }
 @@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
@@ -54,6 +74,29 @@
     <button class="btn btn-primary" onclick="bnfShowAddModal()" style="border-radius:12px;padding:10px 28px;">
         <i class="bi bi-plus-lg"></i> إضافة
     </button>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters" id="bnfFiltersWrap">
+    <div class="rt-search-box" style="min-width:200px;max-width:280px;">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="bnfFilterName" placeholder="بحث باسم الموظف..." autocomplete="off">
+    </div>
+    <input type="text" class="form-control rt-filter-text" id="bnfFilterNationalId" placeholder="رقم الهوية" maxlength="10" inputmode="numeric" autocomplete="off" title="الهوية">
+    <select class="rt-filter-select form-select" id="bnfFilterUnit">
+        <option value="">الوحدة التنظيمية</option>
+    </select>
+    <select class="rt-filter-select form-select" id="bnfFilterMainRole">
+        <option value="">الدور الرئيسي</option>
+        <option value="موظف">موظف</option>
+        <option value="مدير">مدير</option>
+    </select>
+    <select class="rt-filter-select form-select" id="bnfFilterSubRole" style="min-width:220px;">
+        <option value="">الدور الفرعي</option>
+        <option value="__none__">بدون دور فرعي</option>
+        <option value="ممثل الوحدة التنظيمية">ممثل الوحدة التنظيمية</option>
+        <option value="مدير النظام">مدير النظام</option>
+    </select>
+    <button type="button" class="rt-clear-btn" id="bnfFilterClear" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
 <div class="card">
@@ -97,13 +140,16 @@
                             <label class="form-label">الصورة الشخصية <small class="text-muted">(صورة واحدة)</small></label>
                             <div class="bnf-photo-wrap">
                                 <img id="bnfPhotoPreview" class="bnf-photo-preview" src="" alt="" style="display:none;" onerror="this.style.display='none';">
-                                <div id="bnfPhotoPlaceholder" class="bnf-photo-preview d-flex align-items-center justify-content-center" style="display:flex !important;"><i class="bi bi-person" style="font-size:32px;color:var(--gray-400);"></i></div>
-                                <input type="file" class="form-control form-control-sm" id="bnfPhoto" accept="image/*" style="max-width:180px;">
+                                <div id="bnfPhotoPlaceholder" class="bnf-photo-preview d-flex align-items-center justify-content-center"><i class="bi bi-person" style="font-size:32px;color:var(--gray-400);"></i></div>
+                                <div id="bnfPhotoInputWrap">
+                                    <input type="file" class="form-control form-control-sm" id="bnfPhoto" accept="image/*" style="max-width:180px;">
+                                </div>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="bnfPhotoChangeBtn" style="display:none;font-size:13px;" onclick="bnfShowPhotoFileInput()">تغيير الصورة</button>
                             </div>
                         </div>
                         <div>
                             <label class="form-label">الهوية الوطنية<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="bnfNationalId" maxlength="10" placeholder="10 أرقام تبدأ بـ 10 أو 11">
+                            <input type="text" class="form-control" id="bnfNationalId" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="10 أرقام تبدأ بـ 10 أو 11">
                         </div>
                         <div></div>
                         <div></div>
@@ -183,18 +229,22 @@
                     <div class="bnf-section-title"><i class="bi bi-building"></i>الوحدة والاتصال</div>
                     <div class="bnf-form-row">
                         <div>
-                            <label class="form-label">الوحدة التنظيمية<span class="required-star">*</span></label>
-                            <select class="form-select" id="bnfOrganizationalUnitId">
-                                <option value="">-- اختر --</option>
-                            </select>
+                            <label class="form-label" for="bnfOuTreeTrigger">الوحدة التنظيمية<span class="required-star">*</span></label>
+                            <div class="bnf-ou-tree-wrap">
+                                <input type="hidden" id="bnfOrganizationalUnitId" value="">
+                                <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="bnfOuTreeTrigger" aria-expanded="false" aria-haspopup="listbox">
+                                    <span class="bnf-ou-tree-label text-truncate d-block" id="bnfOuTreeLabel">-- اختر --</span>
+                                </button>
+                                <div class="bnf-ou-tree-panel d-none" id="bnfOuTreePanel" role="listbox"></div>
+                            </div>
                         </div>
                         <div>
                             <label class="form-label">الجوال<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" placeholder="05xxxxxxxx">
+                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="05xxxxxxxx">
                         </div>
                         <div>
                             <label class="form-label">البريد الإلكتروني<span class="required-star">*</span></label>
-                            <input type="email" class="form-control" id="bnfEmail" placeholder="name@gov.sa">
+                            <input type="email" class="form-control" id="bnfEmail" placeholder="xxx@@almadinah.gov.sa">
                         </div>
                         <div></div>
                     </div>
@@ -221,10 +271,6 @@
                             <label class="form-label">الدور</label>
                             <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleNone" value="" checked>
-                                    <label class="form-check-label" for="bnfSubRoleNone">-- اختياري --</label>
-                                </div>
-                                <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية">
                                     <label class="form-check-label" for="bnfSubRoleUnit">ممثل الوحدة التنظيمية</label>
                                 </div>
@@ -236,11 +282,23 @@
                         </div>
                         <div id="bnfPasswordWrap">
                             <label class="form-label">كلمة المرور</label>
-                            <input type="password" class="form-control" id="bnfPassword" placeholder="••••••••">
+                            <input type="password" class="form-control" id="bnfPassword" placeholder="••••••••" autocomplete="new-password">
+                            <div class="bnf-pw-hint" role="note">
+                                <div class="bnf-pw-hint-title"><i class="bi bi-shield-lock"></i> متطلبات كلمة المرور</div>
+                                <div class="bnf-pw-hint-note">تُطبق عند تعيين كلمة مرور جديدة أو تغييرها فقط.</div>
+                                <ul class="bnf-pw-hint-list">
+                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-1-circle-fill"></i></span><span><strong>الطول:</strong> 8 أحرف كحد أدنى .</span></li>
+                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-2-circle-fill"></i></span><span><strong>حرف كبير :</strong> مثل A أو B … Z</span></li>
+                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-3-circle-fill"></i></span><span><strong>حرف صغير :</strong> مثل a أو b … z</span></li>
+                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-4-circle-fill"></i></span><span><strong>رقم:</strong> من 0 إلى 9</span></li>
+                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-5-circle-fill"></i></span><span><strong>رمز خاص واحد على الأقل</strong> من المجموعة التالية:</span></li>
+                                </ul>
+                                <div><span class="bnf-pw-hint-chars">!@@#$%^&amp;*</span></div>
+                            </div>
                         </div>
                         <div id="bnfConfirmWrap">
                             <label class="form-label">تأكيد كلمة المرور</label>
-                            <input type="password" class="form-control" id="bnfConfirmPassword" placeholder="••••••••">
+                            <input type="password" class="form-control" id="bnfConfirmPassword" placeholder="••••••••" autocomplete="new-password">
                         </div>
                     </div>
                 </div>

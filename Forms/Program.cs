@@ -7,8 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ─── SERVICES ────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
-// JSON file-based data store (no EF Core / NuGet required)
-builder.Services.AddSingleton<AppDbContext>();
+//JSON file-based data store (no EF Core / NuGet required)
+//builder.Services.AddSingleton<AppDbContext>();
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<ExcelService>();
@@ -57,9 +57,9 @@ var app = builder.Build();
 // ─── DATA SEED ───────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var ds = scope.ServiceProvider.GetRequiredService<DataService>();
-    await ds.SeedDataIfEmptyAsync();
-    await ds.SeedReadyTablesIfEmptyAsync();
+   var ds = scope.ServiceProvider.GetRequiredService<DataService>();
+   await ds.SeedDataIfEmptyAsync();
+   await ds.SeedReadyTablesIfEmptyAsync();
 }
 
 // ─── MIDDLEWARE ──────────────────────────────────────────────────────────────

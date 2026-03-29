@@ -96,5 +96,47 @@
     "LevelValuesJson": "",
     "CreatedAt": "2026-03-11T12:55:40.753254+03:00",
     "UpdatedAt": null
+  },
+  {
+    "Id": 8,
+    "DropdownListId": 9,
+    "ItemText": "1",
+    "Description": "",
+    "Color": "#25935f",
+    "IsActive": true,
+    "SortOrder": 1,
+    "ParentItemId": null,
+    "LevelNumber": 1,
+    "LevelValuesJson": "",
+    "CreatedAt": "2026-03-26T10:36:41.9273965+03:00",
+    "UpdatedAt": null
+  },
+  {
+    "Id": 9,
+    "DropdownListId": 9,
+    "ItemText": "1",
+    "Description": "",
+    "Color": "#25935f",
+    "IsActive": true,
+    "SortOrder": 2,
+    "ParentItemId": 8,
+    "LevelNumber": 2,
+    "LevelValuesJson": "",
+    "CreatedAt": "2026-03-26T10:36:50.3891036+03:00",
+    "UpdatedAt": null
+  },
+  {
+    "Id": 10,
+    "DropdownListId": 9,
+    "ItemText": "1",
+    "Description": "",
+    "Color": "#25935f",
+    "IsActive": true,
+    "SortOrder": 3,
+    "ParentItemId": 9,
+    "LevelNumber": 3,
+    "LevelValuesJson": "",
+    "CreatedAt": "2026-03-26T10:37:02.7853666+03:00",
+    "UpdatedAt": null
   }
 ]

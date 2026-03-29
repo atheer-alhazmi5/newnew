@@ -1455,3 +1455,127 @@ p, li, span {
     font-feature-settings: 'tnum' 1;
 }
 
+/* ============================================
+   PRESET COLOR SWATCHES (تصنيفات، جداول جاهزة)
+   ============================================ */
+.app-color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    direction: ltr;
+}
+
+.app-color-swatch {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, transform 0.12s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.app-color-swatch:hover {
+    transform: scale(1.07);
+}
+
+.app-color-swatch.selected {
+    border-color: var(--sa-800, #14532d) !important;
+    box-shadow: none;
+}
+
+.app-color-swatch.app-color-swatch-white {
+    background: #fff !important;
+    border: 1px solid #d1d5db;
+}
+
+.app-color-swatch.app-color-swatch-white.selected {
+    border-color: var(--sa-800, #14532d) !important;
+    border-width: 2px;
+}
+
+.rt-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.rt-search-box {
+    position: relative;
+    min-width: 180px;
+    max-width: 280px;
+}
+
+.rt-search-box input {
+    padding-right: 42px;
+    border-radius: 12px;
+    border: 2px solid var(--gray-200);
+    font-size: 13px;
+    height: 40px;
+    width: 100%;
+}
+
+.rt-search-box input:focus {
+    border-color: var(--sa-400);
+    box-shadow: none;
+}
+
+.rt-search-box .rt-search-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.rt-filter-text {
+    min-width: 140px;
+    width: auto;
+    max-width: 200px;
+    border-radius: 12px;
+    border: 2px solid var(--gray-200);
+    font-size: 13px;
+    height: 40px;
+    padding: 8px 12px;
+    font-family: 'Cairo', sans-serif;
+}
+
+.rt-filter-text:focus {
+    border-color: var(--sa-400);
+    box-shadow: none;
+    outline: none;
+}
+
+.rt-filter-select {
+    min-width: 140px;
+    width: auto;
+    border-radius: 10px;
+    border: 2px solid var(--gray-200);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Cairo', sans-serif;
+}
+
+.rt-clear-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 2px solid var(--gray-200);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Cairo', sans-serif;
+}
+
+.rt-clear-btn:hover {
+    background: var(--gray-200);
+}
+

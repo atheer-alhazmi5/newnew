@@ -468,7 +468,7 @@ function ddlShowLevelNamesSetup() {
         var existing = ddlHierLevelNames[i] || '';
         html += '<div class="mb-2">' +
             '<label class="form-label">اسم المستوى ' + (i + 1) + '<span class="required-star">*</span></label>' +
-            '<input type="text" class="form-control" id="ddlLevelName' + (i + 1) + '" value="' + esc(existing) +
+            '<input type="text" class="form-control" id="ddlLevelName' + (i + 1) + '" value="' + esc(existing) + '">' +
             '</div>';
     }
     document.getElementById('ddlHierLevelNameInputs').innerHTML = html;

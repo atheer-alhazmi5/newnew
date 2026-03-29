@@ -53,7 +53,7 @@ function ouFillClassificationDropdowns() {
 }
 
 function ouFillParentDropdowns(excludeId) {
-    var html = '<option value="">بدون وحدة أم</option>';
+    var html = '<option value="">بدون وحدة تنظيمية رئيسية</option>';
     ouMainUnits.forEach(function (u) {
         if (excludeId && u.id === excludeId) return;
         html += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
@@ -160,6 +160,13 @@ async function ouSubmitAdd() {
         return;
     }
 
+    var dupAdd = ouAll.find(function (u) { return (u.name || '').trim() === name; });
+    if (dupAdd) {
+        errEl.textContent = 'اسم الوحدة موجود مسبقاً، لا يمكن تكرار الاسم';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
     var classificationId = parseInt(document.getElementById('ouAddClassificationId').value);
     if (!classificationId && ouClassifications.length > 0) {
         errEl.textContent = 'اختر التصنيف';
@@ -223,6 +230,13 @@ async function ouSubmitEdit() {
         return;
     }
 
+    var dupEdit = ouAll.find(function (u) { return (u.name || '').trim() === name && u.id !== id; });
+    if (dupEdit) {
+        errEl.textContent = 'اسم الوحدة موجود مسبقاً، لا يمكن تكرار الاسم';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
     var sortOrder = parseInt(document.getElementById('ouEditSortOrder').value);
     if (isNaN(sortOrder) || sortOrder < 1) {
         errEl.textContent = 'الترتيب يجب أن يبدأ من 1';
@@ -275,7 +289,7 @@ function ouShowDetails(id) {
             '<div class="ou-detail-value">' + esc(u.level) + '</div>' +
         '</div>' +
         '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">الوحدة الأم</div>' +
+            '<div class="ou-detail-label">الوحدة التنظيمية الرئيسية</div>' +
             '<div class="ou-detail-value">' + (u.parentName ? esc(u.parentName) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
         '</div>' +
         '<div class="ou-detail-row">' +

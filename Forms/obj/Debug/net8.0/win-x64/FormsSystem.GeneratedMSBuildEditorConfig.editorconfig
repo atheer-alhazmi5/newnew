@@ -82,6 +82,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ2xhc3NpZmljYXRpb25zLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormClasses.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybUNsYXNzZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormSections.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybVNlY3Rpb25zLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormStatuses.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybVN0YXR1c2VzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/OrganizationalUnits.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcT3JnYW5pemF0aW9uYWxVbml0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -104,6 +116,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Users/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlcnNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Workspaces/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcV29ya3NwYWNlc1xJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [c:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/_ViewImports.cshtml]

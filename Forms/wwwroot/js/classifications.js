@@ -149,8 +149,8 @@ function clsShowEditModal(id) {
     document.getElementById('clsEditName').value = cls.name;
     document.getElementById('clsEditDescription').value = cls.description || '';
     document.getElementById('clsEditSortOrder').value = cls.sortOrder;
-    document.getElementById('clsEditColor').value = cls.color;
-    document.getElementById('clsEditColorHex').textContent = cls.color;
+    document.getElementById('clsEditColor').value = cls.color || '#25935F';
+    document.getElementById('clsEditColorHex').textContent = cls.color || '#25935F';
     document.getElementById('clsEditIsActive').checked = cls.isActive;
     document.getElementById('clsEditIsActiveLabel').textContent = cls.isActive ? 'مفعل' : 'معطل';
     document.getElementById('clsEditError').classList.add('d-none');

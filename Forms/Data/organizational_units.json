@@ -37,5 +37,18 @@
     "UpdatedBy": "",
     "CreatedAt": "2026-03-08T00:00:00",
     "UpdatedAt": null
+  },
+  {
+    "Id": 4,
+    "Name": "\u0627\u062F\u0627\u0631\u0629 \u0627\u0644\u0627\u0646\u0638\u0645\u0629 \u0648\u0627\u0644\u0628\u0631\u0627\u0645\u062C",
+    "ClassificationId": 3,
+    "Level": "\u0641\u0631\u0639\u064A",
+    "ParentId": 3,
+    "IsActive": true,
+    "SortOrder": 4,
+    "CreatedBy": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645",
+    "UpdatedBy": "",
+    "CreatedAt": "2026-03-28T15:29:10.4015584+03:00",
+    "UpdatedAt": null
   }
 ]

@@ -30,6 +30,11 @@
 .rt-preview-form-table .form-control, .rt-preview-form-table .form-select { font-size:13px; width:100%; min-width:130px; }
 .rt-preview-form-table .required-star { color:#dc2626; font-weight:800; font-size:1.1em; margin-right:2px; }
 #rtPreviewModal .rt-modal-body { max-height:80vh; overflow-y:auto; padding:24px 28px; }
+.rtc-option-list-editor { border-color: var(--gray-200) !important; }
+.rtc-option-list-editor .rtc-opt-row { background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:8px 10px; align-items:center; }
+.rtc-option-list-editor .rtc-opt-text { min-width:160px; }
+
+.rt-file-size-enable { border-top:1px solid var(--gray-200); padding-top:14px !important; margin-top:8px !important; }
 #rtPreviewModal .modal-dialog { max-width:95vw; }
 #rtPreviewModal .rt-preview-wrap { max-width:100%; }
 .required-star { color:#ef4444; margin-right:4px; }
@@ -41,16 +46,8 @@
 .rt-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
 .rt-action-btn-delete:hover { background:var(--error-50); }
 .rt-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.rt-create-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:var(--sa-50); color:var(--sa-700); border:2px solid var(--sa-200); white-space:nowrap; cursor:pointer; }
-.rt-create-btn:hover { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-300); }
-.rt-search-box { position:relative; min-width:180px; max-width:280px; }
-.rt-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; height:40px; width:100%; }
-.rt-search-box input:focus { border-color:var(--sa-400); }
-.rt-search-box .rt-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; }
-.rt-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-.rt-filter-select { min-width:140px; width:auto; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-size:13px; font-family:'Cairo',sans-serif; }
-.rt-clear-btn { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--gray-100); color:var(--gray-700); border:2px solid var(--gray-200); cursor:pointer; white-space:nowrap; font-family:'Cairo',sans-serif; }
-.rt-clear-btn:hover { background:var(--gray-200); }
+.rt-file-mb-pair .rt-file-mb-input { width:5.25rem; max-width:22vw; }
+/* شريط الفلترة: styles.css (.rt-filters, .rt-search-box, …) */
 .rt-badge-active { background:#dcf5e8; color:#0f9f5c; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
 .rt-badge-inactive { background:#fde8e8; color:#ef4444; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
 .rt-badge-public { color:var(--info-600); font-weight:700; }
@@ -75,9 +72,13 @@
 .rt-add-field-btn { background:var(--sa-600); color:#fff; border:none; border-radius:10px; padding:8px 24px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; }
 .rt-add-field-btn:hover { background:var(--sa-700); }
 .rt-props-area { background:var(--gray-50); border-radius:10px; padding:14px 16px; margin-top:10px; }
-.rt-color-option { display:inline-block; width:32px; height:32px; border-radius:8px; cursor:pointer; border:3px solid transparent; margin:0 4px; transition:all .2s; }
-.rt-color-option:hover { transform:scale(1.15); }
-.rt-color-option.selected { border-color:var(--sa-600); box-shadow:0 0 0 2px var(--sa-300); }
+.rt-hdr-color-picker-wrap { position:relative; display:inline-block; }
+.rt-hdr-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.rt-hdr-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
+.rt-hdr-color-picker-wrap input[type="color"]:disabled { opacity:0.55; cursor:not-allowed; }
+.rt-hdr-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
+.rt-hdr-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
+.rt-hdr-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
 .rt-field-badge-req { background:#dcf5e8; color:#0f9f5c; padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-field-badge-opt { background:var(--gray-100); color:var(--gray-500); padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-page-wrap { width:100%; max-width:100%; }
@@ -90,7 +91,9 @@
         <h2 class="page-title" style="margin:0;">الجداول الجاهزة <span id="rtCountBadge" class="text-muted" style="font-size:14px;"></span></h2>
         <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة الجداول الجاهزة في النظام</p>
     </div>
-    <button class="rt-create-btn" id="rtCreateBtn" onclick="rtShowCreateModal()">+ إنشاء جدول</button>
+    <button type="button" class="btn btn-primary" id="rtCreateBtn" onclick="rtShowCreateModal()" style="border-radius:12px;padding:10px 28px;">
+        <i class="bi bi-plus-lg"></i> إنشاء جدول
+    </button>
 </div>
 
 <!-- Filters & Table -->
@@ -193,13 +196,15 @@
                 </div>
                 <div class="rt-section">
                     <div class="rt-section-title">خلفية حقول الأعمدة</div>
-                    <div id="rtcColorPicker" class="d-flex flex-wrap gap-1">
-                        <span class="rt-color-option selected" data-color="" style="background:#fff;border:2px solid #ccc;" title="بدون لون" onclick="rtcSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#d1d5db" style="background:#d1d5db;" title="رمادي" onclick="rtcSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#67e8f9" style="background:#67e8f9;" title="سماوي" onclick="rtcSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#fde047" style="background:#fde047;" title="أصفر" onclick="rtcSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#86efac" style="background:#86efac;" title="أخضر" onclick="rtcSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#fca5a5" style="background:#fca5a5;" title="أحمر" onclick="rtcSelectColor(this)"></span>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="rtcNoColumnHeaderColor" onchange="rtcOnNoColumnHeaderColorChange()">
+                        <label class="form-check-label" for="rtcNoColumnHeaderColor">بدون لون مخصّص لرؤوس الأعمدة</label>
+                    </div>
+                    <div id="rtcColumnColorRow" class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="rt-hdr-color-picker-wrap">
+                            <input type="color" id="rtcColumnHeaderColor" value="#d1d5db" oninput="rtcOnColumnHeaderColorInput()">
+                        </div>
+                        <div class="rt-hdr-color-hex" id="rtcColumnHeaderColorHex">#d1d5db</div>
                     </div>
                 </div>
                 <div class="rt-section">
@@ -389,13 +394,15 @@
                 </div>
                 <div class="rt-section">
                     <div class="rt-section-title">خلفية حقول الأعمدة</div>
-                    <div id="rtEditColorPicker" class="d-flex flex-wrap gap-1">
-                        <span class="rt-color-option selected" data-color="" style="background:#fff;border:2px solid #ccc;" title="بدون لون" onclick="rtEditSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#d1d5db" style="background:#d1d5db;" title="رمادي" onclick="rtEditSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#67e8f9" style="background:#67e8f9;" title="سماوي" onclick="rtEditSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#fde047" style="background:#fde047;" title="أصفر" onclick="rtEditSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#86efac" style="background:#86efac;" title="أخضر" onclick="rtEditSelectColor(this)"></span>
-                        <span class="rt-color-option" data-color="#fca5a5" style="background:#fca5a5;" title="أحمر" onclick="rtEditSelectColor(this)"></span>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="rtEditNoColumnHeaderColor" onchange="rtEditOnNoColumnHeaderColorChange()">
+                        <label class="form-check-label" for="rtEditNoColumnHeaderColor">بدون لون مخصّص لرؤوس الأعمدة</label>
+                    </div>
+                    <div id="rtEditColumnColorRow" class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="rt-hdr-color-picker-wrap">
+                            <input type="color" id="rtEditColumnHeaderColor" value="#d1d5db" oninput="rtEditOnColumnHeaderColorInput()">
+                        </div>
+                        <div class="rt-hdr-color-hex" id="rtEditColumnHeaderColorHex">#d1d5db</div>
                     </div>
                 </div>
                 <div class="rt-section">

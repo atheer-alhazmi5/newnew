@@ -545,6 +545,267 @@ public class DataService
         return Task.CompletedTask;
     }
 
+    // ─── FORM CLASSES (أصناف النماذج) ───────────────────────────────────────────
+    public Task<List<FormClass>> ListFormClassesAsync()
+        => Task.FromResult(_db.FormClasses.OrderBy(c => c.SortOrder).ToList());
+
+    public Task<FormClass?> GetFormClassByIdAsync(int id)
+        => Task.FromResult(_db.FormClasses.FirstOrDefault(c => c.Id == id));
+
+    public Task<FormClass> AddFormClassAsync(FormClass cls)
+    {
+        var list = _db.FormClasses;
+        cls.Id = NextId(list, c => c.Id);
+        cls.CreatedAt = DateTime.Now;
+        list.Add(cls);
+        _db.SaveFormClasses(list);
+        return Task.FromResult(cls);
+    }
+
+    public Task<bool> UpdateFormClassAsync(FormClass cls)
+    {
+        var list = _db.FormClasses;
+        var idx = list.FindIndex(c => c.Id == cls.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = cls;
+        _db.SaveFormClasses(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormClassAsync(int id)
+    {
+        var list = _db.FormClasses;
+        var cls = list.FirstOrDefault(c => c.Id == id);
+        if (cls == null) return Task.FromResult(false);
+        list.Remove(cls);
+        _db.SaveFormClasses(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsFormClassNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.FormClasses;
+        var duplicate = list.Any(c => c.Name == name && (!excludeId.HasValue || c.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderFormClassesAsync(int formClassId, int newOrder)
+    {
+        var list = _db.FormClasses.OrderBy(c => c.SortOrder).ToList();
+        var target = list.FirstOrDefault(c => c.Id == formClassId);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveFormClasses(list);
+        return Task.CompletedTask;
+    }
+
+    // ─── FORM SECTIONS (أقسام النماذج) ──────────────────────────────────────────
+    public Task<List<FormSection>> ListFormSectionsAsync()
+        => Task.FromResult(_db.FormSections.OrderBy(c => c.SortOrder).ToList());
+
+    public Task<FormSection?> GetFormSectionByIdAsync(int id)
+        => Task.FromResult(_db.FormSections.FirstOrDefault(c => c.Id == id));
+
+    public Task<FormSection> AddFormSectionAsync(FormSection row)
+    {
+        var list = _db.FormSections;
+        row.Id = NextId(list, c => c.Id);
+        row.CreatedAt = DateTime.Now;
+        list.Add(row);
+        _db.SaveFormSections(list);
+        return Task.FromResult(row);
+    }
+
+    public Task<bool> UpdateFormSectionAsync(FormSection row)
+    {
+        var list = _db.FormSections;
+        var idx = list.FindIndex(c => c.Id == row.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = row;
+        _db.SaveFormSections(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormSectionAsync(int id)
+    {
+        var list = _db.FormSections;
+        var row = list.FirstOrDefault(c => c.Id == id);
+        if (row == null) return Task.FromResult(false);
+        list.Remove(row);
+        _db.SaveFormSections(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsFormSectionNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.FormSections;
+        var n = name.Trim();
+        var duplicate = list.Any(c =>
+            string.Equals(c.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || c.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderFormSectionsAsync(int formSectionId, int newOrder)
+    {
+        var list = _db.FormSections.OrderBy(c => c.SortOrder).ToList();
+        var target = list.FirstOrDefault(c => c.Id == formSectionId);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveFormSections(list);
+        return Task.CompletedTask;
+    }
+
+    // ─── FORM STATUSES (حالات النماذج) ───────────────────────────────────────
+    public Task<List<FormStatus>> ListFormStatusesAsync()
+        => Task.FromResult(_db.FormStatuses.OrderBy(s => s.SortOrder).ToList());
+
+    public Task<FormStatus?> GetFormStatusByIdAsync(int id)
+        => Task.FromResult(_db.FormStatuses.FirstOrDefault(s => s.Id == id));
+
+    public Task<FormStatus> AddFormStatusAsync(FormStatus row)
+    {
+        var list = _db.FormStatuses;
+        row.Id = NextId(list, s => s.Id);
+        row.CreatedAt = DateTime.Now;
+        list.Add(row);
+        _db.SaveFormStatuses(list);
+        return Task.FromResult(row);
+    }
+
+    public Task<bool> UpdateFormStatusAsync(FormStatus row)
+    {
+        var list = _db.FormStatuses;
+        var idx = list.FindIndex(s => s.Id == row.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = row;
+        _db.SaveFormStatuses(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormStatusAsync(int id)
+    {
+        var list = _db.FormStatuses;
+        var row = list.FirstOrDefault(s => s.Id == id);
+        if (row == null) return Task.FromResult(false);
+        list.Remove(row);
+        _db.SaveFormStatuses(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsFormStatusNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.FormStatuses;
+        var n = name.Trim();
+        var duplicate = list.Any(s =>
+            string.Equals(s.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || s.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderFormStatusesAsync(int formStatusId, int newOrder)
+    {
+        var list = _db.FormStatuses.OrderBy(s => s.SortOrder).ToList();
+        var target = list.FirstOrDefault(s => s.Id == formStatusId);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveFormStatuses(list);
+        return Task.CompletedTask;
+    }
+
+    // ─── WORKSPACES ──────────────────────────────────────────────────────────
+    public Task<List<Workspace>> ListWorkspacesAsync()
+        => Task.FromResult(_db.Workspaces.OrderBy(w => w.SortOrder).ToList());
+
+    public Task<Workspace?> GetWorkspaceByIdAsync(int id)
+        => Task.FromResult(_db.Workspaces.FirstOrDefault(w => w.Id == id));
+
+    public Task<Workspace> AddWorkspaceAsync(Workspace row)
+    {
+        var list = _db.Workspaces;
+        row.Id = NextId(list, w => w.Id);
+        row.CreatedAt = DateTime.Now;
+        list.Add(row);
+        _db.SaveWorkspaces(list);
+        return Task.FromResult(row);
+    }
+
+    public Task<bool> UpdateWorkspaceAsync(Workspace row)
+    {
+        var list = _db.Workspaces;
+        var idx = list.FindIndex(w => w.Id == row.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = row;
+        _db.SaveWorkspaces(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteWorkspaceAsync(int id)
+    {
+        var list = _db.Workspaces;
+        var row = list.FirstOrDefault(w => w.Id == id);
+        if (row == null) return Task.FromResult(false);
+        list.Remove(row);
+        _db.SaveWorkspaces(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsWorkspaceNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.Workspaces;
+        var n = name.Trim();
+        var duplicate = list.Any(w =>
+            string.Equals(w.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || w.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderWorkspacesAsync(int workspaceId, int newOrder)
+    {
+        var list = _db.Workspaces.OrderBy(w => w.SortOrder).ToList();
+        var target = list.FirstOrDefault(w => w.Id == workspaceId);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveWorkspaces(list);
+        return Task.CompletedTask;
+    }
+
     // ─── ORGANIZATIONAL UNITS ────────────────────────────────────────────────
     public Task<List<OrganizationalUnit>> ListOrganizationalUnitsAsync()
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
@@ -585,6 +846,16 @@ public class DataService
         list.Remove(unit);
         _db.SaveOrganizationalUnits(list);
         return Task.FromResult(true);
+    }
+
+    public Task<bool> IsOrganizationalUnitNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.OrganizationalUnits;
+        var n = name.Trim();
+        var duplicate = list.Any(u =>
+            string.Equals(u.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || u.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
     }
 
     public Task<bool> IsOrganizationalUnitSortOrderTakenAsync(int sortOrder, int? excludeId = null)
@@ -648,8 +919,17 @@ public class DataService
         return Task.FromResult(true);
     }
 
-    public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email)
-        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b => b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)));
+    public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email, int? excludeId = null)
+        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
+            b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
+            && (!excludeId.HasValue || b.Id != excludeId.Value)));
+
+    public Task<Beneficiary?> GetBeneficiaryByPhoneAsync(string phone, int? excludeId = null)
+    {
+        var p = phone.Trim();
+        return Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
+            b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
+    }
 
     // ─── DROPDOWN LISTS ───────────────────────────────────────────────────────
     public Task<List<DropdownList>> ListDropdownListsAsync()
