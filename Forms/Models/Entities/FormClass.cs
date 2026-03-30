@@ -5,6 +5,7 @@ public class FormClass
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string Color { get; set; } = "#25935F";
+    public string Icon { get; set; } = "";
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
     public string CreatedBy { get; set; } = "";

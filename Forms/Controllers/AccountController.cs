@@ -17,6 +17,14 @@ public class AccountController : BaseController
     }
 
     [HttpGet]
+    public IActionResult Landing()
+    {
+        if (IsAuthenticated)
+            return RedirectAfterLogin(CurrentUserRole);
+        return View();
+    }
+
+    [HttpGet]
     public IActionResult Login()
     {
         if (IsAuthenticated)
@@ -78,7 +86,7 @@ public class AccountController : BaseController
     public IActionResult Logout()
     {
         HttpContext.Session.Clear();
-        return RedirectToAction("Login");
+        return RedirectToAction("Landing");
     }
 
     [HttpGet]

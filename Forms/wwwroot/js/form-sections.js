@@ -3,8 +3,46 @@ let fmsFiltered = [];
 let fmsCurrentPage = 1;
 const fmsPerPage = 10;
 
+const FMS_ICONS = [
+    { key: 'bi-file-earmark-text-fill', label: 'مستند' },
+    { key: 'bi-journal-text', label: 'دفتر' },
+    { key: 'bi-clipboard2-check-fill', label: 'قائمة تحقق' },
+    { key: 'bi-card-checklist', label: 'بطاقة' },
+    { key: 'bi-envelope-fill', label: 'رسالة' },
+    { key: 'bi-megaphone-fill', label: 'إعلان' },
+    { key: 'bi-lightning-fill', label: 'سريع' },
+    { key: 'bi-gear-fill', label: 'إعدادات' },
+    { key: 'bi-shield-check', label: 'حماية' },
+    { key: 'bi-person-badge-fill', label: 'بطاقة شخصية' },
+    { key: 'bi-cash-stack', label: 'مالي' },
+    { key: 'bi-truck', label: 'نقل' },
+    { key: 'bi-tools', label: 'أدوات' },
+    { key: 'bi-house-fill', label: 'مبنى' },
+    { key: 'bi-hand-thumbs-up-fill', label: 'موافقة' }
+];
+
+function fmsRenderIconPicker(containerId, selectedIcon, prefix) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = FMS_ICONS.map(function(ic) {
+        return '<div class="fms-icon-picker-item' + (selectedIcon === ic.key ? ' selected' : '') +
+            '" data-icon="' + ic.key + '" title="' + ic.label + '" onclick="fmsSelectIcon(\'' + prefix + '\',\'' + ic.key + '\',this)">' +
+            '<i class="bi ' + ic.key + '"></i></div>';
+    }).join('');
+}
+
+function fmsSelectIcon(prefix, key, el) {
+    document.querySelectorAll('#fms' + prefix + 'IconPicker .fms-icon-picker-item').forEach(function(item) {
+        item.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    document.getElementById('fms' + prefix + 'Icon').value = key;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     fmsLoad();
+    fmsRenderIconPicker('fmsAddIconPicker', '', 'Add');
+    fmsRenderIconPicker('fmsEditIconPicker', '', 'Edit');
 
     document.getElementById('fmsAddIsActive').addEventListener('change', function () {
         document.getElementById('fmsAddIsActiveLabel').textContent = this.checked ? 'مفعل' : 'معطل';
@@ -22,11 +60,11 @@ async function fmsLoad() {
             fmsFilter();
         } else {
             document.getElementById('fmsBody').innerHTML =
-                '<tr><td colspan="6">' + emptyState('bi-layout-text-sidebar-reverse', 'لا توجد أقسام', 'أضف أقساماً جديدة للبدء') + '</td></tr>';
+                '<tr><td colspan="7">' + emptyState('bi-layout-text-sidebar-reverse', 'لا توجد أنواع', 'أضف أنواعاً جديدة للبدء') + '</td></tr>';
         }
     } catch (e) {
         document.getElementById('fmsBody').innerHTML =
-            '<tr><td colspan="6" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
+            '<tr><td colspan="7" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
     }
 }
 
@@ -42,8 +80,8 @@ function fmsFilter() {
 function fmsRenderTable() {
     var body = document.getElementById('fmsBody');
     if (fmsFiltered.length === 0) {
-        body.innerHTML = '<tr><td colspan="6">' +
-            emptyState('bi-layout-text-sidebar-reverse', 'لا توجد أقسام', 'لم يتم العثور على نتائج') +
+        body.innerHTML = '<tr><td colspan="7">' +
+            emptyState('bi-layout-text-sidebar-reverse', 'لا توجد أنواع', 'لم يتم العثور على نتائج') +
             '</td></tr>';
         document.getElementById('fmsPaginationContainer').innerHTML = '';
         return;
@@ -57,9 +95,11 @@ function fmsRenderTable() {
         var statusClass = c.isActive ? 'active' : 'inactive';
         var statusText = c.isActive ? 'مفعل' : 'معطل';
         var safeName = esc(c.name).replace(/'/g, "\\'");
+        var iconClass = c.icon || 'bi-layout-text-sidebar-reverse';
 
         html += '<tr>' +
             '<td style="text-align:center;font-weight:800;font-size:15px;color:var(--gray-700);">' + esc(String(c.sortOrder)) + '</td>' +
+            '<td style="text-align:center;"><div class="fms-icon-display"><i class="bi ' + esc(iconClass) + '"></i></div></td>' +
             '<td style="font-weight:700;font-size:14px;color:var(--gray-800);">' + esc(c.name) + '</td>' +
             '<td style="text-align:center;">' +
                 '<div style="display:inline-flex;align-items:center;gap:8px;">' +
@@ -96,26 +136,35 @@ function fmsShowAddModal() {
     document.getElementById('fmsAddDescription').value = '';
     document.getElementById('fmsAddColor').value = '#25935F';
     document.getElementById('fmsAddColorHex').textContent = '#25935F';
+    document.getElementById('fmsAddIcon').value = '';
     document.getElementById('fmsAddIsActive').checked = true;
     document.getElementById('fmsAddIsActiveLabel').textContent = 'مفعل';
     document.getElementById('fmsAddError').classList.add('d-none');
+    fmsRenderIconPicker('fmsAddIconPicker', '', 'Add');
     new bootstrap.Modal(document.getElementById('fmsAddModal')).show();
 }
 
 async function fmsSubmitAdd() {
     var name = document.getElementById('fmsAddName').value.trim();
+    var icon = document.getElementById('fmsAddIcon').value;
     var errEl = document.getElementById('fmsAddError');
     errEl.classList.add('d-none');
 
     if (!name) {
-        errEl.textContent = 'اسم القسم مطلوب';
+        errEl.textContent = 'اسم النوع مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    if (!icon) {
+        errEl.textContent = 'اختيار الأيقونة مطلوب';
         errEl.classList.remove('d-none');
         return;
     }
 
     var duplicate = fmsAll.find(function (c) { return (c.name || '').trim() === name; });
     if (duplicate) {
-        errEl.textContent = 'اسم القسم موجود مسبقاً، لا يمكن تكرار الاسم';
+        errEl.textContent = 'اسم النوع موجود مسبقاً، لا يمكن تكرار الاسم';
         errEl.classList.remove('d-none');
         return;
     }
@@ -124,6 +173,7 @@ async function fmsSubmitAdd() {
         name: name,
         description: document.getElementById('fmsAddDescription').value.trim(),
         color: document.getElementById('fmsAddColor').value,
+        icon: icon,
         isActive: document.getElementById('fmsAddIsActive').checked
     };
 
@@ -148,11 +198,13 @@ function fmsShowEditModal(id) {
     document.getElementById('fmsEditSortOrder').value = row.sortOrder;
     document.getElementById('fmsEditColor').value = row.color;
     document.getElementById('fmsEditColorHex').textContent = row.color;
+    document.getElementById('fmsEditIcon').value = row.icon || '';
     document.getElementById('fmsEditIsActive').checked = row.isActive;
     document.getElementById('fmsEditIsActiveLabel').textContent = row.isActive ? 'مفعل' : 'معطل';
     document.getElementById('fmsEditError').classList.add('d-none');
 
     document.getElementById('fmsEditSortOrder').setAttribute('max', fmsAll.length);
+    fmsRenderIconPicker('fmsEditIconPicker', row.icon || '', 'Edit');
 
     new bootstrap.Modal(document.getElementById('fmsEditModal')).show();
 }
@@ -160,18 +212,25 @@ function fmsShowEditModal(id) {
 async function fmsSubmitEdit() {
     var id = parseInt(document.getElementById('fmsEditId').value);
     var name = document.getElementById('fmsEditName').value.trim();
+    var icon = document.getElementById('fmsEditIcon').value;
     var errEl = document.getElementById('fmsEditError');
     errEl.classList.add('d-none');
 
     if (!name) {
-        errEl.textContent = 'اسم القسم مطلوب';
+        errEl.textContent = 'اسم النوع مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    if (!icon) {
+        errEl.textContent = 'اختيار الأيقونة مطلوب';
         errEl.classList.remove('d-none');
         return;
     }
 
     var duplicate = fmsAll.find(function (c) { return (c.name || '').trim() === name && c.id !== id; });
     if (duplicate) {
-        errEl.textContent = 'اسم القسم موجود مسبقاً، لا يمكن تكرار الاسم';
+        errEl.textContent = 'اسم النوع موجود مسبقاً، لا يمكن تكرار الاسم';
         errEl.classList.remove('d-none');
         return;
     }
@@ -193,6 +252,7 @@ async function fmsSubmitEdit() {
         name: name,
         description: document.getElementById('fmsEditDescription').value.trim(),
         color: document.getElementById('fmsEditColor').value,
+        icon: icon,
         sortOrder: sortOrder,
         isActive: document.getElementById('fmsEditIsActive').checked
     };
@@ -214,6 +274,7 @@ function fmsShowDetails(id) {
 
     var statusClass = row.isActive ? 'active' : 'inactive';
     var statusText = row.isActive ? 'مفعل' : 'معطل';
+    var iconClass = row.icon || 'bi-layout-text-sidebar-reverse';
 
     var html =
         '<div class="fms-detail-row">' +
@@ -221,7 +282,11 @@ function fmsShowDetails(id) {
             '<div class="fms-detail-value" style="font-weight:700;">' + esc(String(row.sortOrder)) + '</div>' +
         '</div>' +
         '<div class="fms-detail-row">' +
-            '<div class="fms-detail-label">اسم القسم</div>' +
+            '<div class="fms-detail-label">الأيقونة</div>' +
+            '<div class="fms-detail-value"><div class="fms-icon-display"><i class="bi ' + esc(iconClass) + '"></i></div></div>' +
+        '</div>' +
+        '<div class="fms-detail-row">' +
+            '<div class="fms-detail-label">اسم النوع</div>' +
             '<div class="fms-detail-value" style="font-weight:700;">' + esc(row.name) + '</div>' +
         '</div>' +
         '<div class="fms-detail-row">' +
@@ -279,4 +344,3 @@ async function fmsSubmitDelete() {
         errEl.classList.remove('d-none');
     }
 }
-

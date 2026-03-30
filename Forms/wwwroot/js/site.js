@@ -121,7 +121,18 @@ function getFormIcon(icon, size = 20) {
         clock: 'bi-clock-fill',
         shield: 'bi-shield-fill',
         star: 'bi-star-fill',
-        folder: 'bi-folder-fill'
+        folder: 'bi-folder-fill',
+        heart: 'bi-heart-fill',
+        globe: 'bi-globe2',
+        key: 'bi-key-fill',
+        megaphone: 'bi-megaphone-fill',
+        award: 'bi-award-fill',
+        lightning: 'bi-lightning-fill',
+        camera: 'bi-camera-fill',
+        gift: 'bi-gift-fill',
+        compass: 'bi-compass-fill',
+        truck: 'bi-truck',
+        tools: 'bi-tools'
     };
     const cls = icons[icon] || 'bi-file-earmark';
     return `<i class="bi ${cls}" style="font-size:${size}px;"></i>`;

@@ -59,6 +59,11 @@
 .fmc-modal-body .form-check-input:checked { background-color:var(--sa-600); border-color:var(--sa-600); }
 .fmc-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .fmc-page-header .fmc-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.fmc-icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.fmc-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:#fff; }
+.fmc-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
+.fmc-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
+.fmc-icon-display { width:32px; height:32px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
 </style>
 
 <div class="fmc-page-header">
@@ -85,6 +90,7 @@
                 <thead>
                     <tr>
                         <th style="width:70px;">الترتيب</th>
+                        <th style="width:60px;">الأيقونة</th>
                         <th>الصنف</th>
                         <th style="width:130px;">اللون</th>
                         <th>الوصف</th>
@@ -93,7 +99,7 @@
                     </tr>
                 </thead>
                 <tbody id="fmcBody">
-                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="7" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -117,6 +123,11 @@
                 <div class="mb-3">
                     <label class="form-label">اسم الصنف<span class="required-star">*</span></label>
                     <input type="text" class="form-control" id="fmcAddName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="fmc-icon-picker" id="fmcAddIconPicker"></div>
+                    <input type="hidden" id="fmcAddIcon" value="">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الوصف</label>
@@ -171,6 +182,11 @@
                 <div class="mb-3">
                     <label class="form-label">اسم الصنف<span class="required-star">*</span></label>
                     <input type="text" class="form-control" id="fmcEditName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="fmc-icon-picker" id="fmcEditIconPicker"></div>
+                    <input type="hidden" id="fmcEditIcon" value="">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الوصف</label>

@@ -608,7 +608,7 @@ public class DataService
         return Task.CompletedTask;
     }
 
-    // ─── FORM SECTIONS (أقسام النماذج) ──────────────────────────────────────────
+    // ─── FORM SECTIONS (أنواع النماذج) ──────────────────────────────────────────
     public Task<List<FormSection>> ListFormSectionsAsync()
         => Task.FromResult(_db.FormSections.OrderBy(c => c.SortOrder).ToList());
 

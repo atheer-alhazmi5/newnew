@@ -1,6 +1,6 @@
 @{
-    ViewBag.Title = "أقسام النماذج";
-    ViewBag.PageName = "أقسام النماذج";
+    ViewBag.Title = "أنواع النماذج";
+    ViewBag.PageName = "أنواع النماذج";
 }
 
 <style>
@@ -59,22 +59,27 @@
 .fms-modal-body .form-check-input:checked { background-color:var(--sa-600); border-color:var(--sa-600); }
 .fms-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .fms-page-header .fms-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.fms-icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.fms-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:#fff; }
+.fms-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
+.fms-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
+.fms-icon-display { width:32px; height:32px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
 </style>
 
 <div class="fms-page-header">
     <div>
-        <h2 class="page-title" style="margin:0;">أقسام النماذج</h2>
-        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">تنظيم النماذج حسب الأقسام في النظام</p>
+        <h2 class="page-title" style="margin:0;">أنواع النماذج</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">تنظيم النماذج حسب الأنواع في النظام</p>
     </div>
     <button class="btn btn-primary fms-add-btn" onclick="fmsShowAddModal()">
-        <i class="bi bi-plus-lg"></i>إضافة قسم
+        <i class="bi bi-plus-lg"></i>إضافة نوع
     </button>
 </div>
 
 <div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
     <div class="fms-search-box flex-grow-1" style="max-width:400px;">
         <i class="bi bi-search fms-search-icon"></i>
-        <input type="text" class="form-control" id="fmsSearchInput" placeholder="البحث عن قسم بالاسم..." oninput="fmsFilter()">
+        <input type="text" class="form-control" id="fmsSearchInput" placeholder="البحث عن نوع بالاسم..." oninput="fmsFilter()">
     </div>
 </div>
 
@@ -93,7 +98,7 @@
                     </tr>
                 </thead>
                 <tbody id="fmsBody">
-                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="7" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -108,19 +113,24 @@
         <div class="modal-content fms-modal">
             <div class="fms-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="fms-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة قسم جديد</h5>
-                <div class="fms-modal-subtitle">أدخل بيانات القسم الجديد</div>
+                <h5 class="fms-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة نوع جديد</h5>
+                <div class="fms-modal-subtitle">أدخل بيانات النوع الجديد</div>
             </div>
             <div class="fms-modal-body">
-                <div class="fms-section-title"><i class="bi bi-info-circle-fill"></i>معلومات القسم</div>
+                <div class="fms-section-title"><i class="bi bi-info-circle-fill"></i>معلومات النوع</div>
 
                 <div class="mb-3">
-                    <label class="form-label">اسم القسم<span class="required-star">*</span></label>
+                    <label class="form-label">اسم النوع<span class="required-star">*</span></label>
                     <input type="text" class="form-control" id="fmsAddName">
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="fms-icon-picker" id="fmsAddIconPicker"></div>
+                    <input type="hidden" id="fmsAddIcon" value="">
+                </div>
+                <div class="mb-3">
                     <label class="form-label">الوصف</label>
-                    <textarea class="form-control" id="fmsAddDescription" rows="3" placeholder="وصف مختصر لهذا القسم"></textarea>
+                    <textarea class="form-control" id="fmsAddDescription" rows="3" placeholder="وصف مختصر لهذا النوع"></textarea>
                 </div>
                 <div class="row mb-3">
                     <div class="col-6">
@@ -147,7 +157,7 @@
             </div>
             <div class="fms-modal-footer">
                 <button class="fms-save-btn" onclick="fmsSubmitAdd()">
-                    <i class="bi bi-plus-lg"></i>إضافة القسم
+                    <i class="bi bi-plus-lg"></i>إضافة النوع
                 </button>
                 <button class="fms-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
@@ -161,16 +171,21 @@
         <div class="modal-content fms-modal">
             <div class="fms-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="fms-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i>تحديث القسم</h5>
-                <div class="fms-modal-subtitle">تعديل بيانات القسم</div>
+                <h5 class="fms-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i>تحديث النوع</h5>
+                <div class="fms-modal-subtitle">تعديل بيانات النوع</div>
             </div>
             <div class="fms-modal-body">
                 <input type="hidden" id="fmsEditId">
-                <div class="fms-section-title"><i class="bi bi-info-circle-fill"></i>معلومات القسم</div>
+                <div class="fms-section-title"><i class="bi bi-info-circle-fill"></i>معلومات النوع</div>
 
                 <div class="mb-3">
-                    <label class="form-label">اسم القسم<span class="required-star">*</span></label>
+                    <label class="form-label">اسم النوع<span class="required-star">*</span></label>
                     <input type="text" class="form-control" id="fmsEditName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="fms-icon-picker" id="fmsEditIconPicker"></div>
+                    <input type="hidden" id="fmsEditIcon" value="">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الوصف</label>
@@ -219,8 +234,8 @@
         <div class="modal-content fms-modal">
             <div class="fms-modal-header" style="background:var(--info-700);">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="fms-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل القسم</h5>
-                <div class="fms-modal-subtitle">عرض بيانات القسم</div>
+                <h5 class="fms-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل النوع</h5>
+                <div class="fms-modal-subtitle">عرض بيانات النوع</div>
             </div>
             <div class="fms-modal-body" id="fmsDetailsBody">
             </div>
@@ -237,11 +252,11 @@
         <div class="modal-content fms-modal">
             <div class="fms-modal-header" style="background:var(--error-600);">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="fms-modal-title"><i class="bi bi-trash3" style="margin-left:8px;"></i>حذف القسم</h5>
+                <h5 class="fms-modal-title"><i class="bi bi-trash3" style="margin-left:8px;"></i>حذف النوع</h5>
             </div>
             <div class="fms-modal-body text-center">
                 <input type="hidden" id="fmsDeleteId">
-                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا القسم؟</p>
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا النوع؟</p>
                 <p style="font-size:14px;color:var(--gray-500);" id="fmsDeleteNameLabel"></p>
                 <div id="fmsDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
             </div>

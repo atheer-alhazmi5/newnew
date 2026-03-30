@@ -198,6 +198,7 @@ public class SettingsController : BaseController
                 c.Name,
                 c.Description,
                 c.Color,
+                c.Icon,
                 c.SortOrder,
                 c.IsActive,
                 c.CreatedBy,
@@ -229,6 +230,7 @@ public class SettingsController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Color = req.Color ?? "#25935F",
+            Icon = req.Icon ?? "",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
             CreatedBy = "مدير النظام"
@@ -262,6 +264,7 @@ public class SettingsController : BaseController
         cls.Name = req.Name.Trim();
         cls.Description = req.Description?.Trim() ?? "";
         cls.Color = req.Color ?? cls.Color;
+        cls.Icon = req.Icon ?? cls.Icon;
         cls.IsActive = req.IsActive;
         cls.UpdatedBy = CurrentUserFullName;
         cls.UpdatedAt = DateTime.Now;
@@ -307,11 +310,11 @@ public class SettingsController : BaseController
         if (CurrentUserRole != "Admin")
             return RedirectToAction("Index", "Forms");
         SetViewBagUser(_ui);
-        ViewBag.PageName = "أقسام النماذج";
+        ViewBag.PageName = "أنواع النماذج";
         return View();
     }
 
-    // ─── FORM SECTIONS API (أقسام النماذج) ───────────────────────────────────
+    // ─── FORM SECTIONS API (أنواع النماذج) ───────────────────────────────────
 
     [HttpGet]
     public async Task<IActionResult> GetFormSections()
@@ -329,6 +332,7 @@ public class SettingsController : BaseController
                 c.Name,
                 c.Description,
                 c.Color,
+                c.Icon,
                 c.SortOrder,
                 c.IsActive,
                 c.CreatedBy,
@@ -346,10 +350,10 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         if (string.IsNullOrWhiteSpace(req.Name))
-            return Json(new { success = false, message = "اسم القسم مطلوب" });
+            return Json(new { success = false, message = "اسم النوع مطلوب" });
 
         if (await _ds.IsFormSectionNameDuplicateAsync(req.Name.Trim()))
-            return Json(new { success = false, message = "اسم القسم موجود مسبقاً، لا يمكن تكرار الاسم" });
+            return Json(new { success = false, message = "اسم النوع موجود مسبقاً، لا يمكن تكرار الاسم" });
 
         var all = await _ds.ListFormSectionsAsync();
         var nextOrder = all.Count > 0 ? all.Max(c => c.SortOrder) + 1 : 1;
@@ -359,6 +363,7 @@ public class SettingsController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Color = req.Color ?? "#25935F",
+            Icon = req.Icon ?? "",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
             CreatedBy = "مدير النظام"
@@ -366,9 +371,9 @@ public class SettingsController : BaseController
 
         await _ds.AddFormSectionAsync(row);
         await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة قسم نموذج", "FormSection", row.Id.ToString(), row.Name);
+            "إضافة نوع نموذج", "FormSection", row.Id.ToString(), row.Name);
 
-        return Json(new { success = true, message = "تم إضافة القسم بنجاح" });
+        return Json(new { success = true, message = "تم إضافة النوع بنجاح" });
     }
 
     [HttpPost]
@@ -378,19 +383,20 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         if (string.IsNullOrWhiteSpace(req.Name))
-            return Json(new { success = false, message = "اسم القسم مطلوب" });
+            return Json(new { success = false, message = "اسم النوع مطلوب" });
 
         var row = await _ds.GetFormSectionByIdAsync(req.Id);
         if (row == null)
-            return Json(new { success = false, message = "القسم غير موجود" });
+            return Json(new { success = false, message = "النوع غير موجود" });
 
         if (await _ds.IsFormSectionNameDuplicateAsync(req.Name.Trim(), req.Id))
-            return Json(new { success = false, message = "اسم القسم موجود مسبقاً، لا يمكن تكرار الاسم" });
+            return Json(new { success = false, message = "اسم النوع موجود مسبقاً، لا يمكن تكرار الاسم" });
 
         var oldOrder = row.SortOrder;
         row.Name = req.Name.Trim();
         row.Description = req.Description?.Trim() ?? "";
         row.Color = req.Color ?? row.Color;
+        row.Icon = req.Icon ?? row.Icon;
         row.IsActive = req.IsActive;
         row.UpdatedBy = CurrentUserFullName;
         row.UpdatedAt = DateTime.Now;
@@ -401,9 +407,9 @@ public class SettingsController : BaseController
             await _ds.ReorderFormSectionsAsync(row.Id, req.SortOrder);
 
         await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث قسم نموذج", "FormSection", row.Id.ToString(), row.Name);
+            "تحديث نوع نموذج", "FormSection", row.Id.ToString(), row.Name);
 
-        return Json(new { success = true, message = "تم تحديث القسم بنجاح" });
+        return Json(new { success = true, message = "تم تحديث النوع بنجاح" });
     }
 
     [HttpPost]
@@ -414,7 +420,7 @@ public class SettingsController : BaseController
 
         var row = await _ds.GetFormSectionByIdAsync(req.Id);
         if (row == null)
-            return Json(new { success = false, message = "القسم غير موجود" });
+            return Json(new { success = false, message = "النوع غير موجود" });
 
         await _ds.DeleteFormSectionAsync(req.Id);
 
@@ -425,9 +431,9 @@ public class SettingsController : BaseController
             await _ds.UpdateFormSectionAsync(c);
 
         await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف قسم نموذج", "FormSection", req.Id.ToString(), row.Name);
+            "حذف نوع نموذج", "FormSection", req.Id.ToString(), row.Name);
 
-        return Json(new { success = true, message = "تم حذف القسم بنجاح" });
+        return Json(new { success = true, message = "تم حذف النوع بنجاح" });
     }
 
     public IActionResult FormStatuses()
@@ -1001,6 +1007,7 @@ public class FormClassRequest
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string? Color { get; set; }
+    public string? Icon { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
@@ -1010,6 +1017,7 @@ public class FormClassUpdateRequest
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string? Color { get; set; }
+    public string? Icon { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
 }
@@ -1024,6 +1032,7 @@ public class FormSectionRequest
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string? Color { get; set; }
+    public string? Icon { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
@@ -1033,6 +1042,7 @@ public class FormSectionUpdateRequest
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public string? Color { get; set; }
+    public string? Icon { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
 }

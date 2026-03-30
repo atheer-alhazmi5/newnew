@@ -1,0 +1,565 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة النماذج وسير الإجراءات - إمارة منطقة المدينة المنورة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --sa-50: #F3FCF6; --sa-100: #DFF6E7; --sa-200: #B8EACB; --sa-300: #88D8AD;
+            --sa-400: #54C08A; --sa-500: #25935F; --sa-600: #1B8354; --sa-700: #166A45;
+            --sa-800: #14573A; --sa-900: #104631; --sa-950: #092A1E;
+            --gold-100: #FFFCE6; --gold-200: #FCF3BD; --gold-300: #FAE996;
+            --gold-400: #F7D54D; --gold-500: #F5BD02; --gold-600: #DBA102; --gold-700: #B87B02;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #FAFBFC;
+            color: #1F2A37;
+            overflow-x: hidden;
+            line-height: 1.8;
+        }
+
+        /* ═══════ NAVBAR ═══════ */
+        .lp-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,.06);
+            transition: box-shadow .3s;
+        }
+        .lp-nav.scrolled { box-shadow: 0 2px 24px rgba(0,0,0,.08); }
+        .lp-nav-inner {
+            max-width: 1280px; margin: 0 auto; padding: 0 40px;
+            display: flex; align-items: center; justify-content: space-between; height: 72px;
+        }
+        .lp-nav-brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+        .lp-nav-logo {
+            width: 48px; height: 48px; object-fit: contain;
+        }
+        .lp-nav-brand-text { font-weight: 800; font-size: 15px; color: var(--sa-800); line-height: 1.4; }
+        .lp-nav-brand-sub { font-size: 11px; color: #6C737F; font-weight: 600; }
+        .lp-nav-links { display: flex; align-items: center; gap: 12px; }
+        .lp-nav-link {
+            padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 14px;
+            text-decoration: none; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .lp-nav-link-ghost { color: var(--sa-700); background: transparent; border: 2px solid transparent; }
+        .lp-nav-link-ghost:hover { background: var(--sa-50); }
+        .lp-nav-link-solid {
+            background: var(--sa-700); color: #fff; border: 2px solid var(--sa-700);
+        }
+        .lp-nav-link-solid:hover { background: var(--sa-800); border-color: var(--sa-800); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(20,87,58,.25); }
+
+        /* ═══════ HERO ═══════ */
+        .lp-hero {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden; padding: 120px 40px 80px;
+        }
+        .lp-hero-bg {
+            position: absolute; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 80%, rgba(37,147,95,.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 20%, rgba(219,161,2,.06) 0%, transparent 60%),
+                linear-gradient(180deg, #ffffff 0%, #F7FDF9 40%, #F3FCF6 100%);
+        }
+        .lp-hero-pattern {
+            position: absolute; inset: 0; z-index: 1;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(37,147,95,.04) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+        .lp-hero-glow {
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%); z-index: 1;
+            width: 800px; height: 800px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(37,147,95,.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .lp-hero-content {
+            position: relative; z-index: 2; text-align: center; max-width: 860px;
+        }
+        .lp-hero-badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--sa-50), #fff);
+            border: 1.5px solid var(--sa-200);
+            padding: 8px 24px; border-radius: 999px;
+            font-size: 13px; font-weight: 700; color: var(--sa-700);
+            margin-bottom: 32px;
+            animation: fadeUp .8s ease-out;
+        }
+        .lp-hero-badge-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--sa-500);
+            animation: pulse 2s infinite;
+        }
+        .lp-hero-title {
+            font-size: clamp(28px, 4vw, 42px); font-weight: 900;
+            color: var(--sa-900); line-height: 1.4; margin-bottom: 8px;
+            animation: fadeUp .8s ease-out .1s both;
+        }
+        .lp-hero-title-gold {
+            background: linear-gradient(135deg, var(--gold-600), var(--gold-500));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .lp-hero-slogan {
+            font-size: 20px; font-weight: 700; color: var(--sa-600);
+            margin-bottom: 24px; letter-spacing: .5px;
+            animation: fadeUp .8s ease-out .2s both;
+        }
+        .lp-hero-desc {
+            font-size: 17px; color: #4D5761; max-width: 700px; margin: 0 auto 44px;
+            line-height: 2;
+            animation: fadeUp .8s ease-out .3s both;
+        }
+        .lp-hero-actions {
+            display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+            animation: fadeUp .8s ease-out .4s both;
+        }
+        .lp-btn {
+            padding: 16px 40px; border-radius: 14px; font-weight: 800; font-size: 16px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+            transition: all .3s; border: 2px solid transparent; cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+        }
+        .lp-btn-primary {
+            background: linear-gradient(135deg, var(--sa-700), var(--sa-600));
+            color: #fff; border-color: var(--sa-700);
+            box-shadow: 0 4px 20px rgba(20,87,58,.2);
+        }
+        .lp-btn-primary:hover {
+            transform: translateY(-3px); box-shadow: 0 8px 32px rgba(20,87,58,.3);
+            background: linear-gradient(135deg, var(--sa-800), var(--sa-700));
+        }
+        .lp-btn-outline {
+            background: #fff; color: var(--sa-700); border-color: var(--sa-300);
+        }
+        .lp-btn-outline:hover {
+            border-color: var(--sa-500); background: var(--sa-50); transform: translateY(-2px);
+        }
+
+        .lp-hero-divider {
+            width: 60px; height: 3px; border-radius: 2px;
+            background: linear-gradient(90deg, var(--sa-500), var(--gold-500));
+            margin: 0 auto 48px;
+            animation: fadeUp .8s ease-out .45s both;
+        }
+        .lp-hero-highlights {
+            display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;
+            margin-top: 56px;
+            animation: fadeUp .8s ease-out .5s both;
+        }
+        .lp-highlight {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; font-weight: 700; color: var(--sa-700);
+        }
+        .lp-highlight-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--gold-500); flex-shrink: 0;
+        }
+
+        /* ═══════ SECTION COMMON ═══════ */
+        .lp-section { padding: 100px 40px; }
+        .lp-section-header { text-align: center; max-width: 700px; margin: 0 auto 60px; }
+        .lp-section-tag {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--sa-50); border: 1px solid var(--sa-200);
+            color: var(--sa-700); font-size: 13px; font-weight: 700;
+            padding: 6px 18px; border-radius: 999px; margin-bottom: 16px;
+        }
+        .lp-section-title {
+            font-size: clamp(26px, 3.5vw, 38px); font-weight: 900;
+            color: var(--sa-900); margin-bottom: 16px; line-height: 1.4;
+        }
+        .lp-section-desc { font-size: 16px; color: #4D5761; line-height: 1.9; }
+
+        /* ═══════ FEATURES ═══════ */
+        .lp-features { background: #fff; }
+        .lp-features-grid {
+            max-width: 1200px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 28px;
+        }
+        .lp-feature {
+            background: #FAFBFC; border: 1px solid #E5E7EB;
+            border-radius: 20px; padding: 36px 32px;
+            transition: all .3s; position: relative; overflow: hidden;
+        }
+        .lp-feature::before {
+            content: ''; position: absolute; top: 0; right: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, var(--sa-500), var(--gold-500));
+            opacity: 0; transition: opacity .3s;
+        }
+        .lp-feature:hover { background: #fff; border-color: var(--sa-200); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,.06); }
+        .lp-feature:hover::before { opacity: 1; }
+        .lp-feature-icon {
+            width: 56px; height: 56px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-bottom: 20px;
+        }
+        .lp-feature-icon-green { background: var(--sa-50); color: var(--sa-600); }
+        .lp-feature-icon-gold { background: var(--gold-100); color: var(--gold-700); }
+        .lp-feature-icon-blue { background: #EFF6FF; color: #1D4ED8; }
+        .lp-feature-icon-purple { background: #F5F3FF; color: #6D28D9; }
+        .lp-feature-icon-red { background: #FEF2F2; color: #DC2626; }
+        .lp-feature-icon-teal { background: #F0FDFA; color: #0D9488; }
+        .lp-feature-title { font-size: 17px; font-weight: 800; color: var(--sa-900); margin-bottom: 10px; }
+        .lp-feature-desc { font-size: 14px; color: #6C737F; line-height: 1.9; }
+
+        /* ═══════ WORKFLOW SECTION ═══════ */
+        .lp-workflow { background: linear-gradient(180deg, #F7FDF9 0%, #fff 100%); }
+        .lp-workflow-grid {
+            max-width: 1000px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px;
+        }
+        .lp-wf-step {
+            text-align: center; position: relative;
+        }
+        .lp-wf-num {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--sa-600), var(--sa-500));
+            color: #fff; font-size: 24px; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 20px rgba(37,147,95,.2);
+        }
+        .lp-wf-title { font-size: 15px; font-weight: 800; color: var(--sa-800); margin-bottom: 6px; }
+        .lp-wf-desc { font-size: 13px; color: #6C737F; line-height: 1.7; }
+
+        /* ═══════ CTA ═══════ */
+        .lp-cta {
+            background: linear-gradient(135deg, var(--sa-900) 0%, var(--sa-700) 50%, var(--sa-800) 100%);
+            padding: 80px 40px; text-align: center; position: relative; overflow: hidden;
+        }
+        .lp-cta::before {
+            content: ''; position: absolute; inset: 0;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(255,255,255,.03) 1px, transparent 0);
+            background-size: 32px 32px;
+        }
+        .lp-cta-content { position: relative; z-index: 1; max-width: 700px; margin: 0 auto; }
+        .lp-cta-title { font-size: clamp(24px, 3vw, 34px); font-weight: 900; color: #fff; margin-bottom: 16px; line-height: 1.5; }
+        .lp-cta-desc { font-size: 16px; color: rgba(255,255,255,.75); margin-bottom: 36px; line-height: 1.8; }
+        .lp-cta-btn {
+            padding: 16px 48px; border-radius: 14px; font-weight: 800; font-size: 16px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--gold-500), var(--gold-600));
+            color: var(--sa-950); border: none; cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: all .3s;
+            box-shadow: 0 4px 20px rgba(245,189,2,.3);
+        }
+        .lp-cta-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(245,189,2,.4); }
+
+        .lp-footer {
+            background: var(--sa-950); padding: 48px 40px 32px;
+        }
+        .lp-footer-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 32px;
+        }
+        .lp-footer-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .lp-footer-logo { width: 40px; height: 40px; object-fit: contain; filter: brightness(0) invert(1); opacity: .9; }
+        .lp-footer-brand-text { font-weight: 700; font-size: 14px; color: rgba(255,255,255,.9); }
+        .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,.5); max-width: 320px; line-height: 1.8; }
+        .lp-footer-col-title { font-weight: 700; font-size: 14px; color: rgba(255,255,255,.8); margin-bottom: 16px; }
+        .lp-footer-link {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: rgba(255,255,255,.5); text-decoration: none;
+            margin-bottom: 10px; transition: color .2s;
+        }
+        .lp-footer-link:hover { color: var(--gold-400); }
+        .lp-footer-social { display: flex; gap: 10px; margin-top: 8px; }
+        .lp-footer-social a {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,.6); font-size: 16px; text-decoration: none;
+            transition: all .2s;
+        }
+        .lp-footer-social a:hover { background: rgba(255,255,255,.12); color: var(--gold-400); }
+        .lp-footer-bottom {
+            max-width: 1200px; margin: 32px auto 0;
+            padding-top: 24px; border-top: 1px solid rgba(255,255,255,.08);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        .lp-footer-copy { font-size: 12px; color: rgba(255,255,255,.35); }
+        .lp-footer-dev { font-size: 12px; color: rgba(255,255,255,.35); }
+        .lp-footer-dev span { color: var(--gold-500); font-weight: 700; }
+
+        @@keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @@keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.3); }
+        }
+
+        .reveal { opacity: 0; transform: translateY(40px); transition: all .7s ease-out; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+=
+        @@media (max-width: 768px) {
+            .lp-nav-inner { padding: 0 20px; height: 64px; }
+            .lp-nav-brand-text { font-size: 13px; }
+            .lp-nav-link { padding: 8px 14px; font-size: 12px; }
+            .lp-hero { padding: 100px 20px 60px; }
+            .lp-hero-desc { font-size: 15px; }
+            .lp-section { padding: 60px 20px; }
+            .lp-features-grid { grid-template-columns: 1fr; }
+            .lp-hero-highlights { gap: 20px; }
+            .lp-footer-inner { flex-direction: column; text-align: center; }
+            .lp-footer-bottom { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="lp-nav" id="lpNav">
+    <div class="lp-nav-inner">
+        <a href="/" class="lp-nav-brand">
+            <img src="~/images/logo1.webp" alt="شعار إمارة منطقة المدينة المنورة" class="lp-nav-logo"
+                 onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+            <div>
+                <div class="lp-nav-brand-text">نظام إدارة النماذج وسير الإجراءات</div>
+                <div class="lp-nav-brand-sub">إمارة منطقة المدينة المنورة</div>
+            </div>
+        </a>
+        <div class="lp-nav-links">
+            <a href="#support" class="lp-nav-link lp-nav-link-ghost">
+                <i class="bi bi-headset"></i> الدعم الفني
+            </a>
+            <a href="/Account/Login" class="lp-nav-link lp-nav-link-solid">
+                <i class="bi bi-box-arrow-in-left"></i> تسجيل الدخول
+            </a>
+        </div>
+    </div>
+</nav>
+
+<section class="lp-hero">
+    <div class="lp-hero-bg"></div>
+    <div class="lp-hero-pattern"></div>
+    <div class="lp-hero-glow"></div>
+    <div class="lp-hero-content" style="padding-top:32px;">
+        <h1 class="lp-hero-title">
+            نظام إدارة النماذج<br>
+            <span class="lp-hero-title-gold">وسير الإجراءات</span>
+        </h1>
+        <div class="lp-hero-slogan">« إمارة بلا ورق »</div>
+        <p class="lp-hero-desc">
+            نظام متكامل يسهّل إدارة النماذج الإلكترونية
+            وتنظيم إجراءات العمل بسلاسة ودقة، بما يسرع إنجاز المعاملات ويعزز كفاءة الأداء،
+            وصولًا إلى بيئة عمل حديثة بلا ورق.
+        </p>
+        <div class="lp-hero-divider"></div>
+        <div class="lp-hero-actions">
+            <a href="/Account/Login" class="lp-btn lp-btn-primary">
+                ابدأ الآن
+            </a>
+            <a href="#features" class="lp-btn lp-btn-outline">
+                اكتشف المزيد
+            </a>
+        </div>
+
+        <div class="lp-hero-highlights">
+            <div class="lp-highlight"><span class="lp-highlight-dot"></span>نماذج إلكترونية</div>
+            <div class="lp-highlight"><span class="lp-highlight-dot"></span>سير إجراءات آلي</div>
+            <div class="lp-highlight"><span class="lp-highlight-dot"></span>اعتماد إلكتروني</div>
+            <div class="lp-highlight"><span class="lp-highlight-dot"></span>تقارير وتحليلات</div>
+        </div>
+    </div>
+</section>
+
+<section class="lp-section lp-features" id="features">
+    <div class="lp-section-header reveal">
+        <div class="lp-section-tag">
+            خدمات ومميزات النظام
+        </div>
+        <h2 class="lp-section-title">حلول رقمية متقدمة لإدارة الأعمال </h2>
+    
+    </div>
+
+    <div class="lp-features-grid">
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-ui-checks-grid"></i>
+            </div>
+            <div class="lp-feature-title">بناء النماذج الإلكترونية</div>
+            <div class="lp-feature-desc">
+                محرر نماذج  يتيح إنشاء نماذج إلكترونية بأنواع حقول متعددة
+         تشمل النصوص والقوائم والجداول والتقييمات.
+            </div>
+        </div>
+
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-diagram-3-fill"></i>
+            </div>
+            <div class="lp-feature-title">سير الإجراءات الآلي</div>
+            <div class="lp-feature-desc">
+                نظام توجيه للنماذج يضمن وصولها للمستلم مع تتبّع مراحل
+                الاعتماد والمراجعة بشكل تسلسلي وفق الهيكل الإداري.
+            </div>
+        </div>
+
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-send-check-fill"></i>
+            </div>
+            <div class="lp-feature-title">الإرسال والاستقبال</div>
+            <div class="lp-feature-desc">
+                صناديق وارد وصادر تمكن الموظفين من إرسال النماذج واستقبالها
+                مع إشعارات فورية لضمان عدم تأخر المعاملات.
+            </div>
+        </div>
+
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-clipboard2-check-fill"></i>
+            </div>
+            <div class="lp-feature-title">الاعتماد الإلكتروني</div>
+            <div class="lp-feature-desc">
+                آلية اعتماد ومراجعة إلكترونية متكاملة تدعم مستويات متعددة من الموافقات .
+            </div>
+        </div>
+
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-building-fill-gear"></i>
+            </div>
+            <div class="lp-feature-title">إدارة الوحدات التنظيمية</div>
+            <div class="lp-feature-desc">
+                هيكلة رقمية للوحدات التنظيمية والأقسام مع إدارة 
+                للصلاحيات والأدوار تراعي التسلسل الإداري .
+            </div>
+        </div>
+
+        <div class="lp-feature reveal">
+            <div class="lp-feature-icon lp-feature-icon-green">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+            </div>
+            <div class="lp-feature-title">التقارير والتصدير</div>
+            <div class="lp-feature-desc">
+                إنشاء تقارير تفصيلية وتصدير البيانات بصيغ متعددة
+                مع لوحة تحكم تفاعلية تعرض مؤشرات الأداء ومتابعة الإنجاز.
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="lp-section lp-workflow">
+    <div class="lp-section-header reveal">
+        <div class="lp-section-tag">
+            <i class="bi bi-signpost-split-fill"></i> آلية العمل
+        </div>
+        <h2 class="lp-section-title">خطوات نحو بيئة عمل رقمية</h2>
+        <p class="lp-section-desc">
+            أربع خطوات تحول المعاملات الورقية إلى إجراءات إلكترونية  .
+        </p>
+    </div>
+
+    <div class="lp-workflow-grid">
+        <div class="lp-wf-step reveal">
+            <div class="lp-wf-num">١</div>
+            <div class="lp-wf-title">إنشاء النموذج</div>
+            <div class="lp-wf-desc">تصميم النموذج الإلكتروني بالحقول والأقسام المطلوبة</div>
+        </div>
+        <div class="lp-wf-step reveal">
+            <div class="lp-wf-num">٢</div>
+            <div class="lp-wf-title">الإرسال والتوجيه</div>
+            <div class="lp-wf-desc">إرسال النموذج للمستلمين المحددين وفق المسار الإداري</div>
+        </div>
+        <div class="lp-wf-step reveal">
+            <div class="lp-wf-num">٣</div>
+            <div class="lp-wf-title">المراجعة والاعتماد</div>
+            <div class="lp-wf-desc">مراجعة البيانات واتخاذ القرار بالاعتماد أو الإعادة</div>
+        </div>
+        <div class="lp-wf-step reveal">
+            <div class="lp-wf-num">٤</div>
+            <div class="lp-wf-title">الأرشفة والتتبع</div>
+            <div class="lp-wf-desc">حفظ المعاملة رقمياً مع سجل تدقيق كامل لكل خطوة</div>
+        </div>
+    </div>
+</section>
+
+<section class="lp-cta">
+    <div class="lp-cta-content reveal">
+        <h2 class="lp-cta-title">استعد للانطلاق نحو التحول الرقمي</h2>
+        <p class="lp-cta-desc">
+            انضم إلى نظام إدارة النماذج وسير الإجراءات وساهم في تحقيق
+            رؤية «إمارة بلا ورق».
+        </p>
+        <a href="/Account/Login" class="lp-cta-btn">
+            <i class="bi bi-box-arrow-in-left"></i> الدخول إلى النظام
+        </a>
+    </div>
+</section>
+
+<footer class="lp-footer" id="support">
+    <div class="lp-footer-inner">
+        <div>
+            <div class="lp-footer-brand">
+                <img src="~/images/logo1.webp" alt="شعار" class="lp-footer-logo"
+                     onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+                <span class="lp-footer-brand-text">نظام إدارة النماذج وسير الإجراءات</span>
+            </div>
+            <p class="lp-footer-desc">
+             نظام يهدف إلى أتمتة الإجراءات وتقليل الاعتماد على الورق.
+               
+            </p>
+        </div>
+        <div>
+            <div class="lp-footer-col-title">روابط سريعة</div>
+            <a href="/Account/Login" class="lp-footer-link"><i class="bi bi-box-arrow-in-left"></i> تسجيل الدخول</a>
+            <a href="/Guide/Index" class="lp-footer-link"><i class="bi bi-book"></i> دليل الاستخدام</a>
+            <a href="/Feedback/Index" class="lp-footer-link"><i class="bi bi-star"></i> تقييم النظام</a>
+        </div>
+        <div>
+            <div class="lp-footer-col-title">الدعم الفني</div>
+            <a href="mailto:support@madinah.gov.sa" class="lp-footer-link"><i class="bi bi-envelope-fill"></i> support&#64;madinah.gov.sa</a>
+            <a href="tel:+966148480000" class="lp-footer-link"><i class="bi bi-telephone-fill"></i> 0148150198</a>
+            <a href="#" class="lp-footer-link"><i class="bi bi-clock-fill"></i> الأحد - الخميس </a>
+            <div class="lp-footer-social">
+                <a href="#" title="انستقرام"><i class="bi bi-instagram"></i></a>
+                <a href="#" title="لينكدإن"><i class="bi bi-linkedin"></i></a>
+                <a href="#" title="منصة إكس"><i class="bi bi-twitter-x"></i></a>
+            </div>
+        </div>
+    </div>
+    <div class="lp-footer-bottom">
+        <span class="lp-footer-copy">جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026</span>
+        <span class="lp-footer-dev">تنفيذ وتطوير: <span>إدارة الأنظمة والبرامج</span></span>
+    </div>
+</footer>
+
+<script>
+window.addEventListener('scroll', function() {
+    var nav = document.getElementById('lpNav');
+    if (window.scrollY > 20) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+});
+
+var reveals = document.querySelectorAll('.reveal');
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, { threshold: 0.15 });
+
+reveals.forEach(function(el) { observer.observe(el); });
+</script>
+</body>
+</html>
