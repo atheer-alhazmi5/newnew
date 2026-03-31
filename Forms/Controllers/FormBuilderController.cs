@@ -87,9 +87,9 @@ public class FormBuilderController : BaseController
         };
         var saved = await _ds.AddFormAsync(form);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
+        await _ds.AddAuditLogAsync(BuildAuditEntry(
             pinAsReady ? "تثبيت نموذج جاهز" : "إنشاء نموذج", "Form",
-            saved.Id.ToString(), req.Name);
+            saved.Id.ToString(), req.Name));
 
         return Json(new { success = true, id = saved.Id, message = "تم إنشاء النموذج بنجاح", pinAsReady });
     }
@@ -150,8 +150,7 @@ public class FormBuilderController : BaseController
 
         if (pinAsReady)
         {
-            await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-                "تثبيت نموذج جاهز", "Form", form.Id.ToString(), req.Name);
+            await _ds.AddAuditLogAsync(BuildAuditEntry("تثبيت نموذج جاهز", "Form", form.Id.ToString(), req.Name));
             return Json(new { success = true, message = "تم تثبيت النموذج كنموذج جاهز", redirect = "/Forms/Index" });
         }
 
@@ -207,8 +206,7 @@ public class FormBuilderController : BaseController
                 });
             }
 
-            await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-                "إرسال نموذج للاعتماد", "Form", form.Id.ToString(), req.Name);
+            await _ds.AddAuditLogAsync(BuildAuditEntry("إرسال نموذج للاعتماد", "Form", form.Id.ToString(), req.Name));
             return Json(new { success = true, message = "تم إرسال النموذج للاعتماد", redirect = "/Outbox/Index" });
         }
 
@@ -243,8 +241,7 @@ public class FormBuilderController : BaseController
             });
         }
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "نشر نموذج", "Form", form.Id.ToString(), $"إلى {recipients.Count} مستلم");
+        await _ds.AddAuditLogAsync(BuildAuditEntry("نشر نموذج", "Form", form.Id.ToString(), $"إلى {recipients.Count} مستلم"));
         return Json(new { success = true, message = "تم نشر النموذج بنجاح!", redirect = "/Outbox/Index" });
     }
 

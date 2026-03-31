@@ -32,7 +32,7 @@
             line-height: 1.8;
         }
 
-        /* ═══════ NAVBAR ═══════ */
+        /*NAVBAR  */
         .lp-nav {
             position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             background: rgba(255,255,255,.92);
@@ -64,7 +64,6 @@
         }
         .lp-nav-link-solid:hover { background: var(--sa-800); border-color: var(--sa-800); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(20,87,58,.25); }
 
-        /* ═══════ HERO ═══════ */
         .lp-hero {
             min-height: 100vh; display: flex; align-items: center; justify-content: center;
             position: relative; overflow: hidden; padding: 120px 40px 80px;
@@ -129,27 +128,88 @@
             animation: fadeUp .8s ease-out .4s both;
         }
         .lp-btn {
-            padding: 16px 40px; border-radius: 14px; font-weight: 800; font-size: 16px;
+            width: 220px; height: 54px; padding: 0 24px;
+            border-radius: 999px; justify-content: center;
+            font-weight: 800; font-size: 16px;
             text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
             transition: all .3s; border: 2px solid transparent; cursor: pointer;
             font-family: 'Cairo', sans-serif;
         }
         .lp-btn-primary {
-            background: linear-gradient(135deg, var(--sa-700), var(--sa-600));
-            color: #fff; border-color: var(--sa-700);
-            box-shadow: 0 4px 20px rgba(20,87,58,.2);
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #14573A 0%, #104631 100%);
+            color: #fff;
+            border: none;
+            box-shadow: 0 10px 26px rgba(16,70,49,.32), inset 0 1px 0 rgba(255,255,255,.18);
+            transition: transform .25s ease, box-shadow .25s ease, background .35s ease, color .35s ease;
         }
-        .lp-btn-primary:hover {
-            transform: translateY(-3px); box-shadow: 0 8px 32px rgba(20,87,58,.3);
-            background: linear-gradient(135deg, var(--sa-800), var(--sa-700));
+        .lp-btn-primary::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -65%;
+            width: 58%;
+            height: 180%;
+            transform: rotate(22deg);
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.28) 45%, transparent 100%);
+            transition: right .55s ease;
+        }
+        .lp-btn-primary:hover::before { right: 120%; }
+        .lp-btn-primary:hover,
+        .lp-btn-primary:focus-visible,
+        .lp-btn-primary:active {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #F7D54D 0%, #F5BD02 100%);
+            color: #104631;
+            box-shadow: 0 14px 30px rgba(245,189,2,.33), inset 0 1px 0 rgba(255,255,255,.38);
         }
         .lp-btn-outline {
-            background: #fff; color: var(--sa-700); border-color: var(--sa-300);
+            position: relative;
+            overflow: hidden;
+            display: inline-flex; align-items: center; gap: 12px;
+            background: linear-gradient(135deg, #1B8354 0%, #14573A 100%);
+            color: #fff;
+            border: none;
+            box-shadow: 0 10px 26px rgba(20,87,58,.28), inset 0 1px 0 rgba(255,255,255,.2);
+            transition: transform .25s ease, box-shadow .25s ease, background .35s ease, color .35s ease;
         }
-        .lp-btn-outline:hover {
-            border-color: var(--sa-500); background: var(--sa-50); transform: translateY(-2px);
+        .lp-btn-outline::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -65%;
+            width: 58%;
+            height: 180%;
+            transform: rotate(22deg);
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.32) 45%, transparent 100%);
+            transition: right .55s ease;
         }
-
+        .lp-btn-outline:hover::before { right: 120%; }
+        .lp-btn-outline:hover,
+        .lp-btn-outline:focus-visible,
+        .lp-btn-outline:active {
+            background: linear-gradient(135deg, #F7D54D 0%, #F5BD02 100%);
+            color: #104631;
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px rgba(245,189,2,.33), inset 0 1px 0 rgba(255,255,255,.38);
+        }
+        .lp-discover-txt { position: relative; z-index: 1; font-weight: 800; letter-spacing: .2px; }
+        .lp-discover-arrow {
+            position: relative; z-index: 1;
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(255,255,255,.2); color: #fff;
+            font-size: 16px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+            flex-shrink: 0;
+            transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+        }
+        .lp-btn-outline:hover .lp-discover-arrow {
+            background: rgba(16,70,49,.14);
+            color: #104631;
+            box-shadow: inset 0 0 0 1px rgba(16,70,49,.3);
+        }
         .lp-hero-divider {
             width: 60px; height: 3px; border-radius: 2px;
             background: linear-gradient(90deg, var(--sa-500), var(--gold-500));
@@ -368,7 +428,8 @@
                 ابدأ الآن
             </a>
             <a href="#features" class="lp-btn lp-btn-outline">
-                اكتشف المزيد
+                <span class="lp-discover-txt">اكتشف المزيد</span>
+                <span class="lp-discover-arrow"><i class="bi bi-chevron-down"></i></span>
             </a>
         </div>
 

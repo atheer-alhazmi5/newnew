@@ -114,8 +114,7 @@ public class WorkspacesController : BaseController
         };
 
         await _ds.AddWorkspaceAsync(row);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة مساحة عمل", "Workspace", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة مساحة عمل", "Workspace", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم إنشاء مساحة العمل بنجاح" });
     }
@@ -149,8 +148,7 @@ public class WorkspacesController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != oldOrder)
             await _ds.ReorderWorkspacesAsync(row.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث مساحة عمل", "Workspace", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث مساحة عمل", "Workspace", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم تحديث مساحة العمل بنجاح" });
     }
@@ -173,8 +171,7 @@ public class WorkspacesController : BaseController
         foreach (var w in all)
             await _ds.UpdateWorkspaceAsync(w);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف مساحة عمل", "Workspace", req.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف مساحة عمل", "Workspace", req.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم حذف مساحة العمل بنجاح" });
     }

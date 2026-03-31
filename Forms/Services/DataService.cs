@@ -931,6 +931,22 @@ public class DataService
             b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
     }
 
+    public Task<Beneficiary?> GetBeneficiaryByUsernameAsync(string username, int? excludeId = null)
+        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
+            b.Username.Equals(username, StringComparison.OrdinalIgnoreCase)
+            && (!excludeId.HasValue || b.Id != excludeId.Value)));
+
+    public Task<bool> HasManagerInUnitAsync(int organizationalUnitId, int? excludeId = null)
+        => Task.FromResult(_db.Beneficiaries.Any(b =>
+            b.OrganizationalUnitId == organizationalUnitId
+            && b.MainRole == "مدير"
+            && b.IsActive
+            && (!excludeId.HasValue || b.Id != excludeId.Value)));
+
+    public Task<User?> GetUserByUsernameForBeneficiaryAsync(string username)
+        => Task.FromResult(_db.Users.FirstOrDefault(u =>
+            u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)));
+
     // ─── DROPDOWN LISTS ───────────────────────────────────────────────────────
     public Task<List<DropdownList>> ListDropdownListsAsync()
         => Task.FromResult(_db.DropdownLists.OrderBy(d => d.SortOrder).ToList());
@@ -1098,6 +1114,69 @@ public class DataService
 
     public Task<List<AuditLog>> ListRecentAuditLogsAsync(int count = 20)
         => Task.FromResult(_db.AuditLogs.OrderByDescending(a => a.CreatedAt).Take(count).ToList());
+
+    public Task<List<AuditLog>> ListAllAuditLogsAsync()
+        => Task.FromResult(_db.AuditLogs.OrderByDescending(a => a.CreatedAt).ToList());
+
+    // ─── LOGIN ATTEMPTS ──────────────────────────────────────────────────────
+    public Task<LoginAttempt> AddLoginAttemptAsync(LoginAttempt a)
+    {
+        var list = _db.LoginAttempts;
+        a.Id = NextId(list, x => x.Id);
+        a.CreatedAt = DateTime.Now;
+        list.Add(a);
+        _db.SaveLoginAttempts(list);
+        return Task.FromResult(a);
+    }
+
+    public Task<List<LoginAttempt>> ListAllLoginAttemptsAsync()
+        => Task.FromResult(_db.LoginAttempts.OrderByDescending(a => a.CreatedAt).ToList());
+
+    public Task<int> CountRecentFailedAttemptsAsync(string username, int minutes = 15)
+    {
+        var cutoff = DateTime.Now.AddMinutes(-minutes);
+        var count = _db.LoginAttempts.Count(a =>
+            a.UsernameAttempted.Equals(username, StringComparison.OrdinalIgnoreCase)
+            && a.WarningType != "محاولة دخول ناجحة"
+            && a.CreatedAt >= cutoff);
+        return Task.FromResult(count);
+    }
+
+    public Task<int> CountRecentAttemptsByIpAsync(string ipAddress, int minutes = 1, bool includeSuccess = true)
+    {
+        var cutoff = DateTime.Now.AddMinutes(-minutes);
+        var count = _db.LoginAttempts.Count(a =>
+            a.IpAddress == ipAddress
+            && a.CreatedAt >= cutoff
+            && (includeSuccess || a.WarningType != "محاولة دخول ناجحة"));
+        return Task.FromResult(count);
+    }
+
+    // ─── BACKUP RECORDS ──────────────────────────────────────────────────────
+    public string GetDataDirectory() => _db.DataDir;
+
+    public Task<List<BackupRecord>> ListBackupRecordsAsync()
+        => Task.FromResult(_db.BackupRecords.OrderByDescending(b => b.CreatedAt).ToList());
+
+    public Task<BackupRecord> AddBackupRecordAsync(BackupRecord rec)
+    {
+        var list = _db.BackupRecords;
+        rec.Id = NextId(list, x => x.Id);
+        rec.CreatedAt = DateTime.Now;
+        list.Add(rec);
+        _db.SaveBackupRecords(list);
+        return Task.FromResult(rec);
+    }
+
+    public Task<bool> DeleteBackupRecordAsync(int id)
+    {
+        var list = _db.BackupRecords;
+        var rec = list.FirstOrDefault(b => b.Id == id);
+        if (rec == null) return Task.FromResult(false);
+        list.Remove(rec);
+        _db.SaveBackupRecords(list);
+        return Task.FromResult(true);
+    }
 
     // ─── DASHBOARD ────────────────────────────────────────────────────────────
     public Task<(int approved, int sent, int pending, int inbox)> GetDashboardKpisAsync(int userId, int deptId)

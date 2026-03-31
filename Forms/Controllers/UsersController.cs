@@ -135,8 +135,7 @@ public class UsersController : BaseController
             Status = req.IsActive ? AccountStatus.Active : AccountStatus.Inactive
         };
         await _ds.AddUserAsync(user);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "إضافة مستخدم", "User",
-            user.Id.ToString(), user.FullName);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة مستخدم", "User", user.Id.ToString(), user.FullName));
         return Json(new { success = true, message = "تم إضافة المستخدم بنجاح" });
     }
 
@@ -159,6 +158,7 @@ public class UsersController : BaseController
 
         var newStatus = u.Status == AccountStatus.Active ? AccountStatus.Inactive : AccountStatus.Active;
         await _ds.UpdateUserStatusAsync(userId, newStatus);
+        await _ds.AddAuditLogAsync(BuildAuditEntry(newStatus == FormsSystem.Models.Enums.AccountStatus.Active ? "تفعيل مستخدم" : "تعطيل مستخدم", "User", u.Id.ToString(), u.FullName));
         return Json(new { success = true, newStatus = newStatus.ToString() });
     }
 
@@ -210,8 +210,7 @@ public class UsersController : BaseController
             u.DepartmentId = req.DepartmentId;
 
         await _ds.UpdateUserAsync(u);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تعديل دور مستخدم", "User", u.Id.ToString(), $"{u.FullName} -> {u.RoleLabel}");
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تعديل دور مستخدم", "User", u.Id.ToString(), $"{u.FullName} -> {u.RoleLabel}"));
 
         return Json(new { success = true, message = "تم تعديل المستخدم بنجاح" });
     }

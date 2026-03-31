@@ -21,6 +21,8 @@ public class AppDbContext
         Directory.CreateDirectory(_dataDir);
     }
 
+    public string DataDir => _dataDir;
+
     // ── Generic helpers ────────────────────────────────────────────────
     private string FilePath(string name) => Path.Combine(_dataDir, $"{name}.json");
 
@@ -56,6 +58,8 @@ public class AppDbContext
     public List<ReadyTable> ReadyTables => Load<ReadyTable>("ready_tables");
     public List<ReadyTableField> ReadyTableFields => Load<ReadyTableField>("ready_table_fields");
     public List<Workspace> Workspaces => Load<Workspace>("workspaces");
+    public List<LoginAttempt> LoginAttempts => Load<LoginAttempt>("login_attempts");
+    public List<BackupRecord> BackupRecords => Load<BackupRecord>("backup_records");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -78,6 +82,8 @@ public class AppDbContext
     public void SaveReadyTables(List<ReadyTable> d) => Save("ready_tables", d);
     public void SaveReadyTableFields(List<ReadyTableField> d) => Save("ready_table_fields", d);
     public void SaveWorkspaces(List<Workspace> d) => Save("workspaces", d);
+    public void SaveLoginAttempts(List<LoginAttempt> d) => Save("login_attempts", d);
+    public void SaveBackupRecords(List<BackupRecord> d) => Save("backup_records", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

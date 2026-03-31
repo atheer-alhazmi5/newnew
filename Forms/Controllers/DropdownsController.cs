@@ -213,7 +213,7 @@ public class DropdownsController : BaseController
         };
 
         await _ds.AddDropdownListAsync(d);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "إضافة قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name));
 
         return Json(new { success = true, message = "تم إضافة القائمة المنسدلة بنجاح", id = d.Id });
     }
@@ -243,7 +243,7 @@ public class DropdownsController : BaseController
         d.IsActive = req.IsActive;
 
         await _ds.UpdateDropdownListAsync(d);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "تحديث قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name));
 
         return Json(new { success = true, message = "تم تحديث القائمة بنجاح" });
     }
@@ -259,7 +259,7 @@ public class DropdownsController : BaseController
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
         await _ds.DeleteDropdownListAsync(req.Id);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "حذف قائمة منسدلة", "DropdownList", req.Id.ToString(), d.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قائمة منسدلة", "DropdownList", req.Id.ToString(), d.Name));
 
         return Json(new { success = true, message = "تم حذف القائمة بنجاح" });
     }

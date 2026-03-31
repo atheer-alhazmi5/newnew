@@ -17,6 +17,7 @@ public class Beneficiary
     public string Phone { get; set; } = "";
     public string Email { get; set; } = "";
     public bool IsActive { get; set; } = true;
+    public string Username { get; set; } = "";
     public string MainRole { get; set; } = "";              // موظف | مدير
     public string SubRole { get; set; } = "";              // ممثل الوحدة التنظيمية | مدير النظام
     public string PasswordHash { get; set; } = "";

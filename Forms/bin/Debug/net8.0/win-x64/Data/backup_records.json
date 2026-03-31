@@ -1,0 +1,11 @@
+[
+  {
+    "Id": 1,
+    "Name": "ghj",
+    "BackupType": "Differential",
+    "SizeBytes": 81416489,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-03-31T08:27:25.2603898+03:00",
+    "SizeDisplay": "77.6 MB"
+  }
+]

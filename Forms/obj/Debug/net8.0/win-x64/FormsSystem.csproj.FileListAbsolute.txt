@@ -188,3 +188,5 @@ C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms\bin\Debug\net8.0\win-x64\
 C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms\bin\Debug\net8.0\win-x64\Data\form_statuses.json
 C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\Forms\bin\Debug\net8.0\win-x64\Data\workspaces.json
 C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms\bin\Debug\net8.0\win-x64\publish\Data\workspaces.json
+C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms\bin\Debug\net8.0\win-x64\Data\login_attempts.json
+C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\Forms\bin\Debug\net8.0\win-x64\Data\backup_records.json

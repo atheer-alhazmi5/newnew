@@ -176,7 +176,7 @@ public class TablesController : BaseController
             }
         }
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "إضافة جدول جاهز", "ReadyTable", table.Id.ToString(), table.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة جدول جاهز", "ReadyTable", table.Id.ToString(), table.Name));
         return Json(new { success = true, message = "تم إضافة الجدول بنجاح", id = table.Id });
     }
 
@@ -230,7 +230,7 @@ public class TablesController : BaseController
         }
 
         await _ds.UpdateReadyTableAsync(t);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "تحديث جدول جاهز", "ReadyTable", t.Id.ToString(), t.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث جدول جاهز", "ReadyTable", t.Id.ToString(), t.Name));
         return Json(new { success = true, message = "تم تحديث الجدول بنجاح" });
     }
 
@@ -247,7 +247,7 @@ public class TablesController : BaseController
         if (!canDelete) return Json(new { success = false, message = "غير مصرح بحذف هذا الجدول" });
 
         await _ds.DeleteReadyTableAsync(req.Id);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "حذف جدول جاهز", "ReadyTable", req.Id.ToString(), t.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف جدول جاهز", "ReadyTable", req.Id.ToString(), t.Name));
         return Json(new { success = true, message = "تم حذف الجدول بنجاح" });
     }
 }

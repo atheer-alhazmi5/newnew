@@ -1,0 +1,516 @@
+@{
+    ViewBag.Title = "النسخ الاحتياطي";
+    ViewBag.PageName = "النسخ الاحتياطي";
+}
+
+<style>
+.bk-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+.bk-b-full         { background:#ECFDF3; color:#067647; }
+.bk-b-differential { background:#EFF8FF; color:#175CD3; }
+.bk-b-incremental  { background:#F4F3FF; color:#5925DC; }
+.bk-b-log          { background:#FFF6ED; color:#B93815; }
+.bk-b-system       { background:#FEF3F2; color:#B42318; }
+.bk-size { font-family:'Consolas','Courier New',monospace; font-size:12px; background:var(--gray-100); padding:3px 10px; border-radius:8px; color:var(--gray-700); }
+.bk-del-btn { background:transparent; border:1.5px solid #FCA5A5; color:#B42318; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
+.bk-del-btn:hover { background:#FEF2F2; border-color:#F87171; }
+.bk-dl-btn  { background:transparent; border:1.5px solid var(--sa-400); color:var(--sa-700); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; text-decoration:none; }
+.bk-dl-btn:hover  { background:var(--sa-50); }
+.bk-rst-btn { background:transparent; border:1.5px solid #FCD34D; color:#92400E; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
+.bk-rst-btn:hover { background:#FFFBEB; border-color:#F59E0B; }
+.bk-actions { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+.bk-empty { text-align:center; padding:48px 20px; color:var(--gray-400); }
+.bk-empty i { font-size:52px; display:block; margin-bottom:12px; }
+.bk-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
+.bk-pagination button { border:1px solid var(--gray-300); background:#fff; color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
+.bk-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
+.bk-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
+.bk-pagination button:disabled { opacity:.4; cursor:default; }
+.bk-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
+.table > :not(caption) > * > * { padding-top:.75rem; padding-bottom:.75rem; vertical-align:middle; }
+.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+.table tbody tr { transition:background .15s; }
+.table tbody tr:hover { background:var(--sa-25); }
+.table tbody td { border-bottom:1px solid var(--gray-100); text-align:center; font-size:13px; }
+</style>
+
+<!-- Header -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h2 class="page-title" style="margin:0;">النسخ الاحتياطي</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">عرض وإدارة جميع النسخ الاحتياطية في النظام</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <span class="al-record-count">
+            <i class="bi bi-archive"></i> <span id="bkCountNum">0</span> نسخة
+        </span>
+        <button class="btn btn-primary" onclick="bkOpenCreateModal()"
+                style="border-radius:12px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
+            <i class="bi bi-plus-lg"></i> إنشاء نسخة احتياطية
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+    <input type="text" class="form-control rt-filter-text" id="bkFilterSearch"
+           placeholder="ابحث باسم النسخة..." style="min-width:200px;max-width:250px;" />
+    <select class="rt-filter-select form-select" id="bkFilterType" style="min-width:190px;max-width:230px;">
+        <option value="">  نوع النسخة</option>
+        <option value="Full">نسخة كاملة (Full)</option>
+        <option value="Differential">تفاضلية (Differential)</option>
+        <option value="Incremental">تزايدية (Incremental)</option>
+        <option value="Log">سجل العمليات (Log)</option>
+        <option value="System">نسخة النظام الكامل (System)</option>
+    </select>
+    <input type="date" class="form-control rt-filter-text" id="bkFilterDate"
+           title="تاريخ الإنشاء" style="min-width:155px;max-width:175px;" />
+    <div class="d-flex gap-2 align-items-center" style="flex-shrink:0;">
+        <button type="button" class="btn btn-primary" onclick="bkApplyFilters()"
+                style="border-radius:10px;padding:8px 24px;font-weight:700;font-size:13px;">
+            <i class="bi bi-funnel"></i> تطبيق
+        </button>
+        <button type="button" class="rt-clear-btn" onclick="bkClearFilters()">
+            <i class="bi bi-x-circle"></i> مسح
+        </button>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:55px;">#</th>
+                        <th style="text-align:right;">اسم النسخة</th>
+                        <th style="width:220px;">نوع النسخة</th>
+                        <th style="width:110px;">الحجم</th>
+                        <th style="width:160px;">تاريخ الإنشاء</th>
+                        <th style="width:180px;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="bkBody">
+                    <tr><td colspan="6" class="text-center py-4">
+                        <div class="spinner-border" style="color:var(--sa-600);"></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="bk-pagination" id="bkPagination"></div>
+
+<!-- ─── Create Backup Modal ─── -->
+<div class="modal fade" id="bkCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--sa-700);border-radius:16px 16px 0 0;padding:18px 24px;">
+                <h5 class="modal-title" style="color:#fff;font-weight:700;font-size:16px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-archive-fill"></i> إنشاء نسخة احتياطية جديدة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <div class="mb-4">
+                    <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">
+                        اسم النسخة <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="bkModalName"
+                           placeholder="مثال: نسخة كاملة — مارس 2026"
+                           style="border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;" />
+                    <div id="bkModalNameErr" class="text-danger mt-1" style="font-size:12px;display:none;">اسم النسخة مطلوب</div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">
+                        نوع النسخة <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="bkModalType"
+                            style="border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;">
+                        <option value="">— اختر النوع —</option>
+                        <option value="Full">نسخة كاملة — Full Backup</option>
+                        <option value="Differential">نسخة تفاضلية — Differential</option>
+                        <option value="Incremental">نسخة تزايدية — Incremental</option>
+                        <option value="Log">سجل العمليات — Log Backup</option>
+                        <option value="System">نسخة النظام الكامل — System Backup</option>
+                    </select>
+                    <div id="bkModalTypeErr" class="text-danger mt-1" style="font-size:12px;display:none;">نوع النسخة مطلوب</div>
+                </div>
+                <div id="bkTypeHint" class="mt-3"
+                     style="background:var(--gray-50);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--gray-600);line-height:1.7;display:none;"></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:16px 24px;gap:10px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="bkCreateSubmitBtn" onclick="bkCreateSubmit()"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">
+                    <i class="bi bi-check2-circle"></i> إنشاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Delete Confirm Modal ─── -->
+<div class="modal fade" id="bkDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:#FEF2F2;border-radius:16px 16px 0 0;padding:16px 22px;border-bottom:1px solid #FCA5A5;">
+                <h5 class="modal-title" style="color:#B42318;font-weight:700;font-size:15px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-trash3-fill"></i> تأكيد الحذف
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;text-align:center;">
+                <div style="font-size:40px;color:#F87171;margin-bottom:12px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">هل أنت متأكد من حذف النسخة الاحتياطية</p>
+                <p style="font-size:14px;font-weight:700;color:var(--gray-900);margin:6px 0 0;" id="bkDeleteName"></p>
+                <p style="font-size:12px;color:var(--gray-500);margin:10px 0 0;">لا يمكن التراجع عن هذه العملية</p>
+            </div>
+            <div class="modal-footer" style="border:none;padding:0 22px 18px;gap:10px;justify-content:center;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 22px;">إلغاء</button>
+                <button type="button" id="bkDeleteConfirmBtn" onclick="bkDeleteConfirm()"
+                        class="al-btn-pdf"
+                        style="border-radius:10px;padding:9px 22px;font-size:13px;">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Restore Confirm Modal ─── -->
+<div class="modal fade" id="bkRestoreModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:#FFFBEB;border-radius:16px 16px 0 0;padding:16px 22px;border-bottom:1px solid #FCD34D;">
+                <h5 class="modal-title" style="color:#92400E;font-weight:700;font-size:15px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-arrow-counterclockwise"></i> تأكيد استعادة النسخة
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;text-align:center;">
+                <div style="font-size:40px;color:#F59E0B;margin-bottom:12px;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">سيتم <strong>استبدال بيانات النظام الحالية</strong> ببيانات النسخة</p>
+                <p style="font-size:14px;font-weight:700;color:var(--gray-900);margin:6px 0 0;" id="bkRestoreName"></p>
+                <p style="font-size:12px;color:#B45309;margin:10px 0 0;background:#FEF3C7;padding:8px 12px;border-radius:8px;">
+                    <i class="bi bi-info-circle"></i> تأكد أنك تريد الرجوع لهذه النقطة — لا يمكن التراجع
+                </p>
+            </div>
+            <div class="modal-footer" style="border:none;padding:0 22px 18px;gap:10px;justify-content:center;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 22px;">إلغاء</button>
+                <button type="button" id="bkRestoreConfirmBtn" onclick="bkRestoreConfirm()"
+                        style="background:#D97706;color:#fff;border:none;border-radius:10px;padding:9px 22px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                    <i class="bi bi-arrow-counterclockwise"></i> استعادة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const BK_TYPE_HINTS = {
+    Full:         ' كل شيء في النظام مرة واحدة — الأشمل والأكبر حجماً، مثالية للنسخ الدورية.',
+    Differential: 'تنسخ التغييرات منذ آخر نسخة كاملة فقط — أسرع وأصغر حجماً.',
+    Incremental:  'تنسخ التغييرات منذ آخر نسخة بغض النظر عن نوعها — الأخف والأسرع.',
+    Log:          'تسجّل جميع عمليات قاعدة البيانات — للاسترداد الدقيق لنقطة زمنية .',
+    System:       'تنسخ النظام بالكامل (برامج + إعدادات + بيانات) — تُعيد كل شيء كما كان.'
+};
+
+const BK_TYPE_LABELS = {
+    Full:         'نسخة كاملة',
+    Differential: 'تفاضلية',
+    Incremental:  'تزايدية',
+    Log:          'سجل العمليات',
+    System:       'نسخة النظام الكامل'
+};
+
+const BK_TYPE_CLASS = {
+    Full:         'bk-b-full',
+    Differential: 'bk-b-differential',
+    Incremental:  'bk-b-incremental',
+    Log:          'bk-b-log',
+    System:       'bk-b-system'
+};
+
+const BK_TYPE_ICONS = {
+    Full:         'bi-database-fill-check',
+    Differential: 'bi-layers-half',
+    Incremental:  'bi-arrow-up-right-circle-fill',
+    Log:          'bi-journal-text',
+    System:       'bi-hdd-stack-fill'
+};
+
+let bkAllData   = [];
+let bkFiltered  = [];
+let bkPage      = 1;
+const bkPerPage = 15;
+let bkDeleteId  = null;
+let bkRestoreId = null;
+let bkCreateModal, bkDeleteModal, bkRestoreModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    bkCreateModal  = new bootstrap.Modal(document.getElementById('bkCreateModal'));
+    bkDeleteModal  = new bootstrap.Modal(document.getElementById('bkDeleteModal'));
+    bkRestoreModal = new bootstrap.Modal(document.getElementById('bkRestoreModal'));
+    document.getElementById('bkModalType').addEventListener('change', bkUpdateTypeHint);
+
+    // Scroll active sidebar item into view
+    const active = document.querySelector('#sidebar .sidebar-child.active');
+    if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    bkLoad();
+});
+
+async function bkLoad() {
+    try {
+        const res  = await apiFetch('/Settings/GetBackupRecords');
+        bkAllData  = Array.isArray(res) ? res : (res.data || []);
+        bkFiltered = [...bkAllData];
+        bkUpdateCount();
+        bkPage = 1;
+        bkRender();
+    } catch (e) {
+        document.getElementById('bkBody').innerHTML =
+            '<tr><td colspan="6" class="bk-empty"><i class="bi bi-exclamation-triangle"></i><div>تعذّر تحميل البيانات</div></td></tr>';
+    }
+}
+
+function bkApplyFilters() {
+    const q    = (document.getElementById('bkFilterSearch').value || '').trim().toLowerCase();
+    const type = document.getElementById('bkFilterType').value;
+    const date = document.getElementById('bkFilterDate').value;
+
+    bkFiltered = bkAllData.filter(d => {
+        if (q    && !d.name.toLowerCase().includes(q)) return false;
+        if (type && d.backupType !== type)              return false;
+        if (date) {
+            const recDate = (d.createdAt || '').substring(0, 10);
+            if (recDate !== date) return false;
+        }
+        return true;
+    });
+    bkPage = 1;
+    bkUpdateCount();
+    bkRender();
+}
+
+function bkClearFilters() {
+    document.getElementById('bkFilterSearch').value = '';
+    document.getElementById('bkFilterType').value   = '';
+    document.getElementById('bkFilterDate').value   = '';
+    bkFiltered = [...bkAllData];
+    bkPage = 1;
+    bkUpdateCount();
+    bkRender();
+}
+
+function bkUpdateCount() {
+    document.getElementById('bkCountNum').textContent = bkFiltered.length;
+}
+
+function bkRender() {
+    const body  = document.getElementById('bkBody');
+    const start = (bkPage - 1) * bkPerPage;
+    const slice = bkFiltered.slice(start, start + bkPerPage);
+
+    if (bkFiltered.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" class="bk-empty">
+            <i class="bi bi-archive"></i>
+            <div style="font-weight:600;margin-bottom:4px;">لا توجد نسخ احتياطية</div>
+            <div style="font-size:12px;">أنشئ أول نسخة احتياطية بالضغط على الزر أعلاه</div>
+        </td></tr>`;
+        document.getElementById('bkPagination').innerHTML = '';
+        return;
+    }
+
+    body.innerHTML = slice.map((d, i) => {
+        const num      = start + i + 1;
+        const typeCls  = BK_TYPE_CLASS[d.backupType]  || 'bk-b-full';
+        const typeIcon = BK_TYPE_ICONS[d.backupType]  || 'bi-archive';
+        const typeLbl  = BK_TYPE_LABELS[d.backupType] || d.backupType;
+        const dlBtn = d.hasFile
+            ? `<a href="/Settings/DownloadBackup?id=${d.id}" class="bk-dl-btn" title="تحميل النسخة">
+                   <i class="bi bi-download"></i> تحميل
+               </a>`
+            : `<span style="font-size:11px;color:var(--gray-400);">—</span>`;
+
+        return `<tr>
+            <td style="font-weight:700;color:var(--gray-500);">${num}</td>
+            <td style="text-align:right;font-weight:600;color:var(--gray-800);">
+                <i class="bi ${typeIcon}" style="color:var(--gray-400);margin-left:6px;"></i>${esc(d.name)}
+            </td>
+            <td><span class="bk-badge ${typeCls}"><i class="bi ${typeIcon}"></i> ${esc(typeLbl)}</span></td>
+            <td><span class="bk-size">${esc(d.sizeDisplay || d.sizeBytes || '—')}</span></td>
+            <td style="font-size:12px;color:var(--gray-600);direction:ltr;">${esc(d.createdAt || '—')}</td>
+            <td>
+                <div class="bk-actions">
+                    ${dlBtn}
+                    ${d.hasFile ? `<button class="bk-rst-btn" onclick="bkOpenRestoreModal(${d.id},'${esc(d.name)}')" title="استعادة">
+                        <i class="bi bi-arrow-counterclockwise"></i> استعادة
+                    </button>` : ''}
+                    <button class="bk-del-btn" onclick="bkOpenDeleteModal(${d.id}, '${esc(d.name)}')">
+                        <i class="bi bi-trash3"></i> حذف
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    bkRenderPagination();
+}
+
+function bkRenderPagination() {
+    const total = Math.ceil(bkFiltered.length / bkPerPage);
+    const el    = document.getElementById('bkPagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+
+    let html = `<span class="bk-pagination-info">صفحة ${bkPage} من ${total}</span>`;
+    html += `<button onclick="bkGoPage(${bkPage - 1})" ${bkPage <= 1 ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
+
+    const maxV = 7;
+    let startP = Math.max(1, bkPage - Math.floor(maxV / 2));
+    let endP   = Math.min(total, startP + maxV - 1);
+    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
+
+    if (startP > 1) {
+        html += `<button onclick="bkGoPage(1)">1</button>`;
+        if (startP > 2) html += `<button disabled>…</button>`;
+    }
+    for (let p = startP; p <= endP; p++) {
+        html += `<button onclick="bkGoPage(${p})" class="${p === bkPage ? 'active' : ''}">${p}</button>`;
+    }
+    if (endP < total) {
+        if (endP < total - 1) html += `<button disabled>…</button>`;
+        html += `<button onclick="bkGoPage(${total})">${total}</button>`;
+    }
+    html += `<button onclick="bkGoPage(${bkPage + 1})" ${bkPage >= total ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
+    el.innerHTML = html;
+}
+
+function bkGoPage(p) {
+    const total = Math.ceil(bkFiltered.length / bkPerPage);
+    if (p < 1 || p > total) return;
+    bkPage = p;
+    bkRender();
+    document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Create Modal ── */
+function bkOpenCreateModal() {
+    document.getElementById('bkModalName').value = '';
+    document.getElementById('bkModalType').value = '';
+    document.getElementById('bkModalNameErr').style.display = 'none';
+    document.getElementById('bkModalTypeErr').style.display = 'none';
+    document.getElementById('bkTypeHint').style.display    = 'none';
+    bkCreateModal.show();
+    setTimeout(() => document.getElementById('bkModalName').focus(), 300);
+}
+
+function bkUpdateTypeHint() {
+    const type = document.getElementById('bkModalType').value;
+    const hint = document.getElementById('bkTypeHint');
+    if (type && BK_TYPE_HINTS[type]) {
+        hint.innerHTML = `<i class="bi bi-info-circle" style="margin-left:6px;color:var(--sa-600);"></i>${BK_TYPE_HINTS[type]}`;
+        hint.style.display = 'block';
+    } else {
+        hint.style.display = 'none';
+    }
+}
+
+async function bkCreateSubmit() {
+    const name = (document.getElementById('bkModalName').value || '').trim();
+    const type = document.getElementById('bkModalType').value;
+    document.getElementById('bkModalNameErr').style.display = name ? 'none' : 'block';
+    document.getElementById('bkModalTypeErr').style.display = type ? 'none' : 'block';
+    if (!name || !type) return;
+
+    const btn = document.getElementById('bkCreateSubmitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جارٍ الإنشاء...';
+
+    try {
+        const res = await apiFetch('/Settings/CreateBackup', 'POST', { name, backupType: type });
+        if (res && res.success === false) {
+            showToast(res.message || 'فشل الإنشاء', 'danger');
+        } else {
+            bkCreateModal.hide();
+            showToast('تم إنشاء النسخة الاحتياطية بنجاح', 'success');
+            await bkLoad();
+        }
+    } catch (e) {
+        showToast('حدث خطأ غير متوقع', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check2-circle"></i> إنشاء';
+    }
+}
+
+/* ── Delete Modal ── */
+function bkOpenDeleteModal(id, name) {
+    bkDeleteId = id;
+    document.getElementById('bkDeleteName').textContent = name;
+    bkDeleteModal.show();
+}
+
+async function bkDeleteConfirm() {
+    if (!bkDeleteId) return;
+    const btn = document.getElementById('bkDeleteConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const res = await apiFetch(`/Settings/DeleteBackup?id=${bkDeleteId}`, 'POST');
+        bkDeleteModal.hide();
+        if (res && res.success) {
+            showToast('تم حذف النسخة الاحتياطية', 'success');
+            await bkLoad();
+        } else {
+            showToast('فشل الحذف', 'danger');
+        }
+    } catch (e) {
+        showToast('حدث خطأ غير متوقع', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash3"></i> حذف';
+        bkDeleteId = null;
+    }
+}
+
+/* ── Restore Modal ── */
+function bkOpenRestoreModal(id, name) {
+    bkRestoreId = id;
+    document.getElementById('bkRestoreName').textContent = name;
+    bkRestoreModal.show();
+}
+
+async function bkRestoreConfirm() {
+    if (!bkRestoreId) return;
+    const btn = document.getElementById('bkRestoreConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جارٍ الاستعادة...';
+
+    try {
+        const res = await apiFetch(`/Settings/RestoreBackup?id=${bkRestoreId}`, 'POST');
+        bkRestoreModal.hide();
+        if (res && res.success) {
+            showToast('تمت استعادة النسخة الاحتياطية بنجاح ✅', 'success');
+        } else {
+            showToast(res?.message || 'فشلت الاستعادة', 'danger');
+        }
+    } catch (e) {
+        showToast('حدث خطأ غير متوقع', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> استعادة';
+        bkRestoreId = null;
+    }
+}
+</script>
+}

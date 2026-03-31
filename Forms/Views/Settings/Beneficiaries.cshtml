@@ -42,15 +42,18 @@
 .bnf-activation-wrap { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#fff; border-radius:12px; border:2px solid var(--gray-200); }
 .bnf-activation-wrap .form-check-input { width:52px; height:26px; cursor:pointer; }
 .bnf-activation-wrap .form-check-label { font-weight:700; font-size:15px; cursor:pointer; }
-.bnf-pw-hint { margin-top:10px; padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; font-size:12px; line-height:1.55; color:var(--gray-700); }
-.bnf-pw-hint-title { font-weight:800; font-size:12px; color:var(--sa-800); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
-.bnf-pw-hint-title i { color:var(--sa-600); font-size:14px; }
-.bnf-pw-hint-note { font-weight:600; color:var(--gray-500); font-size:11px; margin-bottom:8px; }
-.bnf-pw-hint-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
-.bnf-pw-hint-list li { display:flex; align-items:flex-start; gap:8px; margin:0; }
-.bnf-pw-hint-list .bnf-pw-hint-ic { color:var(--sa-600); flex-shrink:0; margin-top:2px; font-size:13px; }
+.bnf-pw-hint { margin-top:10px; padding:14px 16px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:12px; font-size:12px; line-height:1.55; color:var(--gray-700); }
+.bnf-pw-hint-title { font-weight:800; font-size:13px; color:var(--sa-800); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.bnf-pw-hint-title i { color:var(--sa-600); font-size:15px; }
+.bnf-pw-hint-note { font-weight:600; color:var(--gray-500); font-size:11px; margin-bottom:10px; }
+.bnf-pw-hint-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:4px; }
+.bnf-pw-hint-list li { display:flex; align-items:center; gap:8px; margin:0; padding:5px 8px; border-radius:8px; transition:all .2s ease; }
+.bnf-pw-hint-list li.pw-met { background:rgba(5,150,105,.06); }
+.bnf-pw-req-icon { flex-shrink:0; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px; transition:all .25s ease; color:var(--gray-400); background:var(--gray-100); }
+.bnf-pw-hint-list li.pw-met .bnf-pw-req-icon { color:#fff; background:#059669; }
 .bnf-pw-hint-list strong { color:var(--gray-800); font-weight:700; }
-.bnf-pw-hint-chars { display:inline-block; direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:11px; padding:2px 6px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; margin-top:2px; }
+.bnf-pw-hint-list li.pw-met strong { color:#059669; }
+.bnf-pw-hint-chars { display:inline-block; direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:11px; padding:2px 6px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; }
 .bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
 .bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
@@ -62,6 +65,11 @@
 .bnf-ou-tree-exp:active { transform: scale(0.94); }
 .bnf-ou-tree-exp-spacer { flex-shrink: 0; width: 1.35rem; height: 1.35rem; min-width: 1.35rem; }
 .bnf-ou-tree-name { text-align: right; font-size: 14px; line-height: 1.4; min-width: 0; }
+.bnf-tbl-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid var(--gray-200); background:var(--gray-100); vertical-align:middle; }
+.bnf-tbl-avatar-placeholder { width:32px; height:32px; border-radius:50%; background:var(--gray-100); display:inline-flex; align-items:center; justify-content:center; border:2px solid var(--gray-200); color:var(--gray-400); font-size:14px; }
+.bnf-tbl .table { font-size:13px; }
+.bnf-tbl .table thead th { font-size:12px; white-space:nowrap; padding:10px 8px; vertical-align:middle; }
+.bnf-tbl .table tbody td { padding:8px; vertical-align:middle; white-space:nowrap; }
 @@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
@@ -99,21 +107,26 @@
     <button type="button" class="rt-clear-btn" id="bnfFilterClear" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card bnf-tbl">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table mb-0">
                 <thead>
                     <tr>
-                        <th style="width:60px;">#</th>
-                        <th>اسم الموظف</th>
-                        <th style="width:140px;">الهوية</th>
-                        <th style="width:180px;">الدور</th>
-                        <th style="width:260px;">الإجراءات</th>
+                        <th style="width:40px;">#</th>
+                        <th style="width:44px;"></th>
+                        <th>الموظف</th>
+                        <th>اسم المستخدم</th>
+                        <th>الهوية</th>
+                        <th>الجوال</th>
+                        <th>البريد</th>
+                        <th>الدور</th>
+                        <th>الوحدة التنظيمية</th>
+                        <th style="width:220px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="bnfBody">
-                    <tr><td colspan="5" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -250,9 +263,9 @@
                     </div>
                 </div>
 
-                <!-- قسم الأدوار وكلمة المرور -->
+                <!-- قسم الأدوار وبيانات الدخول -->
                 <div class="bnf-section">
-                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وكلمة المرور</div>
+                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وبيانات الدخول</div>
                     <div class="bnf-form-row">
                         <div>
                             <label class="form-label">الدور الرئيسي<span class="required-star">*</span></label>
@@ -280,20 +293,26 @@
                                 </div>
                             </div>
                         </div>
+                        <div>
+                            <label class="form-label">اسم المستخدم<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="bnfUsername" placeholder="اسم المستخدم (إنجليزي)" autocomplete="off" dir="ltr" style="text-align:left;">
+                        </div>
+                        <div></div>
+                    </div>
+                    <div class="bnf-form-row bnf-form-row-2" style="margin-top:16px;">
                         <div id="bnfPasswordWrap">
-                            <label class="form-label">كلمة المرور</label>
+                            <label class="form-label">كلمة المرور<span class="required-star">*</span></label>
                             <input type="password" class="form-control" id="bnfPassword" placeholder="••••••••" autocomplete="new-password">
-                            <div class="bnf-pw-hint" role="note">
+                            <div class="bnf-pw-hint" role="note" id="bnfPwHintBox">
                                 <div class="bnf-pw-hint-title"><i class="bi bi-shield-lock"></i> متطلبات كلمة المرور</div>
                                 <div class="bnf-pw-hint-note">تُطبق عند تعيين كلمة مرور جديدة أو تغييرها فقط.</div>
                                 <ul class="bnf-pw-hint-list">
-                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-1-circle-fill"></i></span><span><strong>الطول:</strong> 8 أحرف كحد أدنى .</span></li>
-                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-2-circle-fill"></i></span><span><strong>حرف كبير :</strong> مثل A أو B … Z</span></li>
-                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-3-circle-fill"></i></span><span><strong>حرف صغير :</strong> مثل a أو b … z</span></li>
-                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-4-circle-fill"></i></span><span><strong>رقم:</strong> من 0 إلى 9</span></li>
-                                    <li><span class="bnf-pw-hint-ic"><i class="bi bi-5-circle-fill"></i></span><span><strong>رمز خاص واحد على الأقل</strong> من المجموعة التالية:</span></li>
+                                    <li id="pwReqLen"><span class="bnf-pw-req-icon"><i class="bi bi-circle"></i></span><span><strong>الطول:</strong> 8 أحرف كحد أدنى</span></li>
+                                    <li id="pwReqUpper"><span class="bnf-pw-req-icon"><i class="bi bi-circle"></i></span><span><strong>حرف كبير:</strong> مثل A أو B … Z</span></li>
+                                    <li id="pwReqLower"><span class="bnf-pw-req-icon"><i class="bi bi-circle"></i></span><span><strong>حرف صغير:</strong> مثل a أو b … z</span></li>
+                                    <li id="pwReqDigit"><span class="bnf-pw-req-icon"><i class="bi bi-circle"></i></span><span><strong>رقم:</strong> من 0 إلى 9</span></li>
+                                    <li id="pwReqSpecial"><span class="bnf-pw-req-icon"><i class="bi bi-circle"></i></span><span><strong>رمز خاص واحد على الأقل</strong> من: <span class="bnf-pw-hint-chars">!@@#$%^&amp;*</span></span></li>
                                 </ul>
-                                <div><span class="bnf-pw-hint-chars">!@@#$%^&amp;*</span></div>
                             </div>
                         </div>
                         <div id="bnfConfirmWrap">

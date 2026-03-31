@@ -138,8 +138,8 @@ public class FormsController : BaseController
             }
         }
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "إرسال نموذج", "Form",
-            form.Id.ToString(), $"إلى {recipients.Count} مستلم");
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إرسال نموذج", "Form",
+            form.Id.ToString(), $"إلى {recipients.Count} مستلم"));
 
         return Json(new { success = true, message = "تم الإرسال بنجاح" });
     }

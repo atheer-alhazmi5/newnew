@@ -1,0 +1,260 @@
+@{
+    ViewBag.Title = "تحذيرات النظام";
+    ViewBag.PageName = "تحذيرات النظام";
+}
+
+<style>
+.sw-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.sw-record-count { background:var(--gray-100); color:var(--gray-700); border-radius:10px; padding:6px 16px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
+.sw-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+.sw-badge-success { background:#ECFDF3; color:#067647; }
+.sw-badge-fail { background:#FEF3F2; color:#B42318; }
+.sw-badge-exceed { background:#FFFAEB; color:#B54708; }
+.sw-badge-disabled { background:var(--gray-100); color:var(--gray-600); }
+.sw-badge-hack { background:#FFF4ED; color:#C4320A; }
+.sw-dot { width:8px; height:8px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.sw-dot-success { background:#12B76A; }
+.sw-dot-fail { background:#F04438; }
+.sw-dot-exceed { background:#F79009; }
+.sw-dot-disabled { background:#98A2B3; }
+.sw-dot-hack { background:#EF6820; }
+.sw-sev { display:inline-flex; align-items:center; justify-content:center; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:800; min-width:68px; }
+.sw-sev-low { background:#ECFDF3; color:#067647; }
+.sw-sev-medium { background:#FFFAEB; color:#B54708; }
+.sw-sev-high { background:#FFF4ED; color:#C4320A; }
+.sw-sev-critical { background:#FEF3F2; color:#B42318; }
+.sw-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
+.table > :not(caption) > * > * { padding-top:0.65rem; padding-bottom:0.65rem; vertical-align:middle; }
+.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:12px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+.table tbody tr { transition:background .15s; }
+.table tbody tr:hover { background:var(--sa-25); }
+.table tbody td { border-bottom:1px solid var(--gray-100); text-align:center; font-size:13px; }
+.sw-empty { text-align:center; padding:40px 20px; color:var(--gray-400); }
+.sw-empty i { font-size:48px; display:block; margin-bottom:12px; }
+.sw-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
+.sw-pagination button { border:1px solid var(--gray-300); background:#fff; color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
+.sw-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
+.sw-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
+.sw-pagination button:disabled { opacity:.4; cursor:default; }
+.sw-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
+.sw-clear-btn { background:var(--error-50); color:var(--error-600); border:1px solid var(--error-200); border-radius:10px; padding:8px 20px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
+.sw-clear-btn:hover { background:var(--error-100); border-color:var(--error-300); }
+</style>
+
+<div class="sw-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">تحذيرات النظام</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">عرض كافة محاولات الدخول للنظام</p>
+    </div>
+    <span class="sw-record-count" id="swRecordCount">
+        <i class="bi bi-database"></i> <span id="swCountNum">0</span> سجل
+    </span>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+    <div class="rt-search-box" style="min-width:220px;max-width:300px;">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="swFilterSearch" placeholder="ابحث بالاسم / الوحدة التنظيمية..." autocomplete="off">
+    </div>
+    <select class="rt-filter-select form-select" id="swFilterType" style="min-width:240px;">
+        <option value=""> نوع التحذير</option>
+        <option value="محاولة دخول ناجحة">محاولات الدخول الناجحة</option>
+        <option value="محاولة مرور فاشلة">محاولات الدخول الفاشلة لكلمة السر</option>
+        <option value="تخطى عدد المحاولات">المستخدم تخطى عدد مرات الدخول</option>
+        <option value="حساب معطل">المستخدم معطل (الحساب غير مفعل)</option>
+        <option value="محاولة اختراق">محاولات الاختراق</option>
+    </select>
+    <select class="rt-filter-select form-select" id="swFilterUnit">
+        <option value="">الوحدة التنظيمية  </option>
+    </select>
+    <input type="date" class="form-control rt-filter-text" id="swFilterFrom" title="من تاريخ" style="min-width:150px;max-width:170px;">
+    <input type="date" class="form-control rt-filter-text" id="swFilterTo" title="إلى تاريخ" style="min-width:150px;max-width:170px;">
+    <div class="d-flex gap-2 align-items-center" style="flex-shrink:0;">
+        <button type="button" class="btn btn-primary" onclick="swApplyFilters()" style="border-radius:10px;padding:8px 24px;font-weight:700;font-size:13px;">
+            <i class="bi bi-funnel"></i> تطبيق
+        </button>
+        <button type="button" class="sw-clear-btn" onclick="swClearFilters()">
+            <i class="bi bi-x-circle"></i> مسح
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:45px;">#</th>
+                        <th style="width:110px;">رقم الهوية</th>
+                        <th>المستفيد</th>
+                        <th>الوحدة التنظيمية</th>
+                        <th style="width:110px;">تاريخ الدخول</th>
+                        <th style="width:85px;">الوقت</th>
+                        <th style="width:120px;">معرف الجهاز (IP)</th>
+                        <th style="min-width:200px;">وصف العملية</th>
+                        <th style="width:95px;">الخطورة</th>
+                    </tr>
+                </thead>
+                <tbody id="swBody">
+                    <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="sw-pagination" id="swPagination"></div>
+
+@section Scripts {
+<script>
+let swAllData = [];
+let swFiltered = [];
+let swPage = 1;
+const swPerPage = 20;
+
+const swBadgeMap = {
+    'محاولة دخول ناجحة': { cls: 'sw-badge-success', dot: 'sw-dot-success' },
+    'محاولة مرور فاشلة': { cls: 'sw-badge-fail', dot: 'sw-dot-fail' },
+    'تخطى عدد المحاولات': { cls: 'sw-badge-exceed', dot: 'sw-dot-exceed' },
+    'حساب معطل': { cls: 'sw-badge-disabled', dot: 'sw-dot-disabled' },
+    'محاولة اختراق': { cls: 'sw-badge-hack', dot: 'sw-dot-hack' }
+};
+
+function swEsc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+async function swLoad() {
+    var r = await apiFetch('/Settings/GetSystemWarnings');
+    if (!r || !r.success) return;
+    swAllData = r.data || [];
+
+    var unitSel = document.getElementById('swFilterUnit');
+    (r.organizationalUnits || []).forEach(function(u) {
+        var o = document.createElement('option');
+        o.value = u.name;
+        o.textContent = u.name;
+        unitSel.appendChild(o);
+    });
+
+    swFiltered = swAllData.slice();
+    document.getElementById('swCountNum').textContent = swFiltered.length;
+    swRender();
+}
+
+function swApplyFilters() {
+    var search = (document.getElementById('swFilterSearch').value || '').trim().toLowerCase();
+    var type = document.getElementById('swFilterType').value;
+    var unit = document.getElementById('swFilterUnit').value;
+    var from = document.getElementById('swFilterFrom').value;
+    var to = document.getElementById('swFilterTo').value;
+
+    swFiltered = swAllData.filter(function(d) {
+        if (search) {
+            var haystack = ((d.fullName || '') + ' ' + (d.organizationalUnit || '')).toLowerCase();
+            if (haystack.indexOf(search) === -1) return false;
+        }
+        if (type && d.warningType !== type) return false;
+        if (unit && d.organizationalUnit !== unit) return false;
+        if (from && d.date < from) return false;
+        if (to && d.date > to) return false;
+        return true;
+    });
+
+    document.getElementById('swCountNum').textContent = swFiltered.length;
+    swPage = 1;
+    swRender();
+}
+
+function swClearFilters() {
+    document.getElementById('swFilterSearch').value = '';
+    document.getElementById('swFilterType').value = '';
+    document.getElementById('swFilterUnit').value = '';
+    document.getElementById('swFilterFrom').value = '';
+    document.getElementById('swFilterTo').value = '';
+    swFiltered = swAllData.slice();
+    document.getElementById('swCountNum').textContent = swFiltered.length;
+    swPage = 1;
+    swRender();
+}
+
+function swRender() {
+    var body = document.getElementById('swBody');
+    var start = (swPage - 1) * swPerPage;
+    var pageData = swFiltered.slice(start, start + swPerPage);
+
+    if (swFiltered.length === 0) {
+        body.innerHTML = '<tr><td colspan="9" class="sw-empty"><i class="bi bi-shield-check"></i><div>لا توجد تحذيرات</div></td></tr>';
+        document.getElementById('swPagination').innerHTML = '';
+        return;
+    }
+
+    body.innerHTML = pageData.map(function(d, i) {
+        var num = start + i + 1;
+        var badge = swBadgeMap[d.warningType] || { cls: 'sw-badge-disabled', dot: 'sw-dot-disabled' };
+        var sev = (d.severity || 'Low').toLowerCase();
+        var sevClass = 'sw-sev-low';
+        if (sev === 'medium') sevClass = 'sw-sev-medium';
+        else if (sev === 'high') sevClass = 'sw-sev-high';
+        else if (sev === 'critical') sevClass = 'sw-sev-critical';
+        return '<tr>' +
+            '<td style="font-weight:700;color:var(--gray-500);">' + num + '</td>' +
+            '<td style="font-family:Consolas,monospace;font-size:12px;">' + swEsc(d.nationalId || '—') + '</td>' +
+            '<td style="font-weight:600;text-align:right;">' + swEsc(d.fullName || '—') + '</td>' +
+            '<td style="text-align:right;">' + swEsc(d.organizationalUnit || '—') + '</td>' +
+            '<td style="font-size:12px;color:var(--gray-600);direction:ltr;">' + swEsc(d.date) + '</td>' +
+            '<td style="font-size:12px;color:var(--gray-600);direction:ltr;">' + swEsc(d.time) + '</td>' +
+            '<td><span class="sw-ip">' + swEsc(d.ipAddress || '—') + '</span></td>' +
+            '<td style="text-align:right;"><span class="sw-badge ' + badge.cls + '"><span class="sw-dot ' + badge.dot + '"></span> ' + swEsc(d.description || d.warningType) + '</span></td>' +
+            '<td><span class="sw-sev ' + sevClass + '">' + swEsc(d.severity || 'Low') + '</span></td>' +
+            '</tr>';
+    }).join('');
+
+    swRenderPagination();
+}
+
+function swRenderPagination() {
+    var total = Math.ceil(swFiltered.length / swPerPage);
+    if (total <= 1) { document.getElementById('swPagination').innerHTML = ''; return; }
+
+    var html = '<span class="sw-pagination-info">صفحة ' + swPage + ' من ' + total + '</span>';
+    html += '<button onclick="swGoPage(' + (swPage - 1) + ')" ' + (swPage <= 1 ? 'disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
+
+    var maxV = 7;
+    var startP = Math.max(1, swPage - Math.floor(maxV / 2));
+    var endP = Math.min(total, startP + maxV - 1);
+    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
+
+    if (startP > 1) {
+        html += '<button onclick="swGoPage(1)">1</button>';
+        if (startP > 2) html += '<button disabled>…</button>';
+    }
+    for (var p = startP; p <= endP; p++) {
+        html += '<button onclick="swGoPage(' + p + ')" class="' + (p === swPage ? 'active' : '') + '">' + p + '</button>';
+    }
+    if (endP < total) {
+        if (endP < total - 1) html += '<button disabled>…</button>';
+        html += '<button onclick="swGoPage(' + total + ')">' + total + '</button>';
+    }
+    html += '<button onclick="swGoPage(' + (swPage + 1) + ')" ' + (swPage >= total ? 'disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
+    document.getElementById('swPagination').innerHTML = html;
+}
+
+function swGoPage(p) {
+    var total = Math.ceil(swFiltered.length / swPerPage);
+    if (p < 1 || p > total) return;
+    swPage = p;
+    swRender();
+    document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    swLoad();
+    document.getElementById('swFilterSearch').addEventListener('input', function() { swApplyFilters(); });
+});
+</script>
+}

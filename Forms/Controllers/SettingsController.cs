@@ -1,5 +1,7 @@
+using System.IO.Compression;
 using System.Linq;
 using FormsSystem.Models.Entities;
+using FormsSystem.Models.Enums;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,9 +12,310 @@ public class SettingsController : BaseController
     private readonly DataService _ds;
     private readonly UiHelperService _ui;
     private readonly PasswordService _pw;
+    private readonly ExcelService _excel;
+    private readonly PdfService _pdf;
 
-    public SettingsController(DataService ds, UiHelperService ui, PasswordService pw)
-    { _ds = ds; _ui = ui; _pw = pw; }
+    public SettingsController(DataService ds, UiHelperService ui, PasswordService pw, ExcelService excel, PdfService pdf)
+    { _ds = ds; _ui = ui; _pw = pw; _excel = excel; _pdf = pdf; }
+
+    // ───  (سجل العمليات) ─────────────────────────────────────────────
+
+    public IActionResult AuditLog()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin")
+            return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "سجل العمليات";
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAuditLogs()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var logs = await _ds.ListAllAuditLogsAsync();
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
+
+        return Json(new
+        {
+            success = true,
+            data = logs.Select((l, idx) => new
+            {
+                l.Id,
+                l.UserId,
+                l.UserName,
+                l.NationalId,
+                l.OrganizationalUnit,
+                l.Action,
+                l.EntityType,
+                l.EntityId,
+                l.Details,
+                l.IpAddress,
+                l.Browser,
+                l.OperatingSystem,
+                CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+            }),
+            organizationalUnits = orgUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder)
+                .Select(u => new { u.Id, u.Name }).ToList(),
+            beneficiaries = beneficiaries.Where(b => b.IsActive)
+                .Select(b => new { b.Id, b.FullName, b.NationalId }).ToList()
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportAuditLogsPdf()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Unauthorized();
+
+        var logs = await _ds.ListAllAuditLogsAsync();
+        var columns = new List<string> { "#", "رقم الهوية", "اسم المستفيد", "الوحدة التنظيمية", "العملية", "التاريخ والوقت", "المتصفح", "عنوان IP", "نظام التشغيل" };
+        var rows = logs.Select((l, i) => new Dictionary<string, string>
+        {
+            ["#"] = (i + 1).ToString(),
+            ["رقم الهوية"] = l.NationalId,
+            ["اسم المستفيد"] = l.UserName,
+            ["الوحدة التنظيمية"] = l.OrganizationalUnit,
+            ["العملية"] = l.Action,
+            ["التاريخ والوقت"] = l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            ["المتصفح"] = l.Browser,
+            ["عنوان IP"] = l.IpAddress,
+            ["نظام التشغيل"] = l.OperatingSystem
+        }).ToList();
+
+        var bytes = _pdf.GenerateFormReport("سجل العمليات", rows, columns);
+        return File(bytes, "text/html; charset=utf-8", $"سجل_العمليات_{DateTime.Now:yyyyMMdd}.html");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportAuditLogsExcel()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Unauthorized();
+
+        var logs = await _ds.ListAllAuditLogsAsync();
+        var headers = new List<string> { "#", "رقم الهوية", "اسم المستفيد", "الوحدة التنظيمية", "العملية", "التاريخ والوقت", "المتصفح", "عنوان IP", "نظام التشغيل" };
+        var rows = logs.Select((l, i) => new List<string>
+        {
+            (i + 1).ToString(),
+            l.NationalId,
+            l.UserName,
+            l.OrganizationalUnit,
+            l.Action,
+            l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            l.Browser,
+            l.IpAddress,
+            l.OperatingSystem
+        }).ToList();
+
+        var bytes = _excel.GenerateExcel("سجل العمليات", headers, rows);
+        return File(bytes, "text/csv; charset=utf-8", $"سجل_العمليات_{DateTime.Now:yyyyMMdd}.csv");
+    }
+
+    // ─── النسخ الاحتياطي ─────────────────────────────────────────────────────
+
+    public IActionResult Backup()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin")
+            return RedirectToAction("Index", "Forms");
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBackupRecords()
+    {
+        var auth = RequireAuth(); if (auth != null) return Unauthorized();
+        var records = await _ds.ListBackupRecordsAsync();
+        return Json(records.Select(b => new
+        {
+            b.Id,
+            b.Name,
+            b.BackupType,
+            b.SizeBytes,
+            SizeDisplay = b.SizeDisplay,
+            CreatedAt = b.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            HasFile = !string.IsNullOrEmpty(b.FilePath) && System.IO.File.Exists(b.FilePath)
+        }));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateBackup([FromBody] CreateBackupRequest req)
+    {
+        var auth = RequireAuth(); if (auth != null) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return Json(new { success = false, message = "اسم النسخة مطلوب" });
+        if (string.IsNullOrWhiteSpace(req.BackupType))
+            return Json(new { success = false, message = "نوع النسخة مطلوب" });
+
+        try
+        {
+            // Build backups folder next to the data folder
+            var dataDir    = _ds.GetDataDirectory();
+            var backupsDir = Path.Combine(Path.GetDirectoryName(dataDir)!, "backups");
+            Directory.CreateDirectory(backupsDir);
+
+            var stamp      = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var safeName   = string.Concat(req.Name.Trim().Take(40)).Replace(" ", "_");
+            var zipName    = $"{safeName}_{stamp}.zip";
+            var zipPath    = Path.Combine(backupsDir, zipName);
+
+            // Zip all JSON data files (except the backup_records list itself)
+            var jsonFiles = Directory.GetFiles(dataDir, "*.json")
+                .Where(f => !Path.GetFileName(f).Equals("backup_records.json",
+                                StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            using (var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+            {
+                foreach (var file in jsonFiles)
+                    zip.CreateEntryFromFile(file, Path.GetFileName(file),
+                        CompressionLevel.SmallestSize);
+            }
+
+            var fileInfo = new FileInfo(zipPath);
+            var rec = new BackupRecord
+            {
+                Name       = req.Name.Trim(),
+                BackupType = req.BackupType,
+                SizeBytes  = fileInfo.Length,
+                FilePath   = zipPath,
+                CreatedBy  = CurrentUserFullName ?? CurrentUserName ?? ""
+            };
+
+            await _ds.AddBackupRecordAsync(rec);
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                $"إنشاء نسخة احتياطية: {rec.Name} ({rec.BackupType})",
+                "نسخ احتياطي", rec.Id.ToString()));
+
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"فشل إنشاء النسخة: {ex.Message}" });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadBackup(int id)
+    {
+        var auth = RequireAuth(); if (auth != null) return Unauthorized();
+        var records = await _ds.ListBackupRecordsAsync();
+        var rec = records.FirstOrDefault(b => b.Id == id);
+        if (rec == null || string.IsNullOrEmpty(rec.FilePath) || !System.IO.File.Exists(rec.FilePath))
+            return NotFound("ملف النسخة الاحتياطية غير موجود");
+
+        var bytes    = await System.IO.File.ReadAllBytesAsync(rec.FilePath);
+        var fileName = Path.GetFileName(rec.FilePath);
+        return File(bytes, "application/zip", fileName);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RestoreBackup(int id)
+    {
+        var auth = RequireAuth(); if (auth != null) return Unauthorized();
+        var records = await _ds.ListBackupRecordsAsync();
+        var rec = records.FirstOrDefault(b => b.Id == id);
+        if (rec == null || string.IsNullOrEmpty(rec.FilePath) || !System.IO.File.Exists(rec.FilePath))
+            return Json(new { success = false, message = "ملف النسخة الاحتياطية غير موجود" });
+
+        try
+        {
+            var dataDir = _ds.GetDataDirectory();
+            using var zip = ZipFile.OpenRead(rec.FilePath);
+            foreach (var entry in zip.Entries)
+            {
+                if (!entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
+                var dest = Path.Combine(dataDir, entry.Name);
+                entry.ExtractToFile(dest, overwrite: true);
+            }
+
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                $"استعادة نسخة احتياطية: {rec.Name} ({rec.BackupType})",
+                "نسخ احتياطي", rec.Id.ToString()));
+
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"فشل الاستعادة: {ex.Message}" });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteBackup(int id)
+    {
+        var auth = RequireAuth(); if (auth != null) return Unauthorized();
+
+        // Also remove the physical zip file
+        var records = await _ds.ListBackupRecordsAsync();
+        var rec     = records.FirstOrDefault(b => b.Id == id);
+        if (rec != null && !string.IsNullOrEmpty(rec.FilePath) && System.IO.File.Exists(rec.FilePath))
+        {
+            try { System.IO.File.Delete(rec.FilePath); } catch { /* ignore */ }
+        }
+
+        var deleted = await _ds.DeleteBackupRecordAsync(id);
+        if (deleted)
+        {
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                $"حذف نسخة احتياطية: {rec?.Name ?? id.ToString()}",
+                "نسخ احتياطي", id.ToString()));
+        }
+        return Json(new { success = deleted });
+    }
+
+    public class CreateBackupRequest
+    {
+        public string Name { get; set; } = "";
+        public string BackupType { get; set; } = "";
+    }
+
+    // ─── تحذيرات النظام ──────────────────────────────────────────────────────
+
+    public IActionResult SystemWarnings()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin")
+            return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "تحذيرات النظام";
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetSystemWarnings()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var data = await _ds.ListAllLoginAttemptsAsync();
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        return Json(new
+        {
+            success = true,
+            data = data.Select(a => new
+            {
+                a.Id,
+                a.NationalId,
+                a.FullName,
+                a.OrganizationalUnit,
+                a.WarningType,
+                a.Severity,
+                a.Description,
+                a.IpAddress,
+                a.Browser,
+                a.OperatingSystem,
+                Date = a.CreatedAt.ToString("yyyy-MM-dd"),
+                Time = a.CreatedAt.ToString("HH:mm:ss")
+            }),
+            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name }).ToList()
+        });
+    }
 
     // ─── VIEWS ────────────────────────────────────────────────────────────────
     public IActionResult OrganizationalUnits()
@@ -100,8 +403,7 @@ public class SettingsController : BaseController
         };
 
         await _ds.AddClassificationAsync(cls);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة تصنيف", "Classification", cls.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة تصنيف", "Classification", cls.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم إضافة التصنيف بنجاح" });
     }
@@ -136,8 +438,7 @@ public class SettingsController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != oldOrder)
             await _ds.ReorderClassificationsAsync(cls.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث تصنيف", "Classification", cls.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث تصنيف", "Classification", cls.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم تحديث التصنيف بنجاح" });
     }
@@ -164,8 +465,7 @@ public class SettingsController : BaseController
         foreach (var c in all)
             await _ds.UpdateClassificationAsync(c);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف تصنيف", "Classification", req.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف تصنيف", "Classification", req.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم حذف التصنيف بنجاح" });
     }
@@ -237,8 +537,7 @@ public class SettingsController : BaseController
         };
 
         await _ds.AddFormClassAsync(cls);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة صنف نموذج", "FormClass", cls.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة صنف نموذج", "FormClass", cls.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم إضافة الصنف بنجاح" });
     }
@@ -274,8 +573,7 @@ public class SettingsController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != oldOrder)
             await _ds.ReorderFormClassesAsync(cls.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث صنف نموذج", "FormClass", cls.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث صنف نموذج", "FormClass", cls.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم تحديث الصنف بنجاح" });
     }
@@ -298,8 +596,7 @@ public class SettingsController : BaseController
         foreach (var c in all)
             await _ds.UpdateFormClassAsync(c);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف صنف نموذج", "FormClass", req.Id.ToString(), cls.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف صنف نموذج", "FormClass", req.Id.ToString(), cls.Name));
 
         return Json(new { success = true, message = "تم حذف الصنف بنجاح" });
     }
@@ -370,8 +667,7 @@ public class SettingsController : BaseController
         };
 
         await _ds.AddFormSectionAsync(row);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة نوع نموذج", "FormSection", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة نوع نموذج", "FormSection", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم إضافة النوع بنجاح" });
     }
@@ -406,8 +702,7 @@ public class SettingsController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != oldOrder)
             await _ds.ReorderFormSectionsAsync(row.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث نوع نموذج", "FormSection", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث نوع نموذج", "FormSection", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم تحديث النوع بنجاح" });
     }
@@ -430,8 +725,7 @@ public class SettingsController : BaseController
         foreach (var c in all)
             await _ds.UpdateFormSectionAsync(c);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف نوع نموذج", "FormSection", req.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف نوع نموذج", "FormSection", req.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم حذف النوع بنجاح" });
     }
@@ -506,8 +800,7 @@ public class SettingsController : BaseController
         };
 
         await _ds.AddFormStatusAsync(row);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة حالة نموذج", "FormStatus", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة حالة نموذج", "FormStatus", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم إضافة الحالة بنجاح" });
     }
@@ -546,8 +839,7 @@ public class SettingsController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != oldOrder)
             await _ds.ReorderFormStatusesAsync(row.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث حالة نموذج", "FormStatus", row.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث حالة نموذج", "FormStatus", row.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم تحديث الحالة بنجاح" });
     }
@@ -570,8 +862,7 @@ public class SettingsController : BaseController
         foreach (var s in all)
             await _ds.UpdateFormStatusAsync(s);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف حالة نموذج", "FormStatus", req.Id.ToString(), row.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف حالة نموذج", "FormStatus", req.Id.ToString(), row.Name));
 
         return Json(new { success = true, message = "تم حذف الحالة بنجاح" });
     }
@@ -639,8 +930,7 @@ public class SettingsController : BaseController
         };
 
         await _ds.AddOrganizationalUnitAsync(unit);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "إضافة وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name));
 
         return Json(new { success = true, message = "تم إضافة الوحدة بنجاح" });
     }
@@ -678,8 +968,7 @@ public class SettingsController : BaseController
         if (req.SortOrder > 0 && req.SortOrder != unit.SortOrder)
             await _ds.ReorderOrganizationalUnitsAsync(unit.Id, req.SortOrder);
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "تحديث وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name));
 
         return Json(new { success = true, message = "تم تحديث الوحدة بنجاح" });
     }
@@ -707,8 +996,7 @@ public class SettingsController : BaseController
             await _ds.UpdateOrganizationalUnitAsync(remaining[i]);
         }
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "حذف وحدة تنظيمية", "OrganizationalUnit", req.Id.ToString(), unit.Name);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف وحدة تنظيمية", "OrganizationalUnit", req.Id.ToString(), unit.Name));
 
         return Json(new { success = true, message = "تم حذف الوحدة بنجاح" });
     }
@@ -745,6 +1033,7 @@ public class SettingsController : BaseController
                 OrganizationalUnitName = units.FirstOrDefault(u => u.Id == b.OrganizationalUnitId)?.Name ?? "",
                 b.Phone,
                 b.Email,
+                b.Username,
                 b.IsActive,
                 b.MainRole,
                 b.SubRole
@@ -762,9 +1051,15 @@ public class SettingsController : BaseController
         var err = ValidateBeneficiary(req, isAdd: true);
         if (err != null) return Json(new { success = false, message = err });
 
-        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), excludeId: null);
+        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), req.Username!.Trim(), excludeId: null);
         if (dup != null)
             return dup;
+
+        if ((req.MainRole ?? "") == "مدير" && await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId))
+            return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
+
+        if (string.IsNullOrEmpty(req.Password))
+            return Json(new { success = false, message = "كلمة المرور مطلوبة عند إضافة مستفيد جديد" });
 
         var b = new Beneficiary
         {
@@ -781,14 +1076,32 @@ public class SettingsController : BaseController
             OrganizationalUnitId = req.OrganizationalUnitId,
             Phone = req.Phone!.Trim(),
             Email = req.Email!.Trim(),
+            Username = req.Username!.Trim(),
             IsActive = req.IsActive,
             MainRole = req.MainRole ?? "موظف",
             SubRole = req.SubRole ?? "",
-            PasswordHash = !string.IsNullOrEmpty(req.Password) ? _pw.Hash(req.Password) : ""
+            PasswordHash = _pw.Hash(req.Password)
         };
 
         await _ds.AddBeneficiaryAsync(b);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "إضافة مستفيد", "Beneficiary", b.Id.ToString(), b.FullName);
+
+        var userRole = MapBeneficiaryToUserRole(b.MainRole, b.SubRole);
+        var user = new User
+        {
+            NationalId = b.NationalId,
+            Username = b.Username,
+            Email = b.Email,
+            Phone = b.Phone,
+            PhotoUrl = b.PhotoUrl,
+            FullName = b.FullName,
+            PasswordHash = b.PasswordHash,
+            Role = userRole,
+            DepartmentId = b.OrganizationalUnitId,
+            Status = b.IsActive ? AccountStatus.Active : AccountStatus.Inactive
+        };
+        await _ds.AddUserAsync(user);
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة مستفيد", "Beneficiary", b.Id.ToString(), b.FullName));
         return Json(new { success = true, message = "تم إضافة المستفيد بنجاح" });
     }
 
@@ -804,10 +1117,18 @@ public class SettingsController : BaseController
         var b = await _ds.GetBeneficiaryByIdAsync(req.Id);
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
 
-        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), req.Id);
+        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), req.Username!.Trim(), req.Id);
         if (dup != null)
             return dup;
 
+        var newMainRole = req.MainRole ?? b.MainRole;
+        if (newMainRole == "مدير" && (b.MainRole != "مدير" || b.OrganizationalUnitId != req.OrganizationalUnitId))
+        {
+            if (await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId, req.Id))
+                return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
+        }
+
+        var oldUsername = b.Username;
         b.PhotoUrl = req.PhotoUrl ?? b.PhotoUrl;
         b.NationalId = req.NationalId!.Trim();
         b.EndorsementType = req.EndorsementType ?? b.EndorsementType;
@@ -821,15 +1142,34 @@ public class SettingsController : BaseController
         b.OrganizationalUnitId = req.OrganizationalUnitId;
         b.Phone = req.Phone!.Trim();
         b.Email = req.Email!.Trim();
+        b.Username = req.Username!.Trim();
         b.IsActive = req.IsActive;
-        b.MainRole = req.MainRole ?? b.MainRole;
+        b.MainRole = newMainRole;
         b.SubRole = req.SubRole ?? "";
         b.UpdatedAt = DateTime.Now;
         if (!string.IsNullOrEmpty(req.Password))
             b.PasswordHash = _pw.Hash(req.Password);
 
         await _ds.UpdateBeneficiaryAsync(b);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "تحديث مستفيد", "Beneficiary", b.Id.ToString(), b.FullName);
+
+        var existingUser = await _ds.GetUserByUsernameForBeneficiaryAsync(oldUsername);
+        if (existingUser != null)
+        {
+            existingUser.Username = b.Username;
+            existingUser.NationalId = b.NationalId;
+            existingUser.Email = b.Email;
+            existingUser.Phone = b.Phone;
+            existingUser.PhotoUrl = b.PhotoUrl;
+            existingUser.FullName = b.FullName;
+            existingUser.Role = MapBeneficiaryToUserRole(b.MainRole, b.SubRole);
+            existingUser.DepartmentId = b.OrganizationalUnitId;
+            existingUser.Status = b.IsActive ? AccountStatus.Active : AccountStatus.Inactive;
+            if (!string.IsNullOrEmpty(req.Password))
+                existingUser.PasswordHash = b.PasswordHash;
+            await _ds.UpdateUserAsync(existingUser);
+        }
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث مستفيد", "Beneficiary", b.Id.ToString(), b.FullName));
         return Json(new { success = true, message = "تم تحديث المستفيد بنجاح" });
     }
 
@@ -843,11 +1183,11 @@ public class SettingsController : BaseController
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
 
         await _ds.DeleteBeneficiaryAsync(req.Id);
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "حذف مستفيد", "Beneficiary", req.Id.ToString(), b.FullName);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف مستفيد", "Beneficiary", req.Id.ToString(), b.FullName));
         return Json(new { success = true, message = "تم حذف المستفيد بنجاح" });
     }
 
-    private async Task<IActionResult?> CheckBeneficiaryDuplicatesAsync(string nationalId, string phone, string email, int? excludeId)
+    private async Task<IActionResult?> CheckBeneficiaryDuplicatesAsync(string nationalId, string phone, string email, string username, int? excludeId)
     {
         if (await _ds.GetBeneficiaryByNationalIdAsync(nationalId, excludeId) != null)
             return Json(new { success = false, message = "رقم الهوية مسجل مسبقًا", duplicateField = "nationalId" });
@@ -855,7 +1195,24 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "رقم الجوال مستخدم من قبل", duplicateField = "phone" });
         if (await _ds.GetBeneficiaryByEmailAsync(email, excludeId) != null)
             return Json(new { success = false, message = "البريد الإلكتروني مستخدم مسبقًا", duplicateField = "email" });
+        if (await _ds.GetBeneficiaryByUsernameAsync(username, excludeId) != null)
+            return Json(new { success = false, message = "اسم المستخدم مستخدم مسبقًا", duplicateField = "username" });
+        var existingUser = await _ds.GetUserByUsernameAsync(username);
+        if (existingUser != null)
+        {
+            var matchBeneficiary = excludeId.HasValue ? await _ds.GetBeneficiaryByIdAsync(excludeId.Value) : null;
+            if (matchBeneficiary == null || !matchBeneficiary.Username.Equals(username, StringComparison.OrdinalIgnoreCase))
+                return Json(new { success = false, message = "اسم المستخدم مستخدم مسبقًا في النظام", duplicateField = "username" });
+        }
         return null;
+    }
+
+    private static UserRole MapBeneficiaryToUserRole(string mainRole, string subRole)
+    {
+        if (subRole == "مدير النظام") return UserRole.Admin;
+        if (mainRole == "مدير") return UserRole.Manager;
+        if (subRole == "ممثل الوحدة التنظيمية") return UserRole.Employee;
+        return UserRole.Staff;
     }
 
     private string? ValidateBeneficiary(dynamic req, bool isAdd)
@@ -881,6 +1238,14 @@ public class SettingsController : BaseController
         var email = ((string?)req.Email ?? "").Trim();
         if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^\s@]+@almadinah\.gov\.sa$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             return "يجب إدخال بريد إلكتروني بصيغة xxx@almadinah.gov.sa";
+
+        if (string.IsNullOrWhiteSpace(req.Username))
+            return "اسم المستخدم مطلوب";
+        var username = ((string?)req.Username ?? "").Trim();
+        if (username.Length < 3)
+            return "اسم المستخدم يجب أن يكون 3 أحرف على الأقل";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-zA-Z0-9_]+$"))
+            return "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط";
 
         if (string.IsNullOrWhiteSpace(req.MainRole))
             return "الدور الرئيسي مطلوب";
@@ -937,6 +1302,7 @@ public class BeneficiaryRequest
     public int OrganizationalUnitId { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
+    public string? Username { get; set; }
     public bool IsActive { get; set; } = true;
     public string? MainRole { get; set; }
     public string? SubRole { get; set; }

@@ -11,125 +11,137 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = FormsSystem
 build_property.RootNamespace = FormsSystem
-build_property.ProjectDir = C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms\
+build_property.ProjectDir = C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\Forms\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 8.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\forms
+build_property.MSBuildProjectDirectory = C:\Users\iosam\OneDrive\Desktop\copybackup\es\es\Forms
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 8.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Account/Landing.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Account/Landing.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxMYW5kaW5nLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Account/Login.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Account/Login.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxMb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Approvals/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Approvals/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXBwcm92YWxzXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Dashboard/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Dashboard/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRGFzaGJvYXJkXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Dropdowns/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Dropdowns/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRHJvcGRvd25zXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Feedback/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Feedback/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRmVlZGJhY2tcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/FormBuilder/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/FormBuilder/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUJ1aWxkZXJcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/FormFill/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/FormFill/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUZpbGxcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/FormFill/PrintView.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/FormFill/PrintView.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybUZpbGxcUHJpbnRWaWV3LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Forms/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Forms/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRm9ybXNcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Guide/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Guide/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcR3VpZGVcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Inbox/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Inbox/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5ib3hcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Notifications/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Notifications/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTm90aWZpY2F0aW9uc1xJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Outbox/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Outbox/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3V0Ym94XEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/Beneficiaries.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/AuditLog.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQXVkaXRMb2cuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/Backup.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQmFja3VwLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/Beneficiaries.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQmVuZWZpY2lhcmllcy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/Classifications.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/Classifications.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ2xhc3NpZmljYXRpb25zLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/FormClasses.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormClasses.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybUNsYXNzZXMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/FormSections.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormSections.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybVNlY3Rpb25zLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/FormStatuses.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/FormStatuses.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRm9ybVN0YXR1c2VzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Settings/OrganizationalUnits.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/OrganizationalUnits.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcT3JnYW5pemF0aW9uYWxVbml0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Shared/Error.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Settings/SystemWarnings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU3lzdGVtV2FybmluZ3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Shared/_Layout.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Shared/_Layout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Shared/_ViewImports.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Shared/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WaWV3SW1wb3J0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Tables/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Tables/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVGFibGVzXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Users/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Users/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlcnNcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/Workspaces/Index.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/Workspaces/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcV29ya3NwYWNlc1xJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/_ViewImports.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/forms/Views/_ViewStart.cshtml]
+[C:/Users/iosam/OneDrive/Desktop/copybackup/es/es/Forms/Views/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 

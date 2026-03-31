@@ -149,8 +149,7 @@ public class InboxController : BaseController
             SenderName = CurrentUserFullName, SenderDepartment = CurrentDeptName
         });
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName,
-            "اعتماد نموذج", "Form", form.Id.ToString(), $"من {rf.SenderName}");
+        await _ds.AddAuditLogAsync(BuildAuditEntry("اعتماد نموذج", "Form", form.Id.ToString(), $"من {rf.SenderName}"));
 
         return Json(new { success = true, message = "تم اعتماد النموذج وإرساله للمستهدفين" });
     }

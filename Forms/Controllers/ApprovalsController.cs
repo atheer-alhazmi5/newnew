@@ -61,8 +61,8 @@ public class ApprovalsController : BaseController
             SenderName = CurrentUserFullName, SenderDepartment = CurrentDeptName
         });
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "اعتماد نموذج",
-            "ReceivedForm", receivedFormId.ToString());
+        await _ds.AddAuditLogAsync(BuildAuditEntry("اعتماد نموذج",
+            "ReceivedForm", receivedFormId.ToString()));
 
         return Json(new { success = true, message = "تم الاعتماد بنجاح" });
     }

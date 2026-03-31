@@ -116,8 +116,8 @@ public class FormFillController : BaseController
             });
         }
 
-        await _ds.AddAuditLogAsync(CurrentUserId, CurrentUserFullName, "تعبئة نموذج", "Form",
-            form.Id.ToString());
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تعبئة نموذج", "Form",
+            form.Id.ToString()));
 
         return Json(new { success = true, message = "تم إرسال النموذج بنجاح" });
     }
