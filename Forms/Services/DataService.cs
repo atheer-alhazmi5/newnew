@@ -1178,6 +1178,77 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    // ─── NOTIFICATIONS ─────────────
+    public Task<List<PopupNotification>> ListPopupNotificationsAsync()
+        => Task.FromResult(_db.PopupNotifications.OrderByDescending(p => p.CreatedAt).ToList());
+
+    public Task<PopupNotification?> GetPopupNotificationAsync(int id)
+        => Task.FromResult(_db.PopupNotifications.FirstOrDefault(p => p.Id == id));
+
+    public Task<PopupNotification> AddPopupNotificationAsync(PopupNotification p)
+    {
+        var list = _db.PopupNotifications;
+        p.Id = NextId(list, x => x.Id);
+        p.CreatedAt = DateTime.Now;
+        list.Add(p);
+        _db.SavePopupNotifications(list);
+        return Task.FromResult(p);
+    }
+
+    public Task<bool> UpdatePopupNotificationAsync(PopupNotification updated)
+    {
+        var list = _db.PopupNotifications;
+        var idx  = list.FindIndex(p => p.Id == updated.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = updated;
+        _db.SavePopupNotifications(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeletePopupNotificationAsync(int id)
+    {
+        var list = _db.PopupNotifications;
+        var item = list.FirstOrDefault(p => p.Id == id);
+        if (item == null) return Task.FromResult(false);
+        list.Remove(item);
+        _db.SavePopupNotifications(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
+        int userId, int departmentId, string location)
+    {
+        var now  = DateTime.Now;
+        var list = _db.PopupNotifications.Where(p =>
+        {
+            if (p.Status != "published") return false;
+            if (p.DisplayLocation != location && p.DisplayLocation != "all") return false;
+            if (p.DisplayPeriod == "specific")
+            {
+                if (p.StartDate.HasValue && now < p.StartDate.Value) return false;
+                if (p.EndDate.HasValue   && now > p.EndDate.Value)   return false;
+            }
+            if (p.DisplayPeriod == "once" && p.DismissedByUserIds.Contains(userId)) return false;
+            if (p.TargetUserIds.Any()       && !p.TargetUserIds.Contains(userId))       return false;
+            if (p.TargetDepartmentIds.Any() && !p.TargetDepartmentIds.Contains(departmentId)) return false;
+            return true;
+        }).ToList();
+        return Task.FromResult(list);
+    }
+
+    public Task<bool> DismissPopupAsync(int popupId, int userId)
+    {
+        var list = _db.PopupNotifications;
+        var item = list.FirstOrDefault(p => p.Id == popupId);
+        if (item == null) return Task.FromResult(false);
+        if (!item.DismissedByUserIds.Contains(userId))
+        {
+            item.DismissedByUserIds.Add(userId);
+            _db.SavePopupNotifications(list);
+        }
+        return Task.FromResult(true);
+    }
+
     // ─── DASHBOARD ────────────────────────────────────────────────────────────
     public Task<(int approved, int sent, int pending, int inbox)> GetDashboardKpisAsync(int userId, int deptId)
     {

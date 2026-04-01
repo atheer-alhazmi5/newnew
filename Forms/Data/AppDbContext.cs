@@ -60,6 +60,7 @@ public class AppDbContext
     public List<Workspace> Workspaces => Load<Workspace>("workspaces");
     public List<LoginAttempt> LoginAttempts => Load<LoginAttempt>("login_attempts");
     public List<BackupRecord> BackupRecords => Load<BackupRecord>("backup_records");
+    public List<PopupNotification> PopupNotifications => Load<PopupNotification>("popup_notifications");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -84,6 +85,7 @@ public class AppDbContext
     public void SaveWorkspaces(List<Workspace> d) => Save("workspaces", d);
     public void SaveLoginAttempts(List<LoginAttempt> d) => Save("login_attempts", d);
     public void SaveBackupRecords(List<BackupRecord> d) => Save("backup_records", d);
+    public void SavePopupNotifications(List<PopupNotification> d) => Save("popup_notifications", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

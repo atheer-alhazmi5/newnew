@@ -1,0 +1,800 @@
+@{
+    ViewBag.Title = "الإشعارات المنبثقة";
+    ViewBag.PageName = "الإشعارات المنبثقة";
+}
+
+<style>
+
+.pn-b-published { background:#ECFDF3;color:#067647; }
+.pn-b-draft     { background:var(--gray-100);color:var(--gray-600); }
+.pn-b-ad        { background:#ECFDF3;color:#067647; }
+.pn-b-alert     { background:#FEFCE8;color:#854D0E; }
+.pn-b-text      { background:#F4F3FF;color:#5925DC; }
+.pn-b-image     { background:#EFF8FF;color:#175CD3; }
+.pn-b-video     { background:#FDF4FF;color:#7E22CE; }
+
+.pn-act { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;width:100%;max-width:280px;margin-inline:auto;align-items:stretch; }
+.pn-action-btn { min-width:0;width:100%;border-radius:10px;font-weight:700;padding:7px 10px;font-size:12px;line-height:1.3;display:inline-flex;align-items:center;gap:5px;justify-content:center;cursor:pointer;transition:all .15s;border:2px solid transparent;font-family:'Cairo',sans-serif;white-space:nowrap;box-sizing:border-box;background:transparent; }
+.pn-action-btn-detail { border-color:var(--info-500);color:var(--info-500);background:#fff; }
+.pn-action-btn-detail:hover { background:var(--info-50); }
+.pn-action-btn-edit { border-color:var(--sa-600);color:var(--sa-600);background:#fff; }
+.pn-action-btn-edit:hover { background:var(--sa-50); }
+.pn-action-btn-publish { border-color:var(--sa-600);color:var(--sa-600);background:#fff; }
+.pn-action-btn-publish:hover { background:var(--sa-50); }
+.pn-action-btn-unpublish { border-color:var(--warning-600);color:var(--warning-700);background:#fff; }
+.pn-action-btn-unpublish:hover { background:var(--warning-50); }
+.pn-action-btn-delete { border-color:var(--error-500);color:var(--error-500);background:#fff; }
+.pn-action-btn-delete:hover { background:var(--error-50); }
+.pn-empty { text-align:center;padding:48px 20px;color:var(--gray-400); }
+.pn-empty i { font-size:52px;display:block;margin-bottom:12px; }
+.pn-pagination { display:flex;justify-content:center;align-items:center;gap:8px;margin-top:20px;flex-wrap:wrap; }
+.pn-pagination button { border:1px solid var(--gray-300);background:#fff;color:var(--gray-700);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;font-family:'Cairo',sans-serif;cursor:pointer;transition:all .15s; }
+.pn-pagination button:hover { background:var(--sa-50);border-color:var(--sa-400); }
+.pn-pagination button.active { background:var(--sa-600);color:#fff;border-color:var(--sa-600); }
+.pn-pagination button:disabled { opacity:.4;cursor:default; }
+.pn-pagination-info { font-size:13px;color:var(--gray-500);font-weight:600; }
+.pn-tbl .table { font-size:13px; }
+.pn-tbl .table thead th { background:var(--gray-50)!important;color:var(--gray-700);font-size:12px;font-weight:700;text-align:center;white-space:nowrap;border-bottom:2px solid var(--gray-200);padding:10px 8px;vertical-align:middle; }
+.pn-tbl .table tbody td { border-bottom:1px solid var(--gray-100);text-align:center;font-size:13px;padding:8px;vertical-align:middle; }
+.pn-tbl .table tbody tr { transition:background .15s; }
+.pn-tbl .table tbody tr:hover { background:var(--sa-25); }
+.pn-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap; }
+/* Modal */
+.pn-section-label { font-size:12px;font-weight:700;color:var(--sa-700);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+.pn-section-label::after { content:'';flex:1;height:1px;background:var(--gray-200); }
+.pn-content-zone { border:1.5px dashed var(--gray-300);border-radius:12px;padding:16px;background:var(--gray-50); }
+.pn-target-list { max-height:150px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:8px 12px;background:#fff; }
+.pn-target-list label { display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-700);cursor:pointer; }
+.pn-target-list label:hover { color:var(--sa-700); }
+/* Preview modal — إعلان = green, تنبيه = yellow */
+.pn-prev-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
+.pn-prev-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
+.pn-preview-img   { width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px; }
+.pn-preview-video { width:100%;border-radius:8px;margin-top:10px; }
+</style>
+
+<!-- Header -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h2 class="page-title" style="margin:0;">الإشعارات المنبثقة</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة الإعلانات والتنبيهات التي تظهر للمستخدمين أثناء استخدام النظام</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <span class="al-record-count"><i class="bi bi-bell"></i> <span id="pnCountNum">0</span> إشعار</span>
+        <button class="btn btn-primary" onclick="pnOpenModal()"
+                style="border-radius:12px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
+            <i class="bi bi-plus-lg"></i> إضافة إشعار
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+    <select class="rt-filter-select form-select" id="pnFilterStatus" style="min-width:160px;max-width:180px;" onchange="pnFilter()">
+        <option value="">الحالة</option>
+        <option value="published">منشور</option>
+        <option value="draft">مسودة</option>
+    </select>
+    <select class="rt-filter-select form-select" id="pnFilterCategory" style="min-width:160px;max-width:180px;" onchange="pnFilter()">
+        <option value="">التصنيف</option>
+        <option value="إعلان">إعلان</option>
+        <option value="تنبيه">تنبيه</option>
+    </select>
+    <select class="rt-filter-select form-select" id="pnFilterContentType" style="min-width:190px;max-width:220px;" onchange="pnFilter()">
+        <option value="">نوع المحتوى </option>
+        <option value="text">نص</option>
+        <option value="image">صورة</option>
+        <option value="video">فيديو</option>
+    </select>
+    <button type="button" class="rt-clear-btn" onclick="pnClearFilters()">
+        <i class="bi bi-x-circle"></i> مسح
+    </button>
+</div>
+
+<!-- Table -->
+<div class="card pn-tbl">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th style="text-align:right;min-width:150px;">العنوان</th>
+                        <th style="width:170px;">الفترة</th>
+                        <th style="width:100px;">التصنيف</th>
+                        <th style="width:110px;">نوع المحتوى</th>
+                        <th style="width:130px;">مكان الظهور</th>
+                        <th style="width:90px;">الحالة</th>
+                        <th style="min-width:280px;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="pnBody">
+                    <tr><td colspan="8" class="text-center py-4">
+                        <div class="spinner-border" style="color:var(--sa-600);"></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="pn-pagination" id="pnPagination"></div>
+
+<!-- ═══ ADD / EDIT MODAL ═══ -->
+<div class="modal fade" id="pnModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width:700px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 50px rgba(0,0,0,.2);">
+            <div class="modal-header" style="background:var(--sa-700);border-radius:16px 16px 0 0;padding:18px 24px;">
+                <h5 class="modal-title" style="color:#fff;font-weight:700;font-size:16px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-bell-fill"></i> <span id="pnModalTitle">إضافة إشعار منبثق</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:24px;max-height:75vh;overflow-y:auto;">
+                <input type="hidden" id="pnEditId" value="0" />
+
+                <!-- Category + Content Type -->
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">التصنيف <span class="text-danger">*</span></label>
+                        <select class="form-select" id="pnCategory" style="border-radius:10px;font-size:13px;">
+                            <option value="">— اختر —</option>
+                            <option value="إعلان">إعلان</option>
+                            <option value="تنبيه">تنبيه</option>
+                        </select>
+                        <div class="text-danger mt-1" id="pnCategoryErr" style="font-size:12px;display:none;">مطلوب</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">نوع المحتوى <span class="text-danger">*</span></label>
+                        <select class="form-select" id="pnContentType" style="border-radius:10px;font-size:13px;" onchange="pnSyncContentType()">
+                            <option value="">— اختر —</option>
+                            <option value="text">نص</option>
+                            <option value="image">صورة</option>
+                            <option value="video">فيديو</option>
+                        </select>
+                        <div class="text-danger mt-1" id="pnContentTypeErr" style="font-size:12px;display:none;">مطلوب</div>
+                    </div>
+                </div>
+
+                <!-- Title + font controls -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">العنوان <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pnTitle"
+                           placeholder="اكتب عنوان الإشعار..."
+                           style="border-radius:10px;font-size:13px;margin-bottom:8px;" />
+                    <div class="text-danger mt-1" id="pnTitleErr" style="font-size:12px;display:none;">مطلوب</div>
+                    <div class="d-flex gap-3 align-items-center mt-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <label style="font-size:12px;color:var(--gray-600);font-weight:600;white-space:nowrap;">حجم الخط:</label>
+                            <select id="pnTitleFontSize" class="form-select form-select-sm" style="width:80px;border-radius:8px;">
+                                <option value="14">14</option><option value="16">16</option>
+                                <option value="18" selected>18</option><option value="20">20</option>
+                                <option value="22">22</option><option value="24">24</option>
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label style="font-size:12px;color:var(--gray-600);font-weight:600;white-space:nowrap;">لون الخط:</label>
+                            <input type="color" id="pnTitleColor" value="#1F2A37"
+                                   style="width:40px;height:32px;border-radius:8px;border:1px solid var(--gray-300);cursor:pointer;padding:2px;" />
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="pnOpenPreview()"
+                                style="border-radius:8px;font-size:12px;font-weight:700;margin-right:auto;">
+                            <i class="bi bi-eye"></i> معاينة الإشعار
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Zone -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-file-text"></i> المحتوى</div>
+                    <div class="pn-content-zone">
+                        <!-- placeholder -->
+                        <div id="pnZonePlaceholder" style="text-align:center;padding:20px;color:var(--gray-400);">
+                            <i class="bi bi-arrow-up-circle" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+                            اختر نوع المحتوى أولاً
+                        </div>
+                        <!-- TEXT -->
+                        <div id="pnZoneText" style="display:none;">
+                            <textarea class="form-control" id="pnTextContent" rows="4"
+                                      placeholder="اكتب نص الإشعار هنا..."
+                                      style="border-radius:10px;font-size:13px;resize:vertical;"></textarea>
+                        </div>
+                        <!-- IMAGE -->
+                        <div id="pnZoneImage" style="display:none;">
+                            <div id="pnImagePreviewWrap" style="display:none;margin-bottom:12px;text-align:center;"></div>
+                            <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">رفع صورة</label>
+                            <input type="file" class="form-control" id="pnImageFile"
+                                   accept="image/jpeg,image/png,image/gif,image/webp"
+                                   style="border-radius:10px;font-size:13px;"
+                                   onchange="pnHandleFileUpload('image')" />
+                            <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">الحد الأقصى: 20 MB | صيغ مدعومة: JPG, PNG, GIF, WebP</div>
+                            <input type="hidden" id="pnAttachmentUrl" value="" />
+                            <input type="hidden" id="pnAttachmentMime" value="" />
+                        </div>
+                        <!-- VIDEO -->
+                        <div id="pnZoneVideo" style="display:none;">
+                            <div id="pnVideoPreviewWrap" style="display:none;margin-bottom:12px;text-align:center;"></div>
+                            <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">رفع فيديو</label>
+                            <input type="file" class="form-control" id="pnVideoFile"
+                                   accept="video/mp4,video/webm"
+                                   style="border-radius:10px;font-size:13px;"
+                                   onchange="pnHandleFileUpload('video')" />
+                            <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">الحد الأقصى: 20 MB | صيغ مدعومة: MP4, WebM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Display Period -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-clock"></i> فترة الظهور</div>
+                    <div class="d-flex gap-4 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pnPeriod" id="pnPeriodPermanent"
+                                   value="permanent" checked onchange="pnSyncPeriod()" />
+                            <label class="form-check-label fw-bold" for="pnPeriodPermanent" style="font-size:13px;">عرض دائم</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pnPeriod" id="pnPeriodSpecific"
+                                   value="specific" onchange="pnSyncPeriod()" />
+                            <label class="form-check-label fw-bold" for="pnPeriodSpecific" style="font-size:13px;">عرض لفترة محددة</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="pnPeriod" id="pnPeriodOnce"
+                                   value="once" onchange="pnSyncPeriod()" />
+                            <label class="form-check-label fw-bold" for="pnPeriodOnce" style="font-size:13px;">مرة واحدة فقط</label>
+                        </div>
+                    </div>
+                    <div id="pnDateRange" style="display:none;" class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:12px;color:var(--gray-600);font-weight:600;">تاريخ البداية</label>
+                            <input type="date" class="form-control" id="pnStartDate" style="border-radius:10px;font-size:13px;" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:12px;color:var(--gray-600);font-weight:600;">تاريخ النهاية</label>
+                            <input type="date" class="form-control" id="pnEndDate" style="border-radius:10px;font-size:13px;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Target Users -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-people"></i> الموظفين المستهدفين</div>
+                    <div class="pn-target-list" id="pnUsersList">
+                        <div class="text-center" style="color:var(--gray-400);font-size:12px;padding:8px 0;">
+                            <div class="spinner-border spinner-border-sm"></div> جارٍ التحميل...
+                        </div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                        <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
+                        في حال عدم التحديد سيرسل الإشعار لجميع الموظفين
+                    </div>
+                </div>
+
+                <!-- Target Departments -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
+                    <div class="pn-target-list" id="pnDeptsList">
+                        <div class="text-center" style="color:var(--gray-400);font-size:12px;padding:8px 0;">
+                            <div class="spinner-border spinner-border-sm"></div>
+                        </div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                        <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
+                        في حال عدم تحديد وحدة سيرسل لموظفي جميع الوحدات التنظيمية
+                    </div>
+                </div>
+
+                <!-- Display Location -->
+                <div class="mb-2">
+                    <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
+                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;">
+                        <option value="landing">صفحة البداية (Landing)</option>
+                        <option value="dashboard">لوحة التحكم</option>
+                        <option value="home">صفحة النماذج</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:16px 24px;gap:10px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="pnSaveBtn" onclick="pnSave()"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">
+                    <i class="bi bi-check2-circle"></i> حفظ
+                </button>
+                <button type="button" id="pnPublishBtn" onclick="pnSaveAndPublish()"
+                        style="background:#079455;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                    <i class="bi bi-megaphone-fill"></i> نشر
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ PREVIEW MODAL ═══ -->
+<div class="modal fade" id="pnPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+        <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.25);">
+            <div id="pnPreviewHeader" class="pn-prev-head-ad">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span id="pnPreviewCatLabel"
+                          style="font-size:12px;font-weight:700;opacity:.9;display:flex;align-items:center;gap:5px;"></span>
+                    <i class="bi bi-x-circle" style="cursor:pointer;font-size:16px;opacity:.8;color:#fff;"></i>
+                </div>
+                <div id="pnPreviewTitleEl" style="font-weight:700;font-size:18px;"></div>
+            </div>
+            <div style="background:#fff;padding:20px 22px;" id="pnPreviewBody">
+                <p style="color:var(--gray-500);font-size:13px;margin:0;">هنا يظهر محتوى الإشعار</p>
+            </div>
+            <div style="padding:0 22px 18px;background:#fff;text-align:center;">
+                <button class="btn btn-sm" data-bs-dismiss="modal"
+                        style="border-radius:20px;padding:6px 28px;font-weight:700;font-size:13px;border:1.5px solid var(--gray-300);color:var(--gray-600);">
+                    إغلاق الإشعار
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ DETAILS MODAL ═══ -->
+<div class="modal fade" id="pnDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:16px 22px;">
+                <h5 class="modal-title fw-bold" style="font-size:15px;margin:0;">
+                    <i class="bi bi-info-circle" style="color:var(--sa-600);margin-left:6px;"></i> تفاصيل الإشعار
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="pnDetailsBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ DELETE CONFIRM MODAL ═══ -->
+<div class="modal fade" id="pnDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:#FEF2F2;border-radius:16px 16px 0 0;padding:16px 22px;border-bottom:1px solid #FCA5A5;">
+                <h5 class="modal-title" style="color:#B42318;font-weight:700;font-size:15px;margin:0;">
+                    <i class="bi bi-trash3-fill"></i> تأكيد الحذف
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;text-align:center;">
+                <div style="font-size:38px;color:#F87171;margin-bottom:12px;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">هل تريد حذف الإشعار</p>
+                <p style="font-size:14px;font-weight:700;color:var(--gray-900);margin:6px 0 0;" id="pnDeleteTitle"></p>
+                <p style="font-size:12px;color:var(--gray-500);margin:10px 0 0;">سيتم إلغاء النشر إن كان منشوراً</p>
+            </div>
+            <div class="modal-footer" style="border:none;padding:0 22px 18px;gap:10px;justify-content:center;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 22px;">إلغاء</button>
+                <button type="button" id="pnDeleteConfirmBtn" onclick="pnDeleteConfirm()" class="al-btn-pdf"
+                        style="border-radius:10px;padding:9px 22px;font-size:13px;">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+/* ── State ── */
+let pnAllData = [], pnFiltered = [], pnPage = 1;
+const pnPer = 12;
+let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
+let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal;
+let pnPublishAfterSave = false;
+
+const LOC_LABELS = { landing:'صفحة البداية', dashboard:'لوحة التحكم', home:'صفحة النماذج' };
+const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
+const CT_ICONS   = { text:'bi-file-text', image:'bi-image', video:'bi-camera-video-fill' };
+const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };
+const PER_LABELS = { permanent:'دائم', specific:'فترة محددة', once:'مرة واحدة' };
+const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill' };
+
+document.addEventListener('DOMContentLoaded', async () => {
+    pnModal        = new bootstrap.Modal(document.getElementById('pnModal'));
+    pnPreviewModal = new bootstrap.Modal(document.getElementById('pnPreviewModal'));
+    pnDetailsModal = new bootstrap.Modal(document.getElementById('pnDetailsModal'));
+    pnDeleteModal  = new bootstrap.Modal(document.getElementById('pnDeleteModal'));
+    await pnLoadMeta();
+    await pnLoad();
+    const active = document.querySelector('#sidebar .sidebar-child.active');
+    if (active) active.scrollIntoView({ block:'nearest', behavior:'smooth' });
+});
+
+async function pnLoadMeta() {
+    const [ur, dr] = await Promise.all([
+        apiFetch('/Settings/GetUsersForPopup'),
+        apiFetch('/Settings/GetDeptsForPopup')
+    ]);
+    pnAllUsers = Array.isArray(ur) ? ur : (ur?.data || []);
+    pnAllDepts = Array.isArray(dr) ? dr : (dr?.data || []);
+}
+
+async function pnLoad() {
+    const res = await apiFetch('/Settings/GetPopupNotifications');
+    pnAllData  = Array.isArray(res) ? res : (res?.data || []);
+    pnFiltered = [...pnAllData];
+    pnUpdateCount(); pnPage = 1; pnRender();
+}
+
+/* ── Filters ── */
+function pnFilter() {
+    const st = document.getElementById('pnFilterStatus').value;
+    const ca = document.getElementById('pnFilterCategory').value;
+    const ct = document.getElementById('pnFilterContentType').value;
+    pnFiltered = pnAllData.filter(d => {
+        if (st && d.status !== st) return false;
+        if (ca && d.category !== ca) return false;
+        if (ct && d.contentType !== ct) return false;
+        return true;
+    });
+    pnPage = 1; pnUpdateCount(); pnRender();
+}
+function pnClearFilters() {
+    ['pnFilterStatus','pnFilterCategory','pnFilterContentType'].forEach(id => document.getElementById(id).value = '');
+    pnFiltered = [...pnAllData]; pnPage = 1; pnUpdateCount(); pnRender();
+}
+function pnUpdateCount() { document.getElementById('pnCountNum').textContent = pnFiltered.length; }
+
+/* ── Render table ── */
+function pnRender() {
+    const body  = document.getElementById('pnBody');
+    const start = (pnPage - 1) * pnPer;
+    const slice = pnFiltered.slice(start, start + pnPer);
+    if (!pnFiltered.length) {
+        body.innerHTML = `<tr><td colspan="8" class="pn-empty">
+            <i class="bi bi-bell-slash"></i>
+            <div style="font-weight:600;margin-bottom:4px;">لا توجد إشعارات</div>
+            <div style="font-size:12px;">أضف إشعاراً جديداً بالضغط على الزر أعلاه</div>
+        </td></tr>`;
+        document.getElementById('pnPagination').innerHTML = ''; return;
+    }
+    body.innerHTML = slice.map((d, i) => {
+        const num     = start + i + 1;
+        const stCls   = d.status === 'published' ? 'pn-b-published' : 'pn-b-draft';
+        const stLbl   = d.status === 'published' ? 'منشور' : 'مسودة';
+        const catCls  = d.category === 'إعلان' ? 'pn-b-ad' : 'pn-b-alert';
+        const catIcon = CAT_ICON[d.category] || 'bi-bell';
+        const ctCls   = CT_CLS[d.contentType] || 'pn-b-text';
+        const ctIcon  = CT_ICONS[d.contentType] || 'bi-file-text';
+        const ctLbl   = CT_LABELS[d.contentType] || d.contentType;
+        const perLbl  = d.displayPeriod === 'specific'
+            ? `${d.startDate || '—'} → ${d.endDate || '—'}`
+            : PER_LABELS[d.displayPeriod] || d.displayPeriod;
+        const pubBtn  = d.status !== 'published'
+            ? `<button type="button" class="pn-action-btn pn-action-btn-publish" onclick="pnTogglePublish(${d.id},true)"><i class="bi bi-megaphone"></i> نشر</button>`
+            : `<button type="button" class="pn-action-btn pn-action-btn-unpublish" onclick="pnTogglePublish(${d.id},false)"><i class="bi bi-stop-circle"></i> إيقاف</button>`;
+        return `<tr>
+            <td style="font-weight:700;color:var(--gray-500);">${num}</td>
+            <td style="text-align:right;font-weight:600;color:${esc(d.titleColor)};">
+                <span style="font-size:${esc(d.titleFontSize)}px;">${esc(d.title)}</span>
+            </td>
+            <td style="font-size:12px;color:var(--gray-600);">${esc(perLbl)}</td>
+            <td><span class="pn-badge ${catCls}"><i class="bi ${catIcon}"></i> ${esc(d.category)}</span></td>
+            <td><span class="pn-badge ${ctCls}"><i class="bi ${ctIcon}"></i> ${esc(ctLbl)}</span></td>
+            <td style="font-size:12px;">${esc(LOC_LABELS[d.displayLocation] || d.displayLocation)}</td>
+            <td><span class="pn-badge ${stCls}"><i class="bi bi-circle-fill" style="font-size:7px;"></i> ${stLbl}</span></td>
+            <td>
+                <div class="pn-act">
+                    <button type="button" class="pn-action-btn pn-action-btn-detail" onclick="pnShowDetails(${d.id})"><i class="bi bi-eye"></i> تفاصيل</button>
+                    <button type="button" class="pn-action-btn pn-action-btn-edit" onclick="pnOpenEditModal(${d.id})"><i class="bi bi-pencil"></i> تعديل</button>
+                    ${pubBtn}
+                    <button type="button" class="pn-action-btn pn-action-btn-delete" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title)}')"><i class="bi bi-trash3"></i> حذف</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+    pnRenderPagination();
+}
+
+function pnRenderPagination() {
+    const total = Math.ceil(pnFiltered.length / pnPer);
+    const el = document.getElementById('pnPagination');
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = `<span class="pn-pagination-info">صفحة ${pnPage} من ${total}</span>`;
+    html += `<button onclick="pnGoPage(${pnPage-1})" ${pnPage<=1?'disabled':''}><i class="bi bi-chevron-right"></i></button>`;
+    const maxV = 7; let sP = Math.max(1,pnPage-3); let eP = Math.min(total,sP+maxV-1);
+    if (eP-sP+1 < maxV) sP = Math.max(1,eP-maxV+1);
+    if (sP > 1) { html+=`<button onclick="pnGoPage(1)">1</button>`; if(sP>2) html+=`<button disabled>…</button>`; }
+    for (let p=sP;p<=eP;p++) html+=`<button onclick="pnGoPage(${p})" class="${p===pnPage?'active':''}">${p}</button>`;
+    if (eP<total) { if(eP<total-1) html+=`<button disabled>…</button>`; html+=`<button onclick="pnGoPage(${total})">${total}</button>`; }
+    html += `<button onclick="pnGoPage(${pnPage+1})" ${pnPage>=total?'disabled':''}><i class="bi bi-chevron-left"></i></button>`;
+    el.innerHTML = html;
+}
+function pnGoPage(p) {
+    const total = Math.ceil(pnFiltered.length / pnPer);
+    if (p<1||p>total) return;
+    pnPage = p; pnRender();
+    document.querySelector('.table')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── Reset modal ── */
+function pnResetModal() {
+    document.getElementById('pnEditId').value = '0';
+    document.getElementById('pnModalTitle').textContent = 'إضافة إشعار منبثق';
+    ['pnCategory','pnContentType','pnTitle','pnTextContent'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('pnTitleFontSize').value = '18';
+    document.getElementById('pnTitleColor').value = '#1F2A37';
+    document.getElementById('pnAttachmentUrl').value = '';
+    document.getElementById('pnAttachmentMime').value = '';
+    // reset image zone
+    const iwrap = document.getElementById('pnImagePreviewWrap');
+    iwrap.style.display = 'none'; iwrap.innerHTML = '';
+    const imgFile = document.getElementById('pnImageFile');
+    if (imgFile) imgFile.value = '';
+    // reset video zone
+    const vwrap = document.getElementById('pnVideoPreviewWrap');
+    vwrap.style.display = 'none'; vwrap.innerHTML = '';
+    const vidFile = document.getElementById('pnVideoFile');
+    if (vidFile) vidFile.value = '';
+    // period
+    document.getElementById('pnPeriodPermanent').checked = true;
+    document.getElementById('pnDateRange').style.display = 'none';
+    document.getElementById('pnStartDate').value = '';
+    document.getElementById('pnEndDate').value = '';
+    document.getElementById('pnDisplayLocation').value = 'landing';
+    ['pnCategoryErr','pnContentTypeErr','pnTitleErr'].forEach(id =>
+        document.getElementById(id).style.display = 'none');
+    pnSyncContentType();
+    pnBuildUsersList([]);
+    pnBuildDeptsList([]);
+}
+
+function pnOpenModal() {
+    pnPublishAfterSave = false;
+    pnResetModal();
+    pnModal.show();
+    setTimeout(() => document.getElementById('pnTitle').focus(), 300);
+}
+
+async function pnOpenEditModal(id) {
+    pnPublishAfterSave = false;
+    pnResetModal();
+    const d = await apiFetch(`/Settings/GetPopupNotification?id=${id}`);
+    if (!d) return showToast('تعذّر تحميل الإشعار', 'danger');
+    document.getElementById('pnEditId').value = d.id;
+    document.getElementById('pnModalTitle').textContent = 'تعديل الإشعار';
+    document.getElementById('pnCategory').value = d.category;
+    document.getElementById('pnContentType').value = d.contentType;
+    pnSyncContentType();
+    document.getElementById('pnTitle').value = d.title;
+    document.getElementById('pnTitleFontSize').value = d.titleFontSize || '18';
+    document.getElementById('pnTitleColor').value = d.titleColor || '#1F2A37';
+    document.getElementById('pnTextContent').value = d.textContent || '';
+    if (d.attachmentUrl) {
+        document.getElementById('pnAttachmentUrl').value  = d.attachmentUrl;
+        document.getElementById('pnAttachmentMime').value = d.attachmentMime;
+        pnShowAttachmentPreview(d.attachmentUrl, d.attachmentMime);
+    }
+    const pRadio = document.querySelector(`input[name="pnPeriod"][value="${d.displayPeriod}"]`);
+    if (pRadio) { pRadio.checked = true; pnSyncPeriod(); }
+    if (d.startDate) document.getElementById('pnStartDate').value = d.startDate;
+    if (d.endDate)   document.getElementById('pnEndDate').value   = d.endDate;
+    document.getElementById('pnDisplayLocation').value = d.displayLocation || 'landing';
+    pnBuildUsersList(d.targetUserIds || []);
+    pnBuildDeptsList(d.targetDepartmentIds || []);
+    pnModal.show();
+}
+
+/* ── Content type sync ── */
+function pnSyncContentType() {
+    const ct = document.getElementById('pnContentType').value;
+    document.getElementById('pnZonePlaceholder').style.display = ct ? 'none' : 'block';
+    document.getElementById('pnZoneText').style.display  = ct === 'text'  ? 'block' : 'none';
+    document.getElementById('pnZoneImage').style.display = ct === 'image' ? 'block' : 'none';
+    document.getElementById('pnZoneVideo').style.display = ct === 'video' ? 'block' : 'none';
+}
+function pnSyncPeriod() {
+    const val = document.querySelector('input[name="pnPeriod"]:checked')?.value;
+    document.getElementById('pnDateRange').style.display = val === 'specific' ? 'flex' : 'none';
+}
+
+/* ── Target lists ── */
+function pnBuildUsersList(selected) {
+    const el = document.getElementById('pnUsersList');
+    if (!pnAllUsers.length) { el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">لا يوجد موظفون</div>'; return; }
+    el.innerHTML = pnAllUsers.map(u =>
+        `<label><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
+            ${selected.includes(u.id)?'checked':''}> ${esc(u.fullName||u.FullName||u.name||'مستخدم')}</label>`
+    ).join('');
+}
+function pnBuildDeptsList(selected) {
+    const el = document.getElementById('pnDeptsList');
+    if (!pnAllDepts.length) { el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">لا توجد وحدات</div>'; return; }
+    el.innerHTML = pnAllDepts.map(d =>
+        `<label><input type="checkbox" class="form-check-input pn-dept-cb" value="${d.id}"
+            ${selected.includes(d.id)?'checked':''}> ${esc(d.name||d.Name)}</label>`
+    ).join('');
+}
+
+/* ── File upload ── */
+async function pnHandleFileUpload(type) {
+    const fileInput = type === 'video'
+        ? document.getElementById('pnVideoFile')
+        : document.getElementById('pnImageFile');
+    if (!fileInput?.files.length) return;
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    try {
+        const res  = await fetch('/Settings/UploadPopupAttachment', { method:'POST', body: fd });
+        const json = await res.json();
+        if (json.success) {
+            document.getElementById('pnAttachmentUrl').value  = json.url;
+            document.getElementById('pnAttachmentMime').value = json.mime;
+            pnShowAttachmentPreview(json.url, json.mime);
+        } else showToast(json.message || 'فشل الرفع', 'danger');
+    } catch { showToast('خطأ في رفع الملف', 'danger'); }
+}
+function pnShowAttachmentPreview(url, mime) {
+    const wrapId = mime === 'video' ? 'pnVideoPreviewWrap' : 'pnImagePreviewWrap';
+    const wrap   = document.getElementById(wrapId);
+    wrap.style.display = 'block';
+    wrap.innerHTML = mime === 'video'
+        ? `<video src="${url}" controls style="max-width:100%;max-height:150px;border-radius:8px;"></video>`
+        : `<img src="${url}" alt="معاينة" style="max-width:100%;max-height:150px;border-radius:8px;object-fit:contain;" />`;
+}
+
+/* ── Preview ── */
+function pnOpenPreview() {
+    const cat   = document.getElementById('pnCategory').value;
+    const ct    = document.getElementById('pnContentType').value;
+    const title = document.getElementById('pnTitle').value || '(بدون عنوان)';
+    const size  = document.getElementById('pnTitleFontSize').value;
+    const color = document.getElementById('pnTitleColor').value;
+
+    // Header bg
+    const header = document.getElementById('pnPreviewHeader');
+    header.className = cat === 'تنبيه' ? 'pn-prev-head-alert' : 'pn-prev-head-ad';
+
+    // Category label with BI icon
+    const catIconName = CAT_ICON[cat] || 'bi-bell';
+    document.getElementById('pnPreviewCatLabel').innerHTML =
+        `<i class="bi ${catIconName}" style="font-size:14px;color:#fff;"></i><span style="color:#fff;">${esc(cat||'إعلان')}</span>`;
+
+    // Title — use user's chosen color
+    const titleEl = document.getElementById('pnPreviewTitleEl');
+    titleEl.textContent = title;
+    titleEl.style.cssText = `font-weight:700;font-size:${size}px;color:${color};`;
+
+    // Body
+    const body = document.getElementById('pnPreviewBody');
+    let bodyHtml = '';
+    if (ct === 'text') {
+        const txt = document.getElementById('pnTextContent').value;
+        bodyHtml = `<p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">${esc(txt)||'(لا يوجد نص)'}</p>`;
+    } else if (ct === 'image') {
+        const url = document.getElementById('pnAttachmentUrl').value;
+        bodyHtml = url
+            ? `<img src="${url}" class="pn-preview-img" />`
+            : `<p style="color:var(--gray-400);font-size:13px;">لم تُرفع صورة بعد</p>`;
+    } else if (ct === 'video') {
+        const url = document.getElementById('pnAttachmentUrl').value;
+        bodyHtml = url
+            ? `<video src="${url}" controls class="pn-preview-video"></video>`
+            : `<p style="color:var(--gray-400);font-size:13px;">لم يُرفع فيديو بعد</p>`;
+    }
+    body.innerHTML = bodyHtml || '<p style="color:var(--gray-400);">اختر نوع المحتوى وأدخل بيانات</p>';
+    pnPreviewModal.show();
+}
+
+/* ── Save ── */
+async function pnSave()          { await pnDoSave(false); }
+async function pnSaveAndPublish(){ await pnDoSave(true);  }
+
+async function pnDoSave(publish) {
+    const category    = document.getElementById('pnCategory').value;
+    const contentType = document.getElementById('pnContentType').value;
+    const title       = (document.getElementById('pnTitle').value || '').trim();
+    let valid = true;
+    document.getElementById('pnCategoryErr').style.display    = category    ? 'none' : 'block'; if (!category)    valid = false;
+    document.getElementById('pnContentTypeErr').style.display = contentType ? 'none' : 'block'; if (!contentType) valid = false;
+    document.getElementById('pnTitleErr').style.display       = title       ? 'none' : 'block'; if (!title)       valid = false;
+    if (!valid) return;
+
+    const period  = document.querySelector('input[name="pnPeriod"]:checked')?.value || 'permanent';
+    const userIds = [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
+    const deptIds = [...document.querySelectorAll('.pn-dept-cb:checked')].map(c => +c.value);
+
+    const payload = {
+        id:           +document.getElementById('pnEditId').value,
+        category, contentType, title,
+        titleFontSize: document.getElementById('pnTitleFontSize').value,
+        titleColor:    document.getElementById('pnTitleColor').value,
+        textContent:   contentType === 'text' ? document.getElementById('pnTextContent').value : '',
+        attachmentUrl:  document.getElementById('pnAttachmentUrl').value,
+        attachmentMime: document.getElementById('pnAttachmentMime').value,
+        externalUrl:    '',
+        displayPeriod:  period,
+        startDate: period === 'specific' ? document.getElementById('pnStartDate').value : null,
+        endDate:   period === 'specific' ? document.getElementById('pnEndDate').value   : null,
+        targetUserIds:       userIds,
+        targetDepartmentIds: deptIds,
+        displayLocation: document.getElementById('pnDisplayLocation').value,
+        status: 'draft'
+    };
+
+    const saveBtn = document.getElementById('pnSaveBtn');
+    const pubBtn  = document.getElementById('pnPublishBtn');
+    saveBtn.disabled = pubBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const res = await apiFetch('/Settings/SavePopupNotification', 'POST', payload);
+        if (!res || res.success === false) { showToast(res?.message || 'فشل الحفظ', 'danger'); return; }
+        if (publish) {
+            const newId = res.id || payload.id;
+            await apiFetch('/Settings/PublishPopup?id=' + newId, 'POST', { publish: true });
+        }
+        pnModal.hide();
+        showToast(publish ? 'تم النشر بنجاح' : 'تم الحفظ بنجاح', 'success');
+        await pnLoad();
+    } catch { showToast('حدث خطأ غير متوقع', 'danger'); }
+    finally {
+        saveBtn.disabled = pubBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="bi bi-check2-circle"></i> حفظ';
+    }
+}
+
+/* ── Publish toggle ── */
+async function pnTogglePublish(id, publish) {
+    const res = await apiFetch('/Settings/PublishPopup?id=' + id, 'POST', { publish });
+    if (res?.success) { showToast(publish ? 'تم نشر الإشعار ' : 'تم إيقاف النشر', 'success'); await pnLoad(); }
+    else showToast('فشل التحديث', 'danger');
+}
+
+/* ── Delete ── */
+function pnOpenDeleteModal(id, title) { pnDeleteId = id; document.getElementById('pnDeleteTitle').textContent = title; pnDeleteModal.show(); }
+async function pnDeleteConfirm() {
+    if (!pnDeleteId) return;
+    const btn = document.getElementById('pnDeleteConfirmBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    try {
+        const res = await apiFetch('/Settings/DeletePopupNotification?id=' + pnDeleteId, 'POST');
+        pnDeleteModal.hide();
+        if (res?.success) { showToast('تم الحذف', 'success'); await pnLoad(); }
+        else showToast('فشل الحذف', 'danger');
+    } catch { showToast('حدث خطأ', 'danger'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3"></i> حذف'; pnDeleteId = null; }
+}
+
+/* ── Details ── */
+async function pnShowDetails(id) {
+    const d = pnAllData.find(x => x.id === id);
+    if (!d) return;
+    const body = document.getElementById('pnDetailsBody');
+    const row = (label, val) => `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-500);min-width:130px;">${label}</div>
+        <div style="font-size:13px;color:var(--gray-800);flex:1;">${val}</div></div>`;
+    body.innerHTML = [
+        row('العنوان',`<span style="font-size:${d.titleFontSize}px;color:${d.titleColor};font-weight:700;">${esc(d.title)}</span>`),
+        row('التصنيف', esc(d.category)),
+        row('نوع المحتوى', `<span class="pn-badge ${CT_CLS[d.contentType]||'pn-b-text'}"><i class="bi ${CT_ICONS[d.contentType]||'bi-file-text'}"></i> ${CT_LABELS[d.contentType]||d.contentType}</span>`),
+        row('فترة الظهور', d.displayPeriod==='specific' ? `${d.startDate||'—'} إلى ${d.endDate||'—'}` : PER_LABELS[d.displayPeriod]||'—'),
+        row('مكان الظهور', LOC_LABELS[d.displayLocation]||'—'),
+        row('الحالة', d.status==='published'
+            ? '<span class="pn-badge pn-b-published"><i class="bi bi-check-circle-fill"></i> منشور</span>'
+            : '<span class="pn-badge pn-b-draft"><i class="bi bi-pencil-square"></i> مسودة</span>'),
+        row('الموظفون', (d.targetUserNames||[]).join('، ')||'—'),
+        row('الوحدات',  (d.targetDeptNames||[]).join('، ')||'—'),
+        row('أُنشئ بواسطة', esc(d.createdBy||'—')),
+        row('تاريخ الإنشاء', esc(d.createdAt||'—')),
+        row('تاريخ النشر',   esc(d.publishedAt||'—')),
+        d.textContent ? row('المحتوى',`<div style="background:var(--gray-50);padding:10px;border-radius:8px;font-size:13px;">${esc(d.textContent)}</div>`) : '',
+        d.attachmentUrl ? row('المرفق', d.attachmentMime==='video'
+            ? `<video src="${d.attachmentUrl}" controls style="max-width:100%;border-radius:8px;"></video>`
+            : `<img src="${d.attachmentUrl}" style="max-width:100%;border-radius:8px;" />`) : ''
+    ].join('');
+    pnDetailsModal.show();
+}
+
+function esc(s) {
+    if (s===null||s===undefined) return '';
+    const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+}
+</script>
+}

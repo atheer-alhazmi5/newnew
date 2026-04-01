@@ -4,6 +4,7 @@ using FormsSystem.Models.Entities;
 using FormsSystem.Models.Enums;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace FormsSystem.Controllers;
 
@@ -275,7 +276,197 @@ public class SettingsController : BaseController
         public string BackupType { get; set; } = "";
     }
 
-    // ─── تحذيرات النظام ──────────────────────────────────────────────────────
+    // ─── الإشعارات  ───────────────────────────────────────────────────
+
+    public IActionResult PopupNotifications()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin") return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "الإشعارات المنبثقة";
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPopupNotifications()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var list  = await _ds.ListPopupNotificationsAsync();
+        var users = await _ds.ListUsersAsync();
+        var depts = await _ds.ListOrganizationalUnitsAsync();
+        return Json(list.Select(p => new
+        {
+            p.Id, p.Title, p.TitleColor, p.TitleFontSize,
+            p.Category, p.ContentType,
+            p.TextContent, p.AttachmentUrl, p.AttachmentMime, p.ExternalUrl,
+            p.DisplayPeriod,
+            StartDate   = p.StartDate?.ToString("yyyy-MM-dd"),
+            EndDate     = p.EndDate?.ToString("yyyy-MM-dd"),
+            p.TargetUserIds, p.TargetDepartmentIds,
+            p.DisplayLocation, p.Status,
+            p.CreatedBy,
+            CreatedAt   = p.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            PublishedAt = p.PublishedAt?.ToString("yyyy-MM-dd HH:mm"),
+            TargetUserNames = p.TargetUserIds.Any()
+                ? users.Where(u => p.TargetUserIds.Contains(u.Id)).Select(u => u.FullName).ToList()
+                : new List<string> { "جميع الموظفين" },
+            TargetDeptNames = p.TargetDepartmentIds.Any()
+                ? depts.Where(d => p.TargetDepartmentIds.Contains(d.Id)).Select(d => d.Name).ToList()
+                : new List<string> { "جميع الوحدات" }
+        }));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPopupNotification(int id)
+    {
+        if (!IsAuthenticated) return Unauthorized();
+        var p = await _ds.GetPopupNotificationAsync(id);
+        if (p == null) return NotFound();
+        return Json(p);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SavePopupNotification([FromBody] PopupNotification req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        if (string.IsNullOrWhiteSpace(req.Title))
+            return Json(new { success = false, message = "العنوان مطلوب" });
+        if (string.IsNullOrWhiteSpace(req.Category))
+            return Json(new { success = false, message = "التصنيف مطلوب" });
+        if (string.IsNullOrWhiteSpace(req.ContentType))
+            return Json(new { success = false, message = "نوع المحتوى مطلوب" });
+
+        req.CreatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
+
+        if (req.Id == 0)
+        {
+            var added = await _ds.AddPopupNotificationAsync(req);
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                $"إضافة إشعار منبثق: {req.Title}", "إشعارات", added.Id.ToString()));
+            return Json(new { success = true, id = added.Id });
+        }
+        else
+        {
+            var existing = await _ds.GetPopupNotificationAsync(req.Id);
+            if (existing == null) return Json(new { success = false, message = "الإشعار غير موجود" });
+            req.CreatedAt   = existing.CreatedAt;
+            req.PublishedAt = existing.PublishedAt;
+            req.DismissedByUserIds = existing.DismissedByUserIds;
+            await _ds.UpdatePopupNotificationAsync(req);
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                $"تعديل إشعار منبثق: {req.Title}", "إشعارات", req.Id.ToString()));
+            return Json(new { success = true });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> PublishPopup(int id, [FromBody] PublishPopupRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var p = await _ds.GetPopupNotificationAsync(id);
+        if (p == null) return Json(new { success = false, message = "الإشعار غير موجود" });
+        p.Status      = req.Publish ? "published" : "draft";
+        p.PublishedAt = req.Publish ? DateTime.Now : null;
+        await _ds.UpdatePopupNotificationAsync(p);
+        await _ds.AddAuditLogAsync(BuildAuditEntry(
+            $"{(req.Publish ? "نشر" : "إلغاء نشر")} إشعار: {p.Title}", "إشعارات", id.ToString()));
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeletePopupNotification(int id)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var p = await _ds.GetPopupNotificationAsync(id);
+        if (p != null && !string.IsNullOrEmpty(p.AttachmentUrl))
+        {
+            var physPath = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot",
+                p.AttachmentUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (System.IO.File.Exists(physPath)) try { System.IO.File.Delete(physPath); } catch { }
+        }
+        await _ds.DeletePopupNotificationAsync(id);
+        await _ds.AddAuditLogAsync(BuildAuditEntry(
+            $"حذف إشعار منبثق رقم {id}", "إشعارات", id.ToString()));
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UploadPopupAttachment(IFormFile file)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        if (file == null || file.Length == 0)
+            return Json(new { success = false, message = "لم يتم اختيار ملف" });
+
+        var allowed = new[] { "image/jpeg","image/png","image/gif","image/webp","video/mp4","video/webm" };
+        if (!allowed.Contains(file.ContentType.ToLower()))
+            return Json(new { success = false, message = "نوع الملف غير مدعوم (صور أو فيديو فقط)" });
+        if (file.Length > 20_000_000)
+            return Json(new { success = false, message = "حجم الملف يتجاوز 20 MB" });
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "popups");
+        Directory.CreateDirectory(uploadsDir);
+        var ext      = Path.GetExtension(file.FileName);
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+        using (var stream = System.IO.File.Create(filePath))
+            await file.CopyToAsync(stream);
+
+        var mime = file.ContentType.StartsWith("video") ? "video" : "image";
+        return Json(new { success = true, url = $"/uploads/popups/{fileName}", mime });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetActivePopups(string location)
+    {
+        var loc = (location ?? "").Trim();
+        // صفحة اللاندنق
+        if (!IsAuthenticated)
+        {
+            if (!string.Equals(loc, "landing", StringComparison.OrdinalIgnoreCase))
+                return Json(new List<object>());
+        }
+
+        var userId = IsAuthenticated ? CurrentUserId : 0;
+        var deptId = IsAuthenticated ? CurrentDeptId : 0;
+        var popups = await _ds.GetActivePopupsForUserAsync(userId, deptId, loc);
+        return Json(popups.Select(p => new
+        {
+            p.Id, p.Title, p.TitleColor, p.TitleFontSize,
+            p.Category, p.ContentType,
+            p.TextContent, p.AttachmentUrl, p.AttachmentMime, p.ExternalUrl,
+            p.DisplayPeriod
+        }));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DismissPopup(int id)
+    {
+        if (!IsAuthenticated)
+            return Json(new { success = true }); // 
+        await _ds.DismissPopupAsync(id, CurrentUserId);
+        return Json(new { success = true });
+    }
+
+    public class PublishPopupRequest { public bool Publish { get; set; } }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsersForPopup()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var users = await _ds.ListUsersAsync();
+        return Json(users.Select(u => new { u.Id, FullName = u.FullName }));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetDeptsForPopup()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        return Json(units.Select(u => new { u.Id, u.Name }));
+    }
+
+    // ─── تحذيرات النظام ────────
 
     public IActionResult SystemWarnings()
     {
@@ -480,7 +671,7 @@ public class SettingsController : BaseController
         return View();
     }
 
-    // ─── FORM CLASSES API (أصناف النماذج) ─────────────────────────────────────
+    // ─── أصناف النماذج──────────────────────────
 
     [HttpGet]
     public async Task<IActionResult> GetFormClasses()
@@ -611,8 +802,7 @@ public class SettingsController : BaseController
         return View();
     }
 
-    // ─── FORM SECTIONS API (أنواع النماذج) ───────────────────────────────────
-
+    // ─── أنواع النماذج------------------
     [HttpGet]
     public async Task<IActionResult> GetFormSections()
     {
@@ -867,7 +1057,7 @@ public class SettingsController : BaseController
         return Json(new { success = true, message = "تم حذف الحالة بنجاح" });
     }
 
-    // ─── ORGANIZATIONAL UNITS API ─────────────────────────────────────────────
+    // ─── ORGANIZATIONAL UNITS ─────────────────────────────────────────────
 
     [HttpGet]
     public async Task<IActionResult> GetOrganizationalUnits()
