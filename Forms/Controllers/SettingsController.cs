@@ -1221,7 +1221,7 @@ public class SettingsController : BaseController
 
         return Json(new { success = true, message = "تم حذف الوحدة بنجاح" });
     }
-
+//
     // ─── BENEFICIARIES API ────────────────────────────────────────────────────
 
     [HttpGet]
