@@ -1,0 +1,138 @@
+@model FormsSystem.Models.ViewModels.LoginVm
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام إدارة النماذج</title>
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/styles.css">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-body">
+        <!-- RIGHT: Logo -->
+        <div class="login-right">
+            <img src="~/images/logo1.webp" alt="شعار" class="login-logo"
+                 onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+            <h3 style="color:var(--sa-600);font-weight:700;margin-bottom:8px;">نظام إدارة النماذج وسير الإجراءات</h3>
+          
+            <div style="width:48px;height:3px;background:var(--gold-600);border-radius:2px;"></div>
+        </div>
+        <!-- LEFT: Form -->
+        <div class="login-left">
+            <div class="login-card">
+                <div class="login-card-body">
+                    <form id="loginForm" method="post" action="/Account/Login">
+                        <input type="hidden" name="__RequestVerificationToken"
+                               value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+                        <div class="mb-3">
+                            <label class="form-label">اسم المستخدم</label>
+                            <input type="text" class="form-control form-control-lg" name="Username" id="username"
+                                   placeholder="أدخل اسم المستخدم" value="@Model.Username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور</label>
+                            <input type="password" class="form-control form-control-lg" name="Password" id="password"
+                                   placeholder="أدخل كلمة المرور" required>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                        {
+                            <div class="alert alert-danger" style="font-size:13px;">@Model.ErrorMessage</div>
+                        }
+                        <div id="errorMsg" class="alert alert-danger d-none" style="font-size:13px;"></div>
+                        <button type="submit" class="login-submit-btn" id="loginBtn">
+                            <i class="bi bi-person-fill"></i> تسجيل الدخول
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="demo-card">
+                <p style="text-align:center;font-weight:700;font-size:13px;color:#6c757d;margin-bottom:12px;">بيانات الدخول التجريبية</p>
+                <button class="demo-btn" onclick="fillLogin('admin','admin123')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div><div style="font-weight:700;">ماجد الحسيني</div><div style="font-size:12px;color:var(--gold-600);">مدير النظام</div></div>
+                        <span style="font-size:12px;color:#a3a3a3;">admin</span>
+                    </div>
+                </button>
+                <button class="demo-btn" onclick="fillLogin('atheer','password123')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div><div style="font-weight:700;">أثير الحازمي</div><div style="font-size:12px;color:var(--gold-600);">مدير الوحدة التنظيمية</div></div>
+                        <span style="font-size:12px;color:#a3a3a3;">atheer</span>
+                    </div>
+                </button>
+                <button class="demo-btn" onclick="fillLogin('rawan','password123')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div><div style="font-weight:700;">روان التميمي</div><div style="font-size:12px;color:var(--gold-600);">ممثل وحدة تنظيمية</div></div>
+                        <span style="font-size:12px;color:#a3a3a3;">rawan</span>
+                    </div>
+                </button>
+                <button class="demo-btn" onclick="fillLogin('nujood','password123')">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div><div style="font-weight:700;">نجود الرشيدي</div><div style="font-size:12px;color:var(--gold-600);">موظف</div></div>
+                        <span style="font-size:12px;color:#a3a3a3;">nujood</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer id="main-footer">
+        <div class="footer-top">
+            <div class="footer-grid">
+                <div class="footer-col footer-col-about">
+                    <div class="footer-about-text">جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026</div>
+                    <div class="footer-dev-text">تنفيذ وتطوير: <span class="gold-text">إدارة الأنظمة والبرامج</span></div>
+                </div>
+                <div class="footer-col footer-col-support">
+                    <h6 class="footer-col-title">الاتصال والدعم</h6>
+                    <ul class="footer-links">
+                        <li><a href="/Guide/Index"><i class="bi bi-book" style="margin-left:6px;"></i>دليل الاستخدام</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col footer-col-social">
+                    <h6 class="footer-col-title">التواصل الاجتماعي</h6>
+                    <div class="footer-social">
+                        <a href="#"><i class="bi bi-instagram"></i></a>
+                        <a href="#"><i class="bi bi-linkedin"></i></a>
+                        <a href="#"><i class="bi bi-twitter-x"></i></a>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px;">أدوات الإتاحة والوصول</div>
+                        <div class="footer-acc-icons">
+                            <button onclick="document.body.classList.toggle('high-contrast')" title="تباين الألوان"><i class="bi bi-eye"></i></button>
+                            <button onclick="(function(){var r=document.documentElement,c=parseFloat(getComputedStyle(r).fontSize);r.style.fontSize=(c>=22?16:c+2)+'px'})()" title="تكبير الخط"><i class="bi bi-zoom-in"></i></button>
+                            <button onclick="document.body.classList.toggle('accessible-mode')" title="إمكانية الوصول"><i class="bi bi-universal-access-circle"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function fillLogin(u, p) {
+    document.getElementById('username').value = u;
+    document.getElementById('password').value = p;
+}
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.classList.add('active-green');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="margin-left:8px;"></span> جاري الدخول...';
+});
+</script>
+</body>
+</html>

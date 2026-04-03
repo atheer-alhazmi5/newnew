@@ -1,0 +1,53 @@
+@{
+    ViewBag.Title = "صندوق الوارد";
+    ViewBag.PageName = "صندوق الوارد";
+}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h2 class="page-title" style="margin:0;">صندوق الوارد <span id="inbox-count" style="font-size:14px;color:var(--gray-500);font-weight:400;"></span></h2>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap">
+    <select class="form-select" style="max-width:200px;" id="categoryFilter" onchange="loadInbox()">
+        <option value="">جميع الأنواع</option>
+        <option value="fill_request">طلبات تعبئة</option>
+        <option value="approval_request">طلبات اعتماد</option>
+    </select>
+    <select class="form-select" style="max-width:200px;" id="statusFilter" onchange="loadInbox()">
+        <option value="">جميع الحالات</option>
+        <option value="قيد الانتظار">قيد الانتظار</option>
+        <option value="تم الملء">تم الملء</option>
+        <option value="معتمد">معتمد</option>
+        <option value="مرفوض">مرفوض</option>
+    </select>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>النموذج</th>
+                        <th>المرسل</th>
+                        <th>القسم</th>
+                        <th>النوع</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="inboxBody">
+                    <tr><td colspan="7" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+@section Scripts {
+<script>var __userRole = '@(ViewBag.UserRole)';</script>
+<script src="~/js/inbox.js?v=@DateTime.Now.Ticks"></script>
+}

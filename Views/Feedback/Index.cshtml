@@ -1,0 +1,60 @@
+@{
+    ViewBag.Title = "تقييم النظام";
+    ViewBag.PageName = "تقييم النظام";
+}
+
+<h2 class="page-title">تقييم النظام</h2>
+
+<div class="card" style="max-width:600px;">
+    <div class="card-body">
+        <p style="color:var(--gray-600);margin-bottom:24px;">نرحب بتقييمك ومقترحاتك لتطوير النظام</p>
+
+        <div class="mb-4">
+            <label class="form-label" style="font-size:16px;">تقييمك العام للنظام</label>
+            <div class="star-rating" id="starRating">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    <span class="star" data-val="@i" onclick="setStar(@i)">★</span>
+                }
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">ملاحظاتك ومقترحاتك</label>
+            <textarea class="form-control" id="feedbackComment" rows="5"
+                      placeholder="شاركنا رأيك وملاحظاتك..."></textarea>
+        </div>
+
+        <div id="feedbackSuccess" class="alert alert-success d-none">
+            <i class="bi bi-check-circle" style="margin-left:8px;"></i>شكراً لتقييمك! تم إرسال رأيك بنجاح.
+        </div>
+
+        <button class="btn btn-primary" onclick="submitFeedback()">
+            <i class="bi bi-send" style="margin-left:6px;"></i>إرسال التقييم
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let selectedRating = 0;
+
+function setStar(val) {
+    selectedRating = val;
+    document.querySelectorAll('.star').forEach((s, i) => {
+        s.classList.toggle('active', i < val);
+    });
+}
+
+async function submitFeedback() {
+    const comment = document.getElementById('feedbackComment').value;
+    const r = await apiFetch('/Feedback/Submit', 'POST', { rating: selectedRating, comment });
+    if (r.success) {
+        document.getElementById('feedbackSuccess').classList.remove('d-none');
+        document.getElementById('feedbackComment').value = '';
+        selectedRating = 0;
+        document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+    }
+}
+</script>
+}

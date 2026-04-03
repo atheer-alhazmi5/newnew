@@ -1,0 +1,78 @@
+@{
+    ViewBag.Title = "الصادر";
+    ViewBag.PageName = "الصادر";
+}
+
+<style>
+.reply-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px; }
+.reply-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.reply-name { font-weight:700; font-size:14px; color:var(--gray-800); }
+.reply-dept { font-size:12px; color:var(--gray-500); }
+.reply-date { font-size:12px; color:var(--gray-500); }
+.reply-answer { margin-bottom:8px; }
+.reply-answer .q-label { font-weight:600; font-size:13px; color:var(--sa-800); margin-bottom:2px; }
+.reply-answer .q-value { font-size:14px; color:var(--gray-700); padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e5e7eb; }
+.modal-xl-custom { max-width:900px; }
+</style>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h2 class="page-title" style="margin:0;">الصادر</h2>
+    @if (ViewBag.UserRole?.ToString() == "Admin" || ViewBag.UserRole?.ToString() == "Manager" || ViewBag.UserRole?.ToString() == "Employee")
+    {
+        <a href="/FormBuilder/Index" class="btn btn-primary" style="border-radius:10px;">
+            <i class="bi bi-plus-lg" style="margin-left:6px;"></i> إنشاء نموذج جديد
+        </a>
+    }
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap">
+    <select class="form-select" style="max-width:200px;" id="statusFilter" onchange="loadOutbox()">
+        <option value="">جميع الحالات</option>
+        <option value="published">منشور</option>
+        <option value="pending_approval">قيد الاعتماد</option>
+    </select>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>النموذج</th>
+                        <th>أُرسل إلى</th>
+                        <th>تاريخ الإرسال</th>
+                        <th>الحالة</th>
+                        <th>الردود</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="outboxBody">
+                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+<!-- Replies Modal -->
+<div class="modal fade" id="repliesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl-custom modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:16px;border:none;">
+            <div class="modal-header" style="background:var(--sa-800);border-radius:16px 16px 0 0;">
+                <h5 class="modal-title text-white"><i class="bi bi-reply-all" style="margin-left:8px;"></i>الردود على النموذج</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="repliesBody" style="min-height:200px;">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>var __userRole = '@(ViewBag.UserRole)';</script>
+<script src="~/js/outbox.js?v=@DateTime.Now.Ticks"></script>
+}

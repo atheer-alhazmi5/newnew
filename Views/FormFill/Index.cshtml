@@ -1,0 +1,18 @@
+@{
+    ViewBag.Title = "تعبئة النموذج";
+    ViewBag.PageName = "تعبئة النموذج";
+    var mode = ViewBag.Mode?.ToString() ?? "fill";
+}
+
+<div id="formFillContainer">
+    <div class="text-center py-5"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+</div>
+
+@section Scripts {
+<script>
+const FORM_ID = @(ViewBag.FormId ?? 0);
+const RECEIVED_FORM_ID = @(ViewBag.ReceivedFormId != null ? ViewBag.ReceivedFormId.ToString() : "null");
+const VIEW_MODE = '@mode';
+</script>
+<script src="~/js/form-fill.js?v=@DateTime.Now.Ticks"></script>
+}

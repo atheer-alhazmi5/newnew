@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(ViewBag.Title ?? "نظام إدارة النماذج وسير الإجراءات")</title>
+    <meta name="csrf-token" content="@(Antiforgery.GetAndStoreTokens(Context).RequestToken)" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/styles.css?v=@DateTime.Now.Ticks">
+    <link rel="stylesheet" href="~/css/animations.css">
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+<div id="app">
+    <!-- TOP BAR -->
+    <div id="top-bar">
+        <div class="top-bar-content">
+            <div class="top-bar-right">
+                <span><i class="bi bi-calendar3" style="margin-left:6px;"></i>@ViewBag.HijriDate</span>
+                <div class="top-bar-divider"></div>
+                <span><i class="bi bi-clock" style="margin-left:6px;"></i>@ViewBag.CurrentTime</span>
+            </div>
+            <div class="top-bar-left">
+                <button onclick="document.body.classList.toggle('high-contrast')" title="تباين الألوان">
+                    <i class="bi bi-eye"></i>
+                </button>
+                <div class="top-bar-divider"></div>
+                <button onclick="(function(){var r=document.documentElement,c=parseFloat(getComputedStyle(r).fontSize);r.style.fontSize=(c>=22?16:c+2)+'px'})()" title="تكبير الخط">
+                    <i class="bi bi-zoom-in"></i>
+                </button>
+                <div class="top-bar-divider"></div>
+                <button onclick="document.body.classList.toggle('accessible-mode')" title="إمكانية الوصول">
+                    <i class="bi bi-universal-access-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div id="main-header">
+        <div class="header-content">
+            <div class="header-right">
+                <img src="~/images/logo1.webp" alt="شعار" class="header-logo"
+                     onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+            </div>
+            <div class="header-center">
+                <h1 class="header-title">نظام إدارة النماذج وسير الإجراءات</h1>
+          
+            </div>
+            <div class="header-left">
+                <a href="/Notifications/Index" class="notification-bell" id="notif-bell">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="notification-dot d-none" id="notif-count">0</span>
+                </a>
+                <div class="user-info">
+                    <div class="user-avatar-circle">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">@ViewBag.UserFullName</div>
+                        <div class="user-role">@GetRoleLabel(ViewBag.UserRole?.ToString())</div>
+                    </div>
+                </div>
+                <form method="post" action="/Account/Logout" style="margin:0;">
+                    <input type="hidden" name="__RequestVerificationToken"
+                           value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+                    <button type="submit" class="btn-logout">
+                        <i class="bi bi-box-arrow-right"></i> خروج
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUB HEADER -->
+    <div id="sub-header">
+        <div class="sub-header-content">
+            <i class="bi bi-house-fill"></i>
+            <span>إمارة منطقة المدينة المنورة</span>
+            <i class="bi bi-chevron-left"></i>
+            <strong>@(ViewBag.PageName ?? ViewBag.Title ?? "الرئيسية")</strong>
+        </div>
+    </div>
+
+    <!-- APP BODY -->
+    <div id="app-body">
+        <!-- SIDEBAR -->
+        <div id="sidebar">
+            <nav class="sidebar-nav">
+                @{
+                    var role = ViewBag.UserRole?.ToString() ?? "";
+                    var currentPath = Context.Request.Path.Value ?? "";
+                    var menuItems = GetMenuItems(role);
+                }
+
+                @foreach (var item in menuItems)
+                {
+                    if (item.HasChildren)
+                    {
+                        var isChildActive = ((IEnumerable<dynamic>)item.Children)
+    .Any(c => !string.IsNullOrEmpty((string?)c.PathPrefix) && currentPath.StartsWith((string)c.PathPrefix)); 
+                        var isExpanded = isChildActive;
+                        <div class="sidebar-group @(isExpanded ? "expanded" : "")">
+                            <a href="javascript:void(0)" class="sidebar-item sidebar-parent @(isChildActive ? "active" : "")" onclick="this.parentElement.classList.toggle('expanded')">
+                                <div class="sidebar-icon"><i class="bi @item.Icon"></i></div>
+                                <span class="sidebar-text">@item.Label</span>
+                                <i class="bi bi-chevron-down sidebar-arrow"></i>
+                            </a>
+                            <div class="sidebar-children">
+                                @foreach (var child in item.Children)
+                                {
+                                    <a href="@child.Url" class="sidebar-item sidebar-child @(currentPath.StartsWith(child.PathPrefix) ? "active" : "")">
+                                        <div class="sidebar-icon sidebar-icon-sm"><i class="bi @child.Icon"></i></div>
+                                        <span class="sidebar-text">@child.Label</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <a href="@item.Url" class="sidebar-item @(currentPath.StartsWith(item.PathPrefix) ? "active" : "")">
+                            <div class="sidebar-icon"><i class="bi @item.Icon"></i></div>
+                            <span class="sidebar-text">@item.Label</span>
+                        </a>
+                    }
+                }
+            </nav>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div id="main-content">
+            @RenderBody()
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer id="main-footer">
+        <div class="footer-top">
+            <div class="footer-grid">
+                <div class="footer-col footer-col-about">
+                    <div class="footer-about-text">
+                        جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026
+                    </div>
+                    <div class="footer-dev-text">
+                        تنفيذ وتطوير: <span class="gold-text">إدارة الأنظمة والبرامج</span>
+                    </div>
+                </div>
+                <div class="footer-col footer-col-support">
+                    <h6 class="footer-col-title">الاتصال والدعم</h6>
+                    <ul class="footer-links">
+                        <li><a href="/Guide/Index"><i class="bi bi-book" style="margin-left:6px;"></i>دليل الاستخدام</a></li>
+                        <li><a href="/Feedback/Index"><i class="bi bi-star" style="margin-left:6px;"></i>تقييم النظام</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col footer-col-social">
+                    <h6 class="footer-col-title">التواصل الاجتماعي</h6>
+                    <div class="footer-social">
+                        <a href="#" title="انستقرام"><i class="bi bi-instagram"></i></a>
+                        <a href="#" title="لينكدإن"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" title="منصة إكس"><i class="bi bi-twitter-x"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" style="position:fixed;bottom:24px;left:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="~/js/site.js"></script>
+@RenderSection("Scripts", required: false)
+
+<div id="sysPopupContainer"></div>
+<style>
+.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;animation:fadeIn .25s ease; }
+.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:440px;width:calc(100% - 40px);animation:slideUp .3s ease; }
+.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff; }
+.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff; }
+.sys-popup-body { background:#fff;padding:20px 22px; }
+.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center; }
+.sys-popup-close { background:#fff;border:1.5px solid #E5E7EB;border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:#374151;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
+.sys-popup-close:hover { background:#F9FAFB; }
+@@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+@@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+@@keyframes slideUp { from { opacity:0;transform:translateY(30px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', async function initSysPopups() {
+    const path = window.location.pathname.toLowerCase();
+    let loc = 'dashboard';
+    if (path.startsWith('/forms') || path.startsWith('/inbox') || path.startsWith('/outbox'))
+        loc = 'home';
+    else if (path === '/' || path.startsWith('/account/landing'))
+        loc = 'landing';
+    else if (path.startsWith('/dashboard'))
+        loc = 'dashboard';
+    else
+        return; // No popups on other pages
+
+    const dismissed = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
+
+    try {
+        const popups = await apiFetch('/Settings/GetActivePopups?location=' + loc);
+        if (!Array.isArray(popups) || !popups.length) return;
+
+        const queue = popups.filter(p => !dismissed.includes(p.id));
+        if (!queue.length) return;
+
+        let idx = 0;
+        function showNext() {
+            if (idx >= queue.length) return;
+            const p = queue[idx++];
+            showPopup(p, () => {
+                setTimeout(showNext, 400);
+            });
+        }
+        setTimeout(showNext, 800);
+    } catch (e) { /* silent */ }
+
+    function showPopup(p, onClose) {
+        const container = document.getElementById('sysPopupContainer');
+        const el = document.createElement('div');
+        el.className = 'sys-popup-overlay';
+
+        const headCls   = p.category === 'تنبيه' ? 'sys-popup-head-alert' : 'sys-popup-head-ad';
+        const catBiIcon = p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill';
+
+        let bodyHtml = '';
+        if (p.contentType === 'text') {
+            bodyHtml = `<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">${escHtml(p.textContent || '')}</p>`;
+        } else if (p.contentType === 'image') {
+            if (p.attachmentUrl)
+                bodyHtml = `<img src="${p.attachmentUrl}" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />`;
+        } else if (p.contentType === 'video') {
+            if (p.attachmentUrl)
+                bodyHtml = `<video src="${p.attachmentUrl}" controls style="width:100%;border-radius:10px;"></video>`;
+        }
+
+        el.innerHTML = `<div class="sys-popup-box">
+            <div class="${headCls}">
+                <div style="font-size:12px;font-weight:700;opacity:.9;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+                    <i class="bi ${catBiIcon}" style="color:#fff;"></i>
+                    <span style="color:#fff;">${escHtml(p.category)}</span>
+                </div>
+                <div style="font-weight:700;font-size:${p.titleFontSize || 18}px;color:${escHtml(p.titleColor || '#ffffff')};">${escHtml(p.title)}</div>
+            </div>
+            <div class="sys-popup-body">${bodyHtml || '<p style="color:#9CA3AF;font-size:13px;margin:0;">لا يوجد محتوى إضافي</p>'}</div>
+            <div class="sys-popup-footer">
+                <button class="sys-popup-close" id="sysPClose_${p.id}">إغلاق</button>
+            </div>
+        </div>`;
+
+        container.appendChild(el);
+
+        function closePopup() {
+            el.style.animation = 'fadeOut .2s ease forwards';
+            setTimeout(() => { el.remove(); onClose?.(); }, 200);
+            if (p.displayPeriod === 'once') {
+                const d = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
+                if (!d.includes(p.id)) { d.push(p.id); localStorage.setItem('sysPopupDismissed', JSON.stringify(d)); }
+                apiFetch('/Settings/DismissPopup?id=' + p.id, 'POST').catch(() => {});
+            }
+        }
+
+        document.getElementById('sysPClose_' + p.id)?.addEventListener('click', closePopup);
+        el.addEventListener('click', e => { if (e.target === el) closePopup(); });
+    }
+
+    function escHtml(s) {
+        if (!s) return '';
+        const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+    }
+});
+</script>
+
+<script>
+    // Load notification count
+    async function loadNotifCount() {
+        try {
+            const r = await apiFetch('/Notifications/GetUnreadCount');
+            if (r.success && r.count > 0) {
+                const dot = document.getElementById('notif-count');
+                if (dot) { dot.textContent = r.count; dot.classList.remove('d-none'); }
+            }
+        } catch {}
+    }
+    loadNotifCount();
+</script>
+</body>
+</html>
+
+@functions {
+    string GetRoleLabel(string? role) => role switch
+    {
+        "Admin" => "مدير النظام",
+        "Manager" => "مدير الوحدة التنظيمية",
+        "Employee" => "ممثل وحدة تنظيمية ",
+        "Staff" => "موظف",
+        _ => ""
+    };
+
+    class SidebarItem
+    {
+        public string Url { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string PathPrefix { get; set; } = "";
+        public List<SidebarItem> Children { get; set; } = new();
+        public bool HasChildren => Children.Count > 0;
+    }
+
+    List<SidebarItem> GetMenuItems(string role)
+    {
+        var items = new List<SidebarItem>();
+
+        if (role == "Admin")
+        {
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة التحكم", PathPrefix = "/Dashboard" });
+            items.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
+            items.Add(new SidebarItem { Url = "/Forms/Index", Icon = "bi-file-earmark-text", Label = "النماذج الجاهزة", PathPrefix = "/Forms" });
+            items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
+            items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send-fill", Label = "صندوق الصادر", PathPrefix = "/Outbox" });
+            items.Add(new SidebarItem { Url = "/Tables/Index", Icon = "bi-table", Label = "الجداول الجاهزة", PathPrefix = "/Tables" });
+            items.Add(new SidebarItem { Url = "/Dropdowns/Index", Icon = "bi-ui-checks-grid", Label = "القوائم المنسدلة", PathPrefix = "/Dropdowns" });
+
+            var settings = new SidebarItem { Url = "#", Icon = "bi-gear-fill", Label = "الاعدادات العامة", PathPrefix = "/Settings" };
+            settings.Children.Add(new SidebarItem { Url = "/Settings/OrganizationalUnits", Icon = "bi-building", Label = "الوحدات التنظيمية", PathPrefix = "/Settings/OrganizationalUnits" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/Beneficiaries", Icon = "bi-people-fill", Label = "المستفيدين", PathPrefix = "/Settings/Beneficiaries" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/Classifications", Icon = "bi-tags-fill", Label = "التصنيفات التنظيمية", PathPrefix = "/Settings/Classifications" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/FormClasses", Icon = "bi-folder2-open", Label = "أصناف النماذج", PathPrefix = "/Settings/FormClasses" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/FormSections", Icon = "bi-layout-text-sidebar-reverse", Label = "أنواع النماذج", PathPrefix = "/Settings/FormSections" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/FormStatuses", Icon = "bi-flag", Label = "حالات النماذج", PathPrefix = "/Settings/FormStatuses" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/AuditLog", Icon = "bi-clock-history", Label = "سجل العمليات", PathPrefix = "/Settings/AuditLog" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/SystemWarnings", Icon = "bi-shield-exclamation", Label = "تحذيرات النظام", PathPrefix = "/Settings/SystemWarnings" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/Backup", Icon = "bi-archive-fill", Label = "النسخ الاحتياطي", PathPrefix = "/Settings/Backup" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/PopupNotifications", Icon = "bi-bell-fill", Label = "الإشعارات المنبثقة", PathPrefix = "/Settings/PopupNotifications" });
+            items.Add(settings);
+
+            return items;
+        }
+
+        if (role == "Manager")
+        {
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة القيادة", PathPrefix = "/Dashboard" });
+        }
+
+        if (role == "Manager" || role == "Employee")
+        {
+            items.Add(new SidebarItem { Url = "/Forms/Index", Icon = "bi-file-earmark-text", Label = "النماذج الجاهزة", PathPrefix = "/Forms" });
+            items.Add(new SidebarItem { Url = "/Tables/Index", Icon = "bi-table", Label = "الجداول الجاهزة", PathPrefix = "/Tables" });
+        }
+
+        items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox", Label = "الوارد", PathPrefix = "/Inbox" });
+
+        if (role == "Manager" || role == "Employee")
+        {
+            items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send", Label = "الصادر", PathPrefix = "/Outbox" });
+        }
+
+        if (role == "Manager")
+        {
+            items.Add(new SidebarItem { Url = "/Users/Index", Icon = "bi-people", Label = "إدارة المستخدمين", PathPrefix = "/Users" });
+        }
+
+        return items;
+    }
+}

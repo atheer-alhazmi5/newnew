@@ -1,0 +1,133 @@
+@{
+    Layout = null;
+    var form = ViewBag.FormData as FormsSystem.Models.Entities.Form;
+    var reply = ViewBag.ReplyData as FormsSystem.Models.Entities.Reply;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <title>@form?.Name - طباعة</title>
+    <style>
+        @@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Cairo', 'Segoe UI', sans-serif; direction: rtl; color: #1a1a1a; padding: 40px; max-width: 900px; margin: 0 auto; }
+        .print-header { text-align: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #1f6b4f; }
+        .print-header h1 { font-size: 24px; font-weight: 800; color: #1f6b4f; margin-bottom: 4px; }
+        .print-header p { font-size: 14px; color: #666; }
+        .info-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 24px; padding: 16px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .info-item { flex: 1; min-width: 200px; }
+        .info-label { font-size: 12px; font-weight: 700; color: #1f6b4f; margin-bottom: 2px; }
+        .info-value { font-size: 14px; color: #333; }
+        .section-block { margin-bottom: 24px; }
+        .section-title { font-size: 16px; font-weight: 800; color: #1f6b4f; padding: 10px 16px; background: #f0faf5; border-radius: 10px; border-right: 4px solid #1f6b4f; margin-bottom: 16px; }
+        .qa-item { margin-bottom: 16px; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; }
+        .qa-question { font-weight: 700; font-size: 14px; color: #374151; margin-bottom: 6px; }
+        .qa-answer { font-size: 14px; color: #1f2937; padding: 8px 12px; background: #fff; border-radius: 8px; border: 1px dashed #d1d5db; min-height: 32px; }
+        .no-answer { color: #9ca3af; font-style: italic; }
+        .print-footer { margin-top: 40px; padding-top: 16px; border-top: 2px solid #e5e7eb; text-align: center; font-size: 12px; color: #9ca3af; }
+        .print-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; background: #1f6b4f; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: 'Cairo', sans-serif; cursor: pointer; margin-bottom: 24px; }
+        .print-btn:hover { background: #165a40; }
+        @@media print {
+            .no-print { display: none !important; }
+            body { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align:center;">
+        <button class="print-btn" onclick="window.print()">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 10a1 1 0 0 1-1-1v-2h8v2a1 1 0 0 1-1 1H5z"/></svg>
+            طباعة / تحميل PDF
+        </button>
+    </div>
+
+    <div class="print-header">
+        <h1>@form?.Name</h1>
+        @if (!string.IsNullOrEmpty(form?.Description))
+        {
+            <p>@form.Description</p>
+        }
+    </div>
+
+    @if (reply != null)
+    {
+        <div class="info-row">
+            <div class="info-item">
+                <div class="info-label">المجيب</div>
+                <div class="info-value">@reply.ResponderName</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">القسم</div>
+                <div class="info-value">@reply.ResponderDepartment</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">تاريخ الرد</div>
+                <div class="info-value">@reply.ReplyDate.ToString("yyyy/MM/dd HH:mm")</div>
+            </div>
+        </div>
+    }
+
+    @{
+        var sectionsJson = form?.SectionsJson ?? "[]";
+        var answersJson = reply?.AnswersJson ?? "[]";
+        List<dynamic>? sections = null;
+        List<dynamic>? answers = null;
+        try { sections = System.Text.Json.JsonSerializer.Deserialize<List<dynamic>>(sectionsJson); } catch { }
+        try { answers = System.Text.Json.JsonSerializer.Deserialize<List<dynamic>>(answersJson); } catch { }
+    }
+
+    <div id="formContent"></div>
+
+    <div class="print-footer">
+        <p>تم إنشاء هذا المستند من نظام إدارة النماذج — @DateTime.Now.ToString("yyyy/MM/dd HH:mm")</p>
+    </div>
+
+    <script>
+        var sectionsRaw = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(sectionsJson));
+        var answersRaw = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(answersJson));
+
+        function render() {
+            var sections = [];
+            var answersArr = [];
+            try { sections = JSON.parse(sectionsRaw); } catch(e) {}
+            try { answersArr = JSON.parse(answersRaw); } catch(e) {}
+
+            var answerMap = {};
+            answersArr.forEach(function(a) {
+                var key = a.questionId || a.label || '';
+                answerMap[key] = a.answer || '';
+                if (a.label) answerMap[a.label] = a.answer || '';
+            });
+
+            var container = document.getElementById('formContent');
+            var html = '';
+
+            sections.forEach(function(sec, si) {
+                html += '<div class="section-block">';
+                html += '<div class="section-title">' + (si + 1) + '. ' + esc(sec.title || sec.name || 'قسم') + '</div>';
+                (sec.questions || []).forEach(function(q) {
+                    var qKey = q.id || '';
+                    var answer = answerMap[qKey] || answerMap[q.label] || answerMap[q.text] || '';
+                    html += '<div class="qa-item">';
+                    html += '<div class="qa-question">' + esc(q.label || q.text || q.question || 'سؤال') + '</div>';
+                    html += '<div class="qa-answer">' + (answer ? esc(answer) : '<span class="no-answer">لم يتم الإجابة</span>') + '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function esc(s) {
+            if (!s) return '';
+            var d = document.createElement('div');
+            d.textContent = String(s);
+            return d.innerHTML;
+        }
+
+        render();
+    </script>
+</body>
+</html>
