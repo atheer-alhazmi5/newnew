@@ -124,6 +124,8 @@ public class SettingsController : BaseController
         var auth = RequireAuth(); if (auth != null) return auth;
         if (CurrentUserRole != "Admin")
             return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "النسخ الاحتياطي";
         return View();
     }
 
@@ -454,8 +456,37 @@ public class SettingsController : BaseController
     public async Task<IActionResult> GetUsersForPopup()
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var activeBenUsernames = beneficiaries
+            .Where(b => b.IsActive)
+            .Select(b => b.Username.ToLower())
+            .ToHashSet();
+        var benByUsername = beneficiaries
+            .Where(b => b.IsActive)
+            .ToDictionary(b => b.Username.ToLower(), b => b);
+        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
+        var ouMap = orgUnits.ToDictionary(o => o.Id, o => o.Name);
         var users = await _ds.ListUsersAsync();
-        return Json(users.Select(u => new { u.Id, FullName = u.FullName }));
+        var filtered = users.Where(u =>
+            u.Status == AccountStatus.Active &&
+            (u.Role == UserRole.Admin || activeBenUsernames.Contains(u.Username.ToLower()))
+        ).ToList();
+        return Json(filtered.Select(u => {
+            var ouId = 0;
+            var ouName = "";
+            if (benByUsername.TryGetValue(u.Username.ToLower(), out var ben))
+            {
+                ouId = ben.OrganizationalUnitId;
+                ouMap.TryGetValue(ouId, out ouName);
+                ouName ??= "";
+            }
+            else
+            {
+                ouId = u.DepartmentId;
+                ouName = u.Department?.Name ?? "";
+            }
+            return new { u.Id, FullName = u.FullName, DepartmentId = ouId, DepartmentName = ouName };
+        }));
     }
 
     [HttpGet]
@@ -463,7 +494,7 @@ public class SettingsController : BaseController
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        return Json(units.Select(u => new { u.Id, u.Name }));
+        return Json(units.Select(u => new { u.Id, u.Name, u.ParentId, u.Level, u.SortOrder }));
     }
 
     // ─── تحذيرات النظام ────────
@@ -1373,6 +1404,8 @@ public class SettingsController : BaseController
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
 
         await _ds.DeleteBeneficiaryAsync(req.Id);
+        if (!string.IsNullOrEmpty(b.Username))
+            await _ds.DeleteUserByUsernameAsync(b.Username);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف مستفيد", "Beneficiary", req.Id.ToString(), b.FullName));
         return Json(new { success = true, message = "تم حذف المستفيد بنجاح" });
     }

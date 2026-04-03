@@ -251,6 +251,16 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    public Task<bool> DeleteUserByUsernameAsync(string username)
+    {
+        var users = _db.Users;
+        var u = users.FirstOrDefault(x => x.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        if (u == null) return Task.FromResult(false);
+        users.Remove(u);
+        _db.SaveUsers(users);
+        return Task.FromResult(true);
+    }
+
     public Task<bool> UpdateUserStatusAsync(int userId, AccountStatus status)
     {
         var users = _db.Users;

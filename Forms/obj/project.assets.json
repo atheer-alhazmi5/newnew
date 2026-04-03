@@ -1,37 +1,36 @@
 {
   "version": 3,
   "targets": {
-    "net8.0": {},
-    "net8.0/win-x64": {}
+    "net9.0": {}
   },
   "libraries": {},
   "projectFileDependencyGroups": {
-    "net8.0": []
+    "net9.0": []
   },
   "packageFolders": {
-    "C:\\Users\\iosam\\.nuget\\packages\\": {}
+    "/Users/atheernamaa/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj",
+      "projectUniqueName": "/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/FormsSystem.csproj",
       "projectName": "FormsSystem",
-      "projectPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\FormsSystem.csproj",
-      "packagesPath": "C:\\Users\\iosam\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\iosam\\OneDrive\\Desktop\\copybackup\\es\\es\\Forms\\obj\\",
+      "projectPath": "/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/FormsSystem.csproj",
+      "packagesPath": "/Users/atheernamaa/.nuget/packages/",
+      "outputPath": "/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\iosam\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/Users/atheernamaa/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
-        "net8.0"
+        "net9.0"
       ],
       "sources": {
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net9.0": {
+          "targetAlias": "net9.0",
           "projectReferences": {}
         }
       },
@@ -45,11 +44,11 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "10.0.100"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
-      "net8.0": {
-        "targetAlias": "net8.0",
+      "net9.0": {
+        "targetAlias": "net9.0",
         "imports": [
           "net461",
           "net462",
@@ -61,24 +60,6 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "downloadDependencies": [
-          {
-            "name": "Microsoft.AspNetCore.App.Ref",
-            "version": "[8.0.24, 8.0.24]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Host.win-x64",
-            "version": "[8.0.24, 8.0.24]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Ref",
-            "version": "[8.0.24, 8.0.24]"
-          },
-          {
-            "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[8.0.24, 8.0.24]"
-          }
-        ],
         "frameworkReferences": {
           "Microsoft.AspNetCore.App": {
             "privateAssets": "none"
@@ -87,12 +68,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
-      }
-    },
-    "runtimes": {
-      "win-x64": {
-        "#import": []
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.303/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

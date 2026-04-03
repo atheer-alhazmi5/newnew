@@ -71,7 +71,12 @@
 .rt-inline-table tbody tr:hover { background:var(--sa-25); }
 .rt-add-field-btn { background:var(--sa-600); color:#fff; border:none; border-radius:10px; padding:8px 24px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; }
 .rt-add-field-btn:hover { background:var(--sa-700); }
-.rt-props-area { background:var(--gray-50); border-radius:10px; padding:14px 16px; margin-top:10px; }
+.rt-props-area { background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:20px; margin-top:12px; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+.rt-props-area .rt-props-title { font-size:13px; font-weight:700; color:var(--sa-700); margin-bottom:14px; display:flex; align-items:center; gap:6px; padding-bottom:10px; border-bottom:1px solid var(--gray-100); }
+.rt-props-area .row { row-gap:12px; }
+.rt-props-area label { font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:4px; }
+.rt-props-area .form-control-sm, .rt-props-area .form-select-sm { font-size:12.5px; border-radius:8px; }
+.rt-props-area .form-check-label { font-size:12.5px; }
 .rt-hdr-color-picker-wrap { position:relative; display:inline-block; }
 .rt-hdr-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
 .rt-hdr-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
@@ -82,6 +87,14 @@
 .rt-field-badge-req { background:#dcf5e8; color:#0f9f5c; padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-field-badge-opt { background:var(--gray-100); color:var(--gray-500); padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-page-wrap { width:100%; max-width:100%; }
+.rt-field-subname { font-size:11px; color:var(--gray-400); font-weight:600; margin-top:4px; line-height:1.4; }
+.rt-spinner-group { max-width:200px; }
+.rt-spinner-group .rt-spin-btn { z-index:0; }
+.rt-spinner-group .rt-spin-input { text-align:center; font-weight:700; font-size:15px; -moz-appearance:textfield; }
+.rt-spinner-group .rt-spin-input::-webkit-inner-spin-button,
+.rt-spinner-group .rt-spin-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.rt-star-rating .rt-star-icon { transition:color .15s; user-select:none; }
+.rt-star-rating .rt-star-icon:hover { transform:scale(1.2); }
 @@media (max-width:768px) { .rt-form-row { grid-template-columns:1fr; } }
 </style>
 
@@ -276,7 +289,7 @@
                             </table>
                         </div>
                         <div id="rtcPropsArea" class="rt-props-area" style="display:none;">
-                            <div class="mb-2 fw-bold" style="font-size:12px;color:var(--sa-700);">الخصائص الإضافية حسب نوع الحقل</div>
+                            <div class="rt-props-title"><i class="bi bi-sliders"></i> الخصائص الإضافية حسب نوع الحقل</div>
                             <div id="rtcPropsFields"></div>
                         </div>
                         <div class="rt-section-title mt-3">الحقول المضافة (<span id="rtcFieldsCount">0</span>)</div>
@@ -468,7 +481,7 @@
                             </table>
                         </div>
                         <div id="rtEditPropsArea" class="rt-props-area" style="display:none;">
-                            <div class="mb-2 fw-bold" style="font-size:12px;color:var(--sa-700);">الخصائص الإضافية حسب نوع الحقل</div>
+                            <div class="rt-props-title"><i class="bi bi-sliders"></i> الخصائص الإضافية حسب نوع الحقل</div>
                             <div id="rtEditPropsFields"></div>
                         </div>
                         <div class="rt-section-title mt-3">الحقول المضافة (<span id="rtEditFieldsCount">0</span>)</div>

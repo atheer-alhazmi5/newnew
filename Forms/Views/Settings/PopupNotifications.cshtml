@@ -43,9 +43,33 @@
 .pn-section-label { font-size:12px;font-weight:700;color:var(--sa-700);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
 .pn-section-label::after { content:'';flex:1;height:1px;background:var(--gray-200); }
 .pn-content-zone { border:1.5px dashed var(--gray-300);border-radius:12px;padding:16px;background:var(--gray-50); }
-.pn-target-list { max-height:150px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:8px 12px;background:#fff; }
+.pn-target-list { max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:0;background:#fff; }
 .pn-target-list label { display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-700);cursor:pointer; }
 .pn-target-list label:hover { color:var(--sa-700); }
+.pn-target-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
+.pn-select-all-btn { background:none;border:1px solid var(--gray-300);border-radius:8px;padding:3px 12px;font-size:11px;font-weight:700;color:var(--sa-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap; }
+.pn-select-all-btn:hover { background:var(--sa-50);border-color:var(--sa-400); }
+.pn-dept-group { border-bottom:1px solid var(--gray-100); }
+.pn-dept-group:last-child { border-bottom:none; }
+.pn-dept-group-head { display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;transition:background .15s;font-size:13px;font-weight:700;color:var(--gray-700); }
+.pn-dept-group-head:hover { background:var(--sa-25); }
+.pn-dept-group-toggle { width:20px;height:20px;border-radius:6px;border:1px solid var(--gray-200);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--sa-600);flex-shrink:0;transition:all .15s; }
+.pn-dept-group-head:hover .pn-dept-group-toggle { border-color:var(--sa-300);background:var(--sa-50); }
+.pn-dept-group-name { flex:1; }
+.pn-dept-group-count { font-size:11px;color:var(--gray-400);font-weight:600; }
+.pn-dept-group-body { padding:2px 12px 8px 36px;display:none; }
+.pn-dept-group.expanded .pn-dept-group-body { display:block; }
+.pn-dept-group.expanded .pn-dept-group-toggle { background:var(--sa-100); }
+/* dept tree */
+.pn-ou-tree-node { position:relative; }
+.pn-ou-tree-row { display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;user-select:none;transition:background .12s;border-radius:6px;margin:1px 0; }
+.pn-ou-tree-row:hover { background:var(--sa-25); }
+.pn-ou-tree-exp { width:18px;height:18px;border-radius:5px;border:1px solid var(--gray-200);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--sa-600);flex-shrink:0;cursor:pointer;transition:all .12s; }
+.pn-ou-tree-exp:hover { border-color:var(--sa-400);background:var(--sa-50); }
+.pn-ou-tree-exp.expanded { background:var(--sa-100);border-color:var(--sa-300); }
+.pn-ou-tree-spacer { width:18px;flex-shrink:0; }
+.pn-ou-tree-children { padding-right:20px;display:none; }
+.pn-ou-tree-node.expanded > .pn-ou-tree-children { display:block; }
 /* Preview modal — إعلان = green, تنبيه = yellow */
 .pn-prev-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
 .pn-prev-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
@@ -257,7 +281,12 @@
 
                 <!-- Target Users -->
                 <div class="mb-3">
-                    <div class="pn-section-label"><i class="bi bi-people"></i> الموظفين المستهدفين</div>
+                    <div class="pn-target-header">
+                        <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-people"></i> الموظفين المستهدفين</div>
+                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllUsers()">
+                            <i class="bi bi-check2-all"></i> <span id="pnUsersAllLabel">تحديد الكل</span>
+                        </button>
+                    </div>
                     <div class="pn-target-list" id="pnUsersList">
                         <div class="text-center" style="color:var(--gray-400);font-size:12px;padding:8px 0;">
                             <div class="spinner-border spinner-border-sm"></div> جارٍ التحميل...
@@ -271,8 +300,13 @@
 
                 <!-- Target Departments -->
                 <div class="mb-3">
-                    <div class="pn-section-label"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
-                    <div class="pn-target-list" id="pnDeptsList">
+                    <div class="pn-target-header">
+                        <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
+                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllDepts()">
+                            <i class="bi bi-check2-all"></i> <span id="pnDeptsAllLabel">تحديد الكل</span>
+                        </button>
+                    </div>
+                    <div class="pn-target-list" id="pnDeptsList" style="padding:6px 8px;">
                         <div class="text-center" style="color:var(--gray-400);font-size:12px;padding:8px 0;">
                             <div class="spinner-border spinner-border-sm"></div>
                         </div>
@@ -289,7 +323,7 @@
                     <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;">
                         <option value="landing">صفحة البداية (Landing)</option>
                         <option value="dashboard">لوحة التحكم</option>
-                        <option value="home">صفحة النماذج</option>
+                        <option value="login">صفحة تسجيل الدخول</option>
                     </select>
                 </div>
             </div>
@@ -386,7 +420,7 @@ let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
 let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal;
 let pnPublishAfterSave = false;
 
-const LOC_LABELS = { landing:'صفحة البداية', dashboard:'لوحة التحكم', home:'صفحة النماذج' };
+const LOC_LABELS = { landing:'صفحة البداية', dashboard:'لوحة التحكم', login:'صفحة تسجيل الدخول' };
 const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
 const CT_ICONS   = { text:'bi-file-text', image:'bi-image', video:'bi-camera-video-fill' };
 const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };
@@ -597,19 +631,150 @@ function pnSyncPeriod() {
 /* ── Target lists ── */
 function pnBuildUsersList(selected) {
     const el = document.getElementById('pnUsersList');
-    if (!pnAllUsers.length) { el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">لا يوجد موظفون</div>'; return; }
-    el.innerHTML = pnAllUsers.map(u =>
-        `<label><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
-            ${selected.includes(u.id)?'checked':''}> ${esc(u.fullName||u.FullName||u.name||'مستخدم')}</label>`
-    ).join('');
+    if (!pnAllUsers.length) { el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:12px;">لا يوجد موظفون</div>'; return; }
+    const groups = {};
+    pnAllUsers.forEach(u => {
+        const dName = u.departmentName || u.DepartmentName || 'بدون وحدة';
+        const dId = u.departmentId || u.DepartmentId || 0;
+        const key = dId + '_' + dName;
+        if (!groups[key]) groups[key] = { id: dId, name: dName, users: [] };
+        groups[key].users.push(u);
+    });
+    const sorted = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+    let html = '';
+    sorted.forEach((g, gi) => {
+        const expanded = selected.length > 0 && g.users.some(u => selected.includes(u.id)) ? ' expanded' : '';
+        const checkedCount = g.users.filter(u => selected.includes(u.id)).length;
+        html += `<div class="pn-dept-group${expanded}" data-dept-idx="${gi}">`;
+        html += `<div class="pn-dept-group-head" onclick="pnToggleDeptGroup(this)">`;
+        html += `<span class="pn-dept-group-toggle">${expanded ? '−' : '+'}</span>`;
+        html += `<span class="pn-dept-group-name"><i class="bi bi-building" style="color:var(--sa-500);margin-left:4px;font-size:12px;"></i> ${esc(g.name)}</span>`;
+        html += `<span class="pn-dept-group-count">${checkedCount ? checkedCount + '/' : ''}${g.users.length}</span>`;
+        html += `</div>`;
+        html += `<div class="pn-dept-group-body">`;
+        g.users.forEach(u => {
+            const name = u.fullName || u.FullName || u.name || 'مستخدم';
+            html += `<label><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
+                ${selected.includes(u.id) ? 'checked' : ''}> ${esc(name)}</label>`;
+        });
+        html += `</div></div>`;
+    });
+    el.innerHTML = html;
+    pnUpdateUsersAllLabel();
 }
+
+function pnToggleDeptGroup(head) {
+    const group = head.closest('.pn-dept-group');
+    group.classList.toggle('expanded');
+    const toggle = head.querySelector('.pn-dept-group-toggle');
+    toggle.textContent = group.classList.contains('expanded') ? '−' : '+';
+}
+
+function pnToggleAllUsers() {
+    const cbs = document.querySelectorAll('.pn-user-cb');
+    const allChecked = [...cbs].every(c => c.checked);
+    cbs.forEach(c => c.checked = !allChecked);
+    document.querySelectorAll('.pn-dept-group').forEach(g => {
+        if (!allChecked) g.classList.add('expanded');
+        const t = g.querySelector('.pn-dept-group-toggle');
+        if (t && !allChecked) t.textContent = '−';
+    });
+    pnUpdateUsersAllLabel();
+}
+
+function pnUpdateUsersAllLabel() {
+    const cbs = document.querySelectorAll('.pn-user-cb');
+    const allChecked = cbs.length > 0 && [...cbs].every(c => c.checked);
+    document.getElementById('pnUsersAllLabel').textContent = allChecked ? 'إلغاء الكل' : 'تحديد الكل';
+}
+
 function pnBuildDeptsList(selected) {
     const el = document.getElementById('pnDeptsList');
     if (!pnAllDepts.length) { el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">لا توجد وحدات</div>'; return; }
-    el.innerHTML = pnAllDepts.map(d =>
-        `<label><input type="checkbox" class="form-check-input pn-dept-cb" value="${d.id}"
-            ${selected.includes(d.id)?'checked':''}> ${esc(d.name||d.Name)}</label>`
-    ).join('');
+    const byParent = {};
+    pnAllDepts.forEach(d => {
+        const pid = d.parentId ?? d.ParentId ?? null;
+        if (!byParent[pid]) byParent[pid] = [];
+        byParent[pid].push(d);
+    });
+    Object.values(byParent).forEach(arr => arr.sort((a,b) => (a.sortOrder||0)-(b.sortOrder||0)));
+
+    function renderNodes(parentId) {
+        const children = byParent[parentId] || [];
+        if (!children.length) return '';
+        let html = '';
+        children.forEach(d => {
+            const id = d.id ?? d.Id;
+            const name = d.name || d.Name;
+            const hasKids = !!(byParent[id] && byParent[id].length);
+            const isChecked = selected.includes(id);
+            const isExpanded = isChecked || pnHasCheckedDescendant(id, byParent, selected);
+            html += `<div class="pn-ou-tree-node${isExpanded ? ' expanded' : ''}" data-ou-id="${id}">`;
+            html += `<div class="pn-ou-tree-row">`;
+            if (hasKids) {
+                html += `<span class="pn-ou-tree-exp${isExpanded?' expanded':''}" onclick="pnOuToggle(this)">${isExpanded?'−':'+'}</span>`;
+            } else {
+                html += `<span class="pn-ou-tree-spacer"></span>`;
+            }
+            html += `<label style="margin:0;flex:1;display:flex;align-items:center;gap:6px;">`;
+            html += `<input type="checkbox" class="form-check-input pn-dept-cb" value="${id}" ${isChecked?'checked':''} onchange="pnUpdateDeptsAllLabel()">`;
+            html += `<i class="bi ${hasKids?'bi-building':'bi-diagram-3'}" style="font-size:12px;color:var(--sa-500);"></i>`;
+            html += ` ${esc(name)}</label>`;
+            html += `</div>`;
+            if (hasKids) {
+                html += `<div class="pn-ou-tree-children">${renderNodes(id)}</div>`;
+            }
+            html += `</div>`;
+        });
+        return html;
+    }
+
+    el.innerHTML = renderNodes(null) || renderNodes(0);
+    if (!el.innerHTML.trim()) {
+        el.innerHTML = pnAllDepts.map(d =>
+            `<div class="pn-ou-tree-node"><div class="pn-ou-tree-row"><span class="pn-ou-tree-spacer"></span>
+            <label style="margin:0;flex:1;display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" class="form-check-input pn-dept-cb" value="${d.id||d.Id}" ${selected.includes(d.id||d.Id)?'checked':''} onchange="pnUpdateDeptsAllLabel()">
+            <i class="bi bi-building" style="font-size:12px;color:var(--sa-500);"></i> ${esc(d.name||d.Name)}</label></div></div>`
+        ).join('');
+    }
+    pnUpdateDeptsAllLabel();
+}
+
+function pnHasCheckedDescendant(parentId, byParent, selected) {
+    const kids = byParent[parentId];
+    if (!kids) return false;
+    for (const k of kids) {
+        const kid = k.id ?? k.Id;
+        if (selected.includes(kid)) return true;
+        if (pnHasCheckedDescendant(kid, byParent, selected)) return true;
+    }
+    return false;
+}
+
+function pnOuToggle(btn) {
+    const node = btn.closest('.pn-ou-tree-node');
+    node.classList.toggle('expanded');
+    const isExp = node.classList.contains('expanded');
+    btn.textContent = isExp ? '−' : '+';
+    btn.classList.toggle('expanded', isExp);
+}
+
+function pnToggleAllDepts() {
+    const cbs = document.querySelectorAll('.pn-dept-cb');
+    const allChecked = [...cbs].every(c => c.checked);
+    cbs.forEach(c => c.checked = !allChecked);
+    if (!allChecked) {
+        document.querySelectorAll('.pn-ou-tree-node').forEach(n => n.classList.add('expanded'));
+        document.querySelectorAll('.pn-ou-tree-exp').forEach(b => { b.textContent='−'; b.classList.add('expanded'); });
+    }
+    pnUpdateDeptsAllLabel();
+}
+
+function pnUpdateDeptsAllLabel() {
+    const cbs = document.querySelectorAll('.pn-dept-cb');
+    const allChecked = cbs.length > 0 && [...cbs].every(c => c.checked);
+    document.getElementById('pnDeptsAllLabel').textContent = allChecked ? 'إلغاء الكل' : 'تحديد الكل';
 }
 
 /* ── File upload ── */

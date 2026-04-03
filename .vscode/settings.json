@@ -1,1 +1,4 @@
-{}
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/4dfc7022-b5c5-4c29-a7df-8b5eaaac1686/resourceGroups/formsnew_group/providers/Microsoft.Web/sites/formsnew",
+    "appService.deploySubpath": "Forms\\publish"
+}

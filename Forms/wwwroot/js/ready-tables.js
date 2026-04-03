@@ -89,42 +89,164 @@ function rtEditApplyColumnHeaderColorFromValue(saved) {
 }
 
 var RT_FIELD_TYPES = {
-    "الاسم الكامل": {
-        props: [
-            { key:"subName", label:"اسم فرعي", type:"text" },
-            { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"مثال: 300" },
-            { key:"charLimit", label:"حد الأحرف", type:"number" },
-            { key:"minLength", label:"الحد الأدنى", type:"number" },
-            { key:"maxLength", label:"الحد الأقصى", type:"number" },
-            { key:"fieldCount", label:"عدد الحقول", type:"number", placeholder:"مثال: 3" },
-            { key:"readOnly", label:"القراءة فقط", type:"checkbox" },
-            { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
-            { key:"placeholder", label:"العنصر النائب (Placeholder)", type:"text" }
-        ]
-    },
-    "البريد الإلكتروني": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"charLimit", label:"حد الأحرف", type:"number" },{ key:"minLength", label:"الحد الأدنى", type:"number" },{ key:"maxLength", label:"الحد الأقصى", type:"number" },{ key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "رقم الهاتف": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"charLimit", label:"حد الأحرف", type:"number" },{ key:"minLength", label:"الحد الأدنى", type:"number" },{ key:"maxLength", label:"الحد الأقصى", type:"number" },{ key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },{ key:"validation", label:"التحقق", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "نص قصير": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"charLimit", label:"حد الأحرف", type:"number" },{ key:"minLength", label:"الحد الأدنى", type:"number" },{ key:"maxLength", label:"الحد الأقصى", type:"number" },{ key:"validation", label:"التحقق", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "نص طويل": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"heightPx", label:"الارتفاع", type:"number" },{ key:"charLimit", label:"حد الأحرف", type:"number" },{ key:"minLength", label:"الحد الأدنى", type:"number" },{ key:"maxLength", label:"الحد الأقصى", type:"number" },{ key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },{ key:"validation", label:"التحقق", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "فقرة": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"charLimit", label:"حد الأحرف", type:"number" },{ key:"minLength", label:"الحد الأدنى", type:"number" },{ key:"maxLength", label:"الحد الأقصى", type:"number" },{ key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },{ key:"validation", label:"التحقق", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "رقم": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },{ key:"minValue", label:"الحد الأدنى", type:"number" },{ key:"maxValue", label:"الحد الأقصى", type:"number" },{ key:"validation", label:"التحقق", type:"checkbox" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" },{ key:"placeholder", label:"العنصر النائب", type:"text" }] },
-    "قائمة منسدلة": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },{ key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },{ key:"optionsCount", label:"عدد الخيارات", type:"number" },{ key:"visibleOptions", label:"الخيارات المرئية", type:"number" },{ key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }] },
-    "قائمة اختيار الواحد": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },{ key:"emptyText", label:"نص الخيار الفارغ", type:"text" },{ key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }] },
-    "قائمة اختيار متعدد": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },{ key:"emptyText", label:"نص الخيار الفارغ", type:"text" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" },{ key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },{ key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }] },
-    "تاريخ": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"separator", label:"الفاصل", type:"select", options:["/",":","."] },{ key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },{ key:"showCalendar", label:"ظهور التقويم", type:"checkbox" },{ key:"simpleMode", label:"الوضع البسيط", type:"checkbox" },{ key:"timeSlot", label:"خانة الوقت", type:"checkbox" },{ key:"startDate", label:"تاريخ البداية", type:"date" },{ key:"endDate", label:"تاريخ النهاية", type:"date" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" }] },
-    "وقت": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },{ key:"autoTime", label:"الوقت التلقائي", type:"checkbox" },{ key:"timeRangeStart", label:"بداية النطاق", type:"time" },{ key:"timeRangeEnd", label:"نهاية النطاق", type:"time" },{ key:"readOnly", label:"القراءة فقط", type:"checkbox" }] },
+    "الاسم الكامل": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب (Placeholder)", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"مثال: 300" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"fieldCount", label:"عدد الحقول", type:"number", placeholder:"مثال: 3" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "البريد الإلكتروني": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "رقم الهاتف": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"phoneFormat", label:"صيغة الرقم", type:"select", options:["+966 (9 أرقام)","05xxxxxxxx (10 أرقام)","دولي","تلفون"] },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },
+        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "نص قصير": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "نص طويل": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"heightPx", label:"الارتفاع", type:"number" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
+        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "فقرة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"charLimit", label:"حد الأحرف", type:"number" },
+        { key:"minLength", label:"الحد الأدنى", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
+        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "رقم": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"minValue", label:"الحد الأدنى", type:"number" },
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
+        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "قائمة منسدلة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },
+        { key:"optionsCount", label:"عدد الخيارات", type:"number" },
+        { key:"visibleOptions", label:"الخيارات المرئية", type:"number" },
+        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+    ] },
+    "قائمة اختيار الواحد": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
+        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+    ] },
+    "قائمة اختيار متعدد": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" },
+        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
+        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+    ] },
+    "تاريخ": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"separator", label:"الفاصل", type:"select", options:["/",":","."] },
+        { key:"startDate", label:"تاريخ البداية", type:"date" },
+        { key:"endDate", label:"تاريخ النهاية", type:"date" },
+        { key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },
+        { key:"showCalendar", label:"ظهور التقويم", type:"checkbox" },
+        { key:"simpleMode", label:"الوضع البسيط", type:"checkbox" },
+        { key:"timeSlot", label:"خانة الوقت", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "وقت": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
+        { key:"timeRangeStart", label:"بداية النطاق", type:"time" },
+        { key:"timeRangeEnd", label:"نهاية النطاق", type:"time" },
+        { key:"autoTime", label:"الوقت التلقائي", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
     "رفع ملف": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { type:"fileMbLimitsPair", label:"حد حجم الملف (ميغابايت)", col:"col-12 mb-2" },
-        { key:"fileSizeLimit", label:"حد حجم الملفات", type:"checkbox", col:"col-12 mb-3 rt-file-size-enable", checkboxLabel:"تفعيل" },
-        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" },
-        { key:"maxFiles", label:"حد عدد الملفات", type:"number" },
         { key:"buttonText", label:"نص الزر", type:"text", placeholder:"رفع ملف" },
+        { key:"maxFiles", label:"حد عدد الملفات", type:"number" },
+        { type:"fileMbLimitsPair", label:"حد حجم الملف (ميغابايت)", col:"col-12 mb-2" },
+        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" },
+        { key:"fileSizeLimit", label:"حد حجم الملفات", type:"checkbox", col:"col-12 mb-3 rt-file-size-enable", checkboxLabel:"تفعيل" },
         { key:"validateSize", label:"التحقق من الحجم", type:"checkbox" }
     ] },
-    "دوار رقمي": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },{ key:"minValue", label:"الحد الأدنى", type:"number" },{ key:"maxValue", label:"الحد الأقصى", type:"number" },{ key:"widthPx", label:"العرض بالبيكسل", type:"number" },{ key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },{ key:"noDecimals", label:"بدون عشرية", type:"checkbox" },{ key:"negativeValue", label:"قيمة سلبية", type:"checkbox" },{ key:"defaultValue", label:"القيمة التلقائية", type:"text" }] },
-    "التقييم بالنجوم": { props: [{ key:"subName", label:"اسم فرعي", type:"text" },{ key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },{ key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },{ key:"defaultValue", label:"القيمة التلقائية", type:"number" },{ key:"tooltipText", label:"نص التلميح", type:"text" }] },
-    "التقييم بالأرقام": { props: [{ key:"lowRatingText", label:"نص أقل تقييم", type:"text" },{ key:"highRatingText", label:"نص أعلى تقييم", type:"text" },{ key:"minRating", label:"أقل قيمة", type:"number" },{ key:"maxRating", label:"أعلى قيمة", type:"number" },{ key:"tooltipText", label:"نص التلميح", type:"text" }] }
+    "دوار رقمي": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"minValue", label:"الحد الأدنى", type:"number" },
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },
+        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
+        { key:"noDecimals", label:"بدون عشرية", type:"checkbox" },
+        { key:"negativeValue", label:"قيمة سلبية", type:"checkbox" }
+    ] },
+    "التقييم بالنجوم": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },
+        { key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"number" },
+        { key:"tooltipText", label:"نص التلميح", type:"text" }
+    ] },
+    "التقييم بالأرقام": { props: [
+        { key:"lowRatingText", label:"نص أقل تقييم", type:"text" },
+        { key:"highRatingText", label:"نص أعلى تقييم", type:"text" },
+        { key:"minRating", label:"أقل قيمة", type:"number" },
+        { key:"maxRating", label:"أعلى قيمة", type:"number" },
+        { key:"tooltipText", label:"نص التلميح", type:"text" }
+    ] }
 };
 
 var RT_FILE_TYPE_CHOICES = [
@@ -308,39 +430,44 @@ function rtApplyPropsSpecialEditors(type, idPrefix, propsObj) {
 
 function rtBuildSinglePropHtml(p, idPrefix) {
     if (p.type === 'fileMbLimitsPair') {
-        return '<div class="' + (p.col || 'col-12 mb-2') + '"><span class="d-block small fw-bold mb-1">' + (p.label || 'حد حجم الملف (ميغابايت)') + '</span>' +
+        return '<div class="' + (p.col || 'col-12 mb-2') + '"><span class="d-block small fw-bold mb-1" style="color:var(--gray-600);">' + (p.label || 'حد حجم الملف (ميغابايت)') + '</span>' +
             '<div class="d-flex flex-nowrap align-items-end gap-2 rt-file-mb-pair">' +
-            '<div class="flex-shrink-0"><label class="small text-muted mb-0 d-block">أدنى</label><input type="number" min="0" step="0.01" class="form-control form-control-sm rt-file-mb-input" id="' + idPrefix + '_minFileSize" placeholder="0"></div>' +
-            '<div class="flex-shrink-0"><label class="small text-muted mb-0 d-block">أقصى</label><input type="number" min="0" step="0.01" class="form-control form-control-sm rt-file-mb-input" id="' + idPrefix + '_maxFileSize" placeholder="مثال 10"></div>' +
+            '<div class="flex-shrink-0"><label class="small text-muted mb-0 d-block">أدنى</label><input type="number" min="0" step="0.01" class="form-control form-control-sm rt-file-mb-input" id="' + idPrefix + '_minFileSize" placeholder="0" style="border-radius:8px;"></div>' +
+            '<div class="flex-shrink-0"><label class="small text-muted mb-0 d-block">أقصى</label><input type="number" min="0" step="0.01" class="form-control form-control-sm rt-file-mb-input" id="' + idPrefix + '_maxFileSize" placeholder="مثال 10" style="border-radius:8px;"></div>' +
             '</div></div>';
     }
     if (p.type === 'optionList') {
-        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1">' + p.label + '</label><p class="text-muted small mb-2">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_options_editor" class="border rounded-3 p-3 bg-light" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
+        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
     }
     if (p.type === 'fileTypesPick') {
-        var h = '<div class="col-12 mb-3"><label class="d-block fw-bold mb-2">' + p.label + '</label><div id="' + idPrefix + '_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">';
+        var h = '<div class="col-12 mb-3"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><div id="' + idPrefix + '_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">';
         RT_FILE_TYPE_CHOICES.forEach(function (ft) {
             var cid = idPrefix + '_ft_' + ft.ext;
-            h += '<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="' + ft.ext + '" id="' + cid + '"><label class="form-check-label" for="' + cid + '">' + ft.label + '</label></div>';
+            h += '<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="' + ft.ext + '" id="' + cid + '"><label class="form-check-label" for="' + cid + '" style="font-size:12.5px;">' + ft.label + '</label></div>';
         });
         return h + '</div></div>';
     }
     var fid = idPrefix + '_' + p.key;
-    var colClass = p.col || 'col-md-4 col-sm-6 mb-2';
-    var html = '<div class="' + colClass + '"><label class="d-block">' + p.label + '</label>';
+    var colClass = p.col || 'col-md-4 col-sm-6 mb-3';
+    var hint = '';
+    if (p.key === 'subName') hint = '<div class="text-muted" style="font-size:10px;margin-top:2px;">نص صغير يظهر أسفل الحقل</div>';
+    if (p.key === 'defaultValue') hint = '<div class="text-muted" style="font-size:10px;margin-top:2px;">قيمة تُعبأ تلقائياً في الحقل</div>';
+    if (p.key === 'placeholder') hint = '<div class="text-muted" style="font-size:10px;margin-top:2px;">نص إرشادي يختفي عند الكتابة</div>';
+    if (p.key === 'readOnly') hint = '<div class="text-muted" style="font-size:10px;margin-top:2px;">الحقل يظهر لكن لا يمكن تعديله</div>';
+    var html = '<div class="' + colClass + '"><label class="d-block" style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:4px;">' + p.label + '</label>';
     if (p.type === 'checkbox') {
         var cbLbl = (p.checkboxLabel != null && p.checkboxLabel !== '') ? p.checkboxLabel : 'تفعيل';
-        html += '<div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="' + fid + '"><label class="form-check-label" for="' + fid + '">' + cbLbl + '</label></div>';
+        html += '<div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="' + fid + '"><label class="form-check-label" for="' + fid + '" style="font-size:12.5px;">' + cbLbl + '</label></div>';
     } else if (p.type === 'select') {
-        html += '<select class="form-select form-select-sm" id="' + fid + '"><option value="">اختر</option>';
+        html += '<select class="form-select form-select-sm" id="' + fid + '" style="border-radius:8px;font-size:12.5px;"><option value="">اختر</option>';
         (p.options || []).forEach(function (o) { html += '<option value="' + rtEscAttr(o) + '">' + o + '</option>'; });
         html += '</select>';
     } else if (p.type === 'textarea') {
-        html += '<textarea class="form-control form-control-sm" id="' + fid + '" rows="3" placeholder="' + rtEscAttr(p.placeholder || '') + '"></textarea>';
+        html += '<textarea class="form-control form-control-sm" id="' + fid + '" rows="3" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;"></textarea>';
     } else {
-        html += '<input type="' + (p.type || 'text') + '" class="form-control form-control-sm" id="' + fid + '" placeholder="' + rtEscAttr(p.placeholder || '') + '">';
+        html += '<input type="' + (p.type || 'text') + '" class="form-control form-control-sm" id="' + fid + '" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;">';
     }
-    return html + '</div>';
+    return html + hint + '</div>';
 }
 
 /* ===== Page Load ===== */
@@ -480,12 +607,23 @@ function rtcOnFieldTypeChange() {
     }
     var def = RT_FIELD_TYPES[type];
     area.style.display = 'block';
-    cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);">تم عرض ' + def.props.length + ' خاصية أدناه</span>';
+    cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    def.props.forEach(function (p) { html += rtBuildSinglePropHtml(p, 'rtcProp'); });
+    var cbStarted = false;
+    def.props.forEach(function (p) {
+        if (p.type === 'checkbox' && !cbStarted) {
+            cbStarted = true;
+            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
+        }
+        html += rtBuildSinglePropHtml(p, 'rtcProp');
+    });
     html += '</div>';
     container.innerHTML = html;
     rtApplyPropsSpecialEditors(type, 'rtcProp', null);
+    if (type === 'رقم الهاتف') {
+        var pfmt = document.getElementById('rtcProp_phoneFormat');
+        if (pfmt && !pfmt.value) pfmt.value = '+966 (9 أرقام)';
+    }
     var tooltip = document.getElementById('rtcFieldTooltip');
     if (!tooltip.value) {
         var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
@@ -674,27 +812,65 @@ function rtpBuildFieldInput(f) {
     var props = {};
     try { props = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
     var defVal = (props.defaultValue != null && props.defaultValue !== '') ? String(props.defaultValue).replace(/"/g, '&quot;') : '';
+    var roAttr = props.readOnly ? ' readonly' : '';
+    var roSel = props.readOnly ? ' disabled' : '';
+    var roStyle = props.readOnly ? 'background:#f3f4f6;cursor:not-allowed;' : '';
+    var reqAttr = f.isRequired ? ' required' : '';
+    var maxL = (props.maxLength || props.charLimit) ? ' maxlength="' + (props.maxLength || props.charLimit) + '"' : '';
+    var minL = props.minLength ? ' minlength="' + props.minLength + '"' : '';
+    var wStyle = props.widthPx ? 'width:' + props.widthPx + 'px;' : '';
+    var ttAttr = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '"' : '';
+    function mkStyle(extra) { var s = (wStyle + roStyle + (extra || '')).trim(); return s ? ' style="' + s + '"' : ''; }
     var inp = '';
-    if (f.fieldType === 'الاسم الكامل' || f.fieldType === 'نص قصير' || f.fieldType === 'رقم الهاتف') {
-        inp = '<input type="' + (f.fieldType === 'رقم الهاتف' ? 'tel' : 'text') + '" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+
+    if (f.fieldType === 'الاسم الكامل' || f.fieldType === 'نص قصير') {
+        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
+    } else if (f.fieldType === 'رقم الهاتف') {
+        var fmt = props.phoneFormat || '+966 (9 أرقام)';
+        if (fmt === '+966 (9 أرقام)') {
+            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}" value="' + defVal + '"' + reqAttr + roAttr + mkStyle('direction:ltr;') + '></div>';
+        } else if (fmt === '05xxxxxxxx (10 أرقام)') {
+            inp = '<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}" value="' + (defVal || '') + '"' + reqAttr + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
+        } else if (fmt === 'تلفون') {
+            inp = '<input type="tel" class="form-control" placeholder="' + (ph || 'XXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
+        } else {
+            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+</span><input type="tel" class="form-control" placeholder="' + (ph || 'XXX XXXXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + mkStyle('direction:ltr;') + '></div>';
+        }
     } else if (f.fieldType === 'البريد الإلكتروني') {
         var pat = '';
         if (props.emailFormat) {
             pat = ' pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa"';
         }
-        inp = '<input type="email" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + pat + (f.isRequired ? ' required' : '') + '>';
+        inp = '<input type="email" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + pat + reqAttr + maxL + roAttr + ttAttr + mkStyle() + '>';
     } else if (f.fieldType === 'نص طويل' || f.fieldType === 'فقرة') {
         var dv = (props.defaultValue != null) ? String(props.defaultValue) : '';
-        inp = '<textarea class="form-control" rows="3" placeholder="' + ph + '"' + (f.isRequired ? ' required' : '') + '>' + dv.replace(/</g, '&lt;') + '</textarea>';
-    } else if (f.fieldType === 'رقم' || f.fieldType === 'دوار رقمي' || f.fieldType === 'التقييم بالأرقام') {
-        inp = '<input type="number" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+        var hPx = props.heightPx ? 'height:' + props.heightPx + 'px;' : '';
+        inp = '<textarea class="form-control" rows="3" placeholder="' + ph + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle(hPx) + '>' + dv.replace(/</g, '&lt;') + '</textarea>';
+    } else if (f.fieldType === 'رقم') {
+        var numMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
+        var numMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
+        inp = '<input type="number" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + numMin + numMax + reqAttr + roAttr + ttAttr + mkStyle() + '>';
+    } else if (f.fieldType === 'دوار رقمي') {
+        var spMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
+        var spMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
+        var spStep = (props.stepValue != null && props.stepValue !== '') ? ' step="' + props.stepValue + '"' : ' step="1"';
+        var spNoD = props.noDecimals ? ' step="1"' : spStep;
+        inp = '<div class="input-group rt-spinner-group" style="' + wStyle + '"' + ttAttr + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="border-radius:8px 0 0 8px;padding:4px 10px;font-size:16px;font-weight:700;">−</button><input type="number" class="form-control text-center rt-spin-input" value="' + (defVal || props.minValue || '0') + '"' + spMin + spMax + spNoD + reqAttr + (props.readOnly ? ' readonly style="background:#f3f4f6;"' : '') + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="border-radius:0 8px 8px 0;padding:4px 10px;font-size:16px;font-weight:700;">+</button></div>';
+    } else if (f.fieldType === 'التقييم بالأرقام') {
+        var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
+        var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
+        inp = '<div' + ttAttr + '><input type="range" class="form-range" min="' + arMin + '" max="' + arMax + '" value="' + (defVal || arMin) + '" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold" style="font-size:14px;">' + (defVal || arMin) + '</div>';
+        var lo = props.lowRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.lowRatingText) + '</span>' : '';
+        var hi = props.highRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.highRatingText) + '</span>' : '';
+        if (lo || hi) inp += '<div class="d-flex justify-content-between">' + lo + hi + '</div>';
+        inp += '</div>';
     } else if (f.fieldType === 'قائمة منسدلة' || f.fieldType === 'قائمة اختيار الواحد') {
         var opts = [];
         if (props.options) opts = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         var emptyText = (props.emptyText || '').trim();
         var defaultOpt = (props.defaultOption || '').trim();
         var firstLabel = emptyText || ph || 'اختر...';
-        inp = '<select class="form-select"' + (f.isRequired ? ' required' : '') + '>';
+        inp = '<select class="form-select"' + reqAttr + roSel + ttAttr + mkStyle() + '>';
         inp += '<option value="">' + String(firstLabel).replace(/</g, '&lt;') + '</option>';
         opts.forEach(function (o) {
             var sel = (defaultOpt && o === defaultOpt) ? ' selected' : '';
@@ -709,26 +885,70 @@ function rtpBuildFieldInput(f) {
             var t = d.trim();
             if (t) defaultSet[t] = true;
         });
-        inp = '<div class="d-flex flex-wrap gap-2">';
+        inp = '<div class="d-flex flex-wrap gap-2"' + ttAttr + '>';
         opts2.forEach(function (o) {
             var chk = defaultSet[o] ? ' checked' : '';
-            inp += '<div class="form-check mb-0"><input class="form-check-input" type="checkbox"' + chk + '><label class="form-check-label">' + String(o).replace(/</g, '&lt;') + '</label></div>';
+            var dis = props.readOnly ? ' disabled' : '';
+            inp += '<div class="form-check mb-0"><input class="form-check-input" type="checkbox"' + chk + dis + '><label class="form-check-label">' + String(o).replace(/</g, '&lt;') + '</label></div>';
         });
         if (opts2.length === 0) inp += '<span class="text-muted">—</span>';
         inp += '</div>';
     } else if (f.fieldType === 'تاريخ') {
-        inp = '<input type="date" class="form-control" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+        inp = '<input type="date" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + '>';
     } else if (f.fieldType === 'وقت') {
-        inp = '<input type="time" class="form-control" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+        var tfmt = props.timeFormat || '';
+        inp = '<input type="time" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + (tfmt === '24 ساعة' ? '' : ' step="3600"') + '>';
     } else if (f.fieldType === 'رفع ملف') {
         var acc = rtpFileAcceptFromProps(props);
-        inp = '<input type="file" class="form-control form-control-sm"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + (f.isRequired ? ' required' : '') + '>';
+        inp = '<input type="file" class="form-control form-control-sm"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + reqAttr + ttAttr + '>';
     } else if (f.fieldType === 'التقييم بالنجوم') {
-        inp = '<input type="number" class="form-control" min="0" max="5" placeholder="0-5" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+        var range = parseInt(props.ratingRange) || 5;
+        var icon = props.ratingIcon || 'نجمة';
+        var starChar = icon === 'قلب' ? '♥' : icon === 'إبهام' ? '👍' : '★';
+        var sdef = parseInt(defVal) || 0;
+        inp = '<div class="rt-star-rating d-flex gap-1 align-items-center"' + ttAttr + ' data-val="' + sdef + '">';
+        for (var si = 1; si <= range; si++) {
+            var active = si <= sdef ? 'color:#f59e0b;' : 'color:#d1d5db;';
+            inp += '<span class="rt-star-icon" data-i="' + si + '" style="font-size:22px;cursor:pointer;' + active + '" onclick="rtStarClick(this,' + si + ')">' + starChar + '</span>';
+        }
+        inp += '<span class="rt-star-val ms-2 fw-bold" style="font-size:13px;">' + sdef + '/' + range + '</span></div>';
     } else {
-        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + (f.isRequired ? ' required' : '') + '>';
+        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
+    }
+    var subName = (f.subName || props.subName || '').trim();
+    if (subName) {
+        inp += '<div class="rt-field-subname">' + subName.replace(/</g, '&lt;') + '</div>';
     }
     return inp;
+}
+
+function rtSpinInc(btn) {
+    var inp = btn.parentElement.querySelector('.rt-spin-input');
+    if (!inp) return;
+    var step = parseFloat(inp.step) || 1;
+    var max = inp.max !== '' ? parseFloat(inp.max) : Infinity;
+    var v = parseFloat(inp.value) || 0;
+    if (v + step <= max) inp.value = +(v + step).toFixed(4);
+}
+function rtSpinDec(btn) {
+    var inp = btn.parentElement.querySelector('.rt-spin-input');
+    if (!inp) return;
+    var step = parseFloat(inp.step) || 1;
+    var min = inp.min !== '' ? parseFloat(inp.min) : -Infinity;
+    var v = parseFloat(inp.value) || 0;
+    if (v - step >= min) inp.value = +(v - step).toFixed(4);
+}
+function rtStarClick(el, idx) {
+    var wrap = el.closest('.rt-star-rating');
+    if (!wrap) return;
+    wrap.setAttribute('data-val', idx);
+    var stars = wrap.querySelectorAll('.rt-star-icon');
+    stars.forEach(function(s) {
+        var i = parseInt(s.getAttribute('data-i'));
+        s.style.color = (i <= idx) ? '#f59e0b' : '#d1d5db';
+    });
+    var lbl = wrap.querySelector('.rt-star-val');
+    if (lbl) lbl.textContent = idx + '/' + stars.length;
 }
 
 function rtpBuildRowHtml() {
@@ -773,7 +993,8 @@ function rtcShowPreview() {
     html += '<p class="mb-3 fw-bold" style="font-size:15px;">نموذج الجدول - مطلوب تعبئته: <span class="text-muted" style="font-size:13px;font-weight:normal;">(مرّر أفقياً لعرض جميع الحقول)</span></p>';
     html += '<div class="rt-preview-wrap"><table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
     rtcFields.forEach(function(f) {
-        html += '<th style="background:' + headerColor + ' !important;color:#1f2937 !important;">' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + '</th>';
+        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:#1f2937 !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:#1f2937 !important;"';
+        html += '<th' + ttip + '>' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '') + '</th>';
     });
     html += '</tr></thead><tbody id="rtpPreviewTbody">';
     for (var i = 0; i < numRows; i++) { html += rtpBuildRowHtml(); }
@@ -955,12 +1176,23 @@ function rtEditOnFieldTypeChange() {
     }
     var def = RT_FIELD_TYPES[type];
     area.style.display = 'block';
-    cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);">تم عرض ' + def.props.length + ' خاصية أدناه</span>';
+    cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    def.props.forEach(function (p) { html += rtBuildSinglePropHtml(p, 'rtEditProp'); });
+    var cbStarted2 = false;
+    def.props.forEach(function (p) {
+        if (p.type === 'checkbox' && !cbStarted2) {
+            cbStarted2 = true;
+            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
+        }
+        html += rtBuildSinglePropHtml(p, 'rtEditProp');
+    });
     html += '</div>';
     container.innerHTML = html;
     rtApplyPropsSpecialEditors(type, 'rtEditProp', null);
+    if (type === 'رقم الهاتف') {
+        var pfmt2 = document.getElementById('rtEditProp_phoneFormat');
+        if (pfmt2 && !pfmt2.value) pfmt2.value = '+966 (9 أرقام)';
+    }
     var tooltip = document.getElementById('rtEditFieldTooltip');
     if (tooltip && !tooltip.value) {
         var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
@@ -1109,7 +1341,8 @@ function rtEditShowPreview() {
     html += '<p class="mb-3 fw-bold" style="font-size:15px;">نموذج الجدول - مطلوب تعبئته: <span class="text-muted" style="font-size:13px;font-weight:normal;">(مرّر أفقياً لعرض جميع الحقول)</span></p>';
     html += '<div class="rt-preview-wrap"><table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
     rtEditFields.forEach(function(f) {
-        html += '<th style="background:' + headerColor + ' !important;color:#1f2937 !important;">' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + '</th>';
+        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:#1f2937 !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:#1f2937 !important;"';
+        html += '<th' + ttip + '>' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '') + '</th>';
     });
     html += '</tr></thead><tbody id="rtpPreviewTbody">';
     for (var i = 0; i < numRows; i++) {

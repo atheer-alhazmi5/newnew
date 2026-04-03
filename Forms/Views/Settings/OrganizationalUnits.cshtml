@@ -47,6 +47,17 @@
 .ou-detail-value { font-size:14px; color:var(--gray-900); flex:1; }
 #ouPageTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; border-bottom:2px solid var(--gray-200); }
 #ouPageTable tbody tr:hover { background:var(--sa-25); }
+.ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + .75rem + 2px); }
+.ou-tree-label { font-weight:500; color:var(--gray-800); }
+.ou-tree-panel { max-height:260px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; display:flex; align-items:center; cursor:pointer; }
+.ou-tree-row:hover { background:var(--sa-25); }
+.ou-tree-row.is-selected { background:var(--info-50); }
+.ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s,border-color .15s,box-shadow .15s,transform .12s; }
+.ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
+.ou-tree-exp:active { transform:scale(0.94); }
+.ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; flex-grow:1; }
 </style>
 
 <div class="ou-page-header">
@@ -133,9 +144,13 @@
                 </div>
                 <div class="mb-3" id="ouAddParentWrap" style="display:none;">
                     <label class="form-label">الوحدة التنظيمية الرئيسية</label>
-                    <select class="form-select" id="ouAddParentId">
-                        <option value="">بدون وحدة تنظيمية رئيسية</option>
-                    </select>
+                    <div class="ou-tree-wrap">
+                        <input type="hidden" id="ouAddParentId" value="">
+                        <button type="button" class="form-select ou-tree-trigger text-end w-100" id="ouAddTreeTrigger" aria-expanded="false">
+                            <span class="ou-tree-label text-truncate d-block" id="ouAddTreeLabel">بدون وحدة تنظيمية رئيسية</span>
+                        </button>
+                        <div class="ou-tree-panel d-none" id="ouAddTreePanel" role="listbox"></div>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الحالة</label>
@@ -185,9 +200,13 @@
                 </div>
                 <div class="mb-3" id="ouEditParentWrap" style="display:none;">
                     <label class="form-label">الوحدة التنظيمية الرئيسية</label>
-                    <select class="form-select" id="ouEditParentId">
-                        <option value="">بدون وحدة تنظيمية رئيسية</option>
-                    </select>
+                    <div class="ou-tree-wrap">
+                        <input type="hidden" id="ouEditParentId" value="">
+                        <button type="button" class="form-select ou-tree-trigger text-end w-100" id="ouEditTreeTrigger" aria-expanded="false">
+                            <span class="ou-tree-label text-truncate d-block" id="ouEditTreeLabel">بدون وحدة تنظيمية رئيسية</span>
+                        </button>
+                        <div class="ou-tree-panel d-none" id="ouEditTreePanel" role="listbox"></div>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الترتيب</label>

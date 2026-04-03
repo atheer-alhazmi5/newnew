@@ -1,10 +1,8 @@
-/* ============================================
-   نظام إدارة النماذج وسير الإجراءات - التصميم
-   ============================================ */
+
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-    /* === الألوان الأساسية (SA) === */
+    
     --sa-25: #F7FDF9;
     --sa-50: #F3FCF6;
     --sa-100: #DFF6E7;
@@ -18,7 +16,6 @@
     --sa-900: #104631;
     --sa-950: #092A1E;
 
-    /* === ألوان الذهبي (Gold) === */
     --gold-25: #FFFEF7;
     --gold-50: #FFFEF2;
     --gold-100: #FFFCE6;
@@ -32,7 +29,6 @@
     --gold-900: #6E3C00;
     --gold-950: #472400;
 
-    /* === الألوان المحايدة (Gray) === */
     --gray-25: #FCFCFD;
     --gray-50: #F9FAFB;
     --gray-100: #F3F4F6;
@@ -46,7 +42,6 @@
     --gray-900: #111927;
     --gray-950: #0D121C;
 
-    /* === ألوان النجاح (Success) === */
     --success-25: #F6FEF9;
     --success-50: #ECFDF3;
     --success-100: #DCFAE6;
@@ -60,7 +55,6 @@
     --success-900: #074D31;
     --success-950: #053321;
 
-    /* === ألوان الخطأ (Error) === */
     --error-25: #FFFBFA;
     --error-50: #FEF3F2;
     --error-100: #FEE4E2;
@@ -74,7 +68,6 @@
     --error-900: #7A271A;
     --error-950: #55160C;
 
-    /* === ألوان التحذير (Warning) === */
     --warning-25: #FFFCF5;
     --warning-50: #FFFAEB;
     --warning-100: #FEF0C7;
@@ -88,7 +81,6 @@
     --warning-900: #7A2E0E;
     --warning-950: #4E1D09;
 
-    /* === ألوان المعلومات (Info) === */
     --info-25: #F5FAFF;
     --info-50: #ECFDF3;
     --info-100: #D1E9FF;
@@ -102,7 +94,6 @@
     --info-900: #194185;
     --info-950: #102A56;
 
-    /* === ألوان الخزامى (Lavender) === */
     --lavender-25: #FEFCFF;
     --lavender-50: #F9F5FA;
     --lavender-100: #F2E9F5;
@@ -116,7 +107,6 @@
     --lavender-900: #281047;
     --lavender-950: #16072E;
 
-    /* === المتغيرات الأساسية المختصرة === */
     --primary: var(--sa-800);
     --primary-dark: var(--sa-900);
     --primary-light: var(--sa-100);
@@ -131,22 +121,18 @@
     --text: var(--gray-900);
     --text-muted: var(--gray-500);
 
-    /* === التخطيط === */
     --sidebar-width: 288px;
     --header-height: 160px;
     --subheader-height: 64px;
     --footer-height: auto;
 
-    /* === الظلال === */
     --shadow: 0 1px 3px rgba(0,0,0,.08);
     --shadow-md: 0 4px 12px rgba(0,0,0,.1);
 
-    /* === الحواف === */
     --radius: 12px;
     --radius-sm: 8px;
     --radius-lg: 16px;
 
-    /* === الحركة === */
     --transition: .25s ease;
 }
 
@@ -157,7 +143,7 @@ body {
     margin: 0; padding: 0;
     font-family: 'Cairo', sans-serif;
     font-size: 15px; color: var(--text);
-    background: #fff; direction: rtl;
+    background: #fafafa; direction: rtl;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -167,7 +153,7 @@ a:hover { color: var(--primary-dark); }
 ::selection { background: var(--primary-light); color: var(--primary-dark); }
 
 /* ============================================
-   LAYOUT
+   اللاي اوت
    ============================================ */
 #app { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
 
@@ -284,8 +270,8 @@ a:hover { color: var(--primary-dark); }
 .sub-header-content strong { color: var(--text); }
 .sub-header-content i { font-size: 18px; color: var(--primary); }
 
-/* APP BODY */
-#app-body { display: flex; flex: 1; align-items: flex-start; }
+/*  BODY */
+#app-body { display: flex; flex: 1; align-items: flex-start; background: #fafafa; }
 
 /* SIDEBAR */
 #sidebar {
@@ -1014,7 +1000,7 @@ img.login-logo {
     --width-lg: 40rem;          /* 640px */
     --width-xl: 48rem;          /* 768px */
     --width-2xl: 64rem;         /* 1024px */
-    --width-3xl: 80rem;         /* 1280px */
+    --width-3xl: 80rem;         
     
     /* Container */
     --container-padding-mobile: 1rem;
@@ -1461,7 +1447,7 @@ p, li, span {
 }
 
 /* ============================================
-   PRESET COLOR SWATCHES (تصنيفات، جداول جاهزة)
+    (تصنيفات، جداول جاهزة
    ============================================ */
 .app-color-swatches {
     display: flex;

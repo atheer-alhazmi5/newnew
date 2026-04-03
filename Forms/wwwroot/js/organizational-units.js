@@ -4,6 +4,8 @@ var ouClassifications = [];
 var ouMainUnits = [];
 var ouCurrentPage = 1;
 var ouPerPage = 10;
+var ouAddTreeExpanded = {};
+var ouEditTreeExpanded = {};
 
 document.addEventListener('DOMContentLoaded', function () {
     ouLoad();
@@ -12,6 +14,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     document.getElementById('ouEditIsActive').addEventListener('change', function () {
         document.getElementById('ouEditIsActiveLabel').textContent = this.checked ? 'مفعل' : 'معطل';
+    });
+    ouInitTreePanel('ouAddTreeTrigger', 'ouAddTreePanel', 'ouAddParentId', 'ouAddTreeLabel', function () { return ouAddTreeExpanded; }, null);
+    ouInitTreePanel('ouEditTreeTrigger', 'ouEditTreePanel', 'ouEditParentId', 'ouEditTreeLabel', function () { return ouEditTreeExpanded; }, function () {
+        return parseInt(document.getElementById('ouEditId').value) || null;
     });
 });
 
@@ -52,14 +58,153 @@ function ouFillClassificationDropdowns() {
     document.getElementById('ouEditClassificationId').innerHTML = html;
 }
 
-function ouFillParentDropdowns(excludeId) {
-    var html = '<option value="">بدون وحدة تنظيمية رئيسية</option>';
-    ouMainUnits.forEach(function (u) {
-        if (excludeId && u.id === excludeId) return;
-        html += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+function ouFillParentDropdowns(excludeId) {}
+
+function ouInitTreePanel(triggerId, panelId, hiddenId, labelId, getExpandedFn, excludeIdFn) {
+    var trigger = document.getElementById(triggerId);
+    var panel = document.getElementById(panelId);
+    if (!trigger || !panel) return;
+    trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (panel.classList.contains('d-none')) {
+            ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
+            panel.classList.remove('d-none');
+            trigger.setAttribute('aria-expanded', 'true');
+        } else {
+            panel.classList.add('d-none');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
     });
-    document.getElementById('ouAddParentId').innerHTML = html;
-    document.getElementById('ouEditParentId').innerHTML = html;
+    panel.addEventListener('click', function (e) {
+        var expBtn = e.target.closest('.ou-tree-exp');
+        if (expBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var eid = expBtn.getAttribute('data-exp');
+            if (eid) {
+                var expanded = getExpandedFn();
+                expanded[eid] = !expanded[eid];
+                ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
+            }
+            return;
+        }
+        var row = e.target.closest('.ou-tree-row');
+        if (row) {
+            var uid = row.getAttribute('data-id');
+            if (uid === '') {
+                document.getElementById(hiddenId).value = '';
+                document.getElementById(labelId).textContent = 'بدون وحدة تنظيمية رئيسية';
+            } else {
+                var u = ouAll.find(function (x) { return x.id === parseInt(uid); });
+                if (u) {
+                    document.getElementById(hiddenId).value = u.id;
+                    document.getElementById(labelId).textContent = u.name;
+                }
+            }
+            panel.classList.add('d-none');
+            document.getElementById(triggerId).setAttribute('aria-expanded', 'false');
+            ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
+        }
+    });
+}
+
+function ouGetDescendantIds(unitId) {
+    var ids = {};
+    function collect(pid) {
+        ouAll.forEach(function (u) {
+            if (u.parentId === pid && !ids[u.id]) {
+                ids[u.id] = true;
+                collect(u.id);
+            }
+        });
+    }
+    collect(unitId);
+    return ids;
+}
+
+function ouBuildTreeMap(excludeIds) {
+    var byParent = {};
+    ouAll.forEach(function (u) {
+        if (excludeIds && excludeIds[u.id]) return;
+        var pk = (u.parentId != null && u.parentId !== '' && !excludeIds[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            if (sa !== sb) return sa - sb;
+            return (a.name || '').localeCompare(b.name || '', 'ar');
+        });
+    });
+    return byParent;
+}
+
+function ouRenderTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var sel = String(selectedId) === idStr ? ' is-selected' : '';
+        html += '<div class="ou-tree-row' + sel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="ou-tree-exp" data-exp="' + idStr + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="ou-tree-exp-spacer"></span>';
+        }
+        html += '<span class="ou-tree-name">' + esc(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += ouRenderTreeRows(byParent, idStr, depth + 1, selectedId, expandedMap);
+        }
+    });
+    return html;
+}
+
+function ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn) {
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    var excludeIds = {};
+    if (excludeIdFn) {
+        var exId = excludeIdFn();
+        if (exId) {
+            excludeIds[exId] = true;
+            var desc = ouGetDescendantIds(exId);
+            Object.keys(desc).forEach(function (k) { excludeIds[parseInt(k)] = true; });
+        }
+    }
+    if (!ouAll.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var selectedId = document.getElementById(hiddenId).value;
+    var byParent = ouBuildTreeMap(excludeIds);
+    var noParentSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="ou-tree-row' + noParentSel + '" data-id="" role="option" dir="rtl" style="padding:8px 12px;"><span class="ou-tree-exp-spacer"></span><span class="ou-tree-name" style="color:var(--gray-500);">بدون وحدة تنظيمية رئيسية</span></div>';
+    html += ouRenderTreeRows(byParent, '', 0, selectedId, getExpandedFn());
+    panel.innerHTML = html;
+}
+
+function ouTreeExpandAncestors(unitId, expandedMap) {
+    var map = {};
+    ouAll.forEach(function (u) { map[u.id] = u; });
+    var u = map[unitId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        expandedMap[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function ouTreeSetSelection(hiddenId, labelId, id, name, panelId, getExpandedFn, excludeIdFn) {
+    var hid = document.getElementById(hiddenId);
+    var lab = document.getElementById(labelId);
+    if (hid) hid.value = (id != null && id !== '') ? String(id) : '';
+    if (lab) lab.textContent = (name && String(name).trim()) ? name : 'بدون وحدة تنظيمية رئيسية';
+    ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
 }
 
 function ouFilter() {
@@ -128,14 +273,19 @@ function ouToggleParentField() {
     var level = document.getElementById('ouAddLevel').value;
     var wrap = document.getElementById('ouAddParentWrap');
     wrap.style.display = level === 'فرعي' ? 'block' : 'none';
-    if (level === 'فرعي') ouFillParentDropdowns();
+    if (level === 'فرعي') {
+        ouRenderTreePanel('ouAddTreePanel', 'ouAddParentId', function () { return ouAddTreeExpanded; }, null);
+    }
 }
 
 function ouToggleParentFieldEdit() {
     var level = document.getElementById('ouEditLevel').value;
     var wrap = document.getElementById('ouEditParentWrap');
     wrap.style.display = level === 'فرعي' ? 'block' : 'none';
-    if (level === 'فرعي') ouFillParentDropdowns();
+    if (level === 'فرعي') {
+        var editId = parseInt(document.getElementById('ouEditId').value);
+        ouRenderTreePanel('ouEditTreePanel', 'ouEditParentId', function () { return ouEditTreeExpanded; }, function () { return editId; });
+    }
 }
 
 function ouShowAddModal() {
@@ -143,6 +293,10 @@ function ouShowAddModal() {
     document.getElementById('ouAddClassificationId').selectedIndex = ouClassifications.length > 0 ? 0 : -1;
     document.getElementById('ouAddLevel').value = 'رئيسي';
     document.getElementById('ouAddParentWrap').style.display = 'none';
+    ouAddTreeExpanded = {};
+    document.getElementById('ouAddParentId').value = '';
+    document.getElementById('ouAddTreeLabel').textContent = 'بدون وحدة تنظيمية رئيسية';
+    document.getElementById('ouAddTreePanel').classList.add('d-none');
     document.getElementById('ouAddIsActive').checked = true;
     document.getElementById('ouAddIsActiveLabel').textContent = 'مفعل';
     document.getElementById('ouAddError').classList.add('d-none');
@@ -175,7 +329,8 @@ async function ouSubmitAdd() {
     }
 
     var level = document.getElementById('ouAddLevel').value;
-    var parentId = level === 'فرعي' ? (parseInt(document.getElementById('ouAddParentId').value) || null) : null;
+    var parentIdVal = document.getElementById('ouAddParentId').value;
+    var parentId = level === 'فرعي' ? (parseInt(parentIdVal) || null) : null;
 
     var body = {
         name: name,
@@ -205,9 +360,16 @@ function ouShowEditModal(id) {
     document.getElementById('ouEditClassificationId').value = u.classificationId;
     document.getElementById('ouEditLevel').value = u.level;
     document.getElementById('ouEditParentWrap').style.display = u.level === 'فرعي' ? 'block' : 'none';
-    if (u.level === 'فرعي') {
-        ouFillParentDropdowns(u.id);
-        document.getElementById('ouEditParentId').value = u.parentId || '';
+    ouEditTreeExpanded = {};
+    document.getElementById('ouEditTreePanel').classList.add('d-none');
+    if (u.level === 'فرعي' && u.parentId) {
+        ouTreeExpandAncestors(u.parentId, ouEditTreeExpanded);
+        var parent = ouAll.find(function (x) { return x.id === u.parentId; });
+        document.getElementById('ouEditParentId').value = u.parentId;
+        document.getElementById('ouEditTreeLabel').textContent = parent ? parent.name : 'بدون وحدة تنظيمية رئيسية';
+    } else {
+        document.getElementById('ouEditParentId').value = '';
+        document.getElementById('ouEditTreeLabel').textContent = 'بدون وحدة تنظيمية رئيسية';
     }
     document.getElementById('ouEditSortOrder').value = u.sortOrder;
     document.getElementById('ouEditSortOrder').setAttribute('max', ouAll.length);
@@ -245,7 +407,8 @@ async function ouSubmitEdit() {
     }
 
     var level = document.getElementById('ouEditLevel').value;
-    var parentId = level === 'فرعي' ? (parseInt(document.getElementById('ouEditParentId').value) || null) : null;
+    var parentIdVal = document.getElementById('ouEditParentId').value;
+    var parentId = level === 'فرعي' ? (parseInt(parentIdVal) || null) : null;
 
     var body = {
         id: id,
