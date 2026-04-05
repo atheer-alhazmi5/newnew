@@ -1,0 +1,351 @@
+@{
+    ViewBag.Title = "أدوار المنفذين";
+    ViewBag.PageName = "أدوار المنفذين";
+}
+
+<style>
+.er-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.er-modal-header { padding:24px 28px; position:relative; }
+.er-modal-header.create { background:var(--sa-800); }
+.er-modal-header.details { background:var(--info-700); }
+.er-modal-header.edit { background:var(--sa-800); }
+.er-modal-header.delete { background:var(--error-600); }
+.er-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.er-modal-header .btn-close-x:hover { color:#fff; }
+.er-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.er-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.er-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.er-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.er-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .15s; }
+.er-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.er-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .15s; }
+.er-cancel-btn:hover { background:#4b5563; }
+.er-section { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.er-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px 0; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.er-section-title i { font-size:15px; color:var(--sa-600); }
+.er-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.er-form-group { display:flex; flex-direction:column; gap:4px; }
+.er-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.er-form-group .form-control,
+.er-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.er-form-group .form-control:focus,
+.er-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.er-form-group textarea.form-control { min-height:70px; resize:vertical; }
+.required-star { color:#ef4444; margin-right:4px; }
+.er-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.er-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.er-action-btn-detail:hover { background:var(--info-50); }
+.er-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.er-action-btn-edit:hover { background:var(--sa-50); }
+.er-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.er-action-btn-delete:hover { background:var(--error-50); }
+.er-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.er-color-swatch { display:inline-block; width:24px; height:24px; border-radius:6px; border:2px solid var(--gray-200); vertical-align:middle; }
+.er-toggle { position:relative; display:inline-block; width:42px; height:22px; }
+.er-toggle input { opacity:0; width:0; height:0; }
+.er-toggle .er-slider { position:absolute; cursor:pointer; inset:0; background:var(--gray-300); border-radius:22px; transition:.25s; }
+.er-toggle .er-slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; }
+.er-toggle input:checked + .er-slider { background:var(--sa-600); }
+.er-toggle input:checked + .er-slider::before { transform:translateX(20px); }
+.er-ou-tree-wrap { position:relative; }
+.er-ou-tree-trigger { cursor:pointer; display:flex; align-items:center; justify-content:space-between; border:2px solid var(--gray-200); border-radius:10px; padding:8px 12px; font-size:13px; background:#fff; min-height:38px; }
+.er-ou-tree-trigger:focus { border-color:var(--sa-400); outline:none; }
+.er-ou-tree-panel { position:absolute; z-index:20; background:#fff; border:2px solid var(--gray-200); border-radius:10px; width:100%; max-height:260px; overflow-y:auto; display:none; box-shadow:0 8px 24px rgba(0,0,0,.1); margin-top:4px; }
+.er-ou-tree-panel.show { display:block; }
+.er-ou-tree-row { display:flex; align-items:center; gap:6px; padding:6px 10px; cursor:pointer; border-bottom:1px solid var(--gray-100); font-size:13px; }
+.er-ou-tree-row:hover { background:var(--sa-50); }
+.er-ou-tree-row.selected { background:var(--sa-100); font-weight:700; }
+.er-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:4px; background:var(--gray-100); color:var(--gray-600); font-size:.75rem; }
+.er-ou-tree-exp:hover { background:var(--sa-200); color:var(--sa-800); }
+.er-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.er-ou-tree-name { text-align:right; font-size:13px; line-height:1.4; min-width:0; flex-grow:1; }
+.er-exec-list-wrap { max-height:240px; overflow-y:auto; border:2px solid var(--gray-200); border-radius:10px; padding:8px; }
+.er-exec-dept-head { font-weight:700; font-size:13px; color:var(--sa-700); background:var(--gray-50); padding:6px 10px; border-radius:8px; margin-bottom:4px; margin-top:6px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+.er-exec-dept-head:first-child { margin-top:0; }
+.er-exec-dept-items { padding-right:16px; }
+.er-exec-item { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; font-size:13px; cursor:pointer; }
+.er-exec-item:hover { background:var(--sa-50); }
+.er-exec-item input[type=checkbox],
+.er-exec-item input[type=radio] { accent-color:var(--sa-600); width:16px; height:16px; cursor:pointer; }
+.er-badge-ownership { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.er-badge-exclusive { background:#fef3c7; color:#92400e; }
+.er-badge-nonexclusive { background:#dbeafe; color:#1e40af; }
+.er-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
+.er-detail-label { font-weight:700; color:var(--gray-500); }
+.er-detail-value { color:var(--gray-800); font-weight:500; }
+.er-empty-state { text-align:center; padding:48px 16px; color:var(--gray-400); }
+.er-empty-state i { font-size:48px; display:block; margin-bottom:12px; }
+.er-empty-state p { font-size:14px; font-weight:600; margin:0; }
+.er-color-picker-wrap { display:flex; align-items:center; gap:12px; }
+.er-color-picker-wrap input[type=color] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.er-color-picker-wrap input[type=color]:hover { border-color:var(--sa-400); }
+.er-color-picker-wrap input[type=color]::-webkit-color-swatch-wrapper { padding:2px; }
+.er-color-picker-wrap input[type=color]::-webkit-color-swatch { border-radius:10px; border:none; }
+.er-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
+@@media (max-width:768px) { .er-form-row { grid-template-columns:1fr; } .er-detail-grid { grid-template-columns:1fr; } }
+</style>
+
+<div class="er-page-wrap">
+<div class="er-page-header">
+    <div>
+        <h2 class="page-title" style="margin:0;">أدوار المنفذين <span id="erCountBadge" class="text-muted" style="font-size:14px;"></span></h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة أدوار المنفذين في النظام</p>
+    </div>
+    <button type="button" class="btn btn-primary" id="erCreateBtn" onclick="erShowCreateModal()" style="border-radius:12px;padding:10px 28px;">
+        <i class="bi bi-plus-lg"></i> إنشاء دور منفذ جديد
+    </button>
+</div>
+
+<!-- Filters -->
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="rt-search-box">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="erSearchInput" placeholder="بحث بالاسم..." oninput="erApplyFilters()">
+    </div>
+    <select class="rt-filter-select form-select" id="erFilterOwnership" onchange="erApplyFilters()">
+        <option value="">الملكية</option>
+        <option value="حصري">حصري</option>
+        <option value="غير حصري">غير حصري</option>
+    </select>
+    <select class="rt-filter-select form-select" id="erFilterOrgUnit" onchange="erApplyFilters()">
+        <option value="">الوحدة التنظيمية</option>
+    </select>
+    <select class="rt-filter-select form-select" id="erFilterActive" onchange="erApplyFilters()">
+        <option value="">حالة التفعيل</option>
+        <option value="1">مفعل</option>
+        <option value="0">معطل</option>
+    </select>
+    <button class="rt-clear-btn" onclick="erClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<!-- Data Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table mb-0" id="erTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;text-align:center;">رقم</th>
+                        <th style="text-align:right;">الدور</th>
+                        <th style="text-align:right;">الوصف</th>
+                        <th style="text-align:center;">الملكية</th>
+                        <th style="text-align:center;">المنفذين</th>
+                        <th style="width:60px;text-align:center;">الترتيب</th>
+                        <th style="width:60px;text-align:center;">اللون</th>
+                        <th style="width:70px;text-align:center;">التفعيل</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="erBody">
+                    <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="erCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content er-modal">
+            <div class="er-modal-header create">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="er-modal-title">إنشاء دور منفذ جديد</h5>
+                <div class="er-modal-subtitle">أدخل بيانات الدور الجديد</div>
+            </div>
+            <div class="er-modal-body">
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-info-circle-fill"></i> البيانات الأساسية</div>
+                    <div class="er-form-row">
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> اسم الدور</label>
+                            <input type="text" class="form-control" id="ercName" placeholder="مثال: مراجع">
+                        </div>
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> الملكية</label>
+                            <select class="form-select" id="ercOwnership" onchange="erOnOwnershipChange('c')">
+                                <option value="حصري">حصري</option>
+                                <option value="غير حصري">غير حصري</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="er-form-row">
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> اللون</label>
+                            <div class="er-color-picker-wrap">
+                                <input type="color" id="ercColor" value="#25935F" oninput="document.getElementById('ercColorHex').textContent=this.value">
+                                <div class="er-color-hex" id="ercColorHex">#25935F</div>
+                            </div>
+                        </div>
+                        <div class="er-form-group">
+                            <label>حالة التفعيل</label>
+                            <label class="er-toggle" style="margin-top:8px;">
+                                <input type="checkbox" id="ercIsActive" checked>
+                                <span class="er-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="er-form-group" style="margin-bottom:14px;">
+                        <label>الوصف العام</label>
+                        <textarea class="form-control" id="ercDescription" placeholder="وصف اختياري للدور..."></textarea>
+                    </div>
+                </div>
+
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-building"></i> الوحدة التنظيمية</div>
+                    <div class="er-form-group">
+                        <label><span class="required-star">*</span> الوحدة التنظيمية</label>
+                        <div class="er-ou-tree-wrap" id="ercOuWrap">
+                            <div class="er-ou-tree-trigger" id="ercOuTrigger" onclick="erToggleOuPanel('c')" tabindex="0">
+                                <span id="ercOuLabel" style="color:var(--gray-400);">اختر الوحدة التنظيمية...</span>
+                                <i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i>
+                            </div>
+                            <div class="er-ou-tree-panel" id="ercOuPanel"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-people-fill"></i> المنفذين <span id="ercExecCount" class="text-muted" style="font-size:12px;font-weight:400;margin-right:6px;"></span></div>
+                    <div class="er-exec-list-wrap" id="ercExecList">
+                        <div class="text-center text-muted py-3" style="font-size:13px;">اختر الوحدة التنظيمية أولاً</div>
+                    </div>
+                </div>
+            </div>
+            <div class="er-modal-footer">
+                <button class="er-save-btn" onclick="erSubmitCreate()"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button class="er-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="erEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content er-modal">
+            <div class="er-modal-header edit">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="er-modal-title">تعديل دور منفذ</h5>
+                <div class="er-modal-subtitle">تحديث بيانات الدور</div>
+            </div>
+            <div class="er-modal-body">
+                <input type="hidden" id="ereId">
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-info-circle-fill"></i> البيانات الأساسية</div>
+                    <div class="er-form-row">
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> اسم الدور</label>
+                            <input type="text" class="form-control" id="ereName" placeholder="مثال: مراجع">
+                        </div>
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> الملكية</label>
+                            <select class="form-select" id="ereOwnership" onchange="erOnOwnershipChange('e')">
+                                <option value="حصري">حصري</option>
+                                <option value="غير حصري">غير حصري</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="er-form-row">
+                        <div class="er-form-group">
+                            <label><span class="required-star">*</span> اللون</label>
+                            <div class="er-color-picker-wrap">
+                                <input type="color" id="ereColor" value="#25935F" oninput="document.getElementById('ereColorHex').textContent=this.value">
+                                <div class="er-color-hex" id="ereColorHex">#25935F</div>
+                            </div>
+                        </div>
+                        <div class="er-form-group">
+                            <label>حالة التفعيل</label>
+                            <label class="er-toggle" style="margin-top:8px;">
+                                <input type="checkbox" id="ereIsActive" checked>
+                                <span class="er-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="er-form-row">
+                        <div class="er-form-group">
+                            <label>الترتيب</label>
+                            <input type="number" class="form-control" id="ereSortOrder" min="1" value="1">
+                        </div>
+                        <div></div>
+                    </div>
+                    <div class="er-form-group" style="margin-bottom:14px;">
+                        <label>الوصف العام</label>
+                        <textarea class="form-control" id="ereDescription" placeholder="وصف اختياري للدور..."></textarea>
+                    </div>
+                </div>
+
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-building"></i> الوحدة التنظيمية</div>
+                    <div class="er-form-group">
+                        <label><span class="required-star">*</span> الوحدة التنظيمية</label>
+                        <div class="er-ou-tree-wrap" id="ereOuWrap">
+                            <div class="er-ou-tree-trigger" id="ereOuTrigger" onclick="erToggleOuPanel('e')" tabindex="0">
+                                <span id="ereOuLabel" style="color:var(--gray-400);">اختر الوحدة التنظيمية...</span>
+                                <i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i>
+                            </div>
+                            <div class="er-ou-tree-panel" id="ereOuPanel"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="er-section">
+                    <div class="er-section-title"><i class="bi bi-people-fill"></i> المنفذين <span id="ereExecCount" class="text-muted" style="font-size:12px;font-weight:400;margin-right:6px;"></span></div>
+                    <div class="er-exec-list-wrap" id="ereExecList">
+                        <div class="text-center text-muted py-3" style="font-size:13px;">اختر الوحدة التنظيمية أولاً</div>
+                    </div>
+                </div>
+            </div>
+            <div class="er-modal-footer">
+                <button class="er-save-btn" onclick="erSubmitEdit()"><i class="bi bi-check-lg"></i> تحديث</button>
+                <button class="er-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="erDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content er-modal">
+            <div class="er-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="er-modal-title">تفاصيل الدور</h5>
+                <div class="er-modal-subtitle">عرض بيانات الدور</div>
+            </div>
+            <div class="er-modal-body" id="erDetailsBody">
+            </div>
+            <div class="er-modal-footer" style="justify-content:flex-end;">
+                <button class="er-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="erDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content er-modal">
+            <div class="er-modal-header delete">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="er-modal-title">حذف الدور</h5>
+                <div class="er-modal-subtitle">هل أنت متأكد من حذف هذا الدور؟</div>
+            </div>
+            <div class="er-modal-body" style="text-align:center;padding:32px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:48px;color:var(--error-500);display:block;margin-bottom:12px;"></i>
+                <p style="font-size:15px;font-weight:600;color:var(--gray-700);margin:0;">سيتم حذف الدور <strong id="erDeleteName"></strong> نهائياً</p>
+                <p style="font-size:13px;color:var(--gray-500);margin-top:8px;">لا يمكن التراجع عن هذا الإجراء</p>
+                <input type="hidden" id="erDeleteId">
+            </div>
+            <div class="er-modal-footer" style="justify-content:center;">
+                <button class="er-save-btn" style="background:var(--error-600);" onclick="erSubmitDelete()"><i class="bi bi-trash3"></i> حذف</button>
+                <button class="er-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/executor-roles.js?v=@DateTime.Now.Ticks"></script>
+}

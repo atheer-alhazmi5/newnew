@@ -558,5 +558,33 @@
     "Browser": "Safari",
     "OperatingSystem": "macOS",
     "CreatedAt": "2026-04-02T13:48:01.903778+03:00"
+  },
+  {
+    "Id": 41,
+    "UsernameAttempted": "admin",
+    "NationalId": "",
+    "FullName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "OrganizationalUnit": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "WarningType": "\u0645\u062D\u0627\u0648\u0644\u0629 \u062F\u062E\u0648\u0644 \u0646\u0627\u062C\u062D\u0629",
+    "Severity": "Low",
+    "Description": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644 \u0646\u0627\u062C\u062D",
+    "IpAddress": "127.0.0.1",
+    "Browser": "Safari",
+    "OperatingSystem": "macOS",
+    "CreatedAt": "2026-04-05T10:35:02.32159+03:00"
+  },
+  {
+    "Id": 42,
+    "UsernameAttempted": "admin",
+    "NationalId": "",
+    "FullName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "OrganizationalUnit": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "WarningType": "\u0645\u062D\u0627\u0648\u0644\u0629 \u062F\u062E\u0648\u0644 \u0646\u0627\u062C\u062D\u0629",
+    "Severity": "Low",
+    "Description": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644 \u0646\u0627\u062C\u062D",
+    "IpAddress": "127.0.0.1",
+    "Browser": "Safari",
+    "OperatingSystem": "macOS",
+    "CreatedAt": "2026-04-05T10:57:25.303595+03:00"
   }
 ]

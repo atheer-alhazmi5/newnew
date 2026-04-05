@@ -69,7 +69,7 @@ public class TablesController : BaseController
         return Json(new
         {
             success = true, data = result,
-            organizationalUnits = units.Select(u => new { u.Id, u.Name }).ToList(),
+            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name }).ToList(),
             currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin"
         });
     }
@@ -134,8 +134,6 @@ public class TablesController : BaseController
             return Json(new { success = false, message = "يجب تحديد الحد الأقصى لعدد الصفوف عندما يكون الجدول مقيداً" });
 
         var orgUnitId = await GetCreatorOrgUnitIdAsync();
-        if (orgUnitId <= 0)
-            return Json(new { success = false, message = "يجب إنشاء الوحدات التنظيمية أولاً" });
 
         var all = await _ds.ListReadyTablesAsync();
         var nextOrder = all.Count > 0 ? all.Max(t => t.SortOrder) + 1 : 1;

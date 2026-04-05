@@ -1269,6 +1269,43 @@ public class DataService
         return Task.FromResult((approved, sent, pending, inbox));
     }
 
+    // ─── EXECUTOR ROLES ──────────────────────────────────────────────────────
+    public Task<List<ExecutorRole>> ListExecutorRolesAsync()
+        => Task.FromResult(_db.ExecutorRoles.OrderBy(r => r.SortOrder).ToList());
+
+    public Task<ExecutorRole?> GetExecutorRoleByIdAsync(int id)
+        => Task.FromResult(_db.ExecutorRoles.FirstOrDefault(r => r.Id == id));
+
+    public Task<ExecutorRole> AddExecutorRoleAsync(ExecutorRole r)
+    {
+        var list = _db.ExecutorRoles;
+        r.Id = NextId(list, x => x.Id);
+        r.CreatedAt = DateTime.Now;
+        list.Add(r);
+        _db.SaveExecutorRoles(list);
+        return Task.FromResult(r);
+    }
+
+    public Task<bool> UpdateExecutorRoleAsync(ExecutorRole r)
+    {
+        var list = _db.ExecutorRoles;
+        var idx = list.FindIndex(x => x.Id == r.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = r;
+        _db.SaveExecutorRoles(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteExecutorRoleAsync(int id)
+    {
+        var list = _db.ExecutorRoles;
+        var r = list.FirstOrDefault(x => x.Id == id);
+        if (r == null) return Task.FromResult(false);
+        list.Remove(r);
+        _db.SaveExecutorRoles(list);
+        return Task.FromResult(true);
+    }
+
     // ─── ALIAS METHODS ────────────────────────────────────────────────────────
     public Task<List<Reply>> ListRepliesByFormIdAsync(int formId)
         => Task.FromResult(_db.Replies.Where(r => r.FormId == formId)
