@@ -102,7 +102,6 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/3npw01zqja-wytnqczv2g.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/vgge7emvdn-1xdgek1yrm.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/u4t0qh7yki-xegh6ungrt.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/ner6rvfi45-3fa2mswca2.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/staticwebassets.build.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/staticwebassets.build.json.cache
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/staticwebassets.development.json
@@ -114,4 +113,7 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/ref/FormsSystem.dll
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/br0nqy2wd4-158ndqrv45.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/hz1aygsx0c-460at3dtpi.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/p6oak9fj2v-y9filg4o9k.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/executor_roles.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/p6oak9fj2v-nbiyhqjff8.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/rjd8yijjgf-zkpd12bdgq.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/ner6rvfi45-7qywdbqbt2.gz

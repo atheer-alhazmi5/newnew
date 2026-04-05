@@ -40,6 +40,8 @@ public class WorkspacesController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.ListWorkspacesAsync();
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var ouMap = units.ToDictionary(u => u.Id, u => u.Name);
         return Json(new
         {
             success = true,
@@ -49,13 +51,16 @@ public class WorkspacesController : BaseController
                 w.Name,
                 w.Description,
                 w.Color,
+                w.OrganizationalUnitId,
+                OrganizationalUnitName = ouMap.GetValueOrDefault(w.OrganizationalUnitId, ""),
                 w.SortOrder,
                 w.IsActive,
                 w.CreatedBy,
                 w.UpdatedBy,
                 CreatedAt = w.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = w.UpdatedAt.HasValue ? w.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
-            })
+            }),
+            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList()
         });
     }
 
@@ -69,6 +74,9 @@ public class WorkspacesController : BaseController
         if (w == null)
             return Json(new { success = false, message = "مساحة العمل غير موجودة" });
 
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var ouName = units.FirstOrDefault(u => u.Id == w.OrganizationalUnitId)?.Name ?? "";
+
         return Json(new
         {
             success = true,
@@ -78,6 +86,8 @@ public class WorkspacesController : BaseController
                 w.Name,
                 w.Description,
                 w.Color,
+                w.OrganizationalUnitId,
+                OrganizationalUnitName = ouName,
                 w.SortOrder,
                 w.IsActive,
                 w.CreatedBy,
@@ -108,6 +118,7 @@ public class WorkspacesController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Color = string.IsNullOrWhiteSpace(req.Color) ? "#25935F" : req.Color.Trim(),
+            OrganizationalUnitId = req.OrganizationalUnitId ?? 0,
             SortOrder = nextOrder,
             IsActive = req.IsActive,
             CreatedBy = CurrentUserFullName
@@ -139,6 +150,8 @@ public class WorkspacesController : BaseController
         row.Name = req.Name.Trim();
         row.Description = req.Description?.Trim() ?? "";
         row.Color = string.IsNullOrWhiteSpace(req.Color) ? row.Color : req.Color.Trim();
+        if (req.OrganizationalUnitId.HasValue && req.OrganizationalUnitId.Value > 0)
+            row.OrganizationalUnitId = req.OrganizationalUnitId.Value;
         row.IsActive = req.IsActive;
         row.UpdatedBy = CurrentUserFullName;
         row.UpdatedAt = DateTime.Now;
@@ -182,6 +195,7 @@ public class WorkspaceRequest
     public string? Name { get; set; }
     public string? Description { get; set; }
     public string? Color { get; set; }
+    public int? OrganizationalUnitId { get; set; }
     public bool IsActive { get; set; } = true;
 }
 

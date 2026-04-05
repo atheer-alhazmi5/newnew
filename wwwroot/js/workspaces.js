@@ -1,7 +1,10 @@
 var wsAll = [];
 var wsFiltered = [];
+var wsOrgUnits = [];
 var wsCurrentPage = 1;
 var wsPerPage = 10;
+var wsOuExpandedAdd = {}, wsOuExpandedEdit = {};
+var wsSelectedOuIdAdd = 0, wsSelectedOuIdEdit = 0;
 
 document.addEventListener('DOMContentLoaded', function () {
     wsLoad();
@@ -31,14 +34,15 @@ async function wsLoad() {
         var r = await apiFetch('/Workspaces/GetWorkspaces');
         if (r && r.success) {
             wsAll = r.data || [];
+            wsOrgUnits = r.organizationalUnits || [];
             wsFilter();
         } else {
             document.getElementById('wsBody').innerHTML =
-                '<tr><td colspan="6">' + emptyState('bi-grid-1x2', 'لا توجد مساحات عمل', 'أنشئ مساحة من الزر أعلاه') + '</td></tr>';
+                '<tr><td colspan="7">' + emptyState('bi-grid-1x2', 'لا توجد مساحات عمل', 'أنشئ مساحة من الزر أعلاه') + '</td></tr>';
         }
     } catch (e) {
         document.getElementById('wsBody').innerHTML =
-            '<tr><td colspan="6" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
+            '<tr><td colspan="7" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
     }
 }
 
@@ -73,7 +77,7 @@ function wsRenderTable() {
         var hasFilters = (document.getElementById('wsFilterSearch') && document.getElementById('wsFilterSearch').value.trim()) ||
             (document.getElementById('wsFilterStatus') && document.getElementById('wsFilterStatus').value !== '');
         var sub = hasFilters ? 'عدّل الفلاتر أو اضغط مسح' : 'أنشئ مساحة من الزر أعلاه';
-        body.innerHTML = '<tr><td colspan="6">' +
+        body.innerHTML = '<tr><td colspan="7">' +
             emptyState('bi-funnel', 'لا توجد نتائج', sub) +
             '</td></tr>';
         document.getElementById('wsPaginationContainer').innerHTML = '';
@@ -99,6 +103,7 @@ function wsRenderTable() {
             '<td style="text-align:center;font-weight:800;">' + esc(String(ord)) + '</td>' +
             '<td style="font-weight:700;">' + esc(nm) + '</td>' +
             '<td>' + (desc ? esc(desc) : '<span class="text-muted">—</span>') + '</td>' +
+            '<td>' + (w.organizationalUnitName ? esc(w.organizationalUnitName) : '<span class="text-muted">—</span>') + '</td>' +
             '<td style="text-align:center;">' +
                 '<span class="ws-color-circle" style="background:' + esc(col) + ';"></span>' +
                 ' <span style="direction:ltr;font-size:12px;color:var(--gray-500);">' + esc(col) + '</span>' +
@@ -134,6 +139,10 @@ function wsShowAddModal() {
     document.getElementById('wsAddIsActive').checked = true;
     document.getElementById('wsAddIsActiveLabel').textContent = 'مفعل';
     document.getElementById('wsAddError').classList.add('d-none');
+    wsSelectedOuIdAdd = 0;
+    wsOuExpandedAdd = {};
+    wsUpdateOuLabel('add');
+    document.getElementById('wsAddOuPanel').classList.remove('show');
     new bootstrap.Modal(document.getElementById('wsAddModal')).show();
 }
 
@@ -159,6 +168,7 @@ async function wsSubmitAdd() {
         name: name,
         description: document.getElementById('wsAddDescription').value.trim(),
         color: document.getElementById('wsAddColor').value,
+        organizationalUnitId: wsSelectedOuIdAdd || null,
         isActive: document.getElementById('wsAddIsActive').checked
     };
 
@@ -188,6 +198,10 @@ function wsShowEditModal(id) {
     document.getElementById('wsEditIsActive').checked = act;
     document.getElementById('wsEditIsActiveLabel').textContent = act ? 'مفعل' : 'غير مفعل';
     document.getElementById('wsEditError').classList.add('d-none');
+    wsSelectedOuIdEdit = w.organizationalUnitId || 0;
+    wsOuExpandedEdit = {};
+    wsUpdateOuLabel('edit');
+    document.getElementById('wsEditOuPanel').classList.remove('show');
     new bootstrap.Modal(document.getElementById('wsEditModal')).show();
 }
 
@@ -218,6 +232,7 @@ async function wsSubmitEdit() {
         name: name,
         description: document.getElementById('wsEditDescription').value.trim(),
         color: document.getElementById('wsEditColor').value,
+        organizationalUnitId: wsSelectedOuIdEdit || null,
         isActive: document.getElementById('wsEditIsActive').checked,
         sortOrder: sortOrder
     };
@@ -246,6 +261,7 @@ function wsShowDetails(id) {
         wsDetailRow('الترتيب', esc(String(w.sortOrder))) +
         wsDetailRow('الحالة', statusText) +
         wsDetailRow('اسم مساحة العمل', esc(w.name || '')) +
+        wsDetailRow('الوحدة التنظيمية', w.organizationalUnitName ? esc(w.organizationalUnitName) : '—') +
         wsDetailRow('الوصف', w.description ? esc(w.description) : '—') +
         wsDetailRow('اللون', colorHtml) +
         wsDetailRow('أُنشئت في', esc(w.createdAt || '—')) +
@@ -278,3 +294,118 @@ async function wsSubmitDelete() {
         errEl.classList.remove('d-none');
     }
 }
+
+/*  Org Unit  Dropdown  */
+function wsOuBuildTreeMap() {
+    var ids = {};
+    wsOrgUnits.forEach(function(u) { ids[u.id] = true; });
+    var byParent = {};
+    wsOrgUnits.forEach(function(u) {
+        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(function(k) {
+        byParent[k].sort(function(a,b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            return sa !== sb ? sa - sb : (a.name||'').localeCompare(b.name||'','ar');
+        });
+    });
+    return byParent;
+}
+
+function wsOuRenderRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var html = '';
+    rows.forEach(function(u) {
+        var idStr = String(u.id);
+        var hasChildren = !!byParent[idStr];
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var sel = String(selectedId) === idStr ? ' is-selected' : '';
+        html += '<div class="ws-ou-tree-row' + sel + '" data-id="' + u.id + '" style="padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="ws-ou-tree-exp" data-exp="' + idStr + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="ws-ou-tree-exp-spacer"></span>';
+        }
+        html += '<span class="ws-ou-tree-name">' + esc(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += wsOuRenderRows(byParent, idStr, depth + 1, selectedId, expandedMap);
+        }
+    });
+    return html;
+}
+
+function wsOuRenderPanel(mode) {
+    var panelId = mode === 'add' ? 'wsAddOuPanel' : 'wsEditOuPanel';
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    var selectedId = mode === 'add' ? wsSelectedOuIdAdd : wsSelectedOuIdEdit;
+    var expandedMap = mode === 'add' ? wsOuExpandedAdd : wsOuExpandedEdit;
+    if (!wsOrgUnits.length) { panel.innerHTML = '<div class="text-muted text-center py-3" style="font-size:13px;">لا توجد وحدات تنظيمية</div>'; return; }
+    var byParent = wsOuBuildTreeMap();
+    var html = wsOuRenderRows(byParent, '', 0, selectedId, expandedMap);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function wsToggleOuPanel(mode) {
+    var panel = document.getElementById(mode === 'add' ? 'wsAddOuPanel' : 'wsEditOuPanel');
+    if (!panel) return;
+    if (panel.classList.contains('show')) {
+        panel.classList.remove('show');
+    } else {
+        wsOuRenderPanel(mode);
+        panel.classList.add('show');
+    }
+}
+
+function wsUpdateOuLabel(mode) {
+    var labelEl = document.getElementById(mode === 'add' ? 'wsAddOuLabel' : 'wsEditOuLabel');
+    var selectedId = mode === 'add' ? wsSelectedOuIdAdd : wsSelectedOuIdEdit;
+    if (!selectedId) {
+        labelEl.textContent = 'اختر الوحدة التنظيمية...';
+        labelEl.style.color = 'var(--gray-400)';
+        return;
+    }
+    var found = wsOrgUnits.find(function(u) { return u.id === selectedId; });
+    labelEl.textContent = found ? found.name : 'اختر الوحدة التنظيمية...';
+    labelEl.style.color = found ? 'var(--gray-800)' : 'var(--gray-400)';
+}
+
+function wsOuPanelClick(mode, e) {
+    var expBtn = e.target.closest('.ws-ou-tree-exp');
+    var expandedMap = mode === 'add' ? wsOuExpandedAdd : wsOuExpandedEdit;
+    if (expBtn) {
+        e.stopPropagation();
+        var eid = expBtn.getAttribute('data-exp');
+        expandedMap[eid] = !expandedMap[eid];
+        wsOuRenderPanel(mode);
+        return;
+    }
+    var row = e.target.closest('.ws-ou-tree-row');
+    if (!row) return;
+    var ouId = parseInt(row.getAttribute('data-id'));
+    if (isNaN(ouId)) return;
+    if (mode === 'add') wsSelectedOuIdAdd = ouId;
+    else wsSelectedOuIdEdit = ouId;
+    wsUpdateOuLabel(mode);
+    var panel = document.getElementById(mode === 'add' ? 'wsAddOuPanel' : 'wsEditOuPanel');
+    panel.classList.remove('show');
+}
+
+document.addEventListener('click', function(e) {
+    ['add', 'edit'].forEach(function(m) {
+        var wrap = document.getElementById(m === 'add' ? 'wsAddOuWrap' : 'wsEditOuWrap');
+        var panel = document.getElementById(m === 'add' ? 'wsAddOuPanel' : 'wsEditOuPanel');
+        if (wrap && panel && !wrap.contains(e.target)) panel.classList.remove('show');
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    ['add', 'edit'].forEach(function(mode) {
+        var panel = document.getElementById(mode === 'add' ? 'wsAddOuPanel' : 'wsEditOuPanel');
+        if (panel) panel.addEventListener('click', function(ev) { wsOuPanelClick(mode, ev); });
+    });
+});
