@@ -1306,6 +1306,43 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    // ─── FORM TEMPLATES ─────────────────────────────────────────────────────
+    public Task<List<FormTemplate>> ListFormTemplatesAsync()
+        => Task.FromResult(_db.FormTemplates.OrderByDescending(t => t.CreatedAt).ToList());
+
+    public Task<FormTemplate?> GetFormTemplateByIdAsync(int id)
+        => Task.FromResult(_db.FormTemplates.FirstOrDefault(t => t.Id == id));
+
+    public Task<FormTemplate> AddFormTemplateAsync(FormTemplate t)
+    {
+        var list = _db.FormTemplates;
+        t.Id = NextId(list, x => x.Id);
+        t.CreatedAt = DateTime.Now;
+        list.Add(t);
+        _db.SaveFormTemplates(list);
+        return Task.FromResult(t);
+    }
+
+    public Task<bool> UpdateFormTemplateAsync(FormTemplate t)
+    {
+        var list = _db.FormTemplates;
+        var idx = list.FindIndex(x => x.Id == t.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = t;
+        _db.SaveFormTemplates(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormTemplateAsync(int id)
+    {
+        var list = _db.FormTemplates;
+        var t = list.FirstOrDefault(x => x.Id == id);
+        if (t == null) return Task.FromResult(false);
+        list.Remove(t);
+        _db.SaveFormTemplates(list);
+        return Task.FromResult(true);
+    }
+
     // ─── ALIAS METHODS ────────────────────────────────────────────────────────
     public Task<List<Reply>> ListRepliesByFormIdAsync(int formId)
         => Task.FromResult(_db.Replies.Where(r => r.FormId == formId)

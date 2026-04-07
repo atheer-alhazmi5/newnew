@@ -343,6 +343,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             settings.Children.Add(new SidebarItem { Url = "/Settings/SystemWarnings", Icon = "bi-shield-exclamation", Label = "تحذيرات النظام", PathPrefix = "/Settings/SystemWarnings" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Backup", Icon = "bi-archive-fill", Label = "النسخ الاحتياطي", PathPrefix = "/Settings/Backup" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/PopupNotifications", Icon = "bi-bell-fill", Label = "الإشعارات المنبثقة", PathPrefix = "/Settings/PopupNotifications" });
+            settings.Children.Add(new SidebarItem { Url = "/Templates/Index", Icon = "bi-file-earmark-richtext", Label = "إدارة القوالب", PathPrefix = "/Templates" });
             items.Add(settings);
 
             return items;
