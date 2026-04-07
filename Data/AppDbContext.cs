@@ -62,6 +62,7 @@ public class AppDbContext
     public List<BackupRecord> BackupRecords => Load<BackupRecord>("backup_records");
     public List<PopupNotification> PopupNotifications => Load<PopupNotification>("popup_notifications");
     public List<ExecutorRole> ExecutorRoles => Load<ExecutorRole>("executor_roles");
+    public List<FormTemplate> FormTemplates => Load<FormTemplate>("form_templates");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -88,6 +89,7 @@ public class AppDbContext
     public void SaveBackupRecords(List<BackupRecord> d) => Save("backup_records", d);
     public void SavePopupNotifications(List<PopupNotification> d) => Save("popup_notifications", d);
     public void SaveExecutorRoles(List<ExecutorRole> d) => Save("executor_roles", d);
+    public void SaveFormTemplates(List<FormTemplate> d) => Save("form_templates", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }
