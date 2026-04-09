@@ -70,6 +70,11 @@
 .tp-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
 .tp-detail-label { font-weight:700; color:var(--gray-500); }
 .tp-detail-value { color:var(--gray-800); font-weight:500; }
+.tp-table-card { border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); overflow:hidden; }
+.tp-table th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+.tp-table td { font-size:13px; vertical-align:middle; border-bottom:1px solid var(--gray-100); }
+.tp-table tbody tr:hover { background:var(--sa-25); }
+.tp-actions-row { display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:nowrap; white-space:nowrap; }
 
 /* Wizard Steps */
 .tp-wizard-steps { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:24px; padding:0 20px; }
@@ -153,17 +158,17 @@
         <option value="true">مفعل</option>
         <option value="false">معطل</option>
     </select>
-    <button type="button" class="btn btn-outline-secondary" onclick="tpClearFilters()" style="border-radius:12px;font-size:13px;font-weight:600;">
+    <button type="button" class="rt-clear-btn" onclick="tpClearFilters()">
         <i class="bi bi-x-circle"></i> مسح الفلترة
     </button>
 </div>
 
 <!-- Table -->
-<div class="card" style="border-radius:16px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+<div class="card tp-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle text-center" style="font-size:13px;">
-                <thead style="background:var(--gray-50);">
+            <table class="table tp-table mb-0 align-middle text-center">
+                <thead>
                     <tr>
                         <th style="width:60px;">#</th>
                         <th>اسم القالب</th>

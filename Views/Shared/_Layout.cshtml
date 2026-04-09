@@ -173,6 +173,7 @@
 <!-- TOAST CONTAINER -->
 <div id="toast-container" style="position:fixed;bottom:24px;left:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
 
+<script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="~/js/site.js"></script>
@@ -194,21 +195,16 @@
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', async function initSysPopups() {
-    const path = window.location.pathname.toLowerCase();
-    let loc = 'dashboard';
-    if (path.startsWith('/forms') || path.startsWith('/inbox') || path.startsWith('/outbox'))
-        loc = 'home';
-    else if (path === '/' || path.startsWith('/account/landing'))
-        loc = 'landing';
-    else if (path.startsWith('/dashboard'))
-        loc = 'dashboard';
-    else
-        return; // No popups on other pages
+    const base = (window.APP_PATH_BASE || '').replace(/\/$/, '').toLowerCase();
+    let path = window.location.pathname.toLowerCase();
+    if (base && path.startsWith(base)) path = path.slice(base.length) || '/';
+    if (!path.startsWith('/dashboard')) return;
+    const loc = 'dashboard';
 
     const dismissed = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
 
     try {
-        const popups = await apiFetch('/Settings/GetActivePopups?location=' + loc);
+        const popups = await apiFetch('/Settings/GetActivePopups?location=' + encodeURIComponent(loc));
         if (!Array.isArray(popups) || !popups.length) return;
 
         const queue = popups.filter(p => !dismissed.includes(p.id));
@@ -238,10 +234,10 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             bodyHtml = `<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">${escHtml(p.textContent || '')}</p>`;
         } else if (p.contentType === 'image') {
             if (p.attachmentUrl)
-                bodyHtml = `<img src="${p.attachmentUrl}" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />`;
+                bodyHtml = `<img src="${typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl}" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />`;
         } else if (p.contentType === 'video') {
             if (p.attachmentUrl)
-                bodyHtml = `<video src="${p.attachmentUrl}" controls style="width:100%;border-radius:10px;"></video>`;
+                bodyHtml = `<video src="${typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl}" controls style="width:100%;border-radius:10px;"></video>`;
         }
 
         el.innerHTML = `<div class="sys-popup-box">
@@ -324,15 +320,16 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         if (role == "Admin")
         {
             items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة التحكم", PathPrefix = "/Dashboard" });
-            items.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
             items.Add(new SidebarItem { Url = "/Forms/Index", Icon = "bi-file-earmark-text", Label = "النماذج الجاهزة", PathPrefix = "/Forms" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
             items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send-fill", Label = "صندوق الصادر", PathPrefix = "/Outbox" });
             items.Add(new SidebarItem { Url = "/Tables/Index", Icon = "bi-table", Label = "الجداول الجاهزة", PathPrefix = "/Tables" });
             items.Add(new SidebarItem { Url = "/Dropdowns/Index", Icon = "bi-ui-checks-grid", Label = "القوائم المنسدلة", PathPrefix = "/Dropdowns" });
             items.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
+            items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
 
             var settings = new SidebarItem { Url = "#", Icon = "bi-gear-fill", Label = "الاعدادات العامة", PathPrefix = "/Settings" };
+            settings.Children.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/OrganizationalUnits", Icon = "bi-building", Label = "الوحدات التنظيمية", PathPrefix = "/Settings/OrganizationalUnits" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Beneficiaries", Icon = "bi-people-fill", Label = "المستفيدين", PathPrefix = "/Settings/Beneficiaries" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Classifications", Icon = "bi-tags-fill", Label = "التصنيفات التنظيمية", PathPrefix = "/Settings/Classifications" });
@@ -357,6 +354,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         if (role == "Manager" || role == "Employee")
         {
             items.Add(new SidebarItem { Url = "/Forms/Index", Icon = "bi-file-earmark-text", Label = "النماذج الجاهزة", PathPrefix = "/Forms" });
+            items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
             items.Add(new SidebarItem { Url = "/Tables/Index", Icon = "bi-table", Label = "الجداول الجاهزة", PathPrefix = "/Tables" });
         }
 

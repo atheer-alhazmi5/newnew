@@ -157,6 +157,12 @@ async function wsSubmitAdd() {
         return;
     }
 
+    if (!wsSelectedOuIdAdd) {
+        errEl.textContent = 'الوحدة التنظيمية مطلوبة';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
     var dup = wsAll.find(function (w) { return (w.name || '').trim() === name; });
     if (dup) {
         errEl.textContent = 'اسم مساحة العمل موجود مسبقاً';
@@ -220,6 +226,12 @@ async function wsSubmitEdit() {
     var dup = wsAll.find(function (w) { return w.id !== id && (w.name || '').trim() === name; });
     if (dup) {
         errEl.textContent = 'اسم مساحة العمل موجود مسبقاً';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    if (!wsSelectedOuIdEdit) {
+        errEl.textContent = 'الوحدة التنظيمية مطلوبة';
         errEl.classList.remove('d-none');
         return;
     }

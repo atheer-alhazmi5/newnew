@@ -47,19 +47,19 @@ public class DataService
 
         var users = new List<User>
         {
-            new() { Id=1, Username="admin", Email="majed@emirate.gov.sa",
+            new() { Id=1, Username="admin", Email="majed@emirate.gov.sa" ,NationalId="1111111111",
                     FullName="ماجد مرزوق لاحق الحسيني",
                     PasswordHash=_pw.Hash("admin123"), Role=UserRole.Admin, DepartmentId=3, CreatedAt=DateTime.Now },
-            new() { Id=2, Username="atheer", Email="atheer@emirate.gov.sa",
+            new() { Id=2, Username="atheer", Email="atheer@emirate.gov.sa", NationalId="1010101010",
                     FullName="أثير علي الحازمي",
                     PasswordHash=_pw.Hash("password123"), Role=UserRole.Manager, DepartmentId=3, CreatedAt=DateTime.Now },
-            new() { Id=3, Username="rawan", Email="rawan@emirate.gov.sa",
+            new() { Id=3, Username="rawan", Email="rawan@emirate.gov.sa", NationalId="1020202020",
                     FullName="روان خالد التميمي",
                     PasswordHash=_pw.Hash("password123"), Role=UserRole.Employee, DepartmentId=3, CreatedAt=DateTime.Now },
-            new() { Id=4, Username="amal", Email="amal@emirate.gov.sa",
+            new() { Id=4, Username="amal", Email="amal@emirate.gov.sa", NationalId="1030303030",
                     FullName="أمل سلمي الرحيلي",
                     PasswordHash=_pw.Hash("password123"), Role=UserRole.Employee, DepartmentId=3, CreatedAt=DateTime.Now },
-            new() { Id=5, Username="nujood", Email="nujood@emirate.gov.sa",
+            new() { Id=5, Username="nujood", Email="nujood@emirate.gov.sa", NationalId="1040404040",
                     FullName="نجود الرشيدي",
                     PasswordHash=_pw.Hash("password123"), Role=UserRole.Staff, DepartmentId=3, CreatedAt=DateTime.Now }
         };
@@ -196,9 +196,8 @@ public class DataService
     public Task<User?> GetUserByUsernameAsync(string username)
     {
         var users = _db.Users;
-        var depts = _db.Departments;
         var u = users.FirstOrDefault(u => u.Username == username);
-        if (u != null) u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+        HydrateUserDepartment(u);
         return Task.FromResult(u);
     }
 
@@ -215,20 +214,30 @@ public class DataService
     public Task<User?> GetUserByIdAsync(int id)
     {
         var users = _db.Users;
-        var depts = _db.Departments;
         var u = users.FirstOrDefault(u => u.Id == id);
-        if (u != null) u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+        HydrateUserDepartment(u);
         return Task.FromResult(u);
     }
 
     public Task<List<User>> ListUsersAsync(int? deptId = null)
     {
         var users = _db.Users;
-        var depts = _db.Departments;
         var filtered = deptId.HasValue ? users.Where(u => u.DepartmentId == deptId.Value).ToList() : users;
         foreach (var u in filtered)
-            u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+            HydrateUserDepartment(u);
         return Task.FromResult(filtered);
+    }
+
+
+    private void HydrateUserDepartment(User? u)
+    {
+        if (u == null) return;
+        var depts = _db.Departments;
+        u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+        if (u.Department != null) return;
+        var ou = _db.OrganizationalUnits.FirstOrDefault(o => o.Id == u.DepartmentId);
+        if (ou == null) return;
+        u.Department = new Department { Id = ou.Id, Name = ou.Name, Code = "", CreatedAt = DateTime.UtcNow };
     }
 
     public Task<User> AddUserAsync(User user)
@@ -490,6 +499,9 @@ public class DataService
     public Task<List<Classification>> ListClassificationsAsync()
         => Task.FromResult(_db.Classifications.OrderBy(c => c.SortOrder).ToList());
 
+    public Task<List<Classification>> ListActiveClassificationsAsync()
+        => Task.FromResult(_db.Classifications.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList());
+
     public Task<Classification?> GetClassificationByIdAsync(int id)
         => Task.FromResult(_db.Classifications.FirstOrDefault(c => c.Id == id));
 
@@ -525,7 +537,8 @@ public class DataService
 
     public Task<bool> IsClassificationLinkedAsync(int classificationId)
     {
-        var linked = _db.Departments.Any(d => d.ClassificationId == classificationId);
+        var linked = _db.Departments.Any(d => d.ClassificationId == classificationId)
+            || _db.OrganizationalUnits.Any(u => u.ClassificationId == classificationId);
         return Task.FromResult(linked);
     }
 
@@ -622,6 +635,9 @@ public class DataService
     public Task<List<FormSection>> ListFormSectionsAsync()
         => Task.FromResult(_db.FormSections.OrderBy(c => c.SortOrder).ToList());
 
+    public Task<List<FormSection>> ListActiveFormSectionsAsync()
+        => Task.FromResult(_db.FormSections.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList());
+
     public Task<FormSection?> GetFormSectionByIdAsync(int id)
         => Task.FromResult(_db.FormSections.FirstOrDefault(c => c.Id == id));
 
@@ -683,6 +699,9 @@ public class DataService
         _db.SaveFormSections(list);
         return Task.CompletedTask;
     }
+
+    public Task<bool> IsFormSectionLinkedAsync(int sectionId)
+        => Task.FromResult(_db.FormDefinitions.Any(f => f.FormTypeId == sectionId));
 
     // ─── FORM STATUSES (حالات النماذج) ───────────────────────────────────────
     public Task<List<FormStatus>> ListFormStatusesAsync()
@@ -754,6 +773,12 @@ public class DataService
     public Task<List<Workspace>> ListWorkspacesAsync()
         => Task.FromResult(_db.Workspaces.OrderBy(w => w.SortOrder).ToList());
 
+    public Task<List<Workspace>> ListActiveWorkspacesAsync()
+        => Task.FromResult(_db.Workspaces.Where(w => w.IsActive).OrderBy(w => w.SortOrder).ToList());
+
+    public Task<bool> IsWorkspaceLinkedAsync(int workspaceId)
+        => Task.FromResult(_db.FormDefinitions.Any(f => f.WorkspaceId == workspaceId));
+
     public Task<Workspace?> GetWorkspaceByIdAsync(int id)
         => Task.FromResult(_db.Workspaces.FirstOrDefault(w => w.Id == id));
 
@@ -820,6 +845,9 @@ public class DataService
     public Task<List<OrganizationalUnit>> ListOrganizationalUnitsAsync()
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
 
+    public Task<List<OrganizationalUnit>> ListActiveOrganizationalUnitsAsync()
+        => Task.FromResult(_db.OrganizationalUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList());
+
     public Task<OrganizationalUnit?> GetOrganizationalUnitByIdAsync(int id)
         => Task.FromResult(_db.OrganizationalUnits.FirstOrDefault(u => u.Id == id));
 
@@ -856,6 +884,21 @@ public class DataService
         list.Remove(unit);
         _db.SaveOrganizationalUnits(list);
         return Task.FromResult(true);
+    }
+
+    public Task<bool> IsOrganizationalUnitLinkedAsync(int unitId)
+    {
+        var linked =
+            _db.OrganizationalUnits.Any(u => u.ParentId == unitId) ||
+            _db.Beneficiaries.Any(b => b.OrganizationalUnitId == unitId) ||
+            _db.Workspaces.Any(w => w.OrganizationalUnitId == unitId) ||
+            _db.ReadyTables.Any(t => t.OrganizationalUnitId == unitId) ||
+            _db.DropdownLists.Any(d => d.OrganizationalUnitId == unitId) ||
+            _db.FormDefinitions.Any(f => f.OrganizationalUnitId == unitId) ||
+            _db.ExecutorRoles.Any(r => ("," + (r.OrgUnitIds ?? "") + ",").Contains("," + unitId + ",")) ||
+            _db.PopupNotifications.Any(p => (p.TargetDepartmentIds ?? new List<int>()).Contains(unitId));
+
+        return Task.FromResult(linked);
     }
 
     public Task<bool> IsOrganizationalUnitNameDuplicateAsync(string name, int? excludeId = null)
@@ -929,6 +972,32 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    public Task<bool> IsBeneficiaryLinkedByCreationAsync(int id)
+    {
+        var b = _db.Beneficiaries.FirstOrDefault(x => x.Id == id);
+        if (b == null) return Task.FromResult(false);
+
+        bool MatchCreator(string? createdBy)
+        {
+            if (string.IsNullOrWhiteSpace(createdBy)) return false;
+            var c = createdBy.Trim();
+            return c.Equals((b.FullName ?? "").Trim(), StringComparison.OrdinalIgnoreCase)
+                || c.Equals((b.Username ?? "").Trim(), StringComparison.OrdinalIgnoreCase)
+                || c.Equals((b.Email ?? "").Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        var linked =
+            _db.FormDefinitions.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.ReadyTables.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.DropdownLists.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.Workspaces.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.ExecutorRoles.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.PopupNotifications.Any(x => MatchCreator(x.CreatedBy)) ||
+            _db.FormTemplates.Any(x => MatchCreator(x.CreatedBy));
+
+        return Task.FromResult(linked);
+    }
+
     public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
             b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
@@ -949,8 +1018,7 @@ public class DataService
     public Task<bool> HasManagerInUnitAsync(int organizationalUnitId, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.Any(b =>
             b.OrganizationalUnitId == organizationalUnitId
-            && b.MainRole == "مدير"
-            && b.IsActive
+            && (b.IsUnitManager || b.MainRole == "مدير")
             && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
     public Task<User?> GetUserByUsernameForBeneficiaryAsync(string username)
@@ -1224,6 +1292,14 @@ public class DataService
         _db.SavePopupNotifications(list);
         return Task.FromResult(true);
     }
+    private static bool PopupDisplayLocationMatches(string? savedLocation, string requestLocation)
+    {
+        if (string.IsNullOrWhiteSpace(savedLocation)) return false;
+        return string.Equals(
+            savedLocation.Trim(),
+            (requestLocation ?? "").Trim(),
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
         int userId, int departmentId, string location)
@@ -1231,16 +1307,41 @@ public class DataService
         var now  = DateTime.Now;
         var list = _db.PopupNotifications.Where(p =>
         {
-            if (p.Status != "published") return false;
-            if (p.DisplayLocation != location && p.DisplayLocation != "all") return false;
+            if (!string.Equals(p.Status?.Trim(), "published", StringComparison.OrdinalIgnoreCase)) return false;
+            if (!PopupDisplayLocationMatches(p.DisplayLocation, location)) return false;
             if (p.DisplayPeriod == "specific")
             {
                 if (p.StartDate.HasValue && now < p.StartDate.Value) return false;
                 if (p.EndDate.HasValue   && now > p.EndDate.Value)   return false;
             }
-            if (p.DisplayPeriod == "once" && p.DismissedByUserIds.Contains(userId)) return false;
-            if (p.TargetUserIds.Any()       && !p.TargetUserIds.Contains(userId))       return false;
-            if (p.TargetDepartmentIds.Any() && !p.TargetDepartmentIds.Contains(departmentId)) return false;
+            var dismissed = p.DismissedByUserIds ?? new List<int>();
+            if (p.DisplayPeriod == "once" && dismissed.Contains(userId)) return false;
+
+            var userIds = p.TargetUserIds ?? new List<int>();
+            var deptIds = p.TargetDepartmentIds ?? new List<int>();
+            var hasU = userIds.Count > 0;
+            var hasD = deptIds.Count > 0;
+            // صفحة البداية وتسجيل الدخول: لا يرتبط العرض بالوحدات — يُعرض للجميعن
+            var publicPage = string.Equals(location, "landing", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(location, "login", StringComparison.OrdinalIgnoreCase);
+            if (publicPage) hasD = false;
+
+            if (userId == 0)
+            {
+                if (hasU) return false;
+                return true;
+            }
+
+            if (!hasU && !hasD) return true;
+            if (hasU && hasD)
+            {
+                var uOk = userIds.Contains(userId);
+                var dOk = deptIds.Contains(departmentId);
+                if (!uOk && !dOk) return false;
+                return true;
+            }
+            if (hasU && !userIds.Contains(userId)) return false;
+            if (hasD && !deptIds.Contains(departmentId)) return false;
             return true;
         }).ToList();
         return Task.FromResult(list);
@@ -1340,6 +1441,43 @@ public class DataService
         if (t == null) return Task.FromResult(false);
         list.Remove(t);
         _db.SaveFormTemplates(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── FORM DEFINITIONS ────────────────────────────────────────────────────
+    public Task<List<FormDefinition>> ListFormDefinitionsAsync()
+        => Task.FromResult(_db.FormDefinitions.OrderByDescending(f => f.CreatedAt).ToList());
+
+    public Task<FormDefinition?> GetFormDefinitionByIdAsync(int id)
+        => Task.FromResult(_db.FormDefinitions.FirstOrDefault(f => f.Id == id));
+
+    public Task<FormDefinition> AddFormDefinitionAsync(FormDefinition f)
+    {
+        var list = _db.FormDefinitions;
+        f.Id = NextId(list, x => x.Id);
+        f.CreatedAt = DateTime.Now;
+        list.Add(f);
+        _db.SaveFormDefinitions(list);
+        return Task.FromResult(f);
+    }
+
+    public Task<bool> UpdateFormDefinitionAsync(FormDefinition f)
+    {
+        var list = _db.FormDefinitions;
+        var idx = list.FindIndex(x => x.Id == f.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = f;
+        _db.SaveFormDefinitions(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormDefinitionAsync(int id)
+    {
+        var list = _db.FormDefinitions;
+        var f = list.FirstOrDefault(x => x.Id == id);
+        if (f == null) return Task.FromResult(false);
+        list.Remove(f);
+        _db.SaveFormDefinitions(list);
         return Task.FromResult(true);
     }
 

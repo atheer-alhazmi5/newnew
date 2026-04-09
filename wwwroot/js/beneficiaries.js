@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
     bnfBindDigitsOnly('bnfPhone', 10);
     bnfLoad();
 
-    var filterIds = ['bnfFilterName', 'bnfFilterNationalId', 'bnfFilterUnit', 'bnfFilterMainRole', 'bnfFilterSubRole'];
+    var filterIds = ['bnfFilterName', 'bnfFilterNationalId', 'bnfFilterUnit', 'bnfFilterSubRole'];
     filterIds.forEach(function (fid) {
         var el = document.getElementById(fid);
         if (!el) return;
@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('bnfFilterName').value = '';
         document.getElementById('bnfFilterNationalId').value = '';
         document.getElementById('bnfFilterUnit').value = '';
-        document.getElementById('bnfFilterMainRole').value = '';
         document.getElementById('bnfFilterSubRole').value = '';
         bnfRenderTable();
     });
@@ -424,7 +423,6 @@ function bnfGetFilteredBeneficiaries() {
     var nameQ = (document.getElementById('bnfFilterName') && document.getElementById('bnfFilterName').value || '').trim();
     var nidQ = (document.getElementById('bnfFilterNationalId') && document.getElementById('bnfFilterNationalId').value || '').trim();
     var unitId = document.getElementById('bnfFilterUnit') ? document.getElementById('bnfFilterUnit').value : '';
-    var mainRole = document.getElementById('bnfFilterMainRole') ? document.getElementById('bnfFilterMainRole').value : '';
     var subRole = document.getElementById('bnfFilterSubRole') ? document.getElementById('bnfFilterSubRole').value : '';
 
     return bnfAll.filter(function (b) {
@@ -433,8 +431,6 @@ function bnfGetFilteredBeneficiaries() {
         if (nidQ && (b.nationalId || '').indexOf(nidQ) === -1)
             return false;
         if (unitId && String(b.organizationalUnitId) !== String(unitId))
-            return false;
-        if (mainRole && (b.mainRole || '') !== mainRole)
             return false;
         if (subRole) {
             var sr = (b.subRole || '').trim();
@@ -549,11 +545,6 @@ function bnfValidate(isAdd) {
     if (!/^[^\s@]+@almadinah\.gov\.sa$/i.test(email))
         return 'يجب إدخال بريد إلكتروني بصيغة xxx@almadinah.gov.sa';
 
-    var mainRole = document.querySelector('input[name="bnfMainRole"]:checked');
-    mainRole = mainRole ? mainRole.value : '';
-    if (!mainRole || (mainRole !== 'موظف' && mainRole !== 'مدير'))
-        return 'الدور الرئيسي يجب أن يكون موظف أو مدير';
-
     if (!document.getElementById('bnfFirstName').value.trim()) return 'الاسم الأول مطلوب';
     if (!document.getElementById('bnfSecondName').value.trim()) return 'الاسم الثاني مطلوب';
     if (!document.getElementById('bnfThirdName').value.trim()) return 'الاسم الثالث مطلوب';
@@ -651,8 +642,7 @@ function bnfShowAddModal() {
     document.getElementById('bnfEmail').value = '';
     document.getElementById('bnfIsActive').checked = true;
     document.getElementById('bnfActivationStatus').textContent = 'مفعل';
-    var mainRoleRadios = document.querySelectorAll('input[name="bnfMainRole"]');
-    mainRoleRadios.forEach(function (r) { r.checked = (r.value === 'موظف'); });
+    document.getElementById('bnfIsUnitManager').checked = false;
     document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = false; });
     document.getElementById('bnfUsername').value = '';
     document.getElementById('bnfUsername').readOnly = false;
@@ -726,8 +716,7 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfEmail').value = b.email || '';
     document.getElementById('bnfIsActive').checked = b.isActive !== false;
     document.getElementById('bnfActivationStatus').textContent = b.isActive !== false ? 'مفعل' : 'معطل';
-    var mainRole = b.mainRole || 'موظف';
-    document.querySelectorAll('input[name="bnfMainRole"]').forEach(function (r) { r.checked = (r.value === mainRole); });
+    document.getElementById('bnfIsUnitManager').checked = !!b.isUnitManager || b.mainRole === 'مدير';
     var subRole = b.subRole || '';
     document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = (r.value === subRole); });
     document.getElementById('bnfUsername').value = b.username || '';
@@ -785,7 +774,7 @@ function bnfSubmit() {
         email: document.getElementById('bnfEmail').value.trim(),
         username: document.getElementById('bnfUsername').value.trim(),
         isActive: document.getElementById('bnfIsActive').checked,
-        mainRole: (document.querySelector('input[name="bnfMainRole"]:checked') || {}).value || '',
+        isUnitManager: !!document.getElementById('bnfIsUnitManager').checked,
         subRole: (document.querySelector('input[name="bnfSubRole"]:checked') || {}).value || '',
         password: document.getElementById('bnfPassword').value || undefined,
         confirmPassword: document.getElementById('bnfConfirmPassword').value || undefined
@@ -846,8 +835,13 @@ function bnfShowDetails(id) {
         '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-person-badge"></i>الأدوار وبيانات الدخول</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المستخدم:</strong></div><div class="col-md-10"><span dir="ltr">' + esc(b.username || '—') + '</span></div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>الدور الرئيسي:</strong></div><div class="col-md-10">' + esc(b.mainRole) + '</div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + (b.subRole ? esc(b.subRole) : '—') + '</div></div></div>';
+        '<div class="row mb-3"><div class="col-md-2"><strong>مدير وحدة تنظيمية:</strong></div><div class="col-md-10">' + ((b.isUnitManager || b.mainRole === 'مدير') ? 'نعم' : 'لا') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + (b.subRole ? esc(b.subRole) : '—') + '</div></div></div>' +
+        '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-clock-history"></i>معلومات التدقيق</div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>اسم المنشئ:</strong></div><div class="col-md-10">' + esc(b.createdBy || '—') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>تاريخ الإنشاء:</strong></div><div class="col-md-10">' + esc(b.createdAt || '—') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>آخر تحديث بواسطة:</strong></div><div class="col-md-10">' + esc(b.updatedBy || '—') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>تاريخ التحديث:</strong></div><div class="col-md-10">' + esc(b.updatedAt || '—') + '</div></div></div>';
 
     document.getElementById('bnfDetailsBody').innerHTML = html;
     new bootstrap.Modal(document.getElementById('bnfDetailsModal')).show();

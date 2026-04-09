@@ -77,6 +77,12 @@ function fmsFilter() {
     fmsRenderTable();
 }
 
+function fmsClear() {
+    var input = document.getElementById('fmsSearchInput');
+    if (input) input.value = '';
+    fmsFilter();
+}
+
 function fmsRenderTable() {
     var body = document.getElementById('fmsBody');
     if (fmsFiltered.length === 0) {
@@ -100,14 +106,14 @@ function fmsRenderTable() {
         html += '<tr>' +
             '<td style="text-align:center;font-weight:800;font-size:15px;color:var(--gray-700);">' + esc(String(c.sortOrder)) + '</td>' +
             '<td style="text-align:center;"><div class="fms-icon-display"><i class="bi ' + esc(iconClass) + '"></i></div></td>' +
-            '<td style="font-weight:700;font-size:14px;color:var(--gray-800);">' + esc(c.name) + '</td>' +
+            '<td style="text-align:right;font-weight:700;font-size:14px;color:var(--gray-800);padding-right:16px;">' + esc(c.name) + '</td>' +
+            '<td style="text-align:right;color:var(--gray-500);font-size:13px;max-width:220px;padding-right:16px;">' + (c.description ? esc(c.description) : '<span style="color:var(--gray-300);">—</span>') + '</td>' +
             '<td style="text-align:center;">' +
                 '<div style="display:inline-flex;align-items:center;gap:8px;">' +
                     '<span class="fms-color-circle" style="background:' + esc(c.color) + ';"></span>' +
                     '<span style="direction:ltr;font-size:12px;color:var(--gray-500);font-weight:600;">' + esc(c.color) + '</span>' +
                 '</div>' +
             '</td>' +
-            '<td style="color:var(--gray-500);font-size:13px;max-width:220px;">' + (c.description ? esc(c.description) : '<span style="color:var(--gray-300);">—</span>') + '</td>' +
             '<td style="text-align:center;"><span class="fms-status-pill ' + statusClass + '"><span class="fms-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +

@@ -64,6 +64,7 @@
 .fms-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
 .fms-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
 .fms-icon-display { width:32px; height:32px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
+.fms-table-card { border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); overflow:hidden; }
 </style>
 
 <div class="fms-page-header">
@@ -76,23 +77,25 @@
     </button>
 </div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
     <div class="fms-search-box flex-grow-1" style="max-width:400px;">
         <i class="bi bi-search fms-search-icon"></i>
         <input type="text" class="form-control" id="fmsSearchInput" placeholder="البحث عن نوع بالاسم..." oninput="fmsFilter()">
     </div>
+    <button type="button" class="rt-clear-btn" onclick="fmsClear()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card fms-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table mb-0">
                 <thead>
                     <tr>
-                        <th style="width:70px;">الترتيب</th>
-                        <th>القسم</th>
+                        <th style="width:70px;">رقم</th>
+                        <th style="width:90px;">الأيقونة</th>
+                        <th style="text-align:right;">اسم النوع</th>
+                        <th style="text-align:right;">الوصف</th>
                         <th style="width:130px;">اللون</th>
-                        <th>الوصف</th>
                         <th style="width:110px;">التفعيل</th>
                         <th style="width:260px;">الإجراءات</th>
                     </tr>

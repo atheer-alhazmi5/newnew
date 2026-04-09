@@ -34,6 +34,7 @@ public class ExecutorRolesController : BaseController
 
         var all = await _ds.ListExecutorRolesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
         var beneficiaries = await _ds.ListBeneficiariesAsync();
         var ouMap = units.ToDictionary(u => u.Id, u => u.Name);
 
@@ -77,7 +78,7 @@ public class ExecutorRolesController : BaseController
         {
             success = true,
             data = result,
-            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList(),
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList(),
             beneficiaries = beneficiaries.Where(b => b.IsActive).Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId }).ToList()
         });
     }

@@ -38,6 +38,7 @@ public class TablesController : BaseController
             all = all.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == userOrgUnitId)).ToList();
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
         var fields = await Task.WhenAll(all.Select(async t => (t.Id, Count: (await _ds.ListReadyTableFieldsByTableIdAsync(t.Id)).Count)));
         var fieldCounts = fields.ToDictionary(x => x.Id, x => x.Count);
 
@@ -69,7 +70,7 @@ public class TablesController : BaseController
         return Json(new
         {
             success = true, data = result,
-            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name }).ToList(),
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name }).ToList(),
             currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin"
         });
     }

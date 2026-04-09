@@ -1,4 +1,10 @@
 
+function appResolveUrl(url) {
+    if (!url || url.startsWith('http://') || url.startsWith('https://')) return url;
+    const base = (typeof window.APP_PATH_BASE === 'string' ? window.APP_PATH_BASE : '').replace(/\/$/, '');
+    return base + (url.startsWith('/') ? url : '/' + url);
+}
+
 function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
@@ -15,7 +21,7 @@ async function apiFetch(url, method = 'GET', body = null) {
     };
     if (body && method !== 'GET') opts.body = JSON.stringify(body);
     try {
-        const res = await fetch(url, opts);
+        const res = await fetch(appResolveUrl(url), opts);
         if (res.redirected) { window.location.href = res.url; return null; }
         var text = await res.text();
         try {
