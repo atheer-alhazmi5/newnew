@@ -93,11 +93,6 @@
     <select class="rt-filter-select form-select" id="bnfFilterUnit">
         <option value="">الوحدة التنظيمية</option>
     </select>
-    <select class="rt-filter-select form-select" id="bnfFilterMainRole">
-        <option value="">الدور الرئيسي</option>
-        <option value="موظف">موظف</option>
-        <option value="مدير">مدير</option>
-    </select>
     <select class="rt-filter-select form-select" id="bnfFilterSubRole" style="min-width:220px;">
         <option value="">الدور الفرعي</option>
         <option value="__none__">بدون دور فرعي</option>
@@ -250,6 +245,10 @@
                                 </button>
                                 <div class="bnf-ou-tree-panel d-none" id="bnfOuTreePanel" role="listbox"></div>
                             </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="bnfIsUnitManager">
+                                <label class="form-check-label" for="bnfIsUnitManager">مدير وحدة تنظيمية</label>
+                            </div>
                         </div>
                         <div>
                             <label class="form-label">الجوال<span class="required-star">*</span></label>
@@ -268,19 +267,6 @@
                     <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وبيانات الدخول</div>
                     <div class="bnf-form-row">
                         <div>
-                            <label class="form-label">الدور الرئيسي<span class="required-star">*</span></label>
-                            <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور الرئيسي">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfMainRole" id="bnfMainRoleEmployee" value="موظف" checked>
-                                    <label class="form-check-label" for="bnfMainRoleEmployee">موظف</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfMainRole" id="bnfMainRoleManager" value="مدير">
-                                    <label class="form-check-label" for="bnfMainRoleManager">مدير</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
                             <label class="form-label">الدور</label>
                             <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور">
                                 <div class="form-check form-check-inline">
@@ -297,6 +283,7 @@
                             <label class="form-label">اسم المستخدم<span class="required-star">*</span></label>
                             <input type="text" class="form-control" id="bnfUsername" placeholder="اسم المستخدم (إنجليزي)" autocomplete="off" dir="ltr" style="text-align:left;">
                         </div>
+                        <div></div>
                         <div></div>
                     </div>
                     <div class="bnf-form-row bnf-form-row-2" style="margin-top:16px;">

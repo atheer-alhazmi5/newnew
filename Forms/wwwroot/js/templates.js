@@ -79,7 +79,7 @@ function tpRenderTable() {
                 </label>
             </td>
             <td>
-                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <div class="tp-actions-row">
                     <button class="tp-action-btn tp-action-btn-detail" onclick="tpShowDetails(${t.id})"><i class="bi bi-eye"></i> تفاصيل</button>
                     <button class="tp-action-btn tp-action-btn-edit" onclick="tpShowEditModal(${t.id})"><i class="bi bi-pencil"></i> تعديل</button>
                     <button class="tp-action-btn tp-action-btn-delete" onclick="tpShowDeleteModal(${t.id})"><i class="bi bi-trash3"></i> حذف</button>

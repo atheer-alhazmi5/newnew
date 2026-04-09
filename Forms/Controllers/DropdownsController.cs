@@ -34,6 +34,7 @@ public class DropdownsController : BaseController
 
         var lists = await _ds.ListDropdownListsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -68,7 +69,7 @@ public class DropdownsController : BaseController
             CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd")
         }).OrderBy(x => x.SortOrder).ToList();
 
-        return Json(new { success = true, data = result, organizationalUnits = units.Select(u => new { u.Id, u.Name }).ToList(), currentUser = CurrentUserFullName });
+        return Json(new { success = true, data = result, organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name }).ToList(), currentUser = CurrentUserFullName });
     }
 
     [HttpGet]

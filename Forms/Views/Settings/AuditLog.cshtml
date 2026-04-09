@@ -58,7 +58,7 @@
 
 <!-- Filters -->
 <div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
-    <select class="rt-filter-select form-select" id="alFilterUnit">
+    <select class="rt-filter-select form-select" id="alFilterUnit" onchange="alOnUnitFilterChange()">
         <option value="">الوحدة التنظيمية</option>
     </select>
     <select class="rt-filter-select form-select" id="alFilterEmployee">
@@ -126,6 +126,8 @@
 <script>
 let alAllData = [];
 let alFiltered = [];
+let alOrgUnits = [];
+let alBeneficiaries = [];
 let alPage = 1;
 const alPerPage = 20;
 
@@ -196,28 +198,55 @@ function getOsIcon(os) {
     return map[os] || 'bi-display';
 }
 
+function alRebuildEmployeeSelect(unitId) {
+    const empSel = document.getElementById('alFilterEmployee');
+    const prev = empSel.value;
+    empSel.innerHTML = '<option value="">الموظف</option>';
+    let list = alBeneficiaries.slice();
+    if (unitId) {
+        const uid = parseInt(unitId, 10);
+        if (!isNaN(uid)) list = list.filter(b => b.organizationalUnitId === uid);
+    }
+    list.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'ar'));
+    list.forEach(b => {
+        const o = document.createElement('option');
+        o.value = b.fullName;
+        o.textContent = b.fullName;
+        empSel.appendChild(o);
+    });
+    if (prev && [...empSel.options].some(opt => opt.value === prev)) empSel.value = prev;
+    else empSel.value = '';
+}
+
+function alOnUnitFilterChange() {
+    const unitId = document.getElementById('alFilterUnit').value;
+    alRebuildEmployeeSelect(unitId);
+}
+
+function alUnitNameFromFilter() {
+    const unitId = document.getElementById('alFilterUnit').value;
+    if (!unitId) return '';
+    const u = alOrgUnits.find(x => String(x.id) === String(unitId));
+    return u ? u.name : '';
+}
+
 async function alLoad() {
     const r = await apiFetch('/Settings/GetAuditLogs');
     if (!r.success) return;
     alAllData = r.data || [];
+    alOrgUnits = r.organizationalUnits || [];
+    alBeneficiaries = r.beneficiaries || [];
 
     const unitSel = document.getElementById('alFilterUnit');
-    (r.organizationalUnits || []).forEach(u => {
+    unitSel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
+    alOrgUnits.forEach(u => {
         const o = document.createElement('option');
-        o.value = u.name;
+        o.value = String(u.id);
         o.textContent = u.name;
         unitSel.appendChild(o);
     });
 
-    const empSel = document.getElementById('alFilterEmployee');
-    const uniqueNames = [...new Set(alAllData.map(d => d.userName).filter(n => n))];
-    uniqueNames.sort();
-    uniqueNames.forEach(n => {
-        const o = document.createElement('option');
-        o.value = n;
-        o.textContent = n;
-        empSel.appendChild(o);
-    });
+    alRebuildEmployeeSelect('');
 
     alFiltered = [...alAllData];
     document.getElementById('alCountNum').textContent = alFiltered.length;
@@ -225,14 +254,14 @@ async function alLoad() {
 }
 
 function alApplyFilters() {
-    const unit = document.getElementById('alFilterUnit').value;
+    const unitName = alUnitNameFromFilter();
     const emp = document.getElementById('alFilterEmployee').value;
     const action = document.getElementById('alFilterAction').value;
     const from = document.getElementById('alFilterFrom').value;
     const to = document.getElementById('alFilterTo').value;
 
     alFiltered = alAllData.filter(d => {
-        if (unit && d.organizationalUnit !== unit) return false;
+        if (unitName && d.organizationalUnit !== unitName) return false;
         if (emp && d.userName !== emp) return false;
         if (action && d.action !== action) return false;
         if (from) {
@@ -253,10 +282,10 @@ function alApplyFilters() {
 
 function alClearFilters() {
     document.getElementById('alFilterUnit').value = '';
-    document.getElementById('alFilterEmployee').value = '';
     document.getElementById('alFilterAction').value = '';
     document.getElementById('alFilterFrom').value = '';
     document.getElementById('alFilterTo').value = '';
+    alRebuildEmployeeSelect('');
     alFiltered = [...alAllData];
     document.getElementById('alCountNum').textContent = alFiltered.length;
     alPage = 1;

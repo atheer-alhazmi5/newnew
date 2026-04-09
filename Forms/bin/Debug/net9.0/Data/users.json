@@ -1,7 +1,7 @@
 [
   {
     "Id": 1,
-    "NationalId": "",
+    "NationalId": "1111111111",
     "Username": "admin",
     "Email": "majed@emirate.gov.sa",
     "Phone": "",
@@ -18,7 +18,7 @@
   },
   {
     "Id": 2,
-    "NationalId": "",
+    "NationalId": "1010101010",
     "Username": "atheer",
     "Email": "atheer@emirate.gov.sa",
     "Phone": "",
@@ -35,7 +35,7 @@
   },
   {
     "Id": 3,
-    "NationalId": "",
+    "NationalId": "1020202020",
     "Username": "rawan",
     "Email": "rawan@emirate.gov.sa",
     "Phone": "",
@@ -52,7 +52,7 @@
   },
   {
     "Id": 4,
-    "NationalId": "",
+    "NationalId": "1030303030",
     "Username": "amal",
     "Email": "amal@emirate.gov.sa",
     "Phone": "",
@@ -69,7 +69,7 @@
   },
   {
     "Id": 5,
-    "NationalId": "",
+    "NationalId": "1040404040",
     "Username": "nujood",
     "Email": "nujood@emirate.gov.sa",
     "Phone": "",
@@ -113,7 +113,7 @@
     "Role": "Employee",
     "DepartmentId": 5,
     "Department": null,
-    "Status": "Active",
+    "Status": "Inactive",
     "CreatedAt": "2026-04-02T09:58:42.157326+03:00",
     "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
     "RoleName": "Employee"

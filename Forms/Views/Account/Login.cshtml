@@ -11,127 +11,571 @@
     <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="~/css/styles.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --sa-50: #F3FCF6; --sa-100: #DFF6E7; --sa-200: #B8EACB; --sa-300: #88D8AD;
+            --sa-400: #54C08A; --sa-500: #25935F; --sa-600: #1B8354; --sa-700: #166A45;
+            --sa-800: #14573A; --sa-900: #104631; --sa-950: #092A1E;
+            --gold-100: #FFFCE6; --gold-200: #FCF3BD; --gold-300: #FAE996;
+            --gold-400: #F7D54D; --gold-500: #F5BD02; --gold-600: #DBA102; --gold-700: #B87B02;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #FAFBFC;
+            color: #1F2A37;
+            line-height: 1.8;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ══════════════════════════════
+           NAVBAR  (same as landing page)
+        ══════════════════════════════ */
+        .lp-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,.06);
+        }
+        .lp-nav-inner {
+            max-width: 1280px; margin: 0 auto; padding: 0 40px;
+            display: flex; align-items: center; justify-content: space-between; height: 72px;
+        }
+        .lp-nav-brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+        .lp-nav-logo { width: 48px; height: 48px; object-fit: contain; }
+        .lp-nav-brand-text { font-weight: 800; font-size: 15px; color: var(--sa-800); line-height: 1.4; }
+        .lp-nav-brand-sub { font-size: 11px; color: #6C737F; font-weight: 600; }
+        .lp-nav-links { display: flex; align-items: center; gap: 12px; }
+        .lp-nav-link {
+            padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 14px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            transition: all .2s;
+        }
+        .lp-nav-link-ghost { color: var(--sa-700); }
+        .lp-nav-link-ghost:hover { background: var(--sa-50); }
+
+        /* ══════════════════════════════
+           PAGE
+        ══════════════════════════════ */
+        .lg-page {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+        }
+
+        /* ══════════════════════════════
+           MAIN  (hero-like background)
+        ══════════════════════════════ */
+        .lg-main {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+            padding: 100px 40px 60px;
+        }
+        /* Same background as landing hero */
+        .lg-main::before {
+            content: ''; position: absolute; inset: 0; z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 80%, rgba(37,147,95,.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 20%, rgba(219,161,2,.06) 0%, transparent 60%),
+                linear-gradient(180deg, #ffffff 0%, #F7FDF9 40%, #F3FCF6 100%);
+        }
+        .lg-main::after {
+            content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            background-image: radial-gradient(circle at 1px 1px, rgba(37,147,95,.04) 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+        .lg-glow {
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%); z-index: 1;
+            width: 800px; height: 800px; border-radius: 50%; pointer-events: none;
+            background: radial-gradient(circle, rgba(37,147,95,.05) 0%, transparent 70%);
+        }
+
+        .lg-content {
+            position: relative; z-index: 2;
+            display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 500px; margin: 0 auto;
+        }
+
+        /* Header above card — no box */
+        .lg-card-header {
+            text-align: center; margin-bottom: 28px;
+        }
+        .lg-card-top-icon {
+            width: 68px; height: 68px; border-radius: 50%;
+            background: rgba(255,255,255,.7);
+            border: 2px solid var(--sa-200);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 18px; font-size: 30px; color: var(--sa-600);
+            box-shadow: 0 4px 16px rgba(37,147,95,.1);
+        }
+        .lg-card-title {
+            font-size: 22px; font-weight: 900; color: var(--sa-900);
+            margin-bottom: 6px; line-height: 1.3;
+        }
+        .lg-card-sub {
+            font-size: 14px; color: #6C737F; font-weight: 600;
+        }
+
+        /* ══════════════════════════════
+           LOGIN CARD
+        ══════════════════════════════ */
+        .lg-card {
+            width: 100%;
+            background: #fff;
+            border-radius: 24px;
+            border: 1px solid #E5E7EB;
+            box-shadow: 0 4px 6px rgba(0,0,0,.04), 0 20px 48px rgba(0,0,0,.06);
+            overflow: hidden;
+        }
+
+        .lg-card-body { padding: 28px 36px 32px; }
+
+        /* Fields */
+        .lg-field { margin-bottom: 18px; }
+        .lg-field-label {
+            display: block; font-weight: 700; font-size: 13px;
+            color: #374151; margin-bottom: 7px;
+        }
+        .lg-req { color: #DC2626; margin-right: 3px; }
+        .lg-field-wrap { position: relative; }
+        .lg-field-input {
+            width: 100%; padding: 13px 16px;
+            border: 1.5px solid #D1D5DB; border-radius: 12px;
+            font-size: 14px; font-family: 'Cairo', sans-serif;
+            background: #fff; color: #1F2A37;
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+        .lg-field-input::placeholder { color: #C5C8CD; }
+        .lg-field-input:focus {
+            border-color: var(--sa-500);
+            box-shadow: 0 0 0 3px rgba(37,147,95,.1);
+        }
+        .lg-pw-toggle {
+            position: absolute; top: 50%; left: 14px; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer; padding: 4px;
+            color: #9CA3AF; font-size: 18px; display: flex; align-items: center;
+            transition: color .2s; line-height: 1;
+        }
+        .lg-pw-toggle:hover { color: #6B7280; }
+
+        /* Remember row */
+        .lg-remember {
+            display: flex; align-items: center; gap: 9px;
+            margin-bottom: 20px; cursor: pointer; user-select: none;
+        }
+        .lg-remember-checkbox {
+            width: 18px; height: 18px; appearance: none; cursor: pointer;
+            border: 2px solid #D1D5DB; border-radius: 5px;
+            background: #fff; position: relative; flex-shrink: 0;
+            transition: all .15s;
+        }
+        .lg-remember-checkbox:checked { background: var(--sa-600); border-color: var(--sa-600); }
+        .lg-remember-checkbox:checked::after {
+            content: ''; position: absolute; top: 2px; right: 5px;
+            width: 5px; height: 9px; border: solid #fff;
+            border-width: 0 2px 2px 0; transform: rotate(45deg);
+        }
+        .lg-remember-label { font-size: 14px; color: #6B7280; font-weight: 600; }
+
+        /* Error */
+        .lg-error {
+            background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
+            padding: 10px 14px; font-size: 13px; color: #DC2626;
+            display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+        }
+        .lg-error i { font-size: 15px; flex-shrink: 0; }
+
+        /* Submit button (same style as lp-btn-primary) */
+        .lg-submit {
+            width: 100%; height: 52px;
+            border: none; border-radius: 999px;
+            background: linear-gradient(135deg, #14573A 0%, #104631 100%);
+            color: #fff; font-size: 16px; font-weight: 800;
+            font-family: 'Cairo', sans-serif; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            outline: none; position: relative; overflow: hidden;
+            box-shadow: 0 10px 26px rgba(16,70,49,.32), inset 0 1px 0 rgba(255,255,255,.18);
+            transition: transform .25s ease, box-shadow .25s ease, background .35s ease, color .35s ease;
+        }
+        .lg-submit::before {
+            content: ''; position: absolute; top: -40%; right: -65%;
+            width: 58%; height: 180%; transform: rotate(22deg);
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.28) 45%, transparent 100%);
+            transition: right .55s ease;
+        }
+        .lg-submit:hover::before { right: 120%; }
+        .lg-submit:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #F7D54D 0%, #F5BD02 100%);
+            color: #104631;
+            box-shadow: 0 14px 30px rgba(245,189,2,.33), inset 0 1px 0 rgba(255,255,255,.38);
+        }
+        .lg-submit.loading,
+        .lg-submit.loading:hover {
+            background: linear-gradient(135deg, var(--sa-700), var(--sa-800));
+            color: #fff; transform: none; cursor: default;
+        }
+
+        /* Demo section */
+        .lg-demo {
+            padding: 18px 36px 28px;
+            border-top: 1px solid #F3F4F6;
+        }
+        .lg-demo-sep {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+        }
+        .lg-demo-sep::before, .lg-demo-sep::after {
+            content: ''; flex: 1; height: 1px; background: #E5E7EB;
+        }
+        .lg-demo-sep-text { font-size: 11px; font-weight: 700; color: #B0B3B8; white-space: nowrap; }
+        .lg-demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .lg-demo-btn {
+            padding: 10px 14px; border-radius: 12px;
+            border: 1.5px solid #E5E7EB; background: #FAFBFC;
+            cursor: pointer; transition: all .15s;
+            font-family: 'Cairo', sans-serif; text-align: right;
+        }
+        .lg-demo-btn:hover { border-color: var(--sa-200); background: var(--sa-50); }
+        .lg-demo-name { font-weight: 800; font-size: 12px; color: var(--sa-900); line-height: 1.4; }
+        .lg-demo-role { font-size: 11px; font-weight: 700; color: var(--gold-600); }
+        .lg-demo-user { font-size: 10px; color: #B0B3B8; font-family: 'Courier New', monospace; margin-top: 1px; }
+        /* رقم الهوية ) */
+        .lg-demo-nid {
+            display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap;
+            gap: 6px; margin-top: 5px; padding-top: 5px; border-top: 1px dashed #E5E7EB;
+        }
+        .lg-demo-nid-lbl { font-size: 9px; font-weight: 800; color: #9CA3AF; letter-spacing: .02em; }
+        .lg-demo-nid-val {
+            font-size: 11px; font-weight: 700; color: #374151;
+            font-family: ui-monospace, 'Cairo', 'Courier New', monospace;
+            direction: ltr; unicode-bidi: embed; letter-spacing: .04em;
+        }
+
+        /* ══════════════════════════════
+           FOOTER 
+        ══════════════════════════════ */
+        .lp-footer { background: var(--sa-950); padding: 48px 40px 32px; }
+        .lp-footer-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 32px;
+        }
+        .lp-footer-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .lp-footer-logo { width: 40px; height: 40px; object-fit: contain; filter: brightness(0) invert(1); opacity: .9; }
+        .lp-footer-brand-text { font-weight: 700; font-size: 14px; color: rgba(255,255,255,.9); }
+        .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,.5); max-width: 320px; line-height: 1.8; }
+        .lp-footer-col-title { font-weight: 700; font-size: 14px; color: rgba(255,255,255,.8); margin-bottom: 16px; }
+        .lp-footer-link {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: rgba(255,255,255,.5); text-decoration: none;
+            margin-bottom: 10px; transition: color .2s;
+        }
+        .lp-footer-link:hover { color: var(--gold-400); }
+        .lp-footer-social { display: flex; gap: 10px; margin-top: 8px; }
+        .lp-footer-social a {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,.6); font-size: 16px; text-decoration: none;
+            transition: all .2s;
+        }
+        .lp-footer-social a:hover { background: rgba(255,255,255,.12); color: var(--gold-400); }
+        .lp-footer-bottom {
+            max-width: 1200px; margin: 32px auto 0;
+            padding-top: 24px; border-top: 1px solid rgba(255,255,255,.08);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        .lp-footer-copy { font-size: 12px; color: rgba(255,255,255,.35); }
+        .lp-footer-dev { font-size: 12px; color: rgba(255,255,255,.35); }
+        .lp-footer-dev span { color: var(--gold-500); font-weight: 700; }
+
+        /* ══════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════ */
+        @@media (max-width: 600px) {
+            .lg-main { padding: 88px 16px 40px; }
+            .lp-nav-inner { padding: 0 20px; height: 64px; }
+            .lp-nav-brand-text { font-size: 13px; }
+            .lg-card-top { padding: 28px 22px 22px; }
+            .lg-card-top-icon { width: 52px; height: 52px; font-size: 22px; }
+            .lg-card-title { font-size: 22px; }
+            .lg-card-body { padding: 22px 22px 24px; }
+            .lg-demo { padding: 16px 22px 22px; }
+            .lg-demo-grid { grid-template-columns: 1fr; }
+            .lp-footer { padding: 32px 20px 24px; }
+            .lp-footer-inner { flex-direction: column; text-align: center; align-items: center; }
+            .lp-footer-desc { max-width: 100%; }
+            .lp-footer-bottom { flex-direction: column; text-align: center; }
+            .lp-footer-social { justify-content: center; }
+        }
+    </style>
 </head>
 <body>
-<div class="login-page">
-    <div class="login-body">
-        <!-- RIGHT: Logo -->
-        <div class="login-right">
-            <img src="~/images/logo1.webp" alt="شعار" class="login-logo"
-                 onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
-            <h3 style="color:var(--sa-600);font-weight:700;margin-bottom:8px;">نظام إدارة النماذج وسير الإجراءات</h3>
-          
-            <div style="width:48px;height:3px;background:var(--gold-600);border-radius:2px;"></div>
+<div class="lg-page">
+
+    <!-- NAV (identical to landing page) -->
+    <nav class="lp-nav">
+        <div class="lp-nav-inner">
+            <a href="/" class="lp-nav-brand">
+                <img src="~/images/logo1.webp" alt="شعار" class="lp-nav-logo"
+                     onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+                <div>
+                    <div class="lp-nav-brand-text">نظام إدارة النماذج وسير الإجراءات</div>
+                    <div class="lp-nav-brand-sub">إمارة منطقة المدينة المنورة</div>
+                </div>
+            </a>
+            <div class="lp-nav-links"></div>
         </div>
-        <!-- LEFT: Form -->
-        <div class="login-left">
-            <div class="login-card">
-                <div class="login-card-body">
-                    <form id="loginForm" method="post" action="/Account/Login">
-                        <input type="hidden" name="__RequestVerificationToken"
-                               value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
-                        <div class="mb-3">
-                            <label class="form-label">اسم المستخدم</label>
-                            <input type="text" class="form-control form-control-lg" name="Username" id="username"
-                                   placeholder="أدخل اسم المستخدم" value="@Model.Username" required>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="lg-main">
+        <div class="lg-glow"></div>
+
+        <div class="lg-content">
+
+            <!-- Header: outside card, on page background -->
+            <div class="lg-card-header">
+                <div class="lg-card-top-icon">
+                    <i class="bi bi-person-lock"></i>
+                </div>
+                <h2 class="lg-card-title">بوابة الدخول</h2>
+               
+            </div>
+
+            <!-- WHITE CARD: starts here -->
+            <div class="lg-card">
+                    <div class="lg-card-body">
+                        <form id="loginForm" method="post" action="/Account/Login">
+                            <input type="hidden" name="__RequestVerificationToken"
+                                   value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+
+                            <div class="lg-field">
+                                <label class="lg-field-label" for="username">
+                                    اسم المستخدم <span class="lg-req">*</span>
+                                </label>
+                                <input type="text" class="lg-field-input" id="username" name="Username"
+                                       placeholder="أدخل اسم المستخدم" value="@Model.Username" required autocomplete="username">
+                            </div>
+
+                            <div class="lg-field">
+                                <label class="lg-field-label" for="password">
+                                    كلمة المرور <span class="lg-req">*</span>
+                                </label>
+                                <div class="lg-field-wrap">
+                                    <input type="password" class="lg-field-input" id="password" name="Password"
+                                           placeholder="أدخل كلمة المرور" style="padding-left:46px;" required autocomplete="current-password">
+                                    <button type="button" class="lg-pw-toggle" id="togglePw" tabindex="-1">
+                                        <i class="bi bi-eye" id="togglePwIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <label class="lg-remember">
+                                <input type="checkbox" name="RememberMe" class="lg-remember-checkbox">
+                                <span class="lg-remember-label">تذكرني</span>
+                            </label>
+
+                            <div class="lg-error" id="serverMsg" style="@(string.IsNullOrEmpty(Model.ErrorMessage) ? "display:none;" : "")">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <span>@Model.ErrorMessage</span>
+                            </div>
+                            <div id="errorMsg" class="lg-error" style="display:none;"></div>
+
+                            <button type="submit" class="lg-submit" id="loginBtn">
+                                <i class="bi bi-box-arrow-in-left"></i> تسجيل الدخول
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Demo Accounts -->
+                    <div class="lg-demo">
+                        <div class="lg-demo-sep">
+                            <span class="lg-demo-sep-text">بيانات الدخول التجريبية</span>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">كلمة المرور</label>
-                            <input type="password" class="form-control form-control-lg" name="Password" id="password"
-                                   placeholder="أدخل كلمة المرور" required>
+                        <div class="lg-demo-grid">
+                            <button type="button" class="lg-demo-btn" onclick="fillLogin('admin','admin123')">
+                                <div class="lg-demo-name">ماجد الحسيني</div>
+                                <div class="lg-demo-role">مدير النظام</div>
+                                <div class="lg-demo-user">admin</div>
+             
+                            </button>
+                            <button type="button" class="lg-demo-btn" onclick="fillLogin('atheer','password123')">
+                                <div class="lg-demo-name">أثير الحازمي</div>
+                                <div class="lg-demo-role">مدير وحدة تنظيمية</div>
+                                <div class="lg-demo-user">atheer</div>
+                              
+                            </button>
+                            <button type="button" class="lg-demo-btn" onclick="fillLogin('rawan','password123')">
+                                <div class="lg-demo-name">روان التميمي</div>
+                                <div class="lg-demo-role">ممثل وحدة تنظيمية</div>
+                                <div class="lg-demo-user">rawan</div>
+   
+                            </button>
+                            <button type="button" class="lg-demo-btn" onclick="fillLogin('nujood','password123')">
+                                <div class="lg-demo-name">نجود الرشيدي</div>
+                                <div class="lg-demo-role">موظف</div>
+                                <div class="lg-demo-user">nujood</div>
+
+                            </button>
                         </div>
-                        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                        {
-                            <div class="alert alert-danger" style="font-size:13px;">@Model.ErrorMessage</div>
-                        }
-                        <div id="errorMsg" class="alert alert-danger d-none" style="font-size:13px;"></div>
-                        <button type="submit" class="login-submit-btn" id="loginBtn">
-                            <i class="bi bi-person-fill"></i> تسجيل الدخول
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
 
-            <div class="demo-card">
-                <p style="text-align:center;font-weight:700;font-size:13px;color:#6c757d;margin-bottom:12px;">بيانات الدخول التجريبية</p>
-                <button class="demo-btn" onclick="fillLogin('admin','admin123')">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><div style="font-weight:700;">ماجد الحسيني</div><div style="font-size:12px;color:var(--gold-600);">مدير النظام</div></div>
-                        <span style="font-size:12px;color:#a3a3a3;">admin</span>
-                    </div>
-                </button>
-                <button class="demo-btn" onclick="fillLogin('atheer','password123')">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><div style="font-weight:700;">أثير الحازمي</div><div style="font-size:12px;color:var(--gold-600);">مدير الوحدة التنظيمية</div></div>
-                        <span style="font-size:12px;color:#a3a3a3;">atheer</span>
-                    </div>
-                </button>
-                <button class="demo-btn" onclick="fillLogin('rawan','password123')">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><div style="font-weight:700;">روان التميمي</div><div style="font-size:12px;color:var(--gold-600);">ممثل وحدة تنظيمية</div></div>
-                        <span style="font-size:12px;color:#a3a3a3;">rawan</span>
-                    </div>
-                </button>
-                <button class="demo-btn" onclick="fillLogin('nujood','password123')">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><div style="font-weight:700;">نجود الرشيدي</div><div style="font-size:12px;color:var(--gold-600);">موظف</div></div>
-                        <span style="font-size:12px;color:#a3a3a3;">nujood</span>
-                    </div>
-                </button>
+        </div><!-- /.lg-content -->
+    </main>
+
+    <!-- FOOTER: مطابق تماماً لصفحة اللاندنق بيج -->
+    <footer class="lp-footer">
+        <div class="lp-footer-inner">
+            <div>
+                <div class="lp-footer-brand">
+                    <img src="~/images/logo1.webp" alt="شعار" class="lp-footer-logo"
+                         onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+                    <span class="lp-footer-brand-text">نظام إدارة النماذج وسير الإجراءات</span>
+                </div>
+                <p class="lp-footer-desc">
+                    نظام يهدف إلى أتمتة الإجراءات وتقليل الاعتماد على الورق.
+                </p>
+            </div>
+            <div>
+                <div class="lp-footer-col-title">روابط سريعة</div>
+                <a href="/" class="lp-footer-link"><i class="bi bi-house-door"></i> الصفحة الرئيسية</a>
+                <a href="/Guide/Index" class="lp-footer-link"><i class="bi bi-book"></i> دليل الاستخدام</a>
+                <a href="/Feedback/Index" class="lp-footer-link"><i class="bi bi-star"></i> تقييم النظام</a>
+            </div>
+            <div>
+                <div class="lp-footer-col-title">الدعم الفني</div>
+                <a href="mailto:support@madinah.gov.sa" class="lp-footer-link"><i class="bi bi-envelope-fill"></i> support@@madinah.gov.sa</a>
+                <a href="tel:+966148150198" class="lp-footer-link"><i class="bi bi-telephone-fill"></i> 0148150198</a>
+                <a href="#" class="lp-footer-link"><i class="bi bi-clock-fill"></i> الأحد - الخميس</a>
+                <div class="lp-footer-social">
+                    <a href="#" title="انستقرام"><i class="bi bi-instagram"></i></a>
+                    <a href="#" title="لينكدإن"><i class="bi bi-linkedin"></i></a>
+                    <a href="#" title="منصة إكس"><i class="bi bi-twitter-x"></i></a>
+                </div>
             </div>
         </div>
-    </div>
-
-    <footer id="main-footer">
-        <div class="footer-top">
-            <div class="footer-grid">
-                <div class="footer-col footer-col-about">
-                    <div class="footer-about-text">جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026</div>
-                    <div class="footer-dev-text">تنفيذ وتطوير: <span class="gold-text">إدارة الأنظمة والبرامج</span></div>
-                </div>
-                <div class="footer-col footer-col-support">
-                    <h6 class="footer-col-title">الاتصال والدعم</h6>
-                    <ul class="footer-links">
-                        <li><a href="/Guide/Index"><i class="bi bi-book" style="margin-left:6px;"></i>دليل الاستخدام</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col footer-col-social">
-                    <h6 class="footer-col-title">التواصل الاجتماعي</h6>
-                    <div class="footer-social">
-                        <a href="#"><i class="bi bi-instagram"></i></a>
-                        <a href="#"><i class="bi bi-linkedin"></i></a>
-                        <a href="#"><i class="bi bi-twitter-x"></i></a>
-                    </div>
-                    <div style="margin-top:20px;">
-                        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px;">أدوات الإتاحة والوصول</div>
-                        <div class="footer-acc-icons">
-                            <button onclick="document.body.classList.toggle('high-contrast')" title="تباين الألوان"><i class="bi bi-eye"></i></button>
-                            <button onclick="(function(){var r=document.documentElement,c=parseFloat(getComputedStyle(r).fontSize);r.style.fontSize=(c>=22?16:c+2)+'px'})()" title="تكبير الخط"><i class="bi bi-zoom-in"></i></button>
-                            <button onclick="document.body.classList.toggle('accessible-mode')" title="إمكانية الوصول"><i class="bi bi-universal-access-circle"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="lp-footer-bottom">
+            <span class="lp-footer-copy">جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026</span>
+            <span class="lp-footer-dev">تنفيذ وتطوير: <span>إدارة الأنظمة والبرامج</span></span>
         </div>
     </footer>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div id="sysPopupContainer"></div>
+<style>
+.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10050;display:flex;align-items:center;justify-content:center;animation:lgPopFadeIn .25s ease; }
+.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:440px;width:calc(100% - 40px);animation:lgPopSlideUp .3s ease; }
+.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff; }
+.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff; }
+.sys-popup-body { background:#fff;padding:20px 22px; }
+.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center; }
+.sys-popup-close { background:#fff;border:1.5px solid #E5E7EB;border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:#374151;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
+.sys-popup-close:hover { background:#F9FAFB; }
+@@keyframes lgPopFadeIn  { from { opacity:0; } to { opacity:1; } }
+@@keyframes lgPopFadeOut { from { opacity:1; } to { opacity:0; } }
+@@keyframes lgPopSlideUp { from { opacity:0;transform:translateY(30px); } to { opacity:1;transform:translateY(0); } }
+</style>
+<script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function initLoginPopups() {
+    const dismissed = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
+    try {
+        const popups = await apiFetch('/Settings/GetActivePopups?location=' + encodeURIComponent('login'));
+        if (!Array.isArray(popups) || !popups.length) return;
+        const queue = popups.filter(function(p) { return dismissed.indexOf(p.id) === -1; });
+        if (!queue.length) return;
+        var idx = 0;
+        function showNext() {
+            if (idx >= queue.length) return;
+            var p = queue[idx++];
+            showLoginPopup(p, function() { setTimeout(showNext, 400); });
+        }
+        setTimeout(showNext, 800);
+    } catch (e) { /* silent */ }
+
+    function showLoginPopup(p, onClose) {
+        var container = document.getElementById('sysPopupContainer');
+        var el = document.createElement('div');
+        el.className = 'sys-popup-overlay';
+        var headCls = p.category === 'تنبيه' ? 'sys-popup-head-alert' : 'sys-popup-head-ad';
+        var catBiIcon = p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill';
+        var bodyHtml = '';
+        if (p.contentType === 'text') {
+            bodyHtml = '<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">' + escHtml(p.textContent || '') + '</p>';
+        } else if (p.contentType === 'image' && p.attachmentUrl) {
+            var imgU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
+            bodyHtml = '<img src="' + imgU + '" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />';
+        } else if (p.contentType === 'video' && p.attachmentUrl) {
+            var vidU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
+            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;border-radius:10px;"></video>';
+        }
+        el.innerHTML = '<div class="sys-popup-box">' +
+            '<div class="' + headCls + '">' +
+            '<div style="font-size:12px;font-weight:700;opacity:.9;margin-bottom:6px;display:flex;align-items:center;gap:5px;">' +
+            '<i class="bi ' + catBiIcon + '" style="color:#fff;"></i><span style="color:#fff;">' + escHtml(p.category) + '</span></div>' +
+            '<div style="font-weight:700;font-size:' + (p.titleFontSize || 18) + 'px;color:' + escHtml(p.titleColor || '#ffffff') + ';">' + escHtml(p.title) + '</div></div>' +
+            '<div class="sys-popup-body">' + (bodyHtml || '<p style="color:#9CA3AF;font-size:13px;margin:0;">لا يوجد محتوى إضافي</p>') + '</div>' +
+            '<div class="sys-popup-footer"><button type="button" class="sys-popup-close" id="sysPClose_' + p.id + '">إغلاق</button></div></div>';
+        container.appendChild(el);
+        function closePopup() {
+            el.style.animation = 'lgPopFadeOut .2s ease forwards';
+            setTimeout(function() { el.remove(); if (onClose) onClose(); }, 200);
+            if (p.displayPeriod === 'once') {
+                var d = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
+                if (d.indexOf(p.id) === -1) { d.push(p.id); localStorage.setItem('sysPopupDismissed', JSON.stringify(d)); }
+                apiFetch('/Settings/DismissPopup?id=' + p.id, 'POST').catch(function() {});
+            }
+        }
+        document.getElementById('sysPClose_' + p.id).addEventListener('click', closePopup);
+        el.addEventListener('click', function(e) { if (e.target === el) closePopup(); });
+    }
+    function escHtml(s) {
+        if (!s) return '';
+        var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+    }
+});
+</script>
+
 <script>
 function fillLogin(u, p) {
     document.getElementById('username').value = u;
     document.getElementById('password').value = p;
 }
 
-document.getElementById('loginForm').addEventListener('submit', function(e) {
+document.getElementById('togglePw').addEventListener('click', function () {
+    var pw = document.getElementById('password');
+    var icon = document.getElementById('togglePwIcon');
+    if (pw.type === 'password') {
+        pw.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        pw.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+});
+
+document.getElementById('loginForm').addEventListener('submit', function () {
     var btn = document.getElementById('loginBtn');
     btn.disabled = true;
-    btn.classList.add('active-green');
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="margin-left:8px;"></span> جاري الدخول...';
+    btn.classList.add('loading');
+    btn.innerHTML = '<span style="width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:lgSpin .6s linear infinite;margin-left:8px;"></span> جاري الدخول...';
+    if (!document.getElementById('lgSpinStyle')) {
+        var s = document.createElement('style');
+        s.id = 'lgSpinStyle';
+        s.textContent = '@@keyframes lgSpin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(s);
+    }
 });
 </script>
 </body>

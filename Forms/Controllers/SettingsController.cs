@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
 using FormsSystem.Models.Entities;
 using FormsSystem.Models.Enums;
 using FormsSystem.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 
@@ -40,6 +42,10 @@ public class SettingsController : BaseController
         var logs = await _ds.ListAllAuditLogsAsync();
         var beneficiaries = await _ds.ListBeneficiariesAsync();
         var orgUnits = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
+        var users = await _ds.ListUsersAsync();
+        var nidByUserId = BuildNationalIdByUserId(users);
+        var ouByUserId = BuildOrganizationalUnitNameByUserId(users, depts, orgUnits);
 
         return Json(new
         {
@@ -49,8 +55,8 @@ public class SettingsController : BaseController
                 l.Id,
                 l.UserId,
                 l.UserName,
-                l.NationalId,
-                l.OrganizationalUnit,
+                NationalId = ResolveNationalIdForAudit(l, nidByUserId),
+                OrganizationalUnit = ResolveOrganizationalUnitForAudit(l, ouByUserId),
                 l.Action,
                 l.EntityType,
                 l.EntityId,
@@ -63,7 +69,7 @@ public class SettingsController : BaseController
             organizationalUnits = orgUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder)
                 .Select(u => new { u.Id, u.Name }).ToList(),
             beneficiaries = beneficiaries.Where(b => b.IsActive)
-                .Select(b => new { b.Id, b.FullName, b.NationalId }).ToList()
+                .Select(b => new { b.Id, b.FullName, b.NationalId, b.OrganizationalUnitId }).ToList()
         });
     }
 
@@ -74,13 +80,18 @@ public class SettingsController : BaseController
             return Unauthorized();
 
         var logs = await _ds.ListAllAuditLogsAsync();
+        var users = await _ds.ListUsersAsync();
+        var depts = await _ds.ListDepartmentsAsync();
+        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
+        var nidByUserId = BuildNationalIdByUserId(users);
+        var ouByUserId = BuildOrganizationalUnitNameByUserId(users, depts, orgUnits);
         var columns = new List<string> { "#", "رقم الهوية", "اسم المستفيد", "الوحدة التنظيمية", "العملية", "التاريخ والوقت", "المتصفح", "عنوان IP", "نظام التشغيل" };
         var rows = logs.Select((l, i) => new Dictionary<string, string>
         {
             ["#"] = (i + 1).ToString(),
-            ["رقم الهوية"] = l.NationalId,
+            ["رقم الهوية"] = ResolveNationalIdForAudit(l, nidByUserId),
             ["اسم المستفيد"] = l.UserName,
-            ["الوحدة التنظيمية"] = l.OrganizationalUnit,
+            ["الوحدة التنظيمية"] = ResolveOrganizationalUnitForAudit(l, ouByUserId),
             ["العملية"] = l.Action,
             ["التاريخ والوقت"] = l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
             ["المتصفح"] = l.Browser,
@@ -99,13 +110,18 @@ public class SettingsController : BaseController
             return Unauthorized();
 
         var logs = await _ds.ListAllAuditLogsAsync();
+        var users = await _ds.ListUsersAsync();
+        var depts = await _ds.ListDepartmentsAsync();
+        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
+        var nidByUserId = BuildNationalIdByUserId(users);
+        var ouByUserId = BuildOrganizationalUnitNameByUserId(users, depts, orgUnits);
         var headers = new List<string> { "#", "رقم الهوية", "اسم المستفيد", "الوحدة التنظيمية", "العملية", "التاريخ والوقت", "المتصفح", "عنوان IP", "نظام التشغيل" };
         var rows = logs.Select((l, i) => new List<string>
         {
             (i + 1).ToString(),
-            l.NationalId,
+            ResolveNationalIdForAudit(l, nidByUserId),
             l.UserName,
-            l.OrganizationalUnit,
+            ResolveOrganizationalUnitForAudit(l, ouByUserId),
             l.Action,
             l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
             l.Browser,
@@ -419,13 +435,16 @@ public class SettingsController : BaseController
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetActivePopups(string location)
     {
         var loc = (location ?? "").Trim();
-        // صفحة اللاندنق
+     
         if (!IsAuthenticated)
         {
-            if (!string.Equals(loc, "landing", StringComparison.OrdinalIgnoreCase))
+            var allowAnon = string.Equals(loc, "landing", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(loc, "login", StringComparison.OrdinalIgnoreCase);
+            if (!allowAnon)
                 return Json(new List<object>());
         }
 
@@ -493,7 +512,7 @@ public class SettingsController : BaseController
     public async Task<IActionResult> GetDeptsForPopup()
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin") return Unauthorized();
-        var units = await _ds.ListOrganizationalUnitsAsync();
+        var units = await _ds.ListActiveOrganizationalUnitsAsync();
         return Json(units.Select(u => new { u.Id, u.Name, u.ParentId, u.Level, u.SortOrder }));
     }
 
@@ -516,16 +535,21 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var data = await _ds.ListAllLoginAttemptsAsync();
-        var units = await _ds.ListOrganizationalUnitsAsync();
+        var units = await _ds.ListActiveOrganizationalUnitsAsync();
+        var users = await _ds.ListUsersAsync();
+        var depts = await _ds.ListDepartmentsAsync();
+        var allOrgUnits = await _ds.ListOrganizationalUnitsAsync();
+        var nidByUsername = BuildNationalIdByUsernameLower(users);
+        var ouByUsername = BuildOrganizationalUnitNameByUsernameLower(users, depts, allOrgUnits);
         return Json(new
         {
             success = true,
             data = data.Select(a => new
             {
                 a.Id,
-                a.NationalId,
+                NationalId = ResolveNationalIdForLoginAttempt(a, nidByUsername),
                 a.FullName,
-                a.OrganizationalUnit,
+                OrganizationalUnit = ResolveOrganizationalUnitForLoginAttempt(a, ouByUsername),
                 a.WarningType,
                 a.Severity,
                 a.Description,
@@ -592,8 +616,8 @@ public class SettingsController : BaseController
                 c.IsActive,
                 c.CreatedBy,
                 c.UpdatedBy,
-                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd") : ""
+                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             })
         });
     }
@@ -677,7 +701,7 @@ public class SettingsController : BaseController
 
         var isLinked = await _ds.IsClassificationLinkedAsync(req.Id);
         if (isLinked)
-            return Json(new { success = false, message = "لا يمكن حذف هذا التصنيف لأنه مرتبط بوحدات تنظيمية" });
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteClassificationAsync(req.Id);
 
@@ -725,8 +749,8 @@ public class SettingsController : BaseController
                 c.IsActive,
                 c.CreatedBy,
                 c.UpdatedBy,
-                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd") : ""
+                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             })
         });
     }
@@ -855,8 +879,8 @@ public class SettingsController : BaseController
                 c.IsActive,
                 c.CreatedBy,
                 c.UpdatedBy,
-                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd") : ""
+                CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             })
         });
     }
@@ -937,6 +961,9 @@ public class SettingsController : BaseController
         var row = await _ds.GetFormSectionByIdAsync(req.Id);
         if (row == null)
             return Json(new { success = false, message = "النوع غير موجود" });
+
+        if (await _ds.IsFormSectionLinkedAsync(req.Id))
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteFormSectionAsync(req.Id);
 
@@ -1098,6 +1125,7 @@ public class SettingsController : BaseController
 
         var units = await _ds.ListOrganizationalUnitsAsync();
         var classifications = await _ds.ListClassificationsAsync();
+        var activeClassifications = classifications.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList();
         return Json(new
         {
             success = true,
@@ -1115,11 +1143,11 @@ public class SettingsController : BaseController
                 u.SortOrder,
                 u.CreatedBy,
                 u.UpdatedBy,
-                CreatedAt = u.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = u.UpdatedAt.HasValue ? u.UpdatedAt.Value.ToString("yyyy-MM-dd") : ""
+                CreatedAt = u.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = u.UpdatedAt.HasValue ? u.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             }),
-            classifications = classifications.Select(c => new { c.Id, c.Name, c.Color }).ToList(),
-            mainUnits = units.Where(u => u.Level == "رئيسي").Select(u => new { u.Id, u.Name }).ToList()
+            classifications = activeClassifications.Select(c => new { c.Id, c.Name, c.Color }).ToList(),
+            mainUnits = units.Where(u => u.IsActive && u.Level == "رئيسي").Select(u => new { u.Id, u.Name }).ToList()
         });
     }
 
@@ -1204,9 +1232,9 @@ public class SettingsController : BaseController
         if (unit == null)
             return Json(new { success = false, message = "الوحدة غير موجودة" });
 
-        var all = await _ds.ListOrganizationalUnitsAsync();
-        if (all.Any(u => u.ParentId == req.Id))
-            return Json(new { success = false, message = "لا يمكن حذف وحدة لديها وحدات فرعية" });
+        var isLinked = await _ds.IsOrganizationalUnitLinkedAsync(req.Id);
+        if (isLinked)
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteOrganizationalUnitAsync(req.Id);
 
@@ -1232,6 +1260,7 @@ public class SettingsController : BaseController
 
         var list = await _ds.ListBeneficiariesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
         return Json(new
         {
             success = true,
@@ -1257,9 +1286,14 @@ public class SettingsController : BaseController
                 b.Username,
                 b.IsActive,
                 b.MainRole,
-                b.SubRole
+                b.IsUnitManager,
+                b.SubRole,
+                b.CreatedBy,
+                b.UpdatedBy,
+                CreatedAt = b.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = b.UpdatedAt.HasValue ? b.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             }),
-            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList()
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList()
         });
     }
 
@@ -1276,7 +1310,7 @@ public class SettingsController : BaseController
         if (dup != null)
             return dup;
 
-        if ((req.MainRole ?? "") == "مدير" && await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId))
+        if (req.IsUnitManager && await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId))
             return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
 
         if (string.IsNullOrEmpty(req.Password))
@@ -1299,14 +1333,16 @@ public class SettingsController : BaseController
             Email = req.Email!.Trim(),
             Username = req.Username!.Trim(),
             IsActive = req.IsActive,
-            MainRole = req.MainRole ?? "موظف",
+            MainRole = "موظف",
+            IsUnitManager = req.IsUnitManager,
             SubRole = req.SubRole ?? "",
-            PasswordHash = _pw.Hash(req.Password)
+            PasswordHash = _pw.Hash(req.Password),
+            CreatedBy = CurrentUserFullName
         };
 
         await _ds.AddBeneficiaryAsync(b);
 
-        var userRole = MapBeneficiaryToUserRole(b.MainRole, b.SubRole);
+        var userRole = MapBeneficiaryToUserRole(b.IsUnitManager, b.SubRole);
         var user = new User
         {
             NationalId = b.NationalId,
@@ -1342,8 +1378,8 @@ public class SettingsController : BaseController
         if (dup != null)
             return dup;
 
-        var newMainRole = req.MainRole ?? b.MainRole;
-        if (newMainRole == "مدير" && (b.MainRole != "مدير" || b.OrganizationalUnitId != req.OrganizationalUnitId))
+        var newIsUnitManager = req.IsUnitManager;
+        if (newIsUnitManager && (!b.IsUnitManager || b.OrganizationalUnitId != req.OrganizationalUnitId))
         {
             if (await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId, req.Id))
                 return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
@@ -1365,8 +1401,10 @@ public class SettingsController : BaseController
         b.Email = req.Email!.Trim();
         b.Username = req.Username!.Trim();
         b.IsActive = req.IsActive;
-        b.MainRole = newMainRole;
+        b.MainRole = "موظف";
+        b.IsUnitManager = newIsUnitManager;
         b.SubRole = req.SubRole ?? "";
+        b.UpdatedBy = CurrentUserFullName;
         b.UpdatedAt = DateTime.Now;
         if (!string.IsNullOrEmpty(req.Password))
             b.PasswordHash = _pw.Hash(req.Password);
@@ -1382,7 +1420,7 @@ public class SettingsController : BaseController
             existingUser.Phone = b.Phone;
             existingUser.PhotoUrl = b.PhotoUrl;
             existingUser.FullName = b.FullName;
-            existingUser.Role = MapBeneficiaryToUserRole(b.MainRole, b.SubRole);
+            existingUser.Role = MapBeneficiaryToUserRole(b.IsUnitManager, b.SubRole);
             existingUser.DepartmentId = b.OrganizationalUnitId;
             existingUser.Status = b.IsActive ? AccountStatus.Active : AccountStatus.Inactive;
             if (!string.IsNullOrEmpty(req.Password))
@@ -1402,6 +1440,10 @@ public class SettingsController : BaseController
 
         var b = await _ds.GetBeneficiaryByIdAsync(req.Id);
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
+
+        var isLinked = await _ds.IsBeneficiaryLinkedByCreationAsync(req.Id);
+        if (isLinked)
+            return Json(new { success = false, message = "هذا العنصر المستفيد مرتبط بعناصر تم انشائها ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteBeneficiaryAsync(req.Id);
         if (!string.IsNullOrEmpty(b.Username))
@@ -1430,10 +1472,10 @@ public class SettingsController : BaseController
         return null;
     }
 
-    private static UserRole MapBeneficiaryToUserRole(string mainRole, string subRole)
+    private static UserRole MapBeneficiaryToUserRole(bool isUnitManager, string subRole)
     {
         if (subRole == "مدير النظام") return UserRole.Admin;
-        if (mainRole == "مدير") return UserRole.Manager;
+        if (isUnitManager) return UserRole.Manager;
         if (subRole == "ممثل الوحدة التنظيمية") return UserRole.Employee;
         return UserRole.Staff;
     }
@@ -1470,11 +1512,6 @@ public class SettingsController : BaseController
         if (!System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-zA-Z0-9_]+$"))
             return "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط";
 
-        if (string.IsNullOrWhiteSpace(req.MainRole))
-            return "الدور الرئيسي مطلوب";
-        if (req.MainRole != "موظف" && req.MainRole != "مدير")
-            return "الدور الرئيسي يجب أن يكون موظف أو مدير";
-
         if (string.IsNullOrWhiteSpace(req.FirstName)) return "الاسم الأول مطلوب";
         if (string.IsNullOrWhiteSpace(req.SecondName)) return "الاسم الثاني مطلوب";
         if (string.IsNullOrWhiteSpace(req.ThirdName)) return "الاسم الثالث مطلوب";
@@ -1491,6 +1528,99 @@ public class SettingsController : BaseController
             if (pwdErr != null) return pwdErr;
         }
         return null;
+    }
+
+    private static Dictionary<int, string> BuildNationalIdByUserId(IEnumerable<User> users)
+    {
+        var d = new Dictionary<int, string>();
+        foreach (var u in users)
+        {
+            if (string.IsNullOrWhiteSpace(u.NationalId)) continue;
+            var nid = u.NationalId.Trim();
+            if (!d.ContainsKey(u.Id)) d[u.Id] = nid;
+        }
+        return d;
+    }
+
+    private static Dictionary<string, string> BuildNationalIdByUsernameLower(IEnumerable<User> users)
+    {
+        var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var u in users)
+        {
+            var key = (u.Username ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(u.NationalId)) continue;
+            var nid = u.NationalId.Trim();
+            if (!d.ContainsKey(key)) d[key] = nid;
+        }
+        return d;
+    }
+
+    private static string ResolveNationalIdForAudit(AuditLog l, Dictionary<int, string> nidByUserId)
+    {
+        if (!string.IsNullOrWhiteSpace(l.NationalId)) return l.NationalId;
+        if (l.UserId > 0 && nidByUserId.TryGetValue(l.UserId, out var nid)) return nid;
+        return l.NationalId ?? "";
+    }
+
+    private static string ResolveNationalIdForLoginAttempt(LoginAttempt a, Dictionary<string, string> nidByUsernameLower)
+    {
+        if (!string.IsNullOrWhiteSpace(a.NationalId)) return a.NationalId;
+        var key = (a.UsernameAttempted ?? "").Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(key) && nidByUsernameLower.TryGetValue(key, out var nid))
+            return nid;
+        return a.NationalId ?? "";
+    }
+
+    private static string ResolveUnitDisplayName(int departmentId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        var d = depts.FirstOrDefault(x => x.Id == departmentId);
+        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
+        var ou = orgUnits.FirstOrDefault(x => x.Id == departmentId);
+        return ou?.Name?.Trim() ?? "";
+    }
+
+    private static Dictionary<int, string> BuildOrganizationalUnitNameByUserId(
+        IEnumerable<User> users, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var u in users)
+        {
+            var name = ResolveUnitDisplayName(u.DepartmentId, depts, orgUnits);
+            if (string.IsNullOrEmpty(name)) continue;
+            if (!map.ContainsKey(u.Id)) map[u.Id] = name;
+        }
+        return map;
+    }
+
+    private static Dictionary<string, string> BuildOrganizationalUnitNameByUsernameLower(
+        IEnumerable<User> users, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var u in users)
+        {
+            var key = (u.Username ?? "").Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(key)) continue;
+            var name = ResolveUnitDisplayName(u.DepartmentId, depts, orgUnits);
+            if (string.IsNullOrEmpty(name)) continue;
+            if (!map.ContainsKey(key)) map[key] = name;
+        }
+        return map;
+    }
+
+    private static string ResolveOrganizationalUnitForAudit(AuditLog l, Dictionary<int, string> ouByUserId)
+    {
+        if (!string.IsNullOrWhiteSpace(l.OrganizationalUnit)) return l.OrganizationalUnit;
+        if (l.UserId > 0 && ouByUserId.TryGetValue(l.UserId, out var name)) return name;
+        return l.OrganizationalUnit ?? "";
+    }
+
+    private static string ResolveOrganizationalUnitForLoginAttempt(LoginAttempt a, Dictionary<string, string> ouByUsernameLower)
+    {
+        if (!string.IsNullOrWhiteSpace(a.OrganizationalUnit)) return a.OrganizationalUnit;
+        var key = (a.UsernameAttempted ?? "").Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(key) && ouByUsernameLower.TryGetValue(key, out var name))
+            return name;
+        return a.OrganizationalUnit ?? "";
     }
 
     private static string? ValidateBeneficiaryPasswordStrength(string password)
@@ -1527,7 +1657,7 @@ public class BeneficiaryRequest
     public string? Email { get; set; }
     public string? Username { get; set; }
     public bool IsActive { get; set; } = true;
-    public string? MainRole { get; set; }
+    public bool IsUnitManager { get; set; } = false;
     public string? SubRole { get; set; }
     public string? Password { get; set; }
     public string? ConfirmPassword { get; set; }

@@ -529,6 +529,7 @@ body.accessible-mode input:focus {
 .table tbody td {
     padding: 12px 16px; vertical-align: middle;
     border-bottom: 1px solid var(--gray-100);
+    font-style: normal !important;
 }
 .table tbody tr { transition: background var(--transition); }
 .table tbody tr:hover { background: var(--primary-light); }
@@ -783,88 +784,7 @@ body.accessible-mode input:focus {
 /* ============================================
    LOGIN PAGE
    ============================================ */
-.login-page {
-    min-height: 100vh; display: flex; flex-direction: column;
-}
-.login-body {
-    flex: 1; display: flex;
-}
-.login-right {
-    flex: 1.2; background: #fff;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 40px; overflow: visible;
-    min-width: 0;
-}
-img.login-logo {
-    width: 450px !important; height: 450px !important;
-    max-width: none !important; max-height: none !important;
-    object-fit: contain; margin-bottom: 20px;
-}
-.login-left {
-    flex: 1; background: #E8E8E8;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 40px;
-}
-.login-card {
-    background: #fff; border-radius: var(--radius);
-    box-shadow: var(--shadow-md); width: 100%;
-    max-width: 440px; overflow: hidden;
-}
-.login-card-body { padding: 28px; }
-.login-submit-btn {
-    width: 100%; padding: 14px;
-    border: 1px solid var(--gray-300); border-radius: var(--radius);
-    background: var(--gray-100); color: var(--gray-700);
-    font-size: 16px; font-weight: 700;
-    font-family: 'Cairo', sans-serif;
-    cursor: pointer; transition: all .2s;
-    display: flex; align-items: center;
-    justify-content: center; gap: 8px;
-    outline: none;
-}
-.login-submit-btn i { font-size: 20px; color: var(--gray-400); transition: color .2s; }
-.login-submit-btn:hover {
-    background: var(--gray-200); border-color: var(--gray-400); color: var(--gray-800);
-}
-.login-submit-btn:hover i { color: var(--gray-600); }
-.login-submit-btn:focus-visible {
-    box-shadow: 0 0 0 3px rgba(20,87,58,.2);
-    border-color: var(--sa-600);
-}
-.login-submit-btn:active {
-    background: var(--sa-800); color: #fff;
-    border-color: var(--sa-800);
-}
-.login-submit-btn:active i { color: #fff; }
-.login-submit-btn.active-green,
-.login-submit-btn.active-green:hover,
-.login-submit-btn.active-green:focus {
-    background: var(--sa-800); color: #fff;
-    border-color: var(--sa-800); border-radius: var(--radius);
-    box-shadow: 0 0 0 3px rgba(20,87,58,.15);
-}
-.login-submit-btn.active-green i,
-.login-submit-btn.active-green:hover i { color: #fff; }
-.demo-card {
-    background: #fff; border-radius: var(--radius);
-    box-shadow: var(--shadow); width: 100%;
-    max-width: 440px; margin-top: 20px;
-    padding: 20px;
-}
-.demo-btn {
-    width: 100%; text-align: right; padding: 12px 14px;
-    border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
-    background: #fff; cursor: pointer;
-    transition: var(--transition); margin-bottom: 8px;
-    font-family: 'Cairo', sans-serif;
-}
-.demo-btn:hover { background: var(--gray-50); border-color: var(--primary); }
-.demo-btn:last-child { margin-bottom: 0; }
-.login-page #main-footer {
-    width: 100%;
-}
+/* Login page styles are now inline in Login.cshtml (same pattern as Landing.cshtml) */
 
 /* Answer display */
 .answer-pair { margin-bottom: 16px; }
@@ -912,9 +832,7 @@ img.login-logo {
     .sidebar-child { margin-right: 0; }
     .sidebar-arrow { display: none; }
     #main-content { padding: 16px; }
-    .login-body { flex-direction: column; }
-    .login-right, .login-left { padding: 24px; }
-    .login-logo { width: 300px !important; height: 300px !important; }
+    /* Login page responsive is handled inline in Login.cshtml */
     .kpi-card { padding: 16px; }
     .kpi-value { font-size: 28px; }
     .form-card { padding: 20px; }
@@ -950,15 +868,12 @@ img.login-logo {
     #main-content { padding: 0; background: #fff; }
 }
 /* ============================================
-   Government Design System Styles
+
    Based on: design.dga.gov.sa
    ============================================ */
 
-/* ============================================
-   DESIGN TOKENS
-   ============================================ */
 :root {
-    /* Colors - Saudi Government Palette */
+    
     --gov-primary: #006341;
     --gov-primary-dark: #004d32;
     --gov-primary-light: #008454;

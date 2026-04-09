@@ -370,7 +370,7 @@
 
         .reveal { opacity: 0; transform: translateY(40px); transition: all .7s ease-out; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
-=
+
         @@media (max-width: 768px) {
             .lp-nav-inner { padding: 0 20px; height: 64px; }
             .lp-nav-brand-text { font-size: 13px; }
@@ -619,12 +619,13 @@
 @@keyframes lpFadeOut { from { opacity:1; } to { opacity:0; } }
 @@keyframes lpSlideUp { from { opacity:0;transform:translateY(30px); } to { opacity:1;transform:translateY(0); } }
 </style>
+<script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async function initLandingPopups() {
     const dismissed = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
     try {
-        const popups = await apiFetch('/Settings/GetActivePopups?location=landing');
+        const popups = await apiFetch('/Settings/GetActivePopups?location=' + encodeURIComponent('landing'));
         if (!Array.isArray(popups) || !popups.length) return;
         const queue = popups.filter(function(p) { return dismissed.indexOf(p.id) === -1; });
         if (!queue.length) return;
@@ -647,9 +648,11 @@ document.addEventListener('DOMContentLoaded', async function initLandingPopups()
         if (p.contentType === 'text') {
             bodyHtml = '<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">' + escHtml(p.textContent || '') + '</p>';
         } else if (p.contentType === 'image' && p.attachmentUrl) {
-            bodyHtml = '<img src="' + p.attachmentUrl + '" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />';
+            var imgU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
+            bodyHtml = '<img src="' + imgU + '" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />';
         } else if (p.contentType === 'video' && p.attachmentUrl) {
-            bodyHtml = '<video src="' + p.attachmentUrl + '" controls style="width:100%;border-radius:10px;"></video>';
+            var vidU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
+            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;border-radius:10px;"></video>';
         }
         el.innerHTML = '<div class="sys-popup-box">' +
             '<div class="' + headCls + '">' +

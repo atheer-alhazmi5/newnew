@@ -41,6 +41,7 @@ public class WorkspacesController : BaseController
 
         var list = await _ds.ListWorkspacesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
         var ouMap = units.ToDictionary(u => u.Id, u => u.Name);
         return Json(new
         {
@@ -60,7 +61,7 @@ public class WorkspacesController : BaseController
                 CreatedAt = w.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = w.UpdatedAt.HasValue ? w.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             }),
-            organizationalUnits = units.OrderBy(u => u.SortOrder).Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList()
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList()
         });
     }
 
@@ -107,6 +108,13 @@ public class WorkspacesController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم مساحة العمل مطلوب" });
 
+        if (req.OrganizationalUnitId == null || req.OrganizationalUnitId <= 0)
+            return Json(new { success = false, message = "الوحدة التنظيمية مطلوبة" });
+
+        var ou = await _ds.GetOrganizationalUnitByIdAsync(req.OrganizationalUnitId.Value);
+        if (ou == null || !ou.IsActive)
+            return Json(new { success = false, message = "الوحدة التنظيمية غير صالحة أو غير مفعّلة" });
+
         if (await _ds.IsWorkspaceNameDuplicateAsync(req.Name.Trim()))
             return Json(new { success = false, message = "اسم مساحة العمل موجود مسبقاً" });
 
@@ -118,7 +126,7 @@ public class WorkspacesController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Color = string.IsNullOrWhiteSpace(req.Color) ? "#25935F" : req.Color.Trim(),
-            OrganizationalUnitId = req.OrganizationalUnitId ?? 0,
+            OrganizationalUnitId = req.OrganizationalUnitId.Value,
             SortOrder = nextOrder,
             IsActive = req.IsActive,
             CreatedBy = CurrentUserFullName
@@ -146,12 +154,18 @@ public class WorkspacesController : BaseController
         if (await _ds.IsWorkspaceNameDuplicateAsync(req.Name.Trim(), req.Id))
             return Json(new { success = false, message = "اسم مساحة العمل موجود مسبقاً" });
 
+        if (req.OrganizationalUnitId == null || req.OrganizationalUnitId <= 0)
+            return Json(new { success = false, message = "الوحدة التنظيمية مطلوبة" });
+
+        var ou = await _ds.GetOrganizationalUnitByIdAsync(req.OrganizationalUnitId.Value);
+        if (ou == null || !ou.IsActive)
+            return Json(new { success = false, message = "الوحدة التنظيمية غير صالحة أو غير مفعّلة" });
+
         var oldOrder = row.SortOrder;
         row.Name = req.Name.Trim();
         row.Description = req.Description?.Trim() ?? "";
         row.Color = string.IsNullOrWhiteSpace(req.Color) ? row.Color : req.Color.Trim();
-        if (req.OrganizationalUnitId.HasValue && req.OrganizationalUnitId.Value > 0)
-            row.OrganizationalUnitId = req.OrganizationalUnitId.Value;
+        row.OrganizationalUnitId = req.OrganizationalUnitId.Value;
         row.IsActive = req.IsActive;
         row.UpdatedBy = CurrentUserFullName;
         row.UpdatedAt = DateTime.Now;
@@ -175,6 +189,9 @@ public class WorkspacesController : BaseController
         var row = await _ds.GetWorkspaceByIdAsync(req.Id);
         if (row == null)
             return Json(new { success = false, message = "مساحة العمل غير موجودة" });
+
+        if (await _ds.IsWorkspaceLinkedAsync(req.Id))
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعناصر أخرى لا يمكن حذفه" });
 
         await _ds.DeleteWorkspaceAsync(req.Id);
 

@@ -19,11 +19,23 @@ public class Beneficiary
     public bool IsActive { get; set; } = true;
     public string Username { get; set; } = "";
     public string MainRole { get; set; } = "";              // موظف | مدير
+    public bool IsUnitManager { get; set; } = false;        // مدير وحدة تنظيمية
     public string SubRole { get; set; } = "";              // ممثل الوحدة التنظيمية | مدير النظام
     public string PasswordHash { get; set; } = "";
+    public string CreatedBy { get; set; } = "";
+    public string? UpdatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
     public string FullName => $"{FirstName} {SecondName} {ThirdName} {FourthName}".Trim();
-    public string RoleDisplay => string.IsNullOrEmpty(SubRole) ? MainRole : $"{MainRole} - {SubRole}";
+    public string RoleDisplay
+    {
+        get
+        {
+            var parts = new List<string> { "موظف" };
+            if (IsUnitManager || MainRole == "مدير") parts.Add("مدير وحدة تنظيمية");
+            if (!string.IsNullOrEmpty(SubRole)) parts.Add(SubRole);
+            return string.Join(" - ", parts);
+        }
+    }
 }
