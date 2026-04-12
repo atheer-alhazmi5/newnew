@@ -6,7 +6,8 @@ public class FormDefinition
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string Ownership { get; set; } = "عام"; // عام | خاص
-    public int CategoryId { get; set; }      // التصنيف التنظيمي
+    public int CategoryId { get; set; }      // قديم — للتوافق مع بيانات JSON السابقة
+    public int FormClassId { get; set; }      // أصناف النماذج (FormClass)
     public int FormTypeId { get; set; }       // نوع النموذج (FormSection)
     public int WorkspaceId { get; set; }
     public int TemplateId { get; set; }

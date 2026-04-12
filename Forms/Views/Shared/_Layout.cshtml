@@ -321,14 +321,14 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         {
             items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة التحكم", PathPrefix = "/Dashboard" });
             items.Add(new SidebarItem { Url = "/Forms/Index", Icon = "bi-file-earmark-text", Label = "النماذج الجاهزة", PathPrefix = "/Forms" });
+            items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
             items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send-fill", Label = "صندوق الصادر", PathPrefix = "/Outbox" });
             items.Add(new SidebarItem { Url = "/Tables/Index", Icon = "bi-table", Label = "الجداول الجاهزة", PathPrefix = "/Tables" });
             items.Add(new SidebarItem { Url = "/Dropdowns/Index", Icon = "bi-ui-checks-grid", Label = "القوائم المنسدلة", PathPrefix = "/Dropdowns" });
-            items.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
-            items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
 
             var settings = new SidebarItem { Url = "#", Icon = "bi-gear-fill", Label = "الاعدادات العامة", PathPrefix = "/Settings" };
+            settings.Children.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
             settings.Children.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/OrganizationalUnits", Icon = "bi-building", Label = "الوحدات التنظيمية", PathPrefix = "/Settings/OrganizationalUnits" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Beneficiaries", Icon = "bi-people-fill", Label = "المستفيدين", PathPrefix = "/Settings/Beneficiaries" });

@@ -28,7 +28,7 @@ public class FormDefinitionsController : BaseController
 
     // ── GET LIST ─────────────────────────────────────────────────────────────
     [HttpGet]
-    public async Task<IActionResult> GetFormDefinitions(string? search, string? status, int? categoryId, int? typeId)
+    public async Task<IActionResult> GetFormDefinitions(string? search, string? status, int? formClassId, int? typeId)
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
 
@@ -53,14 +53,14 @@ public class FormDefinitionsController : BaseController
         }
         if (!string.IsNullOrWhiteSpace(status))
             all = all.Where(f => f.Status == status).ToList();
-        if (categoryId.HasValue && categoryId.Value > 0)
-            all = all.Where(f => f.CategoryId == categoryId.Value).ToList();
+        if (formClassId.HasValue && formClassId.Value > 0)
+            all = all.Where(f => f.FormClassId == formClassId.Value).ToList();
         if (typeId.HasValue && typeId.Value > 0)
             all = all.Where(f => f.FormTypeId == typeId.Value).ToList();
 
-        var classificationsAll = await _ds.ListClassificationsAsync();
+        var formClassesAll = await _ds.ListFormClassesAsync();
         var formTypesAll = await _ds.ListFormSectionsAsync();
-        var classifications = await _ds.ListActiveClassificationsAsync();
+        var formClasses = await _ds.ListActiveFormClassesAsync();
         var formTypes = await _ds.ListActiveFormSectionsAsync();
         var workspacesAll = await _ds.ListWorkspacesAsync();
         var activeWorkspaces = await _ds.ListActiveWorkspacesAsync();
@@ -74,7 +74,7 @@ public class FormDefinitionsController : BaseController
             CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd"),
             ApprovedAt = f.ApprovedAt?.ToString("yyyy-MM-dd"),
             f.RejectionReason,
-            CategoryName = classificationsAll.FirstOrDefault(c => c.Id == f.CategoryId)?.Name ?? "",
+            FormClassName = formClassesAll.FirstOrDefault(c => c.Id == f.FormClassId)?.Name ?? "",
             FormTypeName = formTypesAll.FirstOrDefault(t => t.Id == f.FormTypeId)?.Name ?? "",
             WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == f.WorkspaceId)?.Name ?? "",
             TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot)
@@ -89,7 +89,7 @@ public class FormDefinitionsController : BaseController
             isAdmin,
             currentUserId = CurrentUserId,
             currentUser = CurrentUserFullName,
-            classifications = classifications.Select(c => new { c.Id, c.Name }),
+            formClasses = formClasses.Select(c => new { c.Id, c.Name }),
             formTypes = formTypes.Select(t => new { t.Id, t.Name }),
             workspaces = activeWorkspaces.Select(w => new { w.Id, w.Name }),
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
@@ -104,14 +104,20 @@ public class FormDefinitionsController : BaseController
         var f = await _ds.GetFormDefinitionByIdAsync(id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
 
-        var classificationsAll = await _ds.ListClassificationsAsync();
+        var formClassesAll = await _ds.ListFormClassesAsync();
+        var activeFormClasses = await _ds.ListActiveFormClassesAsync();
         var formTypesAll = await _ds.ListFormSectionsAsync();
-        var classifications = await _ds.ListActiveClassificationsAsync();
-        var formTypes = await _ds.ListActiveFormSectionsAsync();
         var workspacesAll = await _ds.ListWorkspacesAsync();
         var activeWorkspaces = await _ds.ListActiveWorkspacesAsync();
         var templates = await _ds.ListFormTemplatesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+
+        var formClassesForSelect = activeFormClasses
+            .Select(fc => new { id = fc.Id, name = fc.Name })
+            .ToList();
+        var curFormClass = formClassesAll.FirstOrDefault(x => x.Id == f.FormClassId);
+        if (curFormClass != null && !curFormClass.IsActive && formClassesForSelect.All(x => x.id != curFormClass.Id))
+            formClassesForSelect.Add(new { id = curFormClass.Id, name = curFormClass.Name + " (غير مفعّل)" });
 
         var wsForSelect = activeWorkspaces
             .Select(w => new { id = w.Id, name = w.Name })
@@ -129,13 +135,13 @@ public class FormDefinitionsController : BaseController
             data = new
             {
                 f.Id, f.Name, f.Description, f.Ownership,
-                f.CategoryId, f.FormTypeId, f.WorkspaceId, f.TemplateId,
+                f.FormClassId, f.FormTypeId, f.WorkspaceId, f.TemplateId,
                 f.OrganizationalUnitId, f.Status, f.IsActive,
                 f.FieldsJson, f.RejectionReason,
                 f.CreatedBy, f.ApprovedBy,
                 CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 ApprovedAt = f.ApprovedAt?.ToString("yyyy-MM-dd HH:mm"),
-                CategoryName = classificationsAll.FirstOrDefault(c => c.Id == f.CategoryId)?.Name ?? "",
+                FormClassName = formClassesAll.FirstOrDefault(c => c.Id == f.FormClassId)?.Name ?? "",
                 FormTypeName = formTypesAll.FirstOrDefault(t => t.Id == f.FormTypeId)?.Name ?? "",
                 WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == f.WorkspaceId)?.Name ?? "",
                 TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot) ? f.TemplateNameSnapshot : (tpl?.Name ?? ""),
@@ -166,7 +172,8 @@ public class FormDefinitionsController : BaseController
                     tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine
                 })
             },
-            workspaces = wsForSelect
+            workspaces = wsForSelect,
+            formClasses = formClassesForSelect
         });
     }
 
@@ -179,7 +186,7 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم النموذج مطلوب" });
-        if (req.CategoryId <= 0) return Json(new { success = false, message = "التصنيف التنظيمي مطلوب" });
+        if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.WorkspaceId <= 0) return Json(new { success = false, message = "مساحة العمل مطلوبة" });
         if (req.TemplateId <= 0) return Json(new { success = false, message = "القالب المستخدم مطلوب" });
@@ -188,9 +195,9 @@ public class FormDefinitionsController : BaseController
         if (selectedTemplate == null || !selectedTemplate.IsActive)
             return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
 
-        var selCat = await _ds.GetClassificationByIdAsync(req.CategoryId);
-        if (selCat == null || !selCat.IsActive)
-            return Json(new { success = false, message = "التصنيف التنظيمي غير صالح أو غير مفعّل" });
+        var selFc = await _ds.GetFormClassByIdAsync(req.FormClassId);
+        if (selFc == null || !selFc.IsActive)
+            return Json(new { success = false, message = "صنف النموذج غير صالح أو غير مفعّل" });
         var selType = await _ds.GetFormSectionByIdAsync(req.FormTypeId);
         if (selType == null || !selType.IsActive)
             return Json(new { success = false, message = "نوع النموذج غير صالح أو غير مفعّل" });
@@ -206,7 +213,8 @@ public class FormDefinitionsController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Ownership = isAdmin ? "عام" : (req.Ownership ?? "عام"),
-            CategoryId = req.CategoryId,
+            CategoryId = 0,
+            FormClassId = req.FormClassId,
             FormTypeId = req.FormTypeId,
             WorkspaceId = req.WorkspaceId,
             TemplateId = req.TemplateId,
@@ -236,7 +244,7 @@ public class FormDefinitionsController : BaseController
         if (f == null) return Json(new { success = false, message = "غير موجود" });
         if (f.Status == "approved" && CurrentUserRole != "Admin")
             return Json(new { success = false, message = "لا يمكن تعديل نموذج معتمد" });
-        if (req.CategoryId <= 0) return Json(new { success = false, message = "التصنيف التنظيمي مطلوب" });
+        if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.WorkspaceId <= 0) return Json(new { success = false, message = "مساحة العمل مطلوبة" });
         if (req.TemplateId <= 0) return Json(new { success = false, message = "القالب المستخدم مطلوب" });
@@ -245,9 +253,9 @@ public class FormDefinitionsController : BaseController
         if (selectedTemplate == null || !selectedTemplate.IsActive)
             return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
 
-        var selCat = await _ds.GetClassificationByIdAsync(req.CategoryId);
-        if (selCat == null || !selCat.IsActive)
-            return Json(new { success = false, message = "التصنيف التنظيمي غير صالح أو غير مفعّل" });
+        var selFc = await _ds.GetFormClassByIdAsync(req.FormClassId);
+        if (selFc == null || !selFc.IsActive)
+            return Json(new { success = false, message = "صنف النموذج غير صالح أو غير مفعّل" });
         var selType = await _ds.GetFormSectionByIdAsync(req.FormTypeId);
         if (selType == null || !selType.IsActive)
             return Json(new { success = false, message = "نوع النموذج غير صالح أو غير مفعّل" });
@@ -260,7 +268,8 @@ public class FormDefinitionsController : BaseController
         f.Name = req.Name?.Trim() ?? f.Name;
         f.Description = req.Description?.Trim() ?? f.Description;
         f.Ownership = isAdmin ? "عام" : (req.Ownership ?? f.Ownership);
-        f.CategoryId = req.CategoryId;
+        f.CategoryId = 0;
+        f.FormClassId = req.FormClassId;
         f.FormTypeId = req.FormTypeId;
         f.WorkspaceId = req.WorkspaceId;
         f.TemplateId = req.TemplateId;
@@ -430,7 +439,7 @@ public class FormDefinitionsController : BaseController
         public string Name { get; set; } = "";
         public string? Description { get; set; }
         public string? Ownership { get; set; }
-        public int CategoryId { get; set; }
+        public int FormClassId { get; set; }
         public int FormTypeId { get; set; }
         public int WorkspaceId { get; set; }
         public int TemplateId { get; set; }

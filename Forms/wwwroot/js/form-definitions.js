@@ -2,7 +2,7 @@
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let fdData          = [];
-let fdLookups       = { classifications:[], formTypes:[], workspaces:[], templates:[] };
+let fdLookups       = { formClasses:[], formTypes:[], workspaces:[], templates:[] };
 let fdIsAdmin       = false;
 let fdStep          = 1;
 let fdEditId        = null;
@@ -164,6 +164,24 @@ const FD_FIELD_TYPES = {
         { key:"minRating", label:"أقل قيمة", type:"number" },
         { key:"maxRating", label:"أعلى قيمة", type:"number" },
         { key:"tooltipText", label:"نص التلميح", type:"text" }
+    ]},
+    "جدول بيانات": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"عناوين الصفوف (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يُعرض عموداً أولاً للصفوف." },
+        { key:"options", label:"عناوين الأعمدة (سطر لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ]},
+    "شبكة خيارات متعددة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"اختيار واحد لكل صف." },
+        { key:"options", label:"عناوين الأعمدة (خيار لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ]},
+    "شبكة مربعات اختيار": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
+        { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ]}
 };
 
@@ -179,29 +197,32 @@ function fdEscAttr(s) {
     return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 
-function fdInitOptionListEditor(pfx, mode, propsObj) {
-    const el = document.getElementById(pfx + '_options_editor');
+function fdInitOptionListEditor(pfx, mode, propsObj, propKey) {
+    propKey = propKey || 'options';
+    const el = document.getElementById(pfx + '_' + propKey + '_options_editor');
     if (!el) return;
     el.innerHTML = ''; el.setAttribute('data-mode', mode);
     const rowsHost = document.createElement('div'); rowsHost.className = 'rtc-opt-rows';
     const po = propsObj || {};
+    const raw = (po[propKey] != null && String(po[propKey]).trim() !== '') ? po[propKey] : (propKey === 'options' ? po.options : '');
     let lines = [''], defStr = '';
-    if (po.options && String(po.options).trim()) {
-        lines = String(po.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+    if (raw && String(raw).trim()) {
+        lines = String(raw).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
         if (!lines.length) lines = [''];
         defStr = (po.defaultOption || '').trim();
     }
     const defMulti = mode === 'multi' ? defStr.split(/,\s*/).map(s => s.trim()).filter(Boolean) : [];
-    lines.forEach(t => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, t, defStr, defMulti)));
+    lines.forEach(t => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, t, defStr, defMulti, propKey)));
     el.appendChild(rowsHost);
     const btn = document.createElement('button'); btn.type = 'button';
     btn.className = 'btn btn-sm btn-outline-primary mt-2';
     btn.innerHTML = '<i class="bi bi-plus-lg"></i> إضافة خيار';
-    btn.onclick = () => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, '', '', []));
+    btn.onclick = () => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, '', '', [], propKey));
     el.appendChild(btn);
 }
 
-function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr) {
+function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr, propKey) {
+    propKey = propKey || 'options';
     const wrap = document.createElement('div');
     wrap.className = 'rtc-opt-row d-flex align-items-center gap-2 mb-2 flex-wrap';
     const inp = document.createElement('input'); inp.type = 'text';
@@ -217,7 +238,7 @@ function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr) {
         d.appendChild(c); d.appendChild(l); wrap.appendChild(d);
     } else {
         const d = document.createElement('div'); d.className = 'form-check m-0 flex-shrink-0';
-        const r = document.createElement('input'); r.type = 'radio'; r.name = pfx + '_defaultOpt';
+        const r = document.createElement('input'); r.type = 'radio'; r.name = pfx + '_' + propKey + '_defaultOpt';
         r.className = 'form-check-input rtc-opt-def-single';
         if (trimmed && defSingle && trimmed === defSingle) r.checked = true;
         const l = document.createElement('label'); l.className = 'form-check-label small'; l.textContent = 'افتراضي';
@@ -235,8 +256,9 @@ function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr) {
     return wrap;
 }
 
-function fdCollectOptionListFromEditor(pfx) {
-    const el = document.getElementById(pfx + '_options_editor');
+function fdCollectOptionListFromEditor(pfx, propKey) {
+    propKey = propKey || 'options';
+    const el = document.getElementById(pfx + '_' + propKey + '_options_editor');
     if (!el) return null;
     const mode = el.getAttribute('data-mode') || 'single';
     const host = el.querySelector('.rtc-opt-rows');
@@ -267,17 +289,21 @@ function fdApplyFileTypesFromProps(pfx, po) {
 
 function fdMergeSpecialProps(type, pfx, result) {
     const def = FD_FIELD_TYPES[type]; if (!def) return result;
-    if (def.props.some(p => p.type === 'optionList')) {
-        const o = fdCollectOptionListFromEditor(pfx);
-        if (o) { result.options = o.options; result.defaultOption = o.defaultOption; }
-    }
+    def.props.forEach(p => {
+        if (p.type !== 'optionList') return;
+        const o = fdCollectOptionListFromEditor(pfx, p.key);
+        if (!o) return;
+        result[p.key] = o.options;
+        if (p.choiceMode === 'multi') result.defaultOption = o.defaultOption;
+        else if (p.key === 'options') result.defaultOption = o.defaultOption;
+    });
     if (def.props.some(p => p.type === 'fileTypesPick')) result.fileTypes = fdCollectFileTypesPick(pfx);
     return result;
 }
 
 function fdApplyPropsSpecialEditors(type, pfx, po) {
     const def = FD_FIELD_TYPES[type]; if (!def) return;
-    def.props.forEach(p => { if (p.type === 'optionList') fdInitOptionListEditor(pfx, p.choiceMode||'single', po||{}); });
+    def.props.forEach(p => { if (p.type === 'optionList') fdInitOptionListEditor(pfx, p.choiceMode||'single', po||{}, p.key); });
     fdApplyFileTypesFromProps(pfx, po||{});
 }
 
@@ -292,7 +318,14 @@ function fdBuildSinglePropHtml(p, pfx) {
     if (p.type === 'optionList') {
         return `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
         <p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً.</p>
-        <div id="${pfx}_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="${p.choiceMode||'single'}"></div></div>`;
+        <div id="${pfx}_${p.key}_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="${p.choiceMode||'single'}"></div></div>`;
+    }
+    if (p.type === 'textarea') {
+        const fid = `${pfx}_${p.key}`;
+        const hint = p.hint ? `<p class="text-muted small mb-2" style="font-size:11px;">${p.hint}</p>` : '';
+        return `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
+        ${hint}
+        <textarea class="form-control form-control-sm" id="${fid}" rows="${p.rows||4}" placeholder="${fdEscAttr(p.placeholder||'')}" style="border-radius:8px;font-size:12.5px;"></textarea></div>`;
     }
     if (p.type === 'fileTypesPick') {
         let h = `<div class="col-12 mb-3"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
@@ -318,11 +351,17 @@ function fdBuildSinglePropHtml(p, pfx) {
     return html + (hints[p.key]||'') + '</div>';
 }
 
+function fdParseLines(s) {
+    if (s == null || s === '') return [];
+    return String(s).split(/[\r\n]+/).map(x => x.trim()).filter(Boolean);
+}
+
 // ─── FIELD INPUT BUILDER (for step-3 preview) ─────────────────────────────────
-function fdBuildFieldInput(f) {
+function fdBuildFieldInput(f, opt) {
     const ph = ((f.placeholder||'') || (f.tooltipText||'')).replace(/"/g,'&quot;');
     let props = {};
     try { props = JSON.parse(f.propertiesJson||'{}'); } catch(e) {}
+    if (opt && opt.forceReadOnly) props.readOnly = true;
     const defVal  = props.defaultValue != null ? String(props.defaultValue).replace(/"/g,'&quot;') : '';
     const roAttr  = props.readOnly ? ' readonly' : '';
     const roSel   = props.readOnly ? ' disabled' : '';
@@ -388,6 +427,55 @@ function fdBuildFieldInput(f) {
     } else if (f.fieldType==='التقييم بالأرقام') {
         const lo = parseInt(props.minRating)||0, hi = parseInt(props.maxRating)||10;
         inp = `<div${ttAttr}><input type="range" class="form-range" min="${lo}" max="${hi}" value="${defVal||lo}" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold">${defVal||lo}</div></div>`;
+    } else if (f.fieldType==='جدول بيانات') {
+        const cols = fdParseLines(props.options);
+        const rows = fdParseLines(props.rowLabels);
+        const c = cols.length ? cols : ['عمود'];
+        const r = rows.length ? rows : ['صف'];
+        const ro = props.readOnly ? ' readonly' : '';
+        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>`;
+        c.forEach(h => { t += `<th>${esc(h)}</th>`; });
+        t += '</tr></thead><tbody>';
+        r.forEach((rn) => {
+            t += `<tr><th scope="row" style="white-space:nowrap;background:var(--gray-50);">${esc(rn)}</th>`;
+            c.forEach(() => { t += `<td><input type="text" class="form-control form-control-sm"${ro}${reqAttr}></td>`; });
+            t += '</tr>';
+        });
+        t += '</tbody></table></div>';
+        inp = t;
+    } else if (f.fieldType==='شبكة خيارات متعددة') {
+        const cols = fdParseLines(props.options);
+        const rows = fdParseLines(props.rowLabels);
+        const c = cols.length ? cols : ['خيار'];
+        const r = rows.length ? rows : ['صف'];
+        const gridName = 'fd_gr_' + (f.id || 'n') + '_' + (f.fieldName||'').replace(/\s/g,'_');
+        const dis = props.readOnly ? ' disabled' : '';
+        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>`;
+        c.forEach(h => { t += `<th class="text-center">${esc(h)}</th>`; });
+        t += '</tr></thead><tbody>';
+        r.forEach((rn, ri) => {
+            t += `<tr><th scope="row" style="background:var(--gray-50);">${esc(rn)}</th>`;
+            c.forEach(() => { t += `<td class="text-center"><input type="radio" class="form-check-input" name="${gridName}_r${ri}"${dis}></td>`; });
+            t += '</tr>';
+        });
+        t += '</tbody></table></div>';
+        inp = t;
+    } else if (f.fieldType==='شبكة مربعات اختيار') {
+        const cols = fdParseLines(props.options);
+        const rows = fdParseLines(props.rowLabels);
+        const c = cols.length ? cols : ['عمود'];
+        const r = rows.length ? rows : ['صف'];
+        const dis = props.readOnly ? ' disabled' : '';
+        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>`;
+        c.forEach(h => { t += `<th class="text-center">${esc(h)}</th>`; });
+        t += '</tr></thead><tbody>';
+        r.forEach((rn) => {
+            t += `<tr><th scope="row" style="background:var(--gray-50);">${esc(rn)}</th>`;
+            c.forEach(() => { t += `<td class="text-center"><input type="checkbox" class="form-check-input"${dis}></td>`; });
+            t += '</tr>';
+        });
+        t += '</tbody></table></div>';
+        inp = t;
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     }
@@ -429,14 +517,14 @@ async function fdLoad() {
     const catId  = document.getElementById('fdFilterCat')?.value||'';
     const typeId = document.getElementById('fdFilterType')?.value||'';
     const p = new URLSearchParams({search,status});
-    if (catId)  p.set('categoryId',catId);
+    if (catId)  p.set('formClassId',catId);
     if (typeId) p.set('typeId',typeId);
     try {
         const res = await apiFetch(`/FormDefinitions/GetFormDefinitions?${p}`);
         if (!res.success) return;
         fdData    = res.data||[];
         fdIsAdmin = res.isAdmin;
-        fdLookups = { classifications:res.classifications||[], formTypes:res.formTypes||[], workspaces:res.workspaces||[], templates:res.templates||[] };
+        fdLookups = { formClasses:res.formClasses||[], formTypes:res.formTypes||[], workspaces:res.workspaces||[], templates:res.templates||[] };
         fdFillFilters(); fdRenderTable();
     } catch(e) { console.error('fdLoad',e); }
 }
@@ -444,7 +532,7 @@ async function fdLoad() {
 function fdFillFilters() {
     const catSel  = document.getElementById('fdFilterCat');
     const typeSel = document.getElementById('fdFilterType');
-    if (catSel && catSel.options.length<=1) fdLookups.classifications.forEach(c=>catSel.add(new Option(c.name,c.id)));
+    if (catSel && catSel.options.length<=1) fdLookups.formClasses.forEach(c=>catSel.add(new Option(c.name,c.id)));
     if (typeSel && typeSel.options.length<=1) fdLookups.formTypes.forEach(t=>typeSel.add(new Option(t.name,t.id)));
     const th = document.getElementById('fdThActive');
     if (th) th.style.display = fdIsAdmin ? '' : 'none';
@@ -469,7 +557,7 @@ function fdRenderTable() {
             <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i+1}</td>
             <td style="font-weight:600;">${esc(f.name)}</td>
             <td>${esc(f.workspaceName)}</td>
-            <td>${esc(f.categoryName)}</td>
+            <td>${esc(f.formClassName)}</td>
             <td>${esc(f.formTypeName)}</td>
             <td>${esc(f.templateName)}</td>
             <td style="text-align:center;">${fdOwnershipBadge(f.ownership)}</td>
@@ -522,7 +610,7 @@ async function fdToggle(id, el) {
 // ─── WIZARD SHOW ──────────────────────────────────────────────────────────────
 function fdShowCreate() {
     fdEditId = null; fdStep = 1; fdFields = []; fdEditingIdx = -1; fdCurrentTemplate = null;
-    fdStep1State = { name:'', desc:'', ownership:'عام', catId:0, typeId:0, wsId:0, tplId:0 };
+    fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, wsId:0, tplId:0 };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
     document.getElementById('fdWizardHead').className = 'fd-modal-header create';
@@ -536,12 +624,14 @@ async function fdShowEdit(id) {
         const d = res.data;
         if (res.workspaces && res.workspaces.length)
             fdLookups.workspaces = res.workspaces;
+        if (res.formClasses && res.formClasses.length)
+            fdLookups.formClasses = res.formClasses;
         fdEditId = id; fdStep = 1; fdEditingIdx = -1;
         fdStep1State = {
             name: d.name || '',
             desc: d.description || '',
             ownership: d.ownership || 'عام',
-            catId: d.categoryId || 0,
+            formClassId: d.formClassId || 0,
             typeId: d.formTypeId || 0,
             wsId: d.workspaceId || 0,
             tplId: d.templateId || 0
@@ -591,11 +681,15 @@ function fdRenderStep(data) {
 function fdStep1Html(d) {
     d = d || fdStep1State || {};
     const ow  = d.ownership||'عام';
-    const catIdVal = d.categoryId != null ? d.categoryId : d.catId;
+    const fcIdVal = d.formClassId != null && d.formClassId !== '' ? d.formClassId : (fdStep1State?.formClassId || 0);
     const typeIdVal = d.formTypeId != null ? d.formTypeId : d.typeId;
     const wsIdVal = d.workspaceId != null && d.workspaceId !== '' ? d.workspaceId : (d.wsId || 0);
     const tplIdVal = d.templateId != null ? d.templateId : d.tplId;
-    const cat = fdLookups.classifications.map(c=>`<option value="${c.id}" ${c.id==catIdVal?'selected':''}>${c.name}</option>`).join('');
+    const fcs = fdLookups.formClasses || [];
+    const fcOpts = fcs.map(c=>`<option value="${c.id}" ${c.id==fcIdVal?'selected':''}>${esc(c.name)}</option>`).join('');
+    const fcFirstOpt = fcs.length
+        ? '<option value="">-- اختر --</option>'
+        : '<option value="" disabled selected>لا توجد أصناف مفعّلة — أضف أصنافاً من الإعدادات</option>';
     const typ = fdLookups.formTypes.map(t=>`<option value="${t.id}" ${t.id==typeIdVal?'selected':''}>${t.name}</option>`).join('');
     const ws  = fdLookups.workspaces.map(w=>`<option value="${w.id}" ${w.id==wsIdVal?'selected':''}>${w.name}</option>`).join('');
     const tpl = fdLookups.templates.map(t=>`<option value="${t.id}" ${t.id==tplIdVal?'selected':''}>${t.name}</option>`).join('');
@@ -614,7 +708,7 @@ function fdStep1Html(d) {
     <div class="fd-section">
         <div class="fd-section-title"><i class="bi bi-tags-fill"></i> التصنيف والنوع والقالب</div>
         <div class="fd-form-row">
-            <div class="fd-form-group"><label><span class="required-star">*</span> التصنيف التنظيمي</label><select class="form-select" id="fdFCat"><option value="">-- اختر --</option>${cat}</select></div>
+            <div class="fd-form-group"><label><span class="required-star">*</span>  تصنيف النموذج</label><select class="form-select" id="fdFFormClass">${fcFirstOpt}${fcOpts}</select></div>
             <div class="fd-form-group"><label><span class="required-star">*</span> نوع النموذج</label><select class="form-select" id="fdFType"><option value="">-- اختر --</option>${typ}</select></div>
         </div>
         <div class="fd-form-row">
@@ -662,6 +756,14 @@ function fdStep2Html() {
                     <label class="small fw-bold text-muted">نوع الحقل <span class="required-star">*</span></label>
                     <select class="form-select form-select-sm" id="fdFieldType" onchange="fdOnFieldTypeChange()">
                         <option value="">-- اختر النوع --</option>${typeOpts}
+                    </select>
+                    <label class="small fw-bold text-muted mt-2 d-block">طريقة العرض</label>
+                    <select class="form-select form-select-sm" id="fdFieldDisplayLayout">
+                        <option value="">اختر</option>
+                        <option value="يمتد عبر كامل الصف (واحد من واحد)">يمتد عبر كامل الصف (واحد من واحد)</option>
+                        <option value="يمتد عبر نصف الصف (واحد من اثنين)">يمتد عبر نصف الصف (واحد من اثنين)</option>
+                        <option value="يمتد عبر ثلاثة أرباع الصف (ثلاثة من أربعة)">يمتد عبر ثلاثة أرباع الصف (ثلاثة من أربعة)</option>
+                        <option value="يمتد عبر ربع الصف (واحد من أربعة)">يمتد عبر ربع الصف (واحد من أربعة)</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -714,6 +816,18 @@ function fdRenderTemplateSection(sec) {
     return `<div style="text-align:${sec.align||'center'};padding:4px;font-style:normal;">${lines}</div>`;
 }
 
+function fdDisplayLayoutColClass(layout) {
+    const L = (layout != null && String(layout).trim()) || '';
+    const map = {
+        '': 'col-md-12',
+        'يمتد عبر كامل الصف (واحد من واحد)': 'col-md-12',
+        'يمتد عبر نصف الصف (واحد من اثنين)': 'col-md-6',
+        'يمتد عبر ثلاثة أرباع الصف (ثلاثة من أربعة)': 'col-md-9',
+        'يمتد عبر ربع الصف (واحد من أربعة)': 'col-md-3'
+    };
+    return map[L] || 'col-md-12';
+}
+
 // ─── SHARED FORM PREVIEW BUILDER ─────────────────────────────────────────────
 // Renders Header + Body (fields) + Footer from a real saved template object.
 // tplData   – object with headerJson/footerJson/color/margins (or null = fallback)
@@ -731,21 +845,22 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive) {
             لم تُضف حقول بعد
         </div>`;
     } else {
-        fieldsHtml = fields.map(f => {
+        fieldsHtml = '<div class="row g-3">' + fields.map(f => {
+            const colClass = fdDisplayLayoutColClass(f.displayLayout);
             const tipAttr   = f.tooltipText ? ` title="${fdEscAttr(f.tooltipText)}"` : '';
             const infoIcon  = f.tooltipText ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
             const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:2px;font-style:normal;">${esc(f.subName)}</small>` : '';
             const inputHtml = interactive
                 ? fdBuildFieldInput(f)
-                : `<div style="padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-500);background:var(--gray-50);font-style:normal;">${esc(f.defaultValue || f.placeholder || '—')}</div>`;
-            return `<div style="margin-bottom:18px;font-style:normal;">
+                : fdBuildFieldInput(f, { forceReadOnly: true });
+            return `<div class="${colClass}" style="font-style:normal;">
                 <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
                     ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
                 </label>
                 ${subName}
                 ${inputHtml}
             </div>`;
-        }).join('');
+        }).join('') + '</div>';
     }
 
     // ── template layout ───────────────────────────────────────────────────────
@@ -806,7 +921,7 @@ function fdStep3Html() {
 function fdGoStep2() {
     const s = fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
-    if (!s.catId) return showToast('التصنيف مطلوب','error');
+    if (!s.formClassId) return showToast('أصناف النماذج مطلوبة','error');
     if (!s.typeId) return showToast('نوع النموذج مطلوب','error');
     if (!s.wsId) return showToast('مساحة العمل مطلوبة','error');
     if (!s.tplId) return showToast('القالب مطلوب','error');
@@ -853,7 +968,7 @@ function fdOnFieldTypeChange() {
     fdApplyPropsSpecialEditors(type,'fdProp',null);
     if(type==='رقم الهاتف'){ const el=document.getElementById('fdProp_phoneFormat'); if(el&&!el.value) el.value='+966 (9 أرقام)'; }
     const tipEl = document.getElementById('fdFieldTooltip');
-    if(tipEl&&!tipEl.value){ const d={'الاسم الكامل':'أدخل الاسم الكامل','البريد الإلكتروني':'أدخل البريد الإلكتروني','رقم الهاتف':'أدخل رقم الهاتف','نص قصير':'أدخل النص','نص طويل':'أدخل النص','فقرة':'أدخل الفقرة','رقم':'أدخل الرقم','قائمة منسدلة':'اختر من القائمة','قائمة اختيار الواحد':'اختر خياراً','قائمة اختيار متعدد':'اختر خياراً أو أكثر','تاريخ':'اختر التاريخ','وقت':'اختر الوقت','رفع ملف':'ارفع ملفاً','دوار رقمي':'حدد الرقم','التقييم بالنجوم':'حدد التقييم','التقييم بالأرقام':'حدد التقييم'}; tipEl.value=d[type]||'أدخل قيمة الحقل'; }
+    if(tipEl&&!tipEl.value){ const d={'الاسم الكامل':'أدخل الاسم الكامل','البريد الإلكتروني':'أدخل البريد الإلكتروني','رقم الهاتف':'أدخل رقم الهاتف','نص قصير':'أدخل النص','نص طويل':'أدخل النص','فقرة':'أدخل الفقرة','رقم':'أدخل الرقم','قائمة منسدلة':'اختر من القائمة','قائمة اختيار الواحد':'اختر خياراً','قائمة اختيار متعدد':'اختر خياراً أو أكثر','تاريخ':'اختر التاريخ','وقت':'اختر الوقت','رفع ملف':'ارفع ملفاً','دوار رقمي':'حدد الرقم','التقييم بالنجوم':'حدد التقييم','التقييم بالأرقام':'حدد التقييم','جدول بيانات':'عبّئ الجدول','شبكة خيارات متعددة':'اختر خياراً لكل صف','شبكة مربعات اختيار':'حدد الخانات المطلوبة'}; tipEl.value=d[type]||'أدخل قيمة الحقل'; }
 }
 
 function fdCollectFieldProps() {
@@ -864,7 +979,7 @@ function fdCollectFieldProps() {
         if(p.type==='optionList'||p.type==='fileTypesPick') return;
         if(p.type==='fileMbLimitsPair'){ const mn=document.getElementById('fdProp_minFileSize'); const mx=document.getElementById('fdProp_maxFileSize'); if(mn) result.minFileSize=mn.value; if(mx) result.maxFileSize=mx.value; return; }
         const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
-        result[p.key] = p.type==='checkbox' ? el.checked : el.value;
+        result[p.key] = (p.type==='checkbox') ? el.checked : el.value;
     });
     return fdMergeSpecialProps(type,'fdProp',result);
 }
@@ -888,9 +1003,13 @@ function fdAddField() {
     if(!type) return showToast('يرجى اختيار نوع الحقل','error');
     if(!name) return showToast('يرجى إدخال اسم الحقل','error');
     const def = FD_FIELD_TYPES[type];
-    if(def?.props.some(p=>p.type==='optionList')){ const o=fdCollectOptionListFromEditor('fdProp'); if(!o||!String(o.options||'').trim()) return showToast('يرجى إدخال خيار واحد على الأقل','error'); }
+    if(def?.props.some(p=>p.type==='optionList')){ const o=fdCollectOptionListFromEditor('fdProp','options'); if(!o||!String(o.options||'').trim()) return showToast('يرجى إدخال خيار واحد على الأقل','error'); }
+    if(type==='جدول بيانات'||type==='شبكة خيارات متعددة'||type==='شبكة مربعات اختيار'){
+        const rl=document.getElementById('fdProp_rowLabels');
+        if(!rl||!String(rl.value||'').trim()) return showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)','error');
+    }
     const props = fdCollectFieldProps();
-    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired:document.getElementById('fdFieldRequired')?.value==='1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('fdFieldTooltip')?.value?.trim()||'', sortOrder:0, propertiesJson:JSON.stringify(props) };
+    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired:document.getElementById('fdFieldRequired')?.value==='1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('fdFieldTooltip')?.value?.trim()||'', displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
     else { fdFields.push(field); showToast('تم إضافة الحقل','success'); }
     fdRenderFieldsTable(); fdResetFieldForm();
@@ -903,6 +1022,8 @@ function fdEditField(idx) {
     document.getElementById('fdFieldName').value=f.fieldName;
     document.getElementById('fdFieldRequired').value=f.isRequired?'1':'0';
     document.getElementById('fdFieldTooltip').value=f.tooltipText||'';
+    const fdLay = document.getElementById('fdFieldDisplayLayout');
+    if (fdLay) fdLay.value = (f.displayLayout != null && f.displayLayout !== '') ? f.displayLayout : '';
     document.getElementById('fdFieldNum').textContent=String(idx+1);
     document.getElementById('fdFieldFormLabel').textContent='تعديل حقل رقم';
     document.getElementById('fdAddFieldBtnTxt').textContent='تحديث الحقل';
@@ -951,6 +1072,7 @@ function fdResetFieldForm() {
     const fname=document.getElementById('fdFieldName'); if(fname) fname.value='';
     const req=document.getElementById('fdFieldRequired'); if(req) req.value='1';
     const tip=document.getElementById('fdFieldTooltip'); if(tip) tip.value='';
+    const fdLay=document.getElementById('fdFieldDisplayLayout'); if(fdLay) fdLay.value='';
     const area=document.getElementById('fdPropsArea'); if(area) area.style.display='none';
     const flds=document.getElementById('fdPropsFields'); if(flds) flds.innerHTML='';
     const cell=document.getElementById('fdPropsCell'); if(cell) cell.innerHTML='';
@@ -965,7 +1087,7 @@ function fdCollect1() {
         name:     (document.getElementById('fdFName')?.value||'').trim(),
         desc:     (document.getElementById('fdFDesc')?.value||'').trim(),
         ownership: fdIsAdmin ? 'عام' : (document.getElementById('fdFOwnership')?.value||'عام'),
-        catId:    parseInt(document.getElementById('fdFCat')?.value||'0'),
+        formClassId: parseInt(document.getElementById('fdFFormClass')?.value||'0'),
         typeId:   parseInt(document.getElementById('fdFType')?.value||'0'),
         wsId:     parseInt(document.getElementById('fdFWs')?.value||'0'),
         tplId:    parseInt(document.getElementById('fdFTpl')?.value||'0'),
@@ -976,7 +1098,7 @@ function fdCollect1() {
 async function fdSave(sendForApproval) {
     const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
-    const payload = { name:s.name, description:s.desc, ownership:s.ownership, categoryId:s.catId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:JSON.stringify(fdFields), sendForApproval };
+    const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:JSON.stringify(fdFields), sendForApproval };
     try {
         let res;
         if (fdEditId) { payload.id=fdEditId; res=await apiFetch('/FormDefinitions/UpdateFormDefinition','POST',payload); }
@@ -1043,7 +1165,7 @@ async function fdShowDetails(id) {
                 <span class="fd-detail-lbl">الحالة</span><span class="fd-detail-val">${fdStatusBadge(d.status)}</span>
                 <span class="fd-detail-lbl">التفعيل</span><span class="fd-detail-val">${activeBadge}</span>
                 <span class="fd-detail-lbl">الملكية</span><span class="fd-detail-val">${fdOwnershipBadge(d.ownership)}</span>
-                <span class="fd-detail-lbl">التصنيف</span><span class="fd-detail-val">${esc(d.categoryName)}</span>
+                <span class="fd-detail-lbl">التصنيف</span><span class="fd-detail-val">${esc(d.formClassName)}</span>
                 <span class="fd-detail-lbl">النوع</span><span class="fd-detail-val">${esc(d.formTypeName)}</span>
                 <span class="fd-detail-lbl">مساحة العمل</span><span class="fd-detail-val">${esc(d.workspaceName)}</span>
                 <span class="fd-detail-lbl">القالب</span>

@@ -572,6 +572,9 @@ public class DataService
     public Task<List<FormClass>> ListFormClassesAsync()
         => Task.FromResult(_db.FormClasses.OrderBy(c => c.SortOrder).ToList());
 
+    public Task<List<FormClass>> ListActiveFormClassesAsync()
+        => Task.FromResult(_db.FormClasses.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList());
+
     public Task<FormClass?> GetFormClassByIdAsync(int id)
         => Task.FromResult(_db.FormClasses.FirstOrDefault(c => c.Id == id));
 

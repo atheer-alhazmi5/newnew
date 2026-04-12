@@ -246,6 +246,24 @@ var RT_FIELD_TYPES = {
         { key:"minRating", label:"أقل قيمة", type:"number" },
         { key:"maxRating", label:"أعلى قيمة", type:"number" },
         { key:"tooltipText", label:"نص التلميح", type:"text" }
+    ] },
+    "جدول بيانات": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"عناوين الصفوف (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يُعرض عموداً أولاً للصفوف." },
+        { key:"options", label:"عناوين الأعمدة (سطر لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "شبكة خيارات متعددة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"اختيار واحد لكل صف." },
+        { key:"options", label:"عناوين الأعمدة (خيار لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "شبكة مربعات اختيار": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
+        { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] }
 };
 
@@ -266,8 +284,9 @@ function rtEscAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-function rtInitOptionListEditor(idPrefix, mode, propsObj) {
-    var el = document.getElementById(idPrefix + '_options_editor');
+function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey) {
+    propKey = propKey || 'options';
+    var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return;
     el.classList.add('rtc-option-list-editor');
     el.setAttribute('data-mode', mode);
@@ -277,14 +296,15 @@ function rtInitOptionListEditor(idPrefix, mode, propsObj) {
     var lines = [''];
     var defaultStr = '';
     var po = propsObj || {};
-    if (po.options != null && String(po.options).trim() !== '') {
-        lines = String(po.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var raw = (po[propKey] != null && String(po[propKey]).trim() !== '') ? po[propKey] : (propKey === 'options' ? po.options : '');
+    if (raw != null && String(raw).trim() !== '') {
+        lines = String(raw).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         if (lines.length === 0) lines = [''];
         defaultStr = (po.defaultOption || '').trim();
     }
     var defaultMulti = mode === 'multi' ? defaultStr.split(/,\s*/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
     lines.forEach(function (text) {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti, propKey));
     });
     el.appendChild(rowsHost);
     var btn = document.createElement('button');
@@ -292,12 +312,13 @@ function rtInitOptionListEditor(idPrefix, mode, propsObj) {
     btn.className = 'btn btn-sm btn-outline-primary mt-2';
     btn.innerHTML = '<i class="bi bi-plus-lg"></i> إضافة خيار';
     btn.addEventListener('click', function () {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', []));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', [], propKey));
     });
     el.appendChild(btn);
 }
 
-function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr) {
+function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr, propKey) {
+    propKey = propKey || 'options';
     var wrap = document.createElement('div');
     wrap.className = 'rtc-opt-row d-flex align-items-center gap-2 mb-2 flex-wrap';
     var inp = document.createElement('input');
@@ -327,7 +348,7 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr)
         d2.className = 'form-check m-0 flex-shrink-0';
         var r = document.createElement('input');
         r.type = 'radio';
-        r.name = idPrefix + '_defaultOpt';
+        r.name = idPrefix + '_' + propKey + '_defaultOpt';
         r.className = 'form-check-input rtc-opt-def-single';
         r.title = 'الخيار الافتراضي عند فتح النموذج';
         if (trimmed && defaultSingle && trimmed === defaultSingle) r.checked = true;
@@ -353,8 +374,9 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr)
     return wrap;
 }
 
-function rtCollectOptionListFromEditor(idPrefix) {
-    var el = document.getElementById(idPrefix + '_options_editor');
+function rtCollectOptionListFromEditor(idPrefix, propKey) {
+    propKey = propKey || 'options';
+    var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return null;
     var mode = el.getAttribute('data-mode') || 'single';
     var host = el.querySelector('.rtc-opt-rows');
@@ -403,13 +425,14 @@ function rtApplyFileTypesFromProps(idPrefix, propsObj) {
 function rtMergeSpecialPropsIntoResult(type, idPrefix, result) {
     var def = RT_FIELD_TYPES[type];
     if (!def) return result;
-    if (def.props.some(function (p) { return p.type === 'optionList'; })) {
-        var o = rtCollectOptionListFromEditor(idPrefix);
-        if (o) {
-            result.options = o.options;
-            result.defaultOption = o.defaultOption;
-        }
-    }
+    def.props.forEach(function (p) {
+        if (p.type !== 'optionList') return;
+        var o = rtCollectOptionListFromEditor(idPrefix, p.key);
+        if (!o) return;
+        result[p.key] = o.options;
+        if (p.choiceMode === 'multi') result.defaultOption = o.defaultOption;
+        else if (p.key === 'options') result.defaultOption = o.defaultOption;
+    });
     if (def.props.some(function (p) { return p.type === 'fileTypesPick'; })) {
         result.fileTypes = rtCollectFileTypesPick(idPrefix);
     }
@@ -422,7 +445,7 @@ function rtApplyPropsSpecialEditors(type, idPrefix, propsObj) {
     var po = propsObj || {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList') {
-            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po);
+            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po, p.key);
         }
     });
     rtApplyFileTypesFromProps(idPrefix, po);
@@ -437,7 +460,7 @@ function rtBuildSinglePropHtml(p, idPrefix) {
             '</div></div>';
     }
     if (p.type === 'optionList') {
-        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
+        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
     }
     if (p.type === 'fileTypesPick') {
         var h = '<div class="col-12 mb-3"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><div id="' + idPrefix + '_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">';
@@ -463,7 +486,8 @@ function rtBuildSinglePropHtml(p, idPrefix) {
         (p.options || []).forEach(function (o) { html += '<option value="' + rtEscAttr(o) + '">' + o + '</option>'; });
         html += '</select>';
     } else if (p.type === 'textarea') {
-        html += '<textarea class="form-control form-control-sm" id="' + fid + '" rows="3" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;"></textarea>';
+        var hintTx = p.hint ? '<p class="text-muted small mb-2" style="font-size:11px;">' + p.hint + '</p>' : '';
+        html += hintTx + '<textarea class="form-control form-control-sm" id="' + fid + '" rows="' + (p.rows || 4) + '" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;"></textarea>';
     } else {
         html += '<input type="' + (p.type || 'text') + '" class="form-control form-control-sm" id="' + fid + '" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;">';
     }
@@ -626,7 +650,7 @@ function rtcOnFieldTypeChange() {
     }
     var tooltip = document.getElementById('rtcFieldTooltip');
     if (!tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
+        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم","جدول بيانات":"عبّئ الجدول","شبكة خيارات متعددة":"اختر خياراً لكل صف","شبكة مربعات اختيار":"حدد الخانات المطلوبة" };
         tooltip.value = defaults[type] || "أدخل قيمة الحقل";
     }
 }
@@ -679,8 +703,12 @@ function rtcAddField() {
     if (!name) { showToast('يرجى إدخال اسم الحقل', 'danger'); return; }
     var defPre = RT_FIELD_TYPES[type];
     if (defPre && defPre.props.some(function (p) { return p.type === 'optionList'; })) {
-        var oc = rtCollectOptionListFromEditor('rtcProp');
+        var oc = rtCollectOptionListFromEditor('rtcProp', 'options');
         if (!oc || !String(oc.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
+    }
+    if (type === 'جدول بيانات' || type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+        var rl = document.getElementById('rtcProp_rowLabels');
+        if (!rl || !String(rl.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtcCollectProps();
     var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtcFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
@@ -807,10 +835,16 @@ function rtpFileAcceptFromProps(p) {
     return parts.join(',');
 }
 
-function rtpBuildFieldInput(f) {
+function rtpParseLines(s) {
+    if (s == null || s === '') return [];
+    return String(s).split(/[\r\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+}
+
+function rtpBuildFieldInput(f, opt) {
     var ph = rtpFieldPlaceholder(f);
     var props = {};
     try { props = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
+    if (opt && opt.forceReadOnly) props.readOnly = true;
     var defVal = (props.defaultValue != null && props.defaultValue !== '') ? String(props.defaultValue).replace(/"/g, '&quot;') : '';
     var roAttr = props.readOnly ? ' readonly' : '';
     var roSel = props.readOnly ? ' disabled' : '';
@@ -912,6 +946,55 @@ function rtpBuildFieldInput(f) {
             inp += '<span class="rt-star-icon" data-i="' + si + '" style="font-size:22px;cursor:pointer;' + active + '" onclick="rtStarClick(this,' + si + ')">' + starChar + '</span>';
         }
         inp += '<span class="rt-star-val ms-2 fw-bold" style="font-size:13px;">' + sdef + '/' + range + '</span></div>';
+    } else if (f.fieldType === 'جدول بيانات') {
+        var colsD = rtpParseLines(props.options);
+        var rowsD = rtpParseLines(props.rowLabels);
+        var cD = colsD.length ? colsD : ['عمود'];
+        var rD = rowsD.length ? rowsD : ['صف'];
+        var roD = props.readOnly ? ' readonly' : '';
+        var i, j;
+        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
+        for (i = 0; i < cD.length; i++) inp += '<th>' + String(cD[i]).replace(/</g, '&lt;') + '</th>';
+        inp += '</tr></thead><tbody>';
+        for (i = 0; i < rD.length; i++) {
+            inp += '<tr><th scope="row" style="white-space:nowrap;background:var(--gray-50);">' + String(rD[i]).replace(/</g, '&lt;') + '</th>';
+            for (j = 0; j < cD.length; j++) inp += '<td><input type="text" class="form-control form-control-sm"' + roD + reqAttr + '></td>';
+            inp += '</tr>';
+        }
+        inp += '</tbody></table></div>';
+    } else if (f.fieldType === 'شبكة خيارات متعددة') {
+        var colsR = rtpParseLines(props.options);
+        var rowsR = rtpParseLines(props.rowLabels);
+        var cR = colsR.length ? colsR : ['خيار'];
+        var rR = rowsR.length ? rowsR : ['صف'];
+        var gridName = 'rt_gr_' + (f.id || 'n') + '_' + String(f.fieldName || '').replace(/\s/g, '_');
+        var disR = props.readOnly ? ' disabled' : '';
+        var ir, jr;
+        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
+        for (ir = 0; ir < cR.length; ir++) inp += '<th class="text-center">' + String(cR[ir]).replace(/</g, '&lt;') + '</th>';
+        inp += '</tr></thead><tbody>';
+        for (ir = 0; ir < rR.length; ir++) {
+            inp += '<tr><th scope="row" style="background:var(--gray-50);">' + String(rR[ir]).replace(/</g, '&lt;') + '</th>';
+            for (jr = 0; jr < cR.length; jr++) inp += '<td class="text-center"><input type="radio" class="form-check-input" name="' + gridName + '_r' + ir + '"' + disR + '></td>';
+            inp += '</tr>';
+        }
+        inp += '</tbody></table></div>';
+    } else if (f.fieldType === 'شبكة مربعات اختيار') {
+        var colsC = rtpParseLines(props.options);
+        var rowsC = rtpParseLines(props.rowLabels);
+        var cC = colsC.length ? colsC : ['عمود'];
+        var rC = rowsC.length ? rowsC : ['صف'];
+        var disC = props.readOnly ? ' disabled' : '';
+        var ic, jc;
+        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
+        for (ic = 0; ic < cC.length; ic++) inp += '<th class="text-center">' + String(cC[ic]).replace(/</g, '&lt;') + '</th>';
+        inp += '</tr></thead><tbody>';
+        for (ic = 0; ic < rC.length; ic++) {
+            inp += '<tr><th scope="row" style="background:var(--gray-50);">' + String(rC[ic]).replace(/</g, '&lt;') + '</th>';
+            for (jc = 0; jc < cC.length; jc++) inp += '<td class="text-center"><input type="checkbox" class="form-check-input"' + disC + '></td>';
+            inp += '</tr>';
+        }
+        inp += '</tbody></table></div>';
     } else {
         inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
     }
@@ -1195,7 +1278,7 @@ function rtEditOnFieldTypeChange() {
     }
     var tooltip = document.getElementById('rtEditFieldTooltip');
     if (tooltip && !tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
+        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم","جدول بيانات":"عبّئ الجدول","شبكة خيارات متعددة":"اختر خياراً لكل صف","شبكة مربعات اختيار":"حدد الخانات المطلوبة" };
         tooltip.value = defaults[type] || "أدخل قيمة الحقل";
     }
 }
@@ -1248,8 +1331,12 @@ function rtEditAddField() {
     if (!name) { showToast('يرجى إدخال اسم الحقل', 'danger'); return; }
     var defPre2 = RT_FIELD_TYPES[type];
     if (defPre2 && defPre2.props.some(function (p) { return p.type === 'optionList'; })) {
-        var oc2 = rtCollectOptionListFromEditor('rtEditProp');
+        var oc2 = rtCollectOptionListFromEditor('rtEditProp', 'options');
         if (!oc2 || !String(oc2.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
+    }
+    if (type === 'جدول بيانات' || type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+        var rl2 = document.getElementById('rtEditProp_rowLabels');
+        if (!rl2 || !String(rl2.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtEditCollectProps();
     var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtEditFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
