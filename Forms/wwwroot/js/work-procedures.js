@@ -1,7 +1,7 @@
 'use strict';
 
 let wpData = [];
-let wpLookups = { workspaces: [], formDefinitions: [], executorBeneficiaries: [], organizationalUnits: [], myOrgUnitId: 0, myOrgUnitName: '' };
+let wpLookups = { workspaces: [], formDefinitions: [], executorBeneficiaries: [], executorRoles: [], organizationalUnits: [], myOrgUnitId: 0, myOrgUnitName: '' };
 let wpIsAdmin = false;
 let wpEditId = null;
 let wpRejectId = null;
@@ -25,10 +25,14 @@ async function wpLoad() {
     const validity = document.getElementById('wpFilterValidity')?.value || '';
     const workspaceId = document.getElementById('wpFilterWorkspace')?.value || '';
     const formDefinitionId = document.getElementById('wpFilterFormDef')?.value || '';
+    const targetOrgUnitId = document.getElementById('wpFilterTargetOrg')?.value || '';
+    const executorBeneficiaryId = document.getElementById('wpFilterExecutor')?.value || '';
     const isActive = document.getElementById('wpFilterActive')?.value || '';
     const p = new URLSearchParams({ search, status, validity, isActive });
     if (workspaceId) p.set('workspaceId', workspaceId);
     if (formDefinitionId) p.set('formDefinitionId', formDefinitionId);
+    if (targetOrgUnitId) p.set('targetOrgUnitId', targetOrgUnitId);
+    if (executorBeneficiaryId) p.set('executorBeneficiaryId', executorBeneficiaryId);
     try {
         const [lu, res] = await Promise.all([
             apiFetch('/WorkProcedures/GetLookups'),
@@ -39,6 +43,7 @@ async function wpLoad() {
                 workspaces: lu.workspaces || [],
                 formDefinitions: lu.formDefinitions || [],
                 executorBeneficiaries: lu.executorBeneficiaries || [],
+                executorRoles: lu.executorRoles || [],
                 organizationalUnits: lu.organizationalUnits || [],
                 myOrgUnitId: lu.myOrgUnitId != null ? lu.myOrgUnitId : 0,
                 myOrgUnitName: lu.myOrgUnitName || ''
@@ -54,20 +59,60 @@ async function wpLoad() {
 }
 
 function wpFillFilters(res) {
-    const wsSel = document.getElementById('wpFilterWorkspace');
-    const fdSel = document.getElementById('wpFilterFormDef');
-    if (wsSel && wsSel.options.length <= 1) {
-        (res.workspaces || []).forEach(w => wsSel.add(new Option(w.name, w.id)));
-    }
-    if (fdSel && fdSel.options.length <= 1) {
-        (res.formDefinitions || []).forEach(f => fdSel.add(new Option(f.name, f.id)));
-    }
+    const wsList = res.workspaces || [];
+    const fdList = res.formDefinitions || [];
+    const orgList = res.organizationalUnits || wpLookups.organizationalUnits || [];
+    const exList = res.executorBeneficiaries || wpLookups.executorBeneficiaries || [];
+
+    const refill = (sel, placeholder, items, getLabel, getVal) => {
+        if (!sel) return;
+        const prev = sel.value;
+        sel.innerHTML = '';
+        sel.add(new Option(placeholder, ''));
+        items.forEach((item) => {
+            const v = getVal(item);
+            const lbl = getLabel(item);
+            if (v == null || v === '') return;
+            sel.add(new Option(lbl, String(v)));
+        });
+        if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+    };
+
+    refill(
+        document.getElementById('wpFilterWorkspace'),
+        'مساحة العمل',
+        wsList,
+        (w) => w.name ?? w.Name ?? '',
+        (w) => w.id ?? w.Id
+    );
+    refill(
+        document.getElementById('wpFilterFormDef'),
+        'النماذج المستخدمة',
+        fdList,
+        (f) => f.name ?? f.Name ?? '',
+        (f) => f.id ?? f.Id
+    );
+    refill(
+        document.getElementById('wpFilterTargetOrg'),
+        'الوحدات التنظيمية المستهدفة',
+        orgList,
+        (u) => u.name ?? u.Name ?? '',
+        (u) => u.id ?? u.Id
+    );
+    refill(
+        document.getElementById('wpFilterExecutor'),
+        'المنفذ للإجراء',
+        exList,
+        (b) => b.fullName ?? b.FullName ?? '',
+        (b) => b.id ?? b.Id
+    );
+
     const th = document.getElementById('wpThActive');
     if (th) th.style.display = wpIsAdmin ? '' : 'none';
 }
 
 function wpClear() {
-    ['wpSearch', 'wpFilterValidity', 'wpFilterStatus', 'wpFilterActive', 'wpFilterWorkspace', 'wpFilterFormDef'].forEach(id => {
+    ['wpSearch', 'wpFilterWorkspace', 'wpFilterFormDef', 'wpFilterValidity', 'wpFilterTargetOrg', 'wpFilterExecutor', 'wpFilterStatus', 'wpFilterActive'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -142,29 +187,27 @@ async function wpToggle(id, el) {
     } catch { el.checked = !el.checked; }
 }
 
-function wpOptsWorkspaces(selectedId) {
-    return wpLookups.workspaces.map(w => `<option value="${w.id}" ${w.id == selectedId ? 'selected' : ''}>${esc(w.name)}</option>`).join('');
-}
-
-function wpOptsOrgUnits(selIds) {
-    const set = new Set(selIds || []);
-    return wpLookups.organizationalUnits.map(u => `<option value="${u.id}" ${set.has(u.id) ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
-}
-
-/** مدير النظام: قائمة اختيار. ممثل الوحدة: عرض ثابت (وحدة عمله عند الإنشاء، وحدة الإجراء عند التعديل). */
 function wpOwnerOrgFieldHtml(d) {
     d = d || {};
     const owner = d.organizationalUnitId || d.OrganizationalUnitId || 0;
     const ownerName = d.orgUnitName || d.OrgUnitName || '';
     if (wpIsAdmin) {
-        return `<select class="form-select" id="wpOrganizationalUnitId"><option value="">-- اختر --</option>${wpOptsOrgUnits([owner])}</select>`;
+        return `<input type="hidden" id="wpOrganizationalUnitId" value="${owner}">
+        <div class="dropdown wp-dd w-100">
+            <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <span id="wpOwnerOrgDdLbl">اختر الوحدة التنظيمية المالكة...</span>
+            </button>
+            <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                <div id="wpOwnerOrgDdHost"></div>
+            </div>
+        </div>`;
     }
     const lockedId = wpEditId ? owner : (wpLookups.myOrgUnitId || 0);
     const lockedName = wpEditId
         ? (ownerName || (wpLookups.organizationalUnits || []).find(u => u.id === owner)?.name || '—')
         : (wpLookups.myOrgUnitName || (wpLookups.organizationalUnits || []).find(u => u.id === lockedId)?.name || '—');
     return `<input type="hidden" id="wpOrganizationalUnitId" value="${lockedId}">
-        <div class="form-control" style="background:var(--gray-50);cursor:default;border:2px solid var(--gray-200);border-radius:10px;">${esc(lockedName)}</div>
+        <div class="form-control w-100" style="background:var(--gray-50);cursor:default;border:2px solid var(--gray-200);border-radius:10px;">${esc(lockedName)}</div>
         <span class="text-muted small">${wpEditId ? 'لا يمكن تغيير الوحدة المالكة.' : 'تُسجَّل الوحدة المالكة تلقائياً بوحدة عملك التنظيمية.'}</span>`;
 }
 
@@ -191,6 +234,142 @@ function wpDdCheckboxRow(cbClass, htmlId, value, labelText, checked, extraAttrs)
 </div>`;
 }
 
+const WP_USAGE_OPTS = ['يومي', 'أسبوعي', 'شهري', 'ربع سنوي', 'نصف سنوي', 'سنوي'];
+const WP_CLASS_OPTS = ['رئيسي', 'ثانوي', 'مساند'];
+const WP_CONF_OPTS = ['منخفض', 'متوسط', 'مرتفع'];
+const WP_VAL_OPTS = ['دائم', 'مؤقت'];
+
+function wpDdRadioRow(htmlId, groupName, value, labelText, checked) {
+    const chk = checked ? 'checked' : '';
+    const eid = esc(htmlId);
+    const valEsc = esc(String(value));
+    return `<div class="wp-dd-check-row">
+  <input type="radio" class="wp-dd-check-row-cb" name="${esc(groupName)}" value="${valEsc}" id="${eid}" ${chk} onclick="event.stopPropagation()">
+  <label class="wp-dd-check-row-label" for="${eid}">${esc(labelText)}</label>
+</div>`;
+}
+
+/** قوائم اختيار واحد — نفس بنية صفوف النماذج المستخدمة (wp-dd-check-row) */
+function wpWireStaticRadioDd(hiddenId, hostId, lblId, groupName, options, selectedVal, onPick) {
+    const hid = document.getElementById(hiddenId);
+    const host = document.getElementById(hostId);
+    const lbl = document.getElementById(lblId);
+    if (!hid || !host || !lbl) return;
+    const sel = String(selectedVal ?? '');
+    hid.value = sel;
+    host.innerHTML = options.map((opt, idx) => {
+        const rid = `${hostId}_opt_${idx}`;
+        const checked = String(opt) === sel;
+        return wpDdRadioRow(rid, groupName, opt, opt, checked);
+    }).join('');
+    const syncLbl = () => {
+        lbl.textContent = hid.value || '—';
+    };
+    syncLbl();
+    host.querySelectorAll(`input[name="${groupName}"]`).forEach((r) => {
+        r.addEventListener('change', () => {
+            if (!r.checked) return;
+            hid.value = r.value;
+            syncLbl();
+            if (onPick) onPick(r.value);
+        });
+    });
+}
+
+function wpInitFormStaticDds(d) {
+    d = d || {};
+    const usage = d.usageFrequency || d.UsageFrequency || 'شهري';
+    const procClass = d.procedureClassification || d.ProcedureClassification || 'رئيسي';
+    const conf = d.confidentialityLevel || d.ConfidentialityLevel || 'متوسط';
+    const valType = d.validityType || d.ValidityType || 'دائم';
+    wpWireStaticRadioDd('wpUsageFrequency', 'wpUsageDdHost', 'wpUsageDdLbl', 'wpUsageRadio', WP_USAGE_OPTS, usage, null);
+    wpWireStaticRadioDd('wpProcedureClassification', 'wpProcedureClassDdHost', 'wpProcedureClassDdLbl', 'wpProcClassRadio', WP_CLASS_OPTS, procClass, null);
+    wpWireStaticRadioDd('wpConfidentialityLevel', 'wpConfDdHost', 'wpConfDdLbl', 'wpConfRadio', WP_CONF_OPTS, conf, null);
+    wpWireStaticRadioDd('wpValidityType', 'wpValidityDdHost', 'wpValidityDdLbl', 'wpValidityRadio', WP_VAL_OPTS, valType, () => wpOnValidityChange());
+}
+
+function wpRenderWorkspaceDd(selectedId) {
+    const hid = document.getElementById('wpWorkspaceId');
+    const host = document.getElementById('wpWorkspaceDdHost');
+    const lbl = document.getElementById('wpWorkspaceDdLbl');
+    if (!hid || !host || !lbl) return;
+    const items = wpLookups.workspaces || [];
+    if (!items.length) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد مساحات عمل متاحة.</div>';
+        lbl.textContent = '—';
+        hid.value = 0;
+        return;
+    }
+    const sid = parseInt(selectedId, 10) || 0;
+    hid.value = sid;
+    host.innerHTML = items
+        .map((w) => {
+            const id = w.id;
+            const checked = id === sid ? 'checked' : '';
+            const eid = `wpws_${id}`;
+            return `<div class="wp-dd-check-row">
+  <input type="radio" class="wp-dd-check-row-cb" name="wpWsRadio" value="${id}" id="${eid}" ${checked} onclick="event.stopPropagation()">
+  <label class="wp-dd-check-row-label" for="${eid}">${esc(w.name)}</label>
+</div>`;
+        })
+        .join('');
+    const syncLbl = () => {
+        const v = parseInt(hid.value, 10) || 0;
+        const w = items.find((x) => x.id === v);
+        lbl.textContent = w ? w.name : 'اختر مساحة العمل...';
+    };
+    syncLbl();
+    host.querySelectorAll('input[name="wpWsRadio"]').forEach((r) => {
+        r.addEventListener('change', () => {
+            if (!r.checked) return;
+            hid.value = r.value;
+            syncLbl();
+            wpOnWorkspaceChange();
+        });
+    });
+}
+
+function wpRenderOwnerOrgDd(selectedId) {
+    const host = document.getElementById('wpOwnerOrgDdHost');
+    if (!host) return;
+    const hid = document.getElementById('wpOrganizationalUnitId');
+    const lbl = document.getElementById('wpOwnerOrgDdLbl');
+    const units = wpLookups.organizationalUnits || [];
+    if (!hid || !lbl) return;
+    if (!units.length) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد وحدات تنظيمية.</div>';
+        lbl.textContent = '—';
+        hid.value = 0;
+        return;
+    }
+    const sid = parseInt(selectedId, 10) || 0;
+    hid.value = sid;
+    host.innerHTML = units
+        .map((u) => {
+            const id = u.id;
+            const checked = id === sid ? 'checked' : '';
+            const eid = `wpown_${id}`;
+            return `<div class="wp-dd-check-row">
+  <input type="radio" class="wp-dd-check-row-cb" name="wpOwnerOuRadio" value="${id}" id="${eid}" ${checked} onclick="event.stopPropagation()">
+  <label class="wp-dd-check-row-label" for="${eid}">${esc(u.name)}</label>
+</div>`;
+        })
+        .join('');
+    const syncLbl = () => {
+        const v = parseInt(hid.value, 10) || 0;
+        const u = units.find((x) => x.id === v);
+        lbl.textContent = u ? u.name : 'اختر الوحدة التنظيمية المالكة...';
+    };
+    syncLbl();
+    host.querySelectorAll('input[name="wpOwnerOuRadio"]').forEach((r) => {
+        r.addEventListener('change', () => {
+            if (!r.checked) return;
+            hid.value = r.value;
+            syncLbl();
+        });
+    });
+}
+
 function wpWireCbLabel(hostId, cbClass, lblId, emptyText, filledPrefix) {
     const host = document.getElementById(hostId);
     const lbl = document.getElementById(lblId);
@@ -203,23 +382,56 @@ function wpWireCbLabel(hostId, cbClass, lblId, emptyText, filledPrefix) {
     upd();
 }
 
+function wpFormsForCurrentWorkspace() {
+    const ws = parseInt(document.getElementById('wpWorkspaceId')?.value || '0', 10);
+    const all = wpLookups.formDefinitions || [];
+    if (!ws) return [];
+    return all.filter((f) => (f.workspaceId ?? f.WorkspaceId) === ws);
+}
+
 function wpRenderExecutorCb(selectedIds) {
     const host = document.getElementById('wpExecCbHost');
     if (!host) return;
     const sel = new Set(selectedIds || []);
-    const items = wpLookups.executorBeneficiaries || [];
-    if (!items.length) {
-        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا يوجد موظفون مضافون في أدوار المنفذين.</div>';
+    const roles = wpLookups.executorRoles || [];
+    const roleFullySelected = (r) => {
+        const bids = r.beneficiaryIds || [];
+        return bids.length > 0 && bids.every((id) => sel.has(id));
+    };
+    if (!roles.length) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد أدوار منفذين بمنفذين معرّفين — عرّف <strong>أدوار المنفذين</strong> والموظفين ضمنها أولاً.</div>';
         const lbl = document.getElementById('wpExecDdLbl');
-        if (lbl) lbl.textContent = 'لا يوجد منفذون';
+        if (lbl) lbl.textContent = 'لا توجد أدوار';
         return;
     }
-    host.innerHTML = items.map(b => {
-        const id = b.id;
-        const checked = sel.has(id);
-        return wpDdCheckboxRow('wp-exec-cb', `wpex_${id}`, id, b.fullName, checked, '');
+    host.innerHTML = roles.map((r) => {
+        const rid = r.id ?? r.Id;
+        const name = r.name ?? r.Name ?? '';
+        const bids = r.beneficiaryIds || [];
+        const idsAttr = bids.join(',');
+        const checked = roleFullySelected(r);
+        return wpDdCheckboxRow('wp-exec-role-cb', `wper_${rid}`, rid, name, checked, ` data-ben-ids="${idsAttr}"`);
     }).join('');
-    wpWireCbLabel('wpExecCbHost', 'wp-exec-cb', 'wpExecDdLbl', 'اختر المنفذين...', 'محدد:');
+    wpWireCbLabel('wpExecCbHost', 'wp-exec-role-cb', 'wpExecDdLbl', 'اختر المنفذين...', 'محدد:');
+}
+
+function wpCollectExecutorBeneficiaryIdsFromRoles() {
+    const host = document.getElementById('wpExecCbHost');
+    if (!host) return [];
+    const seen = new Set();
+    const out = [];
+    host.querySelectorAll('.wp-exec-role-cb:checked').forEach((cb) => {
+        const raw = cb.getAttribute('data-ben-ids') || '';
+        raw.split(',').forEach((part) => {
+            const v = parseInt(part.trim(), 10);
+            if (v > 0 && !seen.has(v)) {
+                seen.add(v);
+                out.push(v);
+            }
+        });
+    });
+    out.sort((a, b) => a - b);
+    return out;
 }
 
 function wpRenderUsedFormsCb(selectedNorm) {
@@ -232,16 +444,24 @@ function wpRenderUsedFormsCb(selectedNorm) {
             return id > 0 ? id : null;
         }).filter(v => v != null)
     );
-    const forms = wpLookups.formDefinitions || [];
+    const ws = parseInt(document.getElementById('wpWorkspaceId')?.value || '0', 10);
+    const lbl = document.getElementById('wpUsedDdLbl');
+    if (!ws) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">اختر <strong>مساحة العمل</strong> أولاً لعرض النماذج المرتبطة بها.</div>';
+        if (lbl) lbl.textContent = 'اختر المساحة أولاً...';
+        return;
+    }
+    const forms = wpFormsForCurrentWorkspace();
     if (!forms.length) {
-        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد نماذج مستخدمة متاحة لصلاحيتك.</div>';
-        const lbl = document.getElementById('wpUsedDdLbl');
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد نماذج معتمدة في هذه المساحة ضمن صلاحيتك.</div>';
         if (lbl) lbl.textContent = 'لا توجد نماذج';
         return;
     }
     host.innerHTML = forms.map(f => {
-        const checked = sel.has(f.id);
-        return wpDdCheckboxRow('wp-form-cb', `wpu_${f.id}`, f.id, f.name, checked, ` data-fid="${f.id}"`);
+        const fid = f.id ?? f.Id;
+        const fname = f.name ?? f.Name ?? '';
+        const checked = sel.has(fid);
+        return wpDdCheckboxRow('wp-form-cb', `wpu_${fid}`, fid, fname, checked, ` data-fid="${fid}"`);
     }).join('');
     wpWireCbLabel('wpUsedFormsCbHost', 'wp-form-cb', 'wpUsedDdLbl', 'اختر النماذج...', 'محدد:');
 }
@@ -275,7 +495,7 @@ function wpRenderRelCb(hostId, cbClass, lblId, selectedIds) {
     const sel = new Set(selectedIds || []);
     const list = wpRelated || [];
     if (!list.length) {
-        host.innerHTML = '<div class="px-3 py-2 text-muted small">اختر مساحة عمل أولاً أو لا توجد إجراءات أخرى.</div>';
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد إجراءات عمل أخرى للربط ضمن صلاحيتك.</div>';
         const lbl = document.getElementById(lblId);
         if (lbl) lbl.textContent = '—';
         return;
@@ -290,14 +510,10 @@ function wpRenderRelCb(hostId, cbClass, lblId, selectedIds) {
     wpWireCbLabel(hostId, cbClass, lblId, emptyMap[lblId] || 'اختر...', 'محدد:');
 }
 
-async function wpLoadRelated(workspaceId, excludeId) {
-    if (!workspaceId) {
-        wpRelated = [];
-        return;
-    }
-    const q = `workspaceId=${workspaceId}${excludeId ? `&excludeId=${excludeId}` : ''}`;
+async function wpLoadRelated(excludeId) {
+    const q = excludeId ? `excludeId=${excludeId}` : '';
     try {
-        const r = await apiFetch(`/WorkProcedures/ListRelatedProcedures?${q}`);
+        const r = await apiFetch(`/WorkProcedures/ListRelatedProcedures${q ? `?${q}` : ''}`);
         wpRelated = r.success ? (r.data || []) : [];
     } catch { wpRelated = []; }
 }
@@ -313,7 +529,10 @@ async function wpOnWorkspaceChange() {
     const prevIds = wpCollectCheckedIds('wpPrevCbHost', 'wp-rel-prev-cb');
     const nextIds = wpCollectCheckedIds('wpNextCbHost', 'wp-rel-next-cb');
     const impIds = wpCollectCheckedIds('wpImplicitCbHost', 'wp-rel-imp-cb');
-    await wpLoadRelated(ws, wpEditId);
+    const usedPrev = wpCollectUsedFormsFromCb();
+    const allowedFormIds = new Set(wpFormsForCurrentWorkspace().map((f) => f.id ?? f.Id));
+    const usedFiltered = usedPrev.filter((u) => allowedFormIds.has(u.formDefinitionId));
+    wpRenderUsedFormsCb(usedFiltered);
     wpRenderRelCb('wpPrevCbHost', 'wp-rel-prev-cb', 'wpPrevDdLbl', prevIds);
     wpRenderRelCb('wpNextCbHost', 'wp-rel-next-cb', 'wpNextDdLbl', nextIds);
     wpRenderRelCb('wpImplicitCbHost', 'wp-rel-imp-cb', 'wpImplicitDdLbl', impIds);
@@ -324,11 +543,11 @@ function wpBuildFormHtml(d) {
     const code = d.code || '';
     const name = d.name || '';
     const objectives = d.objectives || '';
-    const ws = d.workspaceId || 0;
-    const usage = d.usageFrequency || 'شهري';
-    const procClass = d.procedureClassification || 'رئيسي';
-    const conf = d.confidentialityLevel || 'متوسط';
-    const valType = d.validityType || 'دائم';
+    const ws = d.workspaceId || d.WorkspaceId || 0;
+    const usage = d.usageFrequency || d.UsageFrequency || 'شهري';
+    const procClass = d.procedureClassification || d.ProcedureClassification || 'رئيسي';
+    const conf = d.confidentialityLevel || d.ConfidentialityLevel || 'متوسط';
+    const valType = d.validityType || d.ValidityType || 'دائم';
     const vs = d.validityStartDate || '';
     const ve = d.validityEndDate || '';
     const addIn = d.additionalInputs || '';
@@ -351,38 +570,75 @@ function wpBuildFormHtml(d) {
             <span class="text-muted small">يُخزن اسم الملف للمرجعية</span>
         </div>
     </div>
-    <div class="fd-form-row">
-        <div class="fd-form-group"><label><span class="required-star">*</span> مساحة العمل</label>
-            <select class="form-select" id="wpWorkspaceId" onchange="wpOnWorkspaceChange()"><option value="">-- اختر --</option>${wpOptsWorkspaces(ws)}</select></div>
-        <div class="fd-form-group"><label><span class="required-star">*</span> معدل الاستخدام</label>
-            <select class="form-select" id="wpUsageFrequency">
-                <option ${usage === 'يومي' ? 'selected' : ''}>يومي</option>
-                <option ${usage === 'أسبوعي' ? 'selected' : ''}>أسبوعي</option>
-                <option ${usage === 'شهري' ? 'selected' : ''}>شهري</option>
-                <option ${usage === 'ربع سنوي' ? 'selected' : ''}>ربع سنوي</option>
-                <option ${usage === 'نصف سنوي' ? 'selected' : ''}>نصف سنوي</option>
-                <option ${usage === 'سنوي' ? 'selected' : ''}>سنوي</option>
-            </select></div>
-    </div>
 </div>
 <div class="fd-section">
-    <div class="fd-section-title"><i class="bi bi-file-earmark-check"></i> النماذج المستخدمة</div>
-    <p class="small text-muted mb-2">يُعرض حسب الصلاحية: مدير النظام يرى كل النماذج المستخدمة؛ ممثل الوحدة يرى ما يُسمح له به.</p>
-    <div class="dropdown wp-dd w-100">
-        <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-            <span id="wpUsedDdLbl">اختر النماذج...</span>
-        </button>
-        <div class="dropdown-menu wp-dd-menu w-100 p-0">
-            <div id="wpUsedFormsCbHost"></div>
+    <div class="fd-section-title"><i class="bi bi-grid-3x3-gap"></i> مساحة العمل والنماذج المستخدمة</div>
+    <div class="fd-form-row cols-1">
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> مساحة العمل</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpWorkspaceDdLbl">اختر مساحة العمل...</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div id="wpWorkspaceDdHost"></div>
+                </div>
+            </div>
+            <input type="hidden" id="wpWorkspaceId" value="${ws || 0}">
+        </div>
+    </div>
+
+    <div class="fd-form-group fd-form-group--wp-dd">
+        <label><span class="required-star">*</span> النماذج المستخدمة</label>
+        <div class="dropdown wp-dd w-100">
+            <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <span id="wpUsedDdLbl">اختر النماذج...</span>
+            </button>
+            <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                <div id="wpUsedFormsCbHost"></div>
+            </div>
         </div>
     </div>
 </div>
+<div class="fd-section wp-section-spaced">
+    <div class="fd-section-title"><i class="bi bi-sliders"></i> معدل الاستخدام والتصنيف ومستوى السرية</div>
+    <div class="fd-form-row cols-3">
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> معدل الاستخدام</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpUsageDdLbl">${esc(usage)}</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div id="wpUsageDdHost"></div>
+                </div>
+            </div>
+            <input type="hidden" id="wpUsageFrequency" value="${esc(usage)}"></div>
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> التصنيف</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpProcedureClassDdLbl">${esc(procClass)}</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div id="wpProcedureClassDdHost"></div>
+                </div>
+            </div>
+            <input type="hidden" id="wpProcedureClassification" value="${esc(procClass)}"></div>
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> مستوى السرية</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpConfDdLbl">${esc(conf)}</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div id="wpConfDdHost"></div>
+                </div>
+            </div>
+            <input type="hidden" id="wpConfidentialityLevel" value="${esc(conf)}"></div>
+    </div>
+</div>
 <div class="fd-section">
-    <div class="fd-section-title"><i class="bi bi-person-badge"></i> المنفذين والتصنيف</div>
+    <div class="fd-section-title"><i class="bi bi-person-badge"></i> المنفذين للإجراء</div>
     <div class="fd-form-row cols-1">
-        <div class="fd-form-group">
+        <div class="fd-form-group fd-form-group--wp-dd">
             <label><span class="required-star">*</span> المنفذين للإجراء</label>
-            <p class="small text-muted mb-2">الموظفون المضافون ضمن <strong>أدوار المنفذين</strong> (يظهرون هنا للاختيار).</p>
             <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <span id="wpExecDdLbl">اختر المنفذين...</span>
@@ -393,29 +649,20 @@ function wpBuildFormHtml(d) {
             </div>
         </div>
     </div>
-    <div class="fd-form-row">
-        <div class="fd-form-group"><label><span class="required-star">*</span> التصنيف</label>
-            <select class="form-select" id="wpProcedureClassification">
-                <option ${procClass === 'رئيسي' ? 'selected' : ''}>رئيسي</option>
-                <option ${procClass === 'ثانوي' ? 'selected' : ''}>ثانوي</option>
-                <option ${procClass === 'مساند' ? 'selected' : ''}>مساند</option>
-            </select></div>
-        <div class="fd-form-group"><label><span class="required-star">*</span> مستوى السرية</label>
-            <select class="form-select" id="wpConfidentialityLevel">
-                <option ${conf === 'منخفض' ? 'selected' : ''}>منخفض</option>
-                <option ${conf === 'متوسط' ? 'selected' : ''}>متوسط</option>
-                <option ${conf === 'مرتفع' ? 'selected' : ''}>مرتفع</option>
-            </select></div>
-    </div>
 </div>
 <div class="fd-section">
     <div class="fd-section-title"><i class="bi bi-calendar-range"></i> صلاحية الإجراء</div>
-    <div class="fd-form-row">
-        <div class="fd-form-group"><label><span class="required-star">*</span> الصلاحية</label>
-            <select class="form-select" id="wpValidityType" onchange="wpOnValidityChange()">
-                <option value="دائم" ${valType === 'دائم' ? 'selected' : ''}>دائم</option>
-                <option value="مؤقت" ${valType === 'مؤقت' ? 'selected' : ''}>مؤقت</option>
-            </select></div>
+    <div class="fd-form-row cols-1">
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> الصلاحية</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpValidityDdLbl">${esc(valType)}</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div id="wpValidityDdHost"></div>
+                </div>
+            </div>
+            <input type="hidden" id="wpValidityType" value="${esc(valType)}"></div>
     </div>
     <div class="fd-form-row" id="wpValidityDatesRow" style="display:${valType === 'مؤقت' ? '' : 'none'};">
         <div class="fd-form-group"><label><span class="required-star">*</span> تاريخ بداية الصلاحية</label><input type="date" class="form-control" id="wpValidityStart" value="${esc(vs)}"></div>
@@ -424,12 +671,12 @@ function wpBuildFormHtml(d) {
 </div>
 <div class="fd-section">
     <div class="fd-section-title"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
-    <div class="fd-form-row">
-        <div class="fd-form-group"><label><span class="required-star">*</span> الوحدة التنظيمية المالكة للإجراء</label>
+    <div class="fd-form-row cols-1">
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> الوحدة التنظيمية المالكة للإجراء</label>
             ${wpOwnerOrgFieldHtml(d)}</div>
     </div>
     <div class="fd-form-row cols-1">
-        <div class="fd-form-group">
+        <div class="fd-form-group fd-form-group--wp-dd">
             <label><span class="required-star">*</span> الوحدات التنظيمية المستهدفة</label>
             <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -443,12 +690,12 @@ function wpBuildFormHtml(d) {
     </div>
 </div>
 <div class="fd-section">
-    <div class="fd-section-title"><i class="bi bi-link-45deg"></i> العلاقات (نفس مساحة العمل)</div>
-    <p class="small text-muted mb-2">بعد اختيار مساحة العمل، تظهر الإجراءات الأخرى ضمنها للاختيار.</p>
+    <div class="fd-section-title"><i class="bi bi-link-45deg"></i> الإجراءات المرتبطة</div>
+    
     <div class="fd-form-row cols-3">
         <div class="fd-form-group">
             <label>الإجراءات السابقة</label>
-            <div class="dropdown wp-dd wp-dd-sm w-100">
+            <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <span id="wpPrevDdLbl">الإجراءات السابقة...</span>
                 </button>
@@ -459,7 +706,7 @@ function wpBuildFormHtml(d) {
         </div>
         <div class="fd-form-group">
             <label>الإجراءات اللاحقة</label>
-            <div class="dropdown wp-dd wp-dd-sm w-100">
+            <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <span id="wpNextDdLbl">الإجراءات اللاحقة...</span>
                 </button>
@@ -470,7 +717,7 @@ function wpBuildFormHtml(d) {
         </div>
         <div class="fd-form-group">
             <label>الإجراءات الضمنية</label>
-            <div class="dropdown wp-dd wp-dd-sm w-100">
+            <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <span id="wpImplicitDdLbl">الإجراءات الضمنية...</span>
                 </button>
@@ -512,7 +759,7 @@ function wpCollectPayload() {
         regulationsAttachmentsJson,
         workspaceId: parseInt(document.getElementById('wpWorkspaceId')?.value || '0', 10),
         usedForms: wpCollectUsedFormsFromCb(),
-        executorBeneficiaryIds: wpCollectCheckedIds('wpExecCbHost', 'wp-exec-cb'),
+        executorBeneficiaryIds: wpCollectExecutorBeneficiaryIdsFromRoles(),
         usageFrequency: document.getElementById('wpUsageFrequency')?.value || 'شهري',
         procedureClassification: document.getElementById('wpProcedureClassification')?.value || 'رئيسي',
         confidentialityLevel: document.getElementById('wpConfidentialityLevel')?.value || 'متوسط',
@@ -539,6 +786,28 @@ function wpParseExecutorBeneficiaryIds(d) {
     return [];
 }
 
+function wpResolveExecutorRoleNames(beneficiaryIds) {
+    const ids = new Set(beneficiaryIds || []);
+    const roles = wpLookups.executorRoles || [];
+    if (!ids.size) return '—';
+    const names = [];
+    const seen = new Set();
+    for (const r of roles) {
+        const bids = r.beneficiaryIds || [];
+        if (!bids.some((bid) => ids.has(bid))) continue;
+        const n = r.name ?? r.Name ?? '';
+        if (n && !seen.has(n)) {
+            seen.add(n);
+            names.push(n);
+        }
+    }
+    if (names.length) return names.map(esc).join('، ');
+    return (beneficiaryIds || []).map((bid) => {
+        const b = (wpLookups.executorBeneficiaries || []).find((x) => x.id === bid);
+        return b ? esc(b.fullName) : esc(String(bid));
+    }).join('، ') || '—';
+}
+
 async function wpShowCreate() {
     wpEditId = null;
     await wpLoad();
@@ -546,11 +815,14 @@ async function wpShowCreate() {
     document.getElementById('wpEditSub').textContent = 'أدخل بيانات الإجراء';
     document.getElementById('wpEditHead').className = 'fd-modal-header create';
     document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml({});
+    wpInitFormStaticDds({});
+    wpRenderWorkspaceDd(0);
+    if (wpIsAdmin) wpRenderOwnerOrgDd(0);
     wpOnValidityChange();
     wpRenderUsedFormsCb([]);
     wpRenderExecutorCb([]);
     wpRenderTargetOrgCb([]);
-    await wpLoadRelated(parseInt(document.getElementById('wpWorkspaceId')?.value || '0', 10), null);
+    await wpLoadRelated(null);
     wpRenderRelCb('wpPrevCbHost', 'wp-rel-prev-cb', 'wpPrevDdLbl', []);
     wpRenderRelCb('wpNextCbHost', 'wp-rel-next-cb', 'wpNextDdLbl', []);
     wpRenderRelCb('wpImplicitCbHost', 'wp-rel-imp-cb', 'wpImplicitDdLbl', []);
@@ -576,6 +848,9 @@ async function wpShowEdit(id) {
         document.getElementById('wpEditSub').textContent = d.name || '';
         document.getElementById('wpEditHead').className = 'fd-modal-header edit';
         document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml(d);
+        wpInitFormStaticDds(d);
+        wpRenderWorkspaceDd(d.workspaceId || d.WorkspaceId || 0);
+        if (wpIsAdmin) wpRenderOwnerOrgDd(d.organizationalUnitId || d.OrganizationalUnitId || 0);
         wpOnValidityChange();
         let used = [];
         try { used = JSON.parse(d.usedFormDefinitionsJson || d.UsedFormDefinitionsJson || '[]'); } catch { used = []; }
@@ -590,7 +865,7 @@ async function wpShowEdit(id) {
         try { next = JSON.parse(d.nextProcedureIdsJson || '[]'); } catch {}
         try { imp = JSON.parse(d.implicitProcedureIdsJson || '[]'); } catch {}
         wpRenderTargetOrgCb(tgt);
-        await wpLoadRelated(d.workspaceId || d.WorkspaceId, id);
+        await wpLoadRelated(id);
         wpRenderRelCb('wpPrevCbHost', 'wp-rel-prev-cb', 'wpPrevDdLbl', prev);
         wpRenderRelCb('wpNextCbHost', 'wp-rel-next-cb', 'wpNextDdLbl', next);
         wpRenderRelCb('wpImplicitCbHost', 'wp-rel-imp-cb', 'wpImplicitDdLbl', imp);
@@ -682,7 +957,7 @@ async function wpShowDetails(id) {
         if (!res.success) return showToast(res.message, 'error');
         const d = res.data;
         await wpLoad();
-        await wpLoadRelated(d.workspaceId || d.WorkspaceId || 0, id);
+        await wpLoadRelated(id);
         const activeBadge = d.isActive
             ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle-fill"></i> مفعّل</span>'
             : '<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle"></i> غير مفعل</span>';
@@ -691,15 +966,12 @@ async function wpShowDetails(id) {
         try { used = JSON.parse(d.usedFormDefinitionsJson || '[]'); } catch { used = []; }
         const usedLines = used.map(u => {
             const fid = u.formDefinitionId != null ? u.formDefinitionId : u.formdefinitionId;
-            const fd = wpLookups.formDefinitions.find(x => x.id === fid);
-            return fd ? esc(fd.name) : String(fid);
+            const fd = wpLookups.formDefinitions.find(x => (x.id ?? x.Id) === fid);
+            return fd ? esc(fd.name ?? fd.Name) : String(fid);
         }).join('، ') || '—';
 
-        let exBen = wpParseExecutorBeneficiaryIds(d);
-        const exNames = exBen.map(bid => {
-            const b = (wpLookups.executorBeneficiaries || []).find(x => x.id === bid);
-            return b ? esc(b.fullName) : bid;
-        }).join('، ') || '—';
+        const exBen = wpParseExecutorBeneficiaryIds(d);
+        const exNames = wpResolveExecutorRoleNames(exBen);
 
         let tgt = [], prev = [], next = [], imp = [];
         try { tgt = JSON.parse(d.targetOrganizationalUnitIdsJson || '[]'); } catch { tgt = []; }
@@ -741,7 +1013,7 @@ async function wpShowDetails(id) {
         html += `<div class="fd-section">
             <div class="fd-section-title"><i class="bi bi-person-badge"></i> المنفذون والوحدات</div>
             <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">المنفذون</span><span class="fd-detail-val">${exNames}</span>
+                <span class="fd-detail-lbl">أدوار المنفذين</span><span class="fd-detail-val">${exNames}</span>
                 <span class="fd-detail-lbl">المستهدفون</span><span class="fd-detail-val">${tgtNames}</span>
             </div></div>`;
 

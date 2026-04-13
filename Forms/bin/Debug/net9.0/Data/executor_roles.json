@@ -13,5 +13,20 @@
     "UpdatedBy": "",
     "CreatedAt": "2026-04-13T12:27:59.409274+03:00",
     "UpdatedAt": null
+  },
+  {
+    "Id": 2,
+    "Name": "\u0628\u064A\u062A\u064A\u062A\u064A",
+    "Description": "",
+    "Ownership": "\u063A\u064A\u0631 \u062D\u0635\u0631\u064A",
+    "OrgUnitIds": "5",
+    "ExecutorIds": "3,2",
+    "Color": "#25935f",
+    "SortOrder": 2,
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "UpdatedBy": "",
+    "CreatedAt": "2026-04-13T19:21:55.526304+03:00",
+    "UpdatedAt": null
   }
 ]

@@ -19,6 +19,8 @@
 .fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
 .fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
 .fd-section       { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+
+#wpEditBody .fd-section.wp-section-spaced { margin-top: 1.5rem; }
 .fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
 .fd-section-title i { font-size:15px; color:var(--sa-600); }
 .fd-form-row   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
@@ -105,8 +107,13 @@
     margin-top:4px;
     max-height:300px;
     overflow-y:auto;
+    background:#fff;
 }
-.wp-dd.wp-dd-sm .dropdown-menu.wp-dd-menu { max-height:240px; }
+/* توحيد مظهر زر القائمة واللوحة داخل مودال الإجراء (نماذج / منفذين / وحدات / علاقات) */
+#wpEditBody .dropdown.wp-dd .dropdown-toggle.wp-dd-toggle,
+#wpEditBody .dropdown.wp-dd .dropdown-menu.wp-dd-menu {
+    background:#fff;
+}
 
 .wp-dd-check-row {
     display:flex;
@@ -141,7 +148,16 @@
     font-family:'Cairo',sans-serif;
 }
 .wp-dd-menu .text-muted.small { padding:10px 14px; }
-/* عمودا إجراءات في الجدول */
+
+#wpEditBody .fd-form-row.cols-1 .fd-form-group,
+#wpEditBody .fd-form-group.fd-form-group--wp-dd {
+    width: 100%;
+    min-width: 0;
+}
+.wp-dd-check-row-cb[type="radio"] {
+    border-radius: 50%;
+}
+
 .wp-action-grid {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -169,35 +185,41 @@
     </button>
 </div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters wp-procedure-filters">
     <div class="rt-search-box">
         <i class="bi bi-search rt-search-icon"></i>
-        <input type="text" class="form-control" id="wpSearch" placeholder="بحث في أسماء الإجراءات..." oninput="wpLoad()">
+        <input type="text" class="form-control" id="wpSearch" placeholder="بحث في أسماء الإجراء..." oninput="wpLoad()">
     </div>
-    <select class="rt-filter-select form-select" id="wpFilterValidity" onchange="wpLoad()">
+    <select class="rt-filter-select form-select" id="wpFilterWorkspace" onchange="wpLoad()" aria-label="مساحة العمل">
+        <option value="">مساحة العمل</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterFormDef" onchange="wpLoad()" aria-label="النماذج المستخدمة">
+        <option value="">النماذج المستخدمة</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterValidity" onchange="wpLoad()" aria-label="صلاحية الإجراء">
         <option value="">صلاحية الإجراء</option>
         <option value="دائم">دائم</option>
         <option value="مؤقت">مؤقت</option>
     </select>
-    <select class="rt-filter-select form-select" id="wpFilterStatus" onchange="wpLoad()">
+    <select class="rt-filter-select form-select" id="wpFilterTargetOrg" onchange="wpLoad()" aria-label="الوحدات التنظيمية المستهدفة">
+        <option value="">الوحدات التنظيمية المستهدفة</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterExecutor" onchange="wpLoad()" aria-label="المنفذ للإجراء">
+        <option value="">المنفذ للإجراء</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterStatus" onchange="wpLoad()" aria-label="الحالة">
         <option value="">الحالة</option>
         <option value="draft">مسودة</option>
         <option value="pending">بانتظار الاعتماد</option>
         <option value="approved">معتمد</option>
         <option value="rejected">مرفوض</option>
     </select>
-    <select class="rt-filter-select form-select" id="wpFilterActive" onchange="wpLoad()">
+    <select class="rt-filter-select form-select" id="wpFilterActive" onchange="wpLoad()" aria-label="التفعيل">
         <option value="">التفعيل</option>
         <option value="1">مفعل</option>
-        <option value="0">معطل  </option>
+        <option value="0">غير مفعل</option>
     </select>
-    <select class="rt-filter-select form-select" id="wpFilterWorkspace" onchange="wpLoad()">
-        <option value="">مساحة العمل</option>
-    </select>
-    <select class="rt-filter-select form-select" id="wpFilterFormDef" onchange="wpLoad()">
-        <option value="">النماذج المستخدمة</option>
-    </select>
-    <button class="rt-clear-btn" onclick="wpClear()"><i class="bi bi-x-circle"></i> مسح</button>
+    <button type="button" class="rt-clear-btn" onclick="wpClear()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
 <div class="card">
