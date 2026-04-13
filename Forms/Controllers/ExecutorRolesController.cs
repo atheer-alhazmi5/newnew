@@ -79,7 +79,7 @@ public class ExecutorRolesController : BaseController
             success = true,
             data = result,
             organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList(),
-            beneficiaries = beneficiaries.Where(b => b.IsActive).Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId }).ToList()
+            beneficiaries = beneficiaries.Where(b => b.IsActive).Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId, b.IsUnitManager, RoleDisplay = b.RoleDisplay ?? "" }).ToList()
         });
     }
 

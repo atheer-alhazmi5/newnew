@@ -31,12 +31,12 @@
     "ClassificationId": 1,
     "Level": "\u0631\u0626\u064A\u0633\u064A",
     "ParentId": null,
-    "IsActive": false,
+    "IsActive": true,
     "SortOrder": 3,
     "CreatedBy": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645",
     "UpdatedBy": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645",
     "CreatedAt": "2026-04-02T09:29:17.323218+03:00",
-    "UpdatedAt": "2026-04-09T10:56:47.916579+03:00"
+    "UpdatedAt": "2026-04-13T08:26:18.2054+03:00"
   },
   {
     "Id": 6,

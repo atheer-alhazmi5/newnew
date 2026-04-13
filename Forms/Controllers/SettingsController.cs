@@ -493,9 +493,11 @@ public class SettingsController : BaseController
         return Json(filtered.Select(u => {
             var ouId = 0;
             var ouName = "";
+            var isUnitManager = false;
             if (benByUsername.TryGetValue(u.Username.ToLower(), out var ben))
             {
                 ouId = ben.OrganizationalUnitId;
+                isUnitManager = ben.IsUnitManager;
                 ouMap.TryGetValue(ouId, out ouName);
                 ouName ??= "";
             }
@@ -504,7 +506,7 @@ public class SettingsController : BaseController
                 ouId = u.DepartmentId;
                 ouName = u.Department?.Name ?? "";
             }
-            return new { u.Id, FullName = u.FullName, DepartmentId = ouId, DepartmentName = ouName };
+            return new { u.Id, FullName = u.FullName, DepartmentId = ouId, DepartmentName = ouName, IsUnitManager = isUnitManager };
         }));
     }
 

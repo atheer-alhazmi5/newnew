@@ -63,6 +63,14 @@ function qid() { return 'q_' + Date.now() + '_' + Math.random().toString(36).sub
 
 function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 
+function fbUserIsManager(u) {
+    if (!u) return false;
+    if (u.isUnitManager === true) return true;
+    var rd = String(u.roleDisplay || '');
+    if (rd.indexOf('مدير وحدة') >= 0 || rd.indexOf('مدير الوحدة') >= 0) return true;
+    return false;
+}
+
 function iconSvg(name, size) {
     const svg = FORM_ICONS[name] || FORM_ICONS['document'];
     return '<span style="width:' + size + 'px;height:' + size + 'px;display:inline-flex;align-items:center;justify-content:center;">' + svg + '</span>';
@@ -292,9 +300,12 @@ function renderStep1() {
     var userLabel = userCount > 0 ? (userCount + ' مستخدم محدد') : 'اختر المستخدمين';
     var userItems = INIT_USERS.map(function(u) {
         var checked = formData.targetUserIds.includes(u.id);
-        return '<div class="ms-item' + (checked ? ' checked' : '') + '" data-id="' + u.id + '" data-name="' + esc(u.fullName) + '" onclick="toggleMsItem(this,\'user\')">' +
+        var mgr = fbUserIsManager(u);
+        var mgrCls = mgr ? ' ms-item-manager' : '';
+        var badge = mgr ? '<span class="fb-mgr-badge">مدير وحده تنظيمية</span>' : '';
+        return '<div class="ms-item' + mgrCls + (checked ? ' checked' : '') + '" data-id="' + u.id + '" data-name="' + esc(u.fullName) + '" onclick="toggleMsItem(this,\'user\')">' +
             '<input class="form-check-input" type="checkbox" ' + (checked ? 'checked' : '') + ' style="pointer-events:none;">' +
-            '<span>' + esc(u.fullName) + '</span><small>(' + esc(u.deptName) + ')</small></div>';
+            '<span>' + esc(u.fullName) + '</span>' + badge + '<small>(' + esc(u.deptName) + ')</small></div>';
     }).join('');
     var allUsersChecked = INIT_USERS.length > 0 && formData.targetUserIds.length === INIT_USERS.length;
 

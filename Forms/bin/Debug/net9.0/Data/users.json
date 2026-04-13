@@ -113,7 +113,7 @@
     "Role": "Employee",
     "DepartmentId": 5,
     "Department": null,
-    "Status": "Inactive",
+    "Status": "Active",
     "CreatedAt": "2026-04-02T09:58:42.157326+03:00",
     "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
     "RoleName": "Employee"
@@ -151,5 +151,22 @@
     "CreatedAt": "2026-04-02T10:18:19.17647+03:00",
     "RoleLabel": "\u0645\u0648\u0638\u0641",
     "RoleName": "Staff"
+  },
+  {
+    "Id": 10,
+    "NationalId": "1118181111",
+    "Username": "admin123",
+    "Email": "majed@almadinah.gov.sa",
+    "Phone": "0505050988",
+    "PhotoUrl": "",
+    "FullName": "\u0645\u0627\u062C\u062F \u0644\u0627\u062D\u0642 \u0645\u0631\u0632\u0648\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "PasswordHash": "AQAAAAIAAYagAAAAEG4TOl2BbhbNop/zP25LEr/WNQ43cRtU\u002B75kWLcQd9FGLhtfA0XF1wKZPritwxN2eA==",
+    "Role": "Manager",
+    "DepartmentId": 5,
+    "Department": null,
+    "Status": "Active",
+    "CreatedAt": "2026-04-13T08:30:51.547104+03:00",
+    "RoleLabel": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "RoleName": "Manager"
   }
 ]

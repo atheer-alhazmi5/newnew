@@ -6,6 +6,14 @@ var erSelectedExecIdsC = [], erSelectedExecIdsE = [];
 
 function erEsc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+function erBenIsUnitManager(b) {
+    if (!b) return false;
+    if (b.isUnitManager === true || b.IsUnitManager === true) return true;
+    var rd = String(b.roleDisplay || b.RoleDisplay || '');
+    if (rd.indexOf('مدير وحدة') >= 0 || rd.indexOf('مدير الوحدة') >= 0) return true;
+    return false;
+}
+
 /* ─── Data Loading ──────────────────────────────────────────── */
 async function erLoad() {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoles');
@@ -248,8 +256,9 @@ function erRenderExecutors(mode) {
 
     var grouped = {};
     erBeneficiaries.forEach(function(b) {
-        if (selectedOuIds.indexOf(b.organizationalUnitId) < 0) return;
-        var dept = ouMap[b.organizationalUnitId] || 'أخرى';
+        var ouId = b.organizationalUnitId != null ? b.organizationalUnitId : b.OrganizationalUnitId;
+        if (selectedOuIds.indexOf(ouId) < 0) return;
+        var dept = ouMap[ouId] || 'أخرى';
         if (!grouped[dept]) grouped[dept] = [];
         grouped[dept].push(b);
     });
@@ -263,7 +272,7 @@ function erRenderExecutors(mode) {
 
     var cleanedExecIds = [];
     var allBenIds = [];
-    keys.forEach(function(k) { grouped[k].forEach(function(b) { allBenIds.push(b.id); }); });
+    keys.forEach(function(k) { grouped[k].forEach(function(b) { allBenIds.push(b.id != null ? b.id : b.Id); }); });
     selectedExecIds.forEach(function(id) { if (allBenIds.indexOf(id) >= 0) cleanedExecIds.push(id); });
     if (mode === 'c') erSelectedExecIdsC = cleanedExecIds; else erSelectedExecIdsE = cleanedExecIds;
 
@@ -272,8 +281,13 @@ function erRenderExecutors(mode) {
         html += '<div class="er-exec-dept-head"><i class="bi bi-building"></i> ' + erEsc(dept) + ' (' + grouped[dept].length + ')</div>';
         html += '<div class="er-exec-dept-items">';
         grouped[dept].forEach(function(b) {
-            var checked = cleanedExecIds.indexOf(b.id) >= 0 ? ' checked' : '';
-            html += '<label class="er-exec-item"><input type="' + inputType + '" name="' + inputName + '" value="' + b.id + '"' + checked + ' onchange="erExecChanged(\'' + mode + '\',' + b.id + ',this)"> ' + erEsc(b.fullName) + '</label>';
+            var bid = b.id != null ? b.id : b.Id;
+            var checked = cleanedExecIds.indexOf(bid) >= 0 ? ' checked' : '';
+            var isMgr = erBenIsUnitManager(b);
+            var mgrCls = isMgr ? ' er-exec-item-manager' : '';
+            var badge = isMgr ? '<span class="er-exec-mgr-badge">مدير وحده تنظيمية</span>' : '';
+            var fn = b.fullName || b.FullName || '';
+            html += '<label class="er-exec-item' + mgrCls + '"><input type="' + inputType + '" name="' + inputName + '" value="' + bid + '"' + checked + ' onchange="erExecChanged(\'' + mode + '\',' + bid + ',this)"> <span>' + erEsc(fn) + '</span>' + badge + '</label>';
         });
         html += '</div>';
     });

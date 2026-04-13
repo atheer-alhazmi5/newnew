@@ -1,0 +1,327 @@
+@{
+    ViewBag.Title = "إجراءات العمل";
+    ViewBag.PageName = "إجراءات العمل";
+}
+
+<style>
+/* ── same visual language as FormDefinitions (fd-*) ── */
+.fd-modal        { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.fd-modal-header { padding:24px 28px; position:relative; }
+.fd-modal-header.create  { background:var(--sa-800); }
+.fd-modal-header.edit    { background:var(--sa-800); }
+.fd-modal-header.details { background:var(--info-700); }
+.fd-modal-header.workflow { background:var(--gray-600); }
+.fd-modal-header.danger  { background:var(--error-600); }
+.fd-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.fd-modal-header .btn-close-x:hover { color:#fff; }
+.fd-modal-title    { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
+.fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.fd-section       { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.fd-section-title i { font-size:15px; color:var(--sa-600); }
+.fd-form-row   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.fd-form-row.cols-3 { grid-template-columns:repeat(3,1fr); }
+.fd-form-row.cols-1 { grid-template-columns:1fr; }
+.fd-form-group { display:flex; flex-direction:column; gap:4px; }
+.fd-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.fd-form-group .form-control,
+.fd-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.fd-form-group .form-control:focus,
+.fd-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.fd-form-group textarea.form-control { min-height:70px; resize:vertical; }
+.required-star { color:#ef4444; margin-right:4px; }
+.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fd-action-btn-detail:hover { background:var(--info-50); }
+.fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fd-action-btn-edit:hover { background:var(--sa-50); }
+.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-action-btn-delete:hover { background:var(--error-50); }
+.fd-action-btn-approve { border-color:var(--success-600); color:var(--success-600); background:#fff; }
+.fd-action-btn-approve:hover { background:var(--success-50); }
+.fd-action-btn-reject { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-action-btn-reject:hover { background:var(--error-50); }
+.fd-action-btn-send   { border-color:var(--warning-600); color:var(--warning-600); background:#fff; }
+.fd-action-btn-send:hover { background:var(--warning-50); }
+.fd-action-btn-flow   { border-color:var(--gray-500); color:var(--gray-600); background:#fff; }
+.fd-action-btn-flow:hover { background:var(--gray-50); }
+.fd-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; }
+.fd-badge-draft    { background:var(--gray-100);   color:var(--gray-600); }
+.fd-badge-pending  { background:var(--warning-100); color:var(--warning-700); }
+.fd-badge-approved { background:var(--success-100); color:var(--success-700); }
+.fd-badge-rejected { background:var(--error-100);   color:var(--error-700); }
+.fd-toggle { position:relative; display:inline-block; width:42px; height:22px; }
+.fd-toggle input { opacity:0; width:0; height:0; }
+.fd-toggle .fd-slider { position:absolute; cursor:pointer; inset:0; background:var(--gray-300); border-radius:22px; transition:.25s; }
+.fd-toggle .fd-slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; }
+.fd-toggle input:checked + .fd-slider { background:var(--sa-600); }
+.fd-toggle input:checked + .fd-slider::before { transform:translateX(20px); }
+.fd-toggle input:disabled + .fd-slider { opacity:.45; cursor:not-allowed; }
+.fd-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
+.fd-detail-lbl  { font-weight:700; color:var(--gray-500); }
+.fd-detail-val  { color:var(--gray-800); font-weight:500; }
+.fd-empty-state { text-align:center; padding:56px 16px; color:var(--gray-400) !important; font-style:normal !important; }
+.fd-empty-state i { font-size:52px; display:block; margin-bottom:14px; color:var(--gray-300) !important; font-style:normal !important; }
+.fd-empty-state p { font-size:14px; font-weight:600; margin:0; color:var(--gray-400) !important; font-style:normal !important; }
+.fd-save-btn        { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
+.fd-save-btn:hover  { transform:translateY(-1px); }
+.fd-save-btn.draft  { background:var(--gray-500); }
+.fd-save-btn.draft:hover { background:var(--gray-600); }
+.fd-save-btn.send   { background:var(--sa-600); }
+.fd-save-btn.send:hover  { background:var(--sa-700); }
+.fd-cancel-btn      { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
+.fd-cancel-btn:hover { background:var(--gray-300); }
+/* قوائم اختيار متعدد — نفس خط وحدود حقول form-select داخل النموذج */
+.wp-dd .dropdown-toggle.wp-dd-toggle {
+    width:100%;
+    text-align:start;
+    font-size:13px;
+    border-radius:10px;
+    border:2px solid var(--gray-200);
+    padding:8px 12px;
+    padding-inline-end:2.25rem;
+    font-family:'Cairo',sans-serif;
+    background:#fff;
+    color:var(--gray-800);
+    font-weight:500;
+    line-height:1.5;
+    box-shadow:none;
+}
+.wp-dd .dropdown-toggle.wp-dd-toggle:hover,
+.wp-dd .dropdown-toggle.wp-dd-toggle:focus,
+.wp-dd .dropdown-toggle.wp-dd-toggle.show,
+.wp-dd .dropdown-toggle.wp-dd-toggle:active {
+    border-color:var(--sa-400);
+    box-shadow:none;
+    color:var(--gray-800);
+    background:#fff;
+}
+.wp-dd .dropdown-menu.wp-dd-menu {
+    border-radius:10px;
+    border:2px solid var(--gray-200);
+    box-shadow:0 8px 24px rgba(0,0,0,.08);
+    margin-top:4px;
+    max-height:300px;
+    overflow-y:auto;
+}
+.wp-dd.wp-dd-sm .dropdown-menu.wp-dd-menu { max-height:240px; }
+
+.wp-dd-check-row {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:10px;
+    direction:rtl;
+    padding:10px 14px;
+    border-bottom:1px solid var(--gray-200);
+    margin:0;
+}
+.wp-dd-menu .wp-dd-check-row:last-child { border-bottom:none; }
+.wp-dd-check-row-cb {
+    flex-shrink:0;
+    width:1.125rem;
+    height:1.125rem;
+    margin:0 !important;
+    float:none !important;
+    cursor:pointer;
+    accent-color:var(--sa-600);
+}
+.wp-dd-check-row-label {
+    flex:1;
+    min-width:0;
+    text-align:right;
+    font-size:13px;
+    line-height:1.4;
+    font-weight:500;
+    color:var(--gray-800);
+    cursor:pointer;
+    margin:0;
+    font-family:'Cairo',sans-serif;
+}
+.wp-dd-menu .text-muted.small { padding:10px 14px; }
+/* عمودا إجراءات في الجدول */
+.wp-action-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    max-width:100%;
+    margin-inline:auto;
+    min-width:200px;
+}
+.wp-action-grid .fd-action-btn { width:100%; justify-content:center; }
+.wp-action-grid > .fd-action-btn:last-child:nth-child(odd) { grid-column:1 / -1; }
+@@media (max-width:768px) {
+    .fd-form-row { grid-template-columns:1fr; }
+    .fd-form-row.cols-3 { grid-template-columns:1fr; }
+    .fd-detail-grid { grid-template-columns:1fr; }
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="page-title mb-0">إجراءات العمل</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إنشاء وإدارة إجراءات العمل في النظام</p>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius:12px;padding:10px 28px;">
+        <i class="bi bi-plus-lg"></i> إنشاء إجراء عمل جديد
+    </button>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="rt-search-box">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="wpSearch" placeholder="بحث في أسماء الإجراءات..." oninput="wpLoad()">
+    </div>
+    <select class="rt-filter-select form-select" id="wpFilterValidity" onchange="wpLoad()">
+        <option value="">صلاحية الإجراء</option>
+        <option value="دائم">دائم</option>
+        <option value="مؤقت">مؤقت</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterStatus" onchange="wpLoad()">
+        <option value="">الحالة</option>
+        <option value="draft">مسودة</option>
+        <option value="pending">بانتظار الاعتماد</option>
+        <option value="approved">معتمد</option>
+        <option value="rejected">مرفوض</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterActive" onchange="wpLoad()">
+        <option value="">التفعيل</option>
+        <option value="1">مفعل</option>
+        <option value="0">معطل  </option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterWorkspace" onchange="wpLoad()">
+        <option value="">مساحة العمل</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterFormDef" onchange="wpLoad()">
+        <option value="">النماذج المستخدمة</option>
+    </select>
+    <button class="rt-clear-btn" onclick="wpClear()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0" id="wpTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;text-align:center;">رقم</th>
+                        <th>ترميز الإجراء</th>
+                        <th>اسم الإجراء</th>
+                        <th>مساحة العمل</th>
+                        <th>التصنيف</th>
+                        <th>الوحدة التنظيمية المالكة</th>
+                        <th style="text-align:center;">صلاحية الإجراء</th>
+                        <th style="text-align:center;">الحالة</th>
+                        <th style="text-align:center;display:none;" id="wpThActive">التفعيل</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="wpBody">
+                    <tr><td colspan="10" class="text-center py-4">
+                        <div class="spinner-border" style="color:var(--sa-600);"></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="wpEditHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="wpEditTitle">إضافة إجراء عمل جديد</h5>
+                <div class="fd-modal-subtitle" id="wpEditSub">أدخل بيانات الإجراء</div>
+            </div>
+            <div class="fd-modal-body" id="wpEditBody"></div>
+            <div class="fd-modal-footer" id="wpEditFoot"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تفاصيل إجراء العمل</h5>
+                <div class="fd-modal-subtitle">عرض كامل للبيانات</div>
+            </div>
+            <div class="fd-modal-body" id="wpDetailsBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpRejectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">رفض إجراء العمل</h5>
+                <div class="fd-modal-subtitle" id="wpRejectSub">الرجاء تحديد سبب الرفض</div>
+            </div>
+            <div class="fd-modal-body">
+                <div class="fd-form-group">
+                    <label><span class="required-star">*</span> سبب الرفض</label>
+                    <textarea class="form-control" id="wpRejectReason" rows="3" placeholder="اكتب سبب الرفض هنا..."></textarea>
+                </div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="wpSubmitReject()">
+                    <i class="bi bi-x-lg"></i> رفض
+                </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تأكيد الحذف</h5>
+                <div class="fd-modal-subtitle">هذا الإجراء لا يمكن التراجع عنه</div>
+            </div>
+            <div class="fd-modal-body">
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">
+                    هل أنت متأكد من حذف الإجراء <strong id="wpDeleteName"></strong>؟
+                </p>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="wpSubmitDelete()">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpWorkflowModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header workflow">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">سير العمل</h5>
+                <div class="fd-modal-subtitle" id="wpFlowSub"></div>
+            </div>
+            <div class="fd-modal-body" id="wpFlowBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/work-procedures.js" asp-append-version="true"></script>
+<script>wpLoad();</script>
+}

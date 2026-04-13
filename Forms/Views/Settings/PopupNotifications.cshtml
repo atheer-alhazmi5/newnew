@@ -46,6 +46,8 @@
 .pn-target-list { max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:0;background:#fff; }
 .pn-target-list label { display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-700);cursor:pointer; }
 .pn-target-list label:hover { color:var(--sa-700); }
+.pn-user-row-manager { background:#ECFDF3;border-radius:8px;padding:6px 8px!important;margin:2px 0;align-items:center;flex-wrap:wrap; }
+.pn-user-mgr-badge { font-size:11px;font-weight:700;color:#067647;white-space:nowrap;margin-right:6px; }
 .pn-target-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
 .pn-select-all-btn { background:none;border:1px solid var(--gray-300);border-radius:8px;padding:3px 12px;font-size:11px;font-weight:700;color:var(--sa-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap; }
 .pn-select-all-btn:hover { background:var(--sa-50);border-color:var(--sa-400); }
@@ -654,8 +656,10 @@ function pnBuildUsersList(selected) {
         html += `<div class="pn-dept-group-body">`;
         g.users.forEach(u => {
             const name = u.fullName || u.FullName || u.name || 'مستخدم';
-            html += `<label><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
-                ${selected.includes(u.id) ? 'checked' : ''}> ${esc(name)}</label>`;
+            const isMgr = !!(u.isUnitManager || u.IsUnitManager);
+            const badge = isMgr ? '<span class="pn-user-mgr-badge">مدير وحده تنظيمية</span>' : '';
+            html += `<label${isMgr ? ' class="pn-user-row-manager"' : ''}><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
+                ${selected.includes(u.id) ? 'checked' : ''}> <span>${esc(name)}</span>${badge}</label>`;
         });
         html += `</div></div>`;
     });

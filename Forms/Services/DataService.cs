@@ -780,7 +780,9 @@ public class DataService
         => Task.FromResult(_db.Workspaces.Where(w => w.IsActive).OrderBy(w => w.SortOrder).ToList());
 
     public Task<bool> IsWorkspaceLinkedAsync(int workspaceId)
-        => Task.FromResult(_db.FormDefinitions.Any(f => f.WorkspaceId == workspaceId));
+        => Task.FromResult(
+            _db.FormDefinitions.Any(f => f.WorkspaceId == workspaceId) ||
+            _db.WorkProcedures.Any(w => w.WorkspaceId == workspaceId));
 
     public Task<Workspace?> GetWorkspaceByIdAsync(int id)
         => Task.FromResult(_db.Workspaces.FirstOrDefault(w => w.Id == id));
@@ -898,6 +900,7 @@ public class DataService
             _db.ReadyTables.Any(t => t.OrganizationalUnitId == unitId) ||
             _db.DropdownLists.Any(d => d.OrganizationalUnitId == unitId) ||
             _db.FormDefinitions.Any(f => f.OrganizationalUnitId == unitId) ||
+            _db.WorkProcedures.Any(w => w.OrganizationalUnitId == unitId) ||
             _db.ExecutorRoles.Any(r => ("," + (r.OrgUnitIds ?? "") + ",").Contains("," + unitId + ",")) ||
             _db.PopupNotifications.Any(p => (p.TargetDepartmentIds ?? new List<int>()).Contains(unitId));
 
@@ -1481,6 +1484,43 @@ public class DataService
         if (f == null) return Task.FromResult(false);
         list.Remove(f);
         _db.SaveFormDefinitions(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── WORK PROCEDURES ───────────────────────────────────────────────────────
+    public Task<List<WorkProcedure>> ListWorkProceduresAsync()
+        => Task.FromResult(_db.WorkProcedures.OrderByDescending(f => f.CreatedAt).ToList());
+
+    public Task<WorkProcedure?> GetWorkProcedureByIdAsync(int id)
+        => Task.FromResult(_db.WorkProcedures.FirstOrDefault(f => f.Id == id));
+
+    public Task<WorkProcedure> AddWorkProcedureAsync(WorkProcedure w)
+    {
+        var list = _db.WorkProcedures;
+        w.Id = NextId(list, x => x.Id);
+        w.CreatedAt = DateTime.Now;
+        list.Add(w);
+        _db.SaveWorkProcedures(list);
+        return Task.FromResult(w);
+    }
+
+    public Task<bool> UpdateWorkProcedureAsync(WorkProcedure w)
+    {
+        var list = _db.WorkProcedures;
+        var idx = list.FindIndex(x => x.Id == w.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = w;
+        _db.SaveWorkProcedures(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteWorkProcedureAsync(int id)
+    {
+        var list = _db.WorkProcedures;
+        var w = list.FirstOrDefault(x => x.Id == id);
+        if (w == null) return Task.FromResult(false);
+        list.Remove(w);
+        _db.SaveWorkProcedures(list);
         return Task.FromResult(true);
     }
 
