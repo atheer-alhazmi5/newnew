@@ -34,6 +34,22 @@ public class WorkProceduresController : BaseController
     }
 
     [HttpGet]
+    public IActionResult Workflow(int id)
+    {
+        var auth = RequireAuth();
+        if (auth != null) return auth;
+        if (CurrentUserRole != "Admin" && CurrentUserRole != "Employee")
+            return RedirectToAction("Index", "Forms");
+        if (id <= 0)
+            return RedirectToAction(nameof(Index));
+        SetViewBagUser(_ui);
+        ViewBag.Title = "إدارة سير عمل الإجراء";
+        ViewBag.PageName = "إدارة سير عمل الإجراء";
+        ViewBag.WorkProcedureId = id;
+        return View();
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetWorkProcedures(
         string? search,
         string? status,
@@ -42,6 +58,7 @@ public class WorkProceduresController : BaseController
         int? formDefinitionId,
         int? targetOrgUnitId,
         int? executorBeneficiaryId,
+        int? executorRoleId,
         string? isActive)
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
@@ -72,7 +89,17 @@ public class WorkProceduresController : BaseController
             all = all.Where(p => p.ValidityType == validity).ToList();
         if (targetOrgUnitId.HasValue && targetOrgUnitId.Value > 0)
             all = all.Where(p => ProcedureTargetsOrganizationalUnit(p, targetOrgUnitId.Value)).ToList();
-        if (executorBeneficiaryId.HasValue && executorBeneficiaryId.Value > 0)
+        if (executorRoleId.HasValue && executorRoleId.Value > 0)
+        {
+            var execRolesForRoleFilter = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);
+            var role = execRolesForRoleFilter.FirstOrDefault(r => r.Id == executorRoleId.Value);
+            if (role != null)
+            {
+                var roleBenIds = ParseCsvIntIds(role.ExecutorIds).ToHashSet();
+                all = all.Where(p => ProcedureHasAnyExecutorBeneficiaryInSet(p, roleBenIds)).ToList();
+            }
+        }
+        else if (executorBeneficiaryId.HasValue && executorBeneficiaryId.Value > 0)
             all = all.Where(p => ProcedureHasExecutorBeneficiary(p, executorBeneficiaryId.Value)).ToList();
         if (!string.IsNullOrWhiteSpace(status))
             all = all.Where(p => p.Status == status).ToList();
@@ -226,10 +253,272 @@ public class WorkProceduresController : BaseController
                 CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 ApprovedAt = p.ApprovedAt?.ToString("yyyy-MM-dd HH:mm"),
                 WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == p.WorkspaceId)?.Name ?? "",
-                OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? ""
+                OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? "",
+                WorkflowStepsJson = p.WorkflowStepsJson ?? "[]"
             },
             workspaces = wsForSelect
         });
+    }
+
+    private static readonly JsonSerializerOptions WorkflowJsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = false
+    };
+
+    [HttpGet]
+    public async Task<IActionResult> GetWorkflowContext(int workProcedureId)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        var p = await _ds.GetWorkProcedureByIdAsync(workProcedureId);
+        if (p == null) return Json(new { success = false, message = "غير موجود" });
+
+        var isAdmin = CurrentUserRole == "Admin";
+        var unitsAll = await _ds.ListOrganizationalUnitsAsync();
+        var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
+        var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
+        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var procBenIds = ParseProcedureBeneficiaryIds(p);
+        var allRoles = await _ds.ListExecutorRolesAsync();
+        var beneficiariesAll = await _ds.ListBeneficiariesAsync();
+        var allowedExecutorRoles = allRoles
+            .Where(r => r.IsActive && ParseCsvIntIds(r.ExecutorIds).Any(id => procBenIds.Contains(id)))
+            .OrderBy(r => r.SortOrder)
+            .Select(r => new
+            {
+                id = r.Id,
+                name = r.Name,
+                beneficiaryIds = ParseCsvIntIds(r.ExecutorIds),
+                isManagerLike = IsExecutorRoleManagerLike(r, procBenIds, beneficiariesAll)
+            })
+            .ToList();
+
+        var usedFdIds = ParseUsedFormDefinitionIds(p);
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var formDefinitions = fdAll
+            .Where(f => usedFdIds.Contains(f.Id))
+            .OrderBy(f => f.Name)
+            .Select(f => new { id = f.Id, name = f.Name })
+            .ToList();
+
+        var statuses = (await _ds.ListFormStatusesAsync())
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.SortOrder)
+            .Select(s => new { id = s.Id, name = s.Name, statusCategory = s.StatusCategory })
+            .ToList();
+
+        var procBeneficiaries = beneficiariesAll
+            .Where(b => procBenIds.Contains(b.Id))
+            .Select(b => new { id = b.Id, fullName = b.FullName, isUnitManager = b.IsUnitManager, mainRole = b.MainRole })
+            .ToList();
+
+        List<WorkflowStepSaveDto> steps;
+        try
+        {
+            steps = JsonSerializer.Deserialize<List<WorkflowStepSaveDto>>(p.WorkflowStepsJson ?? "[]", WorkflowJsonOpts) ?? new();
+        }
+        catch
+        {
+            steps = new();
+        }
+
+        steps = steps.OrderBy(s => s.SortOrder).ToList();
+
+        return Json(new
+        {
+            success = true,
+            workProcedureId = p.Id,
+            procedureCode = p.Code,
+            procedureName = p.Name,
+            steps,
+            allowedExecutorRoles,
+            formDefinitions,
+            formStatuses = statuses,
+            procBeneficiaries
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SaveWorkflowSteps([FromBody] SaveWorkflowStepsRequest req)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        if (req.WorkProcedureId <= 0) return Json(new { success = false, message = "معرّف الإجراء غير صالح" });
+
+        var p = await _ds.GetWorkProcedureByIdAsync(req.WorkProcedureId);
+        if (p == null) return Json(new { success = false, message = "غير موجود" });
+
+        var isAdmin = CurrentUserRole == "Admin";
+        var unitsAll = await _ds.ListOrganizationalUnitsAsync();
+        var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
+        var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
+        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var beneficiariesAll = await _ds.ListBeneficiariesAsync();
+        var err = ValidateWorkflowStepsPayload(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), await _ds.ListFormDefinitionsAsync(), await _ds.ListFormStatusesAsync());
+        if (err != null) return Json(new { success = false, message = err });
+
+        var normalized = NormalizeWorkflowStepsForSave(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync());
+        p.WorkflowStepsJson = JsonSerializer.Serialize(normalized, WorkflowJsonOpts);
+        p.UpdatedBy = CurrentUserFullName;
+        p.UpdatedAt = DateTime.Now;
+        await _ds.UpdateWorkProcedureAsync(p);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث سير عمل الإجراء", "WorkProcedure", p.Id.ToString(), p.Name));
+        return Json(new { success = true });
+    }
+
+    private static bool IsExecutorRoleManagerLike(ExecutorRole role, HashSet<int> procBenIds, List<Beneficiary> beneficiaries)
+    {
+        if (role.Name.Contains("مدير", StringComparison.OrdinalIgnoreCase)) return true;
+        foreach (var bid in ParseCsvIntIds(role.ExecutorIds).Where(procBenIds.Contains))
+        {
+            var b = beneficiaries.FirstOrDefault(x => x.Id == bid);
+            if (b != null && (b.IsUnitManager || string.Equals(b.MainRole, "مدير", StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+        return false;
+    }
+
+    private static List<int> ParseUsedFormDefinitionIds(WorkProcedure p)
+    {
+        var result = new List<int>();
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(p.UsedFormDefinitionsJson) ? "[]" : p.UsedFormDefinitionsJson);
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.TryGetProperty("formDefinitionId", out var fd) && fd.ValueKind == JsonValueKind.Number)
+                    result.Add(fd.GetInt32());
+            }
+        }
+        catch { /* ignore */ }
+        return result;
+    }
+
+    private string? ValidateWorkflowStepsPayload(
+        WorkProcedure p,
+        List<WorkflowStepSaveDto> steps,
+        List<Beneficiary> beneficiariesAll,
+        List<ExecutorRole> allRoles,
+        List<FormDefinition> fdAll,
+        List<FormStatus> fsAll)
+    {
+        var procBenIds = ParseProcedureBeneficiaryIds(p);
+        var allowedRoleIds = allRoles
+            .Where(r => r.IsActive && ParseCsvIntIds(r.ExecutorIds).Any(id => procBenIds.Contains(id)))
+            .Select(r => r.Id)
+            .ToHashSet();
+        var usedFdIds = ParseUsedFormDefinitionIds(p).ToHashSet();
+        var fsIds = fsAll.Where(s => s.IsActive).Select(s => s.Id).ToHashSet();
+        var ids = steps.Select(s => s.Id).ToList();
+        if (ids.Any(x => x <= 0)) return "معرّف كل خطوة يجب أن يكون أكبر من صفر";
+        if (ids.Count != ids.Distinct().Count()) return "معرّفات الخطوات يجب أن تكون فريدة";
+
+        var idSet = ids.ToHashSet();
+        foreach (var st in steps)
+        {
+            if (st.IsDecision)
+            {
+                if (st.ExecutorRoleId <= 0 || !allowedRoleIds.Contains(st.ExecutorRoleId))
+                    return "المنفذ غير مسموح لهذا الإجراء";
+                if (!st.ReturnStepId.HasValue || st.ReturnStepId.Value <= 0 || !idSet.Contains(st.ReturnStepId.Value))
+                    return "خطوة الرجوع مطلوبة لخطوة القرار";
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(st.StepLabel))
+                    return "اسم الخطوة مطلوب";
+                if (st.ExecutorRoleId <= 0 || !allowedRoleIds.Contains(st.ExecutorRoleId))
+                    return "المنفذ غير مسموح لهذا الإجراء";
+                if (!string.IsNullOrWhiteSpace(st.ExpectedDurationHours))
+                {
+                    if (int.TryParse(st.ExpectedDurationHours.Trim(), out var h) && (h < 0 || h > 24))
+                        return "الساعات يجب أن تكون بين 0 و 24";
+                }
+            }
+
+            if (st.ProgressStepId.HasValue && st.ProgressStepId.Value > 0 && !idSet.Contains(st.ProgressStepId.Value))
+                return "خطوة التقدم غير موجودة";
+            if (st.ReturnStepId.HasValue && st.ReturnStepId.Value > 0 && !idSet.Contains(st.ReturnStepId.Value))
+                return "خطوة الرجوع غير موجودة";
+
+            if (!st.IsDecision)
+            {
+                if (st.FormDefinitionId.HasValue && st.FormDefinitionId.Value > 0 && !usedFdIds.Contains(st.FormDefinitionId.Value))
+                    return "النموذج المختار غير ضمن النماذج المستخدمة للإجراء";
+                if (st.FormStatusId.HasValue && st.FormStatusId.Value > 0 && !fsIds.Contains(st.FormStatusId.Value))
+                    return "الحالة غير صالحة";
+            }
+
+            if (!string.IsNullOrWhiteSpace(st.NotificationChannel))
+            {
+                var ch = st.NotificationChannel.Trim().ToLowerInvariant();
+                if (ch is not ("in_app" or "email" or "sms"))
+                    return "قناة الإشعار غير صالحة";
+            }
+        }
+
+        return null;
+    }
+
+    private static List<WorkflowStepSaveDto> NormalizeWorkflowStepsForSave(
+        WorkProcedure p,
+        List<WorkflowStepSaveDto> steps,
+        List<Beneficiary> beneficiariesAll,
+        List<ExecutorRole> allRoles)
+    {
+        var procBenIds = ParseProcedureBeneficiaryIds(p);
+        var ordered = steps.OrderBy(s => s.SortOrder).ToList();
+        var result = new List<WorkflowStepSaveDto>();
+        foreach (var st in ordered)
+        {
+            var copy = new WorkflowStepSaveDto
+            {
+                Id = st.Id,
+                SortOrder = st.SortOrder,
+                IsDecision = st.IsDecision,
+                StepLabel = st.IsDecision ? "قرار" : (st.StepLabel ?? "").Trim(),
+                ExecutorRoleId = st.ExecutorRoleId,
+                ExpectedDurationDays = st.ExpectedDurationDays?.Trim() ?? "",
+                ExpectedDurationHours = st.ExpectedDurationHours?.Trim() ?? "",
+                IsConcurrentStep = st.IsConcurrentStep,
+                EscalationSyncFlags = st.EscalationSyncFlags,
+                ReturnStepId = st.ReturnStepId,
+                ProgressStepId = st.ProgressStepId,
+                FormDefinitionId = st.FormDefinitionId,
+                FormStatusId = st.FormStatusId,
+                NotificationChannel = string.IsNullOrWhiteSpace(st.NotificationChannel) ? "in_app" : st.NotificationChannel.Trim(),
+                OverdueNotificationText = st.OverdueNotificationText?.Trim() ?? "",
+                ExecutionNotificationText = st.ExecutionNotificationText?.Trim() ?? "",
+                Notes = st.Notes?.Trim()
+            };
+            if (copy.IsDecision)
+            {
+                copy.ExpectedDurationDays = "";
+                copy.ExpectedDurationHours = "";
+                copy.IsConcurrentStep = false;
+                copy.EscalationSyncFlags = null;
+                copy.FormDefinitionId = null;
+                copy.FormStatusId = null;
+                copy.NotificationChannel = "in_app";
+                copy.OverdueNotificationText = "";
+                copy.ExecutionNotificationText = "";
+            }
+            else
+            {
+                var role = allRoles.FirstOrDefault(r => r.Id == copy.ExecutorRoleId);
+                if (role == null || !IsExecutorRoleManagerLike(role, procBenIds, beneficiariesAll))
+                {
+                    copy.IsConcurrentStep = false;
+                    copy.EscalationSyncFlags = null;
+                }
+            }
+            result.Add(copy);
+        }
+        return result;
     }
 
     [HttpPost]
@@ -241,6 +530,9 @@ public class WorkProceduresController : BaseController
 
         var err = ValidateWorkProcedureRequest(req, true);
         if (err != null) return Json(new { success = false, message = err });
+
+        var uniqErrAdd = await ValidateCodeNameUniqueAsync(req.Code, req.Name, null);
+        if (uniqErrAdd != null) return Json(new { success = false, message = uniqErrAdd });
 
         var isAdmin = CurrentUserRole == "Admin";
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
@@ -289,6 +581,9 @@ public class WorkProceduresController : BaseController
 
         var err = ValidateWorkProcedureRequest(req, true);
         if (err != null) return Json(new { success = false, message = err });
+
+        var uniqErr = await ValidateCodeNameUniqueAsync(req.Code, req.Name, req.Id);
+        if (uniqErr != null) return Json(new { success = false, message = uniqErr });
 
         var isAdmin = CurrentUserRole == "Admin";
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
@@ -496,6 +791,16 @@ public class WorkProceduresController : BaseController
         return null;
     }
 
+    private static HashSet<int> ParseProcedureBeneficiaryIds(WorkProcedure p)
+    {
+        try
+        {
+            var ids = JsonSerializer.Deserialize<List<int>>(p.ExecutorBeneficiaryIdsJson ?? "[]", JsonOpts);
+            return ids?.Where(x => x > 0).ToHashSet() ?? new HashSet<int>();
+        }
+        catch { return new HashSet<int>(); }
+    }
+
     private static List<int> ParseCsvIntIds(string? csv)
     {
         var list = new List<int>();
@@ -542,6 +847,13 @@ public class WorkProceduresController : BaseController
             if (next != null) foreach (var x in next) yield return x;
             if (implicitIds != null) foreach (var x in implicitIds) yield return x;
         }
+        var allRel = new List<int>();
+        if (prev != null) allRel.AddRange(prev);
+        if (next != null) allRel.AddRange(next);
+        if (implicitIds != null) allRel.AddRange(implicitIds);
+        if (allRel.Count != allRel.Distinct().Count())
+            return "لا يمكن أن يظهر نفس الإجراء في أكثر من قائمة (سابقة / لاحقة / ضمنية)";
+
         foreach (var id in AllIds())
         {
             if (id <= 0) return "إجراء مرتبط غير صالح";
@@ -601,6 +913,22 @@ public class WorkProceduresController : BaseController
     {
         if (string.IsNullOrWhiteSpace(s)) return null;
         return DateTime.TryParse(s, out var d) ? d.Date : null;
+    }
+
+    private async Task<string?> ValidateCodeNameUniqueAsync(string? code, string? name, int? excludeProcedureId)
+    {
+        var all = await _ds.ListWorkProceduresAsync();
+        var codeT = (code ?? "").Trim();
+        var nameT = (name ?? "").Trim();
+        foreach (var x in all)
+        {
+            if (excludeProcedureId.HasValue && x.Id == excludeProcedureId.Value) continue;
+            if (string.Equals((x.Code ?? "").Trim(), codeT, StringComparison.OrdinalIgnoreCase))
+                return "ترميز الإجراء مستخدم مسبقاً — لا يُسمح بالتكرار";
+            if (string.Equals((x.Name ?? "").Trim(), nameT, StringComparison.OrdinalIgnoreCase))
+                return "اسم الإجراء مستخدم مسبقاً — لا يُسمح بالتكرار";
+        }
+        return null;
     }
 
     private string? ValidateWorkProcedureRequest(WorkProcedureRequest req, bool isCreate)
@@ -668,6 +996,17 @@ public class WorkProceduresController : BaseController
         {
             var ids = JsonSerializer.Deserialize<List<int>>(p.ExecutorBeneficiaryIdsJson ?? "[]", JsonOpts);
             return ids != null && ids.Contains(beneficiaryId);
+        }
+        catch { return false; }
+    }
+
+    private static bool ProcedureHasAnyExecutorBeneficiaryInSet(WorkProcedure p, HashSet<int> beneficiaryIds)
+    {
+        if (beneficiaryIds.Count == 0) return false;
+        try
+        {
+            var ids = JsonSerializer.Deserialize<List<int>>(p.ExecutorBeneficiaryIdsJson ?? "[]", JsonOpts);
+            return ids != null && ids.Any(beneficiaryIds.Contains);
         }
         catch { return false; }
     }
@@ -797,5 +1136,32 @@ public class WorkProceduresController : BaseController
     {
         public int Id { get; set; }
         public string? Reason { get; set; }
+    }
+
+    public class WorkflowStepSaveDto
+    {
+        public int Id { get; set; }
+        public int SortOrder { get; set; }
+        public bool IsDecision { get; set; }
+        public string StepLabel { get; set; } = "";
+        public int ExecutorRoleId { get; set; }
+        public string ExpectedDurationDays { get; set; } = "";
+        public string ExpectedDurationHours { get; set; } = "";
+        public bool IsConcurrentStep { get; set; }
+        public List<bool>? EscalationSyncFlags { get; set; }
+        public int? ReturnStepId { get; set; }
+        public int? ProgressStepId { get; set; }
+        public int? FormDefinitionId { get; set; }
+        public int? FormStatusId { get; set; }
+        public string NotificationChannel { get; set; } = "in_app";
+        public string OverdueNotificationText { get; set; } = "";
+        public string ExecutionNotificationText { get; set; } = "";
+        public string? Notes { get; set; }
+    }
+
+    public class SaveWorkflowStepsRequest
+    {
+        public int WorkProcedureId { get; set; }
+        public List<WorkflowStepSaveDto>? Steps { get; set; }
     }
 }

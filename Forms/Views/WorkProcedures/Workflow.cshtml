@@ -1,0 +1,193 @@
+@{
+    var wfId = ViewBag.WorkProcedureId is int i ? i : 0;
+    ViewBag.Title = "إدارة سير عمل الإجراء";
+    ViewBag.PageName = "إدارة سير عمل الإجراء";
+}
+
+@section Styles {
+<style>
+.fd-modal        { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.fd-modal-header { padding:24px 28px; position:relative; }
+.fd-modal-header.create  { background:var(--sa-800); }
+.fd-modal-header.details { background:var(--info-700); }
+.fd-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.fd-modal-header .btn-close-x:hover { color:#fff; }
+.fd-modal-title    { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
+.fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:flex-end; align-items:center; background:var(--gray-50); }
+.fd-section       { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.fd-form-row   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.fd-form-row.cols-1 { grid-template-columns:1fr; }
+.fd-form-group { display:flex; flex-direction:column; gap:4px; }
+.fd-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.fd-form-group .form-control,
+.fd-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.required-star { color:#ef4444; margin-right:4px; }
+.fd-save-btn        { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
+.fd-save-btn.send   { background:var(--sa-600); }
+.fd-save-btn.send:hover  { background:var(--sa-700); }
+.fd-cancel-btn      { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
+.fd-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
+.fd-detail-lbl  { font-weight:700; color:var(--gray-500); }
+.fd-detail-val  { color:var(--gray-800); font-weight:500; }
+#wpWorkflowStepModal .fd-modal-body { max-height: 75vh; overflow-y: auto; }
+.wp-wf-section-head .btn-primary { border-radius: 12px; padding: 8px 20px; font-size: 13px; font-weight: 700; }
+.wp-wf-table-wrap .table thead th { font-size: 12px; white-space: nowrap; }
+.wp-wf-muted { background: var(--gray-100) !important; color: var(--gray-500) !important; }
+.wp-wf-muted .wp-wf-na { font-style: italic; }
+.wp-wf-escalation-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 8px 10px; background: var(--gray-50); border-radius: 8px; border: 1px solid var(--gray-200); }
+.wp-wf-channel-note { font-size: 12px; color: var(--warning-700); margin-top: 4px; }
+/* عدّاد يوم / ساعة — مدمج، عرض ثابت، بدون أسهم المتصفح */
+#wpWorkflowStepModal .wp-wf-stepper-wrap { max-width: 200px; }
+#wpWorkflowStepModal .wp-wf-stepper {
+  display: grid;
+  grid-template-columns: 40px minmax(52px, 64px) 40px;
+  width: 100%;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  direction: ltr;
+}
+#wpWorkflowStepModal .wp-wf-stepper-btn {
+  border: none;
+  background: linear-gradient(180deg, #fafafa, var(--gray-50));
+  color: var(--sa-700);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+#wpWorkflowStepModal .wp-wf-stepper-btn:hover {
+  background: var(--sa-50);
+  color: var(--sa-800);
+}
+#wpWorkflowStepModal .wp-wf-stepper-btn:active { background: var(--sa-100); }
+#wpWorkflowStepModal .wp-wf-stepper-btn:first-of-type { border-inline-end: 1px solid var(--gray-200); }
+#wpWorkflowStepModal .wp-wf-stepper-btn:last-of-type { border-inline-start: 1px solid var(--gray-200); }
+#wpWorkflowStepModal .wp-wf-stepper-input {
+  border: none !important;
+  border-radius: 0 !important;
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-align: center;
+  padding: 6px 4px !important;
+  min-height: 44px;
+  color: var(--gray-800);
+  background: #fff !important;
+  box-shadow: none !important;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+#wpWorkflowStepModal .wp-wf-stepper-input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(37, 147, 95, 0.22) !important;
+}
+#wpWorkflowStepModal .wp-wf-stepper-input::-webkit-outer-spin-button,
+#wpWorkflowStepModal .wp-wf-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#wpWorkflowStepModal .btn-primary { background: var(--sa-600); border-color: var(--sa-600); font-weight: 700; border-radius: 12px; padding: 10px 24px; font-size: 14px; }
+#wpWorkflowStepModal .btn-primary:hover { background: var(--sa-700); border-color: var(--sa-700); }
+.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
+.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+@@media (max-width:768px) {
+    .fd-form-row { grid-template-columns:1fr; }
+    .fd-detail-grid { grid-template-columns:1fr; }
+}
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
+    <div>
+        <h2 class="page-title mb-0">إدارة سير عمل الإجراء</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;" id="wpWfSub"></p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center wp-wf-section-head">
+        <button type="button" class="btn btn-primary" onclick="wpWfShowAddForm()">
+            <i class="bi bi-plus-lg"></i> إنشاء سير عمل إجراء جديد
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="wpWfCloseSection()">العودة إلى القائمة</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive wp-wf-table-wrap">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="text-align:center;width:48px;">#</th>
+                        <th>الخطوة</th>
+                        <th>المنفذ</th>
+                        <th>المدة (يوم / ساعة)</th>
+                        <th style="text-align:center;">خطوة متزامنة</th>
+                        <th>خطوة الرجوع</th>
+                        <th>خطوة التقدم</th>
+                        <th>النموذج المستخدم</th>
+                        <th>الحالة</th>
+                        <th>قناة الإشعار</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="wpWfBody">
+                    <tr><td colspan="11" class="text-center py-4">
+                        <div class="spinner-border" style="color:var(--sa-600);"></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpWorkflowStepModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="wpWfStepModalHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal" aria-label="إغلاق"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="wpWfStepModalTitle">إضافة خطوة سير عمل</h5>
+                <div class="fd-modal-subtitle" id="wpWfStepModalSub">أدخل بيانات الخطوة</div>
+            </div>
+            <div class="fd-modal-body" id="wpWfFormWrap"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpWorkflowStepDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تفاصيل خطوة سير العمل</h5>
+                <div class="fd-modal-subtitle" id="wpWfDetSub"></div>
+            </div>
+            <div class="fd-modal-body" id="wpWfDetBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/work-procedures.js" asp-append-version="true"></script>
+<script>
+    window.WP_WORKFLOW_STANDALONE = true;
+    window.WP_WORKFLOW_PAGE_ID = @wfId;
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () { wpWfInitStandalonePage(); });
+</script>
+}

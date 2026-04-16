@@ -986,7 +986,7 @@ public class SettingsController : BaseController
         if (CurrentUserRole != "Admin")
             return RedirectToAction("Index", "Forms");
         SetViewBagUser(_ui);
-        ViewBag.PageName = "حالات النماذج";
+        ViewBag.PageName = "حالات الإجراء";
         return View();
     }
 

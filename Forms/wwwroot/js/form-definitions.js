@@ -12,6 +12,10 @@ let fdFields        = [];          // working field list
 let fdEditingIdx    = -1;          // -1 = adding, >= 0 = editing field at idx
 let fdCurrentTemplate = null;     // fetched template data for step-3 preview
 let fdStep1State    = null;        // persisted step-1 data across wizard steps
+let fdBindingLookups = { readyTables: [], dropdownLists: [] };
+let fdBindingLookupsLoaded = false;
+let fdDropdownItemsCache = {};
+let fdReadyTableGridCache = {};
 
 // ─── FIELD TYPE DEFINITIONS (mirrors ready-tables) ───────────────────────────
 const FD_FIELD_TYPES = {
@@ -99,10 +103,9 @@ const FD_FIELD_TYPES = {
     ]},
     "قائمة منسدلة": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"dropdownListId", label:"قائمة المنسدلة ", type:"dropdownListPick" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },
-        { key:"optionsCount", label:"عدد الخيارات", type:"number" },
         { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
     ]},
     "قائمة اختيار الواحد": { props: [
@@ -167,8 +170,7 @@ const FD_FIELD_TYPES = {
     ]},
     "جدول بيانات": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"rowLabels", label:"عناوين الصفوف (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يُعرض عموداً أولاً للصفوف." },
-        { key:"options", label:"عناوين الأعمدة (سطر لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readyTableId", label:"جدول بيانات ", type:"readyTablePick" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ]},
     "شبكة خيارات متعددة": { props: [
@@ -195,6 +197,61 @@ const FD_FILE_TYPE_CHOICES = [
 function fdEscAttr(s) {
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+async function fdEnsureFieldBindingLookups() {
+    if (fdBindingLookupsLoaded) return;
+    try {
+        const res = await apiFetch('/FormDefinitions/GetFieldBindingLookups');
+        if (res && res.success) {
+            fdBindingLookups.readyTables = res.readyTables || [];
+            fdBindingLookups.dropdownLists = res.dropdownLists || [];
+            fdBindingLookupsLoaded = true;
+        }
+    } catch (e) {
+        console.error('fdEnsureFieldBindingLookups', e);
+    }
+}
+
+async function fdFetchDropdownItemsForField(listId) {
+    const id = parseInt(listId, 10);
+    if (!id || fdDropdownItemsCache[id]) return;
+    try {
+        const res = await apiFetch(`/FormDefinitions/GetDropdownListItemsForField?id=${id}`);
+        if (res && res.success && Array.isArray(res.items)) fdDropdownItemsCache[id] = res.items;
+        else fdDropdownItemsCache[id] = [];
+    } catch {
+        fdDropdownItemsCache[id] = [];
+    }
+}
+
+async function fdFetchReadyTableGridForField(tableId) {
+    const id = parseInt(tableId, 10);
+    if (!id || fdReadyTableGridCache[id]) return;
+    try {
+        const res = await apiFetch(`/FormDefinitions/GetReadyTableForField?id=${id}`);
+        if (res && res.success) fdReadyTableGridCache[id] = res;
+        else fdReadyTableGridCache[id] = null;
+    } catch {
+        fdReadyTableGridCache[id] = null;
+    }
+}
+
+function fdWireBindingPropListeners(type) {
+    const dl = document.getElementById('fdProp_dropdownListId');
+    if (dl) {
+        dl.onchange = () => {
+            const v = parseInt(dl.value, 10) || 0;
+            if (v) fdFetchDropdownItemsForField(v);
+        };
+    }
+    const rt = document.getElementById('fdProp_readyTableId');
+    if (rt) {
+        rt.onchange = () => {
+            const v = parseInt(rt.value, 10) || 0;
+            if (v) fdFetchReadyTableGridForField(v);
+        };
+    }
 }
 
 function fdInitOptionListEditor(pfx, mode, propsObj, propKey) {
@@ -308,6 +365,32 @@ function fdApplyPropsSpecialEditors(type, pfx, po) {
 }
 
 function fdBuildSinglePropHtml(p, pfx) {
+    if (p.type === 'dropdownListPick') {
+        const opts = fdBindingLookups.dropdownLists || [];
+        let h = `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label} <span class="required-star">*</span></label>
+     
+        <select class="form-select form-select-sm" id="fdProp_dropdownListId" style="border-radius:8px;font-size:12.5px;">
+        <option value="">-- اختر قائمة منسدلة --</option>`;
+        opts.forEach(o => {
+            const id = o.id ?? o.Id;
+            const nm = o.name ?? o.Name ?? '';
+            h += `<option value="${id}">${esc(nm)}</option>`;
+        });
+        return h + '</select></div>';
+    }
+    if (p.type === 'readyTablePick') {
+        const opts = fdBindingLookups.readyTables || [];
+        let h = `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label} <span class="required-star">*</span></label>
+        
+        <select class="form-select form-select-sm" id="fdProp_readyTableId" style="border-radius:8px;font-size:12.5px;">
+        <option value="">-- اختر جدول جاهز --</option>`;
+        opts.forEach(o => {
+            const id = o.id ?? o.Id;
+            const nm = o.name ?? o.Name ?? '';
+            h += `<option value="${id}">${esc(nm)}</option>`;
+        });
+        return h + '</select></div>';
+    }
     if (p.type === 'fileMbLimitsPair') {
         return `<div class="${p.col||'col-12 mb-2'}"><span class="d-block small fw-bold mb-1" style="color:var(--gray-600);">${p.label||'حد حجم الملف (ميغابايت)'}</span>
         <div class="d-flex flex-nowrap align-items-end gap-2">
@@ -397,10 +480,15 @@ function fdBuildFieldInput(f, opt) {
         const st = props.stepValue!=null&&props.stepValue!==''?` step="${props.stepValue}"`:(props.noDecimals?' step="1"':'');
         inp = `<div class="input-group"${ttAttr}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="number" class="form-control text-center" value="${defVal||props.minValue||'0'}"${mn}${mx}${st}${reqAttr}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
     } else if (f.fieldType==='قائمة منسدلة'||f.fieldType==='قائمة اختيار الواحد') {
-        const opts = props.options ? String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean) : [];
+        let opts = [];
+        if (f.fieldType === 'قائمة منسدلة' && props.dropdownListId) {
+            opts = fdDropdownItemsCache[props.dropdownListId] || [];
+        }
+        if (!opts.length && props.options) opts = String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean);
         const def  = (props.defaultOption||'').trim();
         inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText||ph||'اختر...').replace(/</g,'&lt;')}</option>`;
         opts.forEach(o => { inp += `<option value="${o.replace(/"/g,'&quot;')}"${o===def?' selected':''}>${o.replace(/</g,'&lt;')}</option>`; });
+        if (f.fieldType === 'قائمة منسدلة' && props.dropdownListId && !opts.length) inp += '<option disabled>— لم تُحمَّل عناصر القائمة —</option>';
         inp += '</select>';
     } else if (f.fieldType==='قائمة اختيار متعدد') {
         const opts = props.options ? String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean) : [];
@@ -428,8 +516,18 @@ function fdBuildFieldInput(f, opt) {
         const lo = parseInt(props.minRating)||0, hi = parseInt(props.maxRating)||10;
         inp = `<div${ttAttr}><input type="range" class="form-range" min="${lo}" max="${hi}" value="${defVal||lo}" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold">${defVal||lo}</div></div>`;
     } else if (f.fieldType==='جدول بيانات') {
-        const cols = fdParseLines(props.options);
-        const rows = fdParseLines(props.rowLabels);
+        let cols = [];
+        let rows = [];
+        if (props.readyTableId && fdReadyTableGridCache[props.readyTableId]) {
+            const g = fdReadyTableGridCache[props.readyTableId];
+            cols = (g.columns || []).slice();
+            const maxR = (g.rowCountMode === 'مقيد' && g.maxRows) ? parseInt(g.maxRows, 10) : 3;
+            const n = Math.min(Math.max(maxR > 0 ? maxR : 3, 1), 50);
+            rows = Array.from({ length: n }, (_, i) => `صف ${i + 1}`);
+        } else {
+            cols = fdParseLines(props.options);
+            rows = fdParseLines(props.rowLabels);
+        }
         const c = cols.length ? cols : ['عمود'];
         const r = rows.length ? rows : ['صف'];
         const ro = props.readOnly ? ' readonly' : '';
@@ -493,9 +591,19 @@ function fdGetPropsSummary(f) {
     try {
         const p = JSON.parse(f.propertiesJson||'{}'), parts=[], def=FD_FIELD_TYPES[f.fieldType];
         if (!def) return '-';
+        if (f.fieldType === 'قائمة منسدلة' && p.dropdownListId) {
+            const n = (fdBindingLookups.dropdownLists || []).find(x => (x.id ?? x.Id) === p.dropdownListId);
+            if (n) parts.push('قائمة: ' + (n.name ?? n.Name ?? ''));
+            else parts.push('قائمة #' + p.dropdownListId);
+        }
+        if (f.fieldType === 'جدول بيانات' && p.readyTableId) {
+            const n = (fdBindingLookups.readyTables || []).find(x => (x.id ?? x.Id) === p.readyTableId);
+            if (n) parts.push('جدول: ' + (n.name ?? n.Name ?? ''));
+            else parts.push('جدول #' + p.readyTableId);
+        }
         for (const k in p) {
             if (p[k]===''||p[k]===false||p[k]===null||p[k]===undefined) continue;
-            if (k==='subName'||k==='placeholder') continue;
+            if (k==='subName'||k==='placeholder'||k==='dropdownListId'||k==='readyTableId') continue;
             const pd = def.props.find(x=>x.key===k); if (!pd) continue;
             if (pd.type==='checkbox'&&p[k]) parts.push(pd.label);
             else if (p[k]) parts.push(pd.label+': '+p[k]);
@@ -610,6 +718,9 @@ async function fdToggle(id, el) {
 // ─── WIZARD SHOW ──────────────────────────────────────────────────────────────
 function fdShowCreate() {
     fdEditId = null; fdStep = 1; fdFields = []; fdEditingIdx = -1; fdCurrentTemplate = null;
+    fdBindingLookupsLoaded = false;
+    fdDropdownItemsCache = {};
+    fdReadyTableGridCache = {};
     fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, wsId:0, tplId:0 };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
@@ -621,6 +732,9 @@ async function fdShowEdit(id) {
     try {
         const res = await apiFetch(`/FormDefinitions/GetFormDefinition?id=${id}`);
         if (!res.success) return showToast(res.message, 'error');
+        fdBindingLookupsLoaded = false;
+        fdDropdownItemsCache = {};
+        fdReadyTableGridCache = {};
         const d = res.data;
         if (res.workspaces && res.workspaces.length)
             fdLookups.workspaces = res.workspaces;
@@ -918,7 +1032,7 @@ function fdStep3Html() {
 }
 
 // ─── STEP NAVIGATION ─────────────────────────────────────────────────────────
-function fdGoStep2() {
+async function fdGoStep2() {
     const s = fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
     if (!s.formClassId) return showToast('أصناف النماذج مطلوبة','error');
@@ -926,7 +1040,17 @@ function fdGoStep2() {
     if (!s.wsId) return showToast('مساحة العمل مطلوبة','error');
     if (!s.tplId) return showToast('القالب مطلوب','error');
     fdStep1State = s;
+    await fdEnsureFieldBindingLookups();
     fdStep=2; fdRenderStep();
+}
+
+async function fdPrefetchBindingCachesForFields() {
+    for (const f of fdFields) {
+        let p = {};
+        try { p = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
+        if (f.fieldType === 'قائمة منسدلة' && p.dropdownListId) await fdFetchDropdownItemsForField(p.dropdownListId);
+        if (f.fieldType === 'جدول بيانات' && p.readyTableId) await fdFetchReadyTableGridForField(p.readyTableId);
+    }
 }
 
 async function fdGoStep3() {
@@ -939,13 +1063,14 @@ async function fdGoStep3() {
             if (res && res.success) fdCurrentTemplate = res.data;
         } catch {}
     }
+    await fdPrefetchBindingCachesForFields();
     fdStep = 3;
     fdRenderStep();
 }
 function fdGoStepBack(from) { fdStep=from-1; fdRenderStep(); }
 
 // ─── STEP 2 – FIELD BUILDER LOGIC ─────────────────────────────────────────────
-function fdOnFieldTypeChange() {
+async function fdOnFieldTypeChange() {
     const type = document.getElementById('fdFieldType')?.value;
     const area  = document.getElementById('fdPropsArea');
     const cont  = document.getElementById('fdPropsFields');
@@ -956,6 +1081,8 @@ function fdOnFieldTypeChange() {
         if(cell) cell.innerHTML='';
         return;
     }
+    const needsBinding = type === 'قائمة منسدلة' || type === 'جدول بيانات';
+    if (needsBinding) await fdEnsureFieldBindingLookups();
     const def = FD_FIELD_TYPES[type];
     if(area) area.style.display='block';
     if(cell) cell.innerHTML=`<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ${def.props.length} خاصية</span>`;
@@ -966,6 +1093,7 @@ function fdOnFieldTypeChange() {
     });
     if(cont) cont.innerHTML = html;
     fdApplyPropsSpecialEditors(type,'fdProp',null);
+    if (needsBinding) fdWireBindingPropListeners(type);
     if(type==='رقم الهاتف'){ const el=document.getElementById('fdProp_phoneFormat'); if(el&&!el.value) el.value='+966 (9 أرقام)'; }
     const tipEl = document.getElementById('fdFieldTooltip');
     if(tipEl&&!tipEl.value){ const d={'الاسم الكامل':'أدخل الاسم الكامل','البريد الإلكتروني':'أدخل البريد الإلكتروني','رقم الهاتف':'أدخل رقم الهاتف','نص قصير':'أدخل النص','نص طويل':'أدخل النص','فقرة':'أدخل الفقرة','رقم':'أدخل الرقم','قائمة منسدلة':'اختر من القائمة','قائمة اختيار الواحد':'اختر خياراً','قائمة اختيار متعدد':'اختر خياراً أو أكثر','تاريخ':'اختر التاريخ','وقت':'اختر الوقت','رفع ملف':'ارفع ملفاً','دوار رقمي':'حدد الرقم','التقييم بالنجوم':'حدد التقييم','التقييم بالأرقام':'حدد التقييم','جدول بيانات':'عبّئ الجدول','شبكة خيارات متعددة':'اختر خياراً لكل صف','شبكة مربعات اختيار':'حدد الخانات المطلوبة'}; tipEl.value=d[type]||'أدخل قيمة الحقل'; }
@@ -977,6 +1105,10 @@ function fdCollectFieldProps() {
     const def=FD_FIELD_TYPES[type], result={};
     def.props.forEach(p => {
         if(p.type==='optionList'||p.type==='fileTypesPick') return;
+        if(p.type==='dropdownListPick'||p.type==='readyTablePick'){
+            const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
+            const v=parseInt(el.value,10); result[p.key]=v>0?v:0; return;
+        }
         if(p.type==='fileMbLimitsPair'){ const mn=document.getElementById('fdProp_minFileSize'); const mx=document.getElementById('fdProp_maxFileSize'); if(mn) result.minFileSize=mn.value; if(mx) result.maxFileSize=mx.value; return; }
         const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
         result[p.key] = (p.type==='checkbox') ? el.checked : el.value;
@@ -989,6 +1121,11 @@ function fdSetFieldProps(type, po) {
     const def=FD_FIELD_TYPES[type]; po=po||{};
     def.props.forEach(p => {
         if(p.type==='optionList'||p.type==='fileTypesPick') return;
+        if(p.type==='dropdownListPick'||p.type==='readyTablePick'){
+            const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
+            const v=po[p.key]; if(v!=null&&v!=='') el.value=String(v);
+            return;
+        }
         if(p.type==='fileMbLimitsPair'){ const mn=document.getElementById('fdProp_minFileSize'); const mx=document.getElementById('fdProp_maxFileSize'); if(mn&&po.minFileSize!=null) mn.value=po.minFileSize; if(mx&&po.maxFileSize!=null) mx.value=po.maxFileSize; return; }
         const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
         const v=po[p.key];
@@ -1003,10 +1140,21 @@ function fdAddField() {
     if(!type) return showToast('يرجى اختيار نوع الحقل','error');
     if(!name) return showToast('يرجى إدخال اسم الحقل','error');
     const def = FD_FIELD_TYPES[type];
-    if(def?.props.some(p=>p.type==='optionList')){ const o=fdCollectOptionListFromEditor('fdProp','options'); if(!o||!String(o.options||'').trim()) return showToast('يرجى إدخال خيار واحد على الأقل','error'); }
-    if(type==='جدول بيانات'||type==='شبكة خيارات متعددة'||type==='شبكة مربعات اختيار'){
-        const rl=document.getElementById('fdProp_rowLabels');
-        if(!rl||!String(rl.value||'').trim()) return showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)','error');
+    if (type === 'قائمة منسدلة') {
+        const did = parseInt(document.getElementById('fdProp_dropdownListId')?.value || '0', 10);
+        if (!did) return showToast('اختر قائمة منسدلة جاهزة من الإعدادات', 'error');
+    }
+    if (type === 'جدول بيانات') {
+        const rid = parseInt(document.getElementById('fdProp_readyTableId')?.value || '0', 10);
+        if (!rid) return showToast('اختر جدولاً جاهزاً من الإعدادات', 'error');
+    }
+    if (def?.props.some(p => p.type === 'optionList')) {
+        const o = fdCollectOptionListFromEditor('fdProp', 'options');
+        if (!o || !String(o.options || '').trim()) return showToast('يرجى إدخال خيار واحد على الأقل', 'error');
+    }
+    if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+        const rl = document.getElementById('fdProp_rowLabels');
+        if (!rl || !String(rl.value || '').trim()) return showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'error');
     }
     const props = fdCollectFieldProps();
     const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired:document.getElementById('fdFieldRequired')?.value==='1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('fdFieldTooltip')?.value?.trim()||'', displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, propertiesJson:JSON.stringify(props) };
@@ -1015,7 +1163,7 @@ function fdAddField() {
     fdRenderFieldsTable(); fdResetFieldForm();
 }
 
-function fdEditField(idx) {
+async function fdEditField(idx) {
     const f=fdFields[idx]; if(!f) return;
     fdEditingIdx=idx;
     document.getElementById('fdFieldType').value=f.fieldType;
@@ -1028,8 +1176,12 @@ function fdEditField(idx) {
     document.getElementById('fdFieldFormLabel').textContent='تعديل حقل رقم';
     document.getElementById('fdAddFieldBtnTxt').textContent='تحديث الحقل';
     document.getElementById('fdCancelEditBtn').style.display='';
-    fdOnFieldTypeChange();
-    try { fdSetFieldProps(f.fieldType,JSON.parse(f.propertiesJson||'{}')); } catch(e) {}
+    let po = {};
+    try { po = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
+    await fdOnFieldTypeChange();
+    fdSetFieldProps(f.fieldType, po);
+    if (po.dropdownListId) await fdFetchDropdownItemsForField(po.dropdownListId);
+    if (po.readyTableId) await fdFetchReadyTableGridForField(po.readyTableId);
     document.getElementById('fdPropsArea')?.scrollIntoView({behavior:'smooth'});
 }
 

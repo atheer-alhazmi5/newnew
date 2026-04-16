@@ -412,6 +412,84 @@ public class FormDefinitionsController : BaseController
         f.TemplateShowFooterLineSnapshot = t.ShowFooterLine;
     }
 
+    //  الجداول الجاهزة / القوائم المنسدلة───
+    [HttpGet]
+    public async Task<IActionResult> GetFieldBindingLookups()
+    {
+        if (!IsAuthenticated || (CurrentUserRole != "Admin" && CurrentUserRole != "Employee"))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var isAdmin = CurrentUserRole == "Admin";
+        var myOrgId = await GetCreatorOrgUnitIdAsync();
+
+        var allTables = await _ds.ListReadyTablesAsync();
+        if (!isAdmin)
+            allTables = allTables.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == myOrgId)).ToList();
+        var readyTables = allTables.Where(t => t.IsActive).OrderBy(t => t.SortOrder)
+            .Select(t => new { t.Id, t.Name }).ToList();
+
+        var allLists = await _ds.ListDropdownListsAsync();
+        if (!isAdmin)
+            allLists = allLists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myOrgId)).ToList();
+        var dropdownLists = allLists.Where(l => l.IsActive && l.ListType == "قائمة مستقلة").OrderBy(l => l.SortOrder)
+            .Select(l => new { l.Id, l.Name }).ToList();
+
+        return Json(new { success = true, readyTables, dropdownLists });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetDropdownListItemsForField(int id)
+    {
+        if (!IsAuthenticated || (CurrentUserRole != "Admin" && CurrentUserRole != "Employee"))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var list = await _ds.GetDropdownListByIdAsync(id);
+        var isAdmin = CurrentUserRole == "Admin";
+        var myOrgId = await GetCreatorOrgUnitIdAsync();
+        if (list == null || !list.IsActive || !DropdownListAllowedForUser(list, isAdmin, myOrgId))
+            return Json(new { success = false, message = "القائمة غير متاحة" });
+
+        var items = await _ds.ListDropdownItemsByListIdAsync(id);
+        var texts = items.Where(i => i.IsActive).OrderBy(i => i.SortOrder).Select(i => i.ItemText ?? "").Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        return Json(new { success = true, items = texts });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetReadyTableForField(int id)
+    {
+        if (!IsAuthenticated || (CurrentUserRole != "Admin" && CurrentUserRole != "Employee"))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var t = await _ds.GetReadyTableByIdAsync(id);
+        var isAdmin = CurrentUserRole == "Admin";
+        var myOrgId = await GetCreatorOrgUnitIdAsync();
+        if (t == null || !t.IsActive || !ReadyTableAllowedForUser(t, isAdmin, myOrgId))
+            return Json(new { success = false, message = "الجدول غير متاح" });
+
+        var fields = await _ds.ListReadyTableFieldsByTableIdAsync(id);
+        var columns = fields.OrderBy(f => f.SortOrder).Select(f => f.FieldName).ToList();
+        return Json(new
+        {
+            success = true,
+            t.Name,
+            t.RowCountMode,
+            t.MaxRows,
+            columns
+        });
+    }
+
+    private static bool ReadyTableAllowedForUser(ReadyTable t, bool isAdmin, int myOrgId)
+    {
+        if (isAdmin) return true;
+        return t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == myOrgId);
+    }
+
+    private static bool DropdownListAllowedForUser(DropdownList l, bool isAdmin, int myOrgId)
+    {
+        if (isAdmin) return true;
+        return l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myOrgId);
+    }
+
     // ── TEMPLATE PREVIEW DATA (accessible by Admin + Employee) ───────────────
     [HttpGet]
     public async Task<IActionResult> GetTemplateForPreview(int id)

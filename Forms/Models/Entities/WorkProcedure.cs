@@ -37,6 +37,9 @@ public class WorkProcedure
     public string NextProcedureIdsJson { get; set; } = "[]";
     public string ImplicitProcedureIdsJson { get; set; } = "[]";
 
+    /// <summary>JSON array of workflow steps for this procedure (managed via سير العمل UI).</summary>
+    public string WorkflowStepsJson { get; set; } = "[]";
+
     public string AdditionalInputs { get; set; } = "";
     public string AdditionalOutputs { get; set; } = "";
 
