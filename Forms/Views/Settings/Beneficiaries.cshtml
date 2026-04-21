@@ -70,6 +70,12 @@
 .bnf-tbl .table { font-size:13px; }
 .bnf-tbl .table thead th { font-size:12px; white-space:nowrap; padding:10px 8px; vertical-align:middle; }
 .bnf-tbl .table tbody td { padding:8px; vertical-align:middle; white-space:nowrap; }
+.bnf-status-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:11px; }
+.bnf-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
+.bnf-status-pill.inactive { background:#fde8e8; color:#ef4444; }
+.bnf-status-dot { width:7px; height:7px; border-radius:999px; display:inline-block; }
+.bnf-status-pill.active .bnf-status-dot { background:#0f9f5c; }
+.bnf-status-pill.inactive .bnf-status-dot { background:#ef4444; }
 @@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
@@ -90,9 +96,13 @@
         <input type="text" class="form-control" id="bnfFilterName" placeholder="بحث باسم الموظف..." autocomplete="off">
     </div>
     <input type="text" class="form-control rt-filter-text" id="bnfFilterNationalId" placeholder="رقم الهوية" maxlength="10" inputmode="numeric" autocomplete="off" title="الهوية">
-    <select class="rt-filter-select form-select" id="bnfFilterUnit">
-        <option value="">الوحدة التنظيمية</option>
-    </select>
+    <div class="bnf-filter-ou-wrap" style="min-width:220px;max-width:280px;position:relative;">
+        <input type="hidden" id="bnfFilterUnit" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 bnf-ou-tree-trigger" id="bnfFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="bnfFilterOuLabel">الوحدة التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="bnfFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+    </div>
     <select class="rt-filter-select form-select" id="bnfFilterSubRole" style="min-width:220px;">
         <option value="">الدور الفرعي</option>
         <option value="__none__">بدون دور فرعي</option>
@@ -117,11 +127,12 @@
                         <th>البريد</th>
                         <th>الدور</th>
                         <th>الوحدة التنظيمية</th>
+                        <th style="width:100px;">التفعيل</th>
                         <th style="width:220px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="bnfBody">
-                    <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="11" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -252,7 +263,8 @@
                         </div>
                         <div>
                             <label class="form-label">الجوال<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="05xxxxxxxx">
+                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="05xxxxxxxx" title="رقم الجوال ١٠ ارقام تبدا ب ٠٥">
+                            <div class="form-text" style="font-size:11px;color:var(--gray-600);">رقم الجوال ١٠ ارقام تبدا ب ٠٥</div>
                         </div>
                         <div>
                             <label class="form-label">البريد الإلكتروني<span class="required-star">*</span></label>

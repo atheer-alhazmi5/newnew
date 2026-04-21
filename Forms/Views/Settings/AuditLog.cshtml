@@ -35,6 +35,18 @@
 .al-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
 .al-pagination button:disabled { opacity:.4; cursor:default; }
 .al-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
+/* فلتر الوحدة — شجرة كما في المستفيدين */
+.al-filter-ou-wrap { position:relative; min-width:220px; max-width:280px; }
+.al-filt-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.al-filt-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.al-filt-ou-tree-panel { max-height:min(320px,70vh); overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.al-filt-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
+.al-filt-ou-tree-row:hover { background:var(--sa-25); }
+.al-filt-ou-tree-row.is-selected { background:var(--info-50); }
+.al-filt-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease,border-color .15s ease; }
+.al-filt-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
+.al-filt-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.al-filt-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
 </style>
 
 <!-- Header -->
@@ -58,9 +70,13 @@
 
 <!-- Filters -->
 <div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
-    <select class="rt-filter-select form-select" id="alFilterUnit" onchange="alOnUnitFilterChange()">
-        <option value="">الوحدة التنظيمية</option>
-    </select>
+    <div class="al-filter-ou-wrap">
+        <input type="hidden" id="alFilterUnit" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 al-filt-ou-tree-trigger" id="alFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="al-filt-ou-tree-label text-truncate d-block" id="alFilterOuLabel">الوحدة التنظيمية</span>
+        </button>
+        <div class="al-filt-ou-tree-panel d-none" id="alFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;"></div>
+    </div>
     <select class="rt-filter-select form-select" id="alFilterEmployee">
         <option value="">الموظف</option>
     </select>
@@ -128,8 +144,113 @@ let alAllData = [];
 let alFiltered = [];
 let alOrgUnits = [];
 let alBeneficiaries = [];
+let alFilterOuExpanded = {};
 let alPage = 1;
 const alPerPage = 20;
+
+function alOuUnitId(u) { return u.id != null ? u.id : u.Id; }
+function alOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
+function alOuSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
+function alOuName(u) { return u.name != null ? u.name : (u.Name || ''); }
+
+function alOuBuildTreeMap() {
+    const ids = {};
+    alOrgUnits.forEach(u => { ids[alOuUnitId(u)] = true; });
+    const byParent = {};
+    alOrgUnits.forEach(u => {
+        const p = alOuParentId(u);
+        const pk = (p != null && p !== '' && ids[p]) ? String(p) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(k => {
+        byParent[k].sort((a, b) => {
+            const sa = alOuSortOrder(a), sb = alOuSortOrder(b);
+            if (sa !== sb) return sa - sb;
+            return alOuName(a).localeCompare(alOuName(b), 'ar');
+        });
+    });
+    return byParent;
+}
+
+function alRenderFilterOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    const rows = byParent[parentKey] || [];
+    const sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    let html = '';
+    rows.forEach(u => {
+        const uid = alOuUnitId(u);
+        const idStr = String(uid);
+        const children = byParent[idStr] || [];
+        const hasChildren = children.length > 0;
+        const expanded = !!expandedMap[idStr];
+        const indent = depth * 22;
+        const rowSel = sel === idStr ? ' is-selected' : '';
+        html += `<div class="al-filt-ou-tree-row d-flex align-items-center${rowSel}" data-id="${uid}" role="option" dir="rtl" style="padding:8px 10px;padding-right:${12 + indent}px;">`;
+        if (hasChildren) {
+            html += `<button type="button" class="al-filt-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}" title="${expanded ? 'طي' : 'توسيع'}">${expanded ? '−' : '+'}</button>`;
+        } else {
+            html += '<span class="al-filt-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += `<span class="al-filt-ou-tree-name flex-grow-1">${esc(alOuName(u))}</span></div>`;
+        if (hasChildren && expanded) {
+            html += alRenderFilterOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function alRenderFilterOuTreePanel() {
+    const panel = document.getElementById('alFilterOuPanel');
+    if (!panel) return;
+    if (!alOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    const byParent = alOuBuildTreeMap();
+    const selectedId = document.getElementById('alFilterUnit').value;
+    const allSel = !selectedId ? ' is-selected' : '';
+    let html = `<div class="al-filt-ou-tree-row d-flex align-items-center${allSel}" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">` +
+        '<span class="al-filt-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="al-filt-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += alRenderFilterOuTreeRows(byParent, '', 0, selectedId, alFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function alFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    const map = {};
+    alOrgUnits.forEach(u => { map[alOuUnitId(u)] = u; });
+    let u = map[selectId];
+    while (u) {
+        const pid = alOuParentId(u);
+        if (pid == null || pid === '' || !map[pid]) break;
+        alFilterOuExpanded[String(pid)] = true;
+        u = map[pid];
+    }
+}
+
+function alFilterOuTogglePanel() {
+    const panel = document.getElementById('alFilterOuPanel');
+    const trig = document.getElementById('alFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        const cur = document.getElementById('alFilterUnit').value;
+        if (cur) alFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        alRenderFilterOuTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function alFilterOuClosePanel() {
+    const panel = document.getElementById('alFilterOuPanel');
+    const trig = document.getElementById('alFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
 
 const badgeMap = {
     'تسجيل دخول': 'al-badge-login',
@@ -205,7 +326,10 @@ function alRebuildEmployeeSelect(unitId) {
     let list = alBeneficiaries.slice();
     if (unitId) {
         const uid = parseInt(unitId, 10);
-        if (!isNaN(uid)) list = list.filter(b => b.organizationalUnitId === uid);
+        if (!isNaN(uid)) list = list.filter(b => {
+            const ouId = b.organizationalUnitId != null ? b.organizationalUnitId : b.OrganizationalUnitId;
+            return ouId === uid;
+        });
     }
     list.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'ar'));
     list.forEach(b => {
@@ -226,8 +350,8 @@ function alOnUnitFilterChange() {
 function alUnitNameFromFilter() {
     const unitId = document.getElementById('alFilterUnit').value;
     if (!unitId) return '';
-    const u = alOrgUnits.find(x => String(x.id) === String(unitId));
-    return u ? u.name : '';
+    const u = alOrgUnits.find(x => String(alOuUnitId(x)) === String(unitId));
+    return u ? alOuName(u) : '';
 }
 
 async function alLoad() {
@@ -237,14 +361,10 @@ async function alLoad() {
     alOrgUnits = r.organizationalUnits || [];
     alBeneficiaries = r.beneficiaries || [];
 
-    const unitSel = document.getElementById('alFilterUnit');
-    unitSel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
-    alOrgUnits.forEach(u => {
-        const o = document.createElement('option');
-        o.value = String(u.id);
-        o.textContent = u.name;
-        unitSel.appendChild(o);
-    });
+    document.getElementById('alFilterUnit').value = '';
+    const alLab = document.getElementById('alFilterOuLabel');
+    if (alLab) alLab.textContent = 'الوحدة التنظيمية';
+    alFilterOuExpanded = {};
 
     alRebuildEmployeeSelect('');
 
@@ -282,6 +402,9 @@ function alApplyFilters() {
 
 function alClearFilters() {
     document.getElementById('alFilterUnit').value = '';
+    const alLab = document.getElementById('alFilterOuLabel');
+    if (alLab) alLab.textContent = 'الوحدة التنظيمية';
+    alFilterOuExpanded = {};
     document.getElementById('alFilterAction').value = '';
     document.getElementById('alFilterFrom').value = '';
     document.getElementById('alFilterTo').value = '';
@@ -367,6 +490,56 @@ function esc(s) {
     const d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+}
+
+document.addEventListener('click', e => {
+    const fw = document.querySelector('.al-filter-ou-wrap');
+    const fp = document.getElementById('alFilterOuPanel');
+    if (fw && fp && !fp.classList.contains('d-none') && !fw.contains(e.target)) {
+        alFilterOuClosePanel();
+    }
+});
+
+const alFilterOuTrigger = document.getElementById('alFilterOuTrigger');
+const alFilterOuPanel = document.getElementById('alFilterOuPanel');
+if (alFilterOuTrigger && alFilterOuPanel) {
+    alFilterOuTrigger.addEventListener('click', ev => {
+        ev.preventDefault();
+        alFilterOuTogglePanel();
+    });
+    alFilterOuPanel.addEventListener('click', ev => {
+        const expBtn = ev.target.closest('.al-filt-ou-tree-exp');
+        if (expBtn) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const eid = expBtn.getAttribute('data-exp');
+            if (eid) {
+                alFilterOuExpanded[eid] = !alFilterOuExpanded[eid];
+                alRenderFilterOuTreePanel();
+            }
+            return;
+        }
+        const row = ev.target.closest('.al-filt-ou-tree-row');
+        if (row && row.getAttribute('data-id') !== null) {
+            const rawId = row.getAttribute('data-id');
+            if (rawId === '') {
+                document.getElementById('alFilterUnit').value = '';
+                const lab = document.getElementById('alFilterOuLabel');
+                if (lab) lab.textContent = 'الوحدة التنظيمية';
+            } else {
+                const uid = parseInt(rawId, 10);
+                const u = alOrgUnits.find(x => alOuUnitId(x) === uid);
+                if (u) {
+                    document.getElementById('alFilterUnit').value = String(alOuUnitId(u));
+                    const lab2 = document.getElementById('alFilterOuLabel');
+                    if (lab2) lab2.textContent = alOuName(u);
+                }
+            }
+            alFilterOuClosePanel();
+            alRenderFilterOuTreePanel();
+            alOnUnitFilterChange();
+        }
+    });
 }
 
 alLoad();

@@ -1,3 +1,4 @@
+using System.Globalization;
 using FormsSystem.Models.Entities;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -68,6 +69,20 @@ public class TemplatesController : BaseController
         var t = await _ds.GetFormTemplateByIdAsync(id);
         if (t == null) return Json(new { success = false, message = "القالب غير موجود" });
 
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var createdByDisplay = ResolveBeneficiaryDisplayName(t.CreatedBy, beneficiaries);
+        var updatedByDisplay = ResolveBeneficiaryDisplayName(t.UpdatedBy, beneficiaries);
+        var logs = await _ds.ListAllAuditLogsAsync();
+        var deleteLog = logs
+            .Where(l => string.Equals(l.EntityType, "FormTemplate", StringComparison.Ordinal)
+                && string.Equals(l.EntityId, id.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                && string.Equals(l.Action, "حذف قالب", StringComparison.Ordinal))
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstOrDefault();
+        var deletedAtDisplay = deleteLog != null
+            ? deleteLog.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+            : "";
+
         return Json(new
         {
             success = true,
@@ -79,7 +94,14 @@ public class TemplatesController : BaseController
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.PageSize,
                 t.ShowHeaderLine, t.ShowFooterLine,
-                t.CreatedBy, t.CreatedAt, t.UpdatedBy, t.UpdatedAt
+                t.CreatedBy, t.CreatedAt, t.UpdatedBy, t.UpdatedAt,
+                CreatedAtDisplay = t.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                UpdatedAtDisplay = t.UpdatedAt.HasValue
+                    ? t.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                    : "",
+                CreatedByDisplay = createdByDisplay,
+                UpdatedByDisplay = updatedByDisplay,
+                DeletedAtDisplay = deletedAtDisplay
             }
         });
     }
@@ -111,7 +133,7 @@ public class TemplatesController : BaseController
             PageSize = req.PageSize ?? "A4",
             ShowHeaderLine = req.ShowHeaderLine ?? true,
             ShowFooterLine = req.ShowFooterLine ?? true,
-            CreatedBy = CurrentUserFullName
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddFormTemplateAsync(t);
@@ -146,7 +168,7 @@ public class TemplatesController : BaseController
         if (req.ShowHeaderLine.HasValue) t.ShowHeaderLine = req.ShowHeaderLine.Value;
         if (req.ShowFooterLine.HasValue) t.ShowFooterLine = req.ShowFooterLine.Value;
 
-        t.UpdatedBy = CurrentUserFullName;
+        t.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         t.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateFormTemplateAsync(t);
@@ -158,6 +180,12 @@ public class TemplatesController : BaseController
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin")
             return Json(new { success = false, message = "غير مصرح" });
+
+        var tpl = await _ds.GetFormTemplateByIdAsync(req.Id);
+        if (tpl == null)
+            return Json(new { success = false, message = "القالب غير موجود" });
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قالب", "FormTemplate", req.Id.ToString(CultureInfo.InvariantCulture), tpl.Name));
 
         var ok = await _ds.DeleteFormTemplateAsync(req.Id);
         return Json(ok
@@ -175,7 +203,7 @@ public class TemplatesController : BaseController
         if (t == null) return Json(new { success = false, message = "القالب غير موجود" });
 
         t.IsActive = !t.IsActive;
-        t.UpdatedBy = CurrentUserFullName;
+        t.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         t.UpdatedAt = DateTime.Now;
         await _ds.UpdateFormTemplateAsync(t);
 
@@ -238,5 +266,16 @@ public class TemplatesController : BaseController
     public class TemplateIdRequest
     {
         public int Id { get; set; }
+    }
+
+    private static string ResolveBeneficiaryDisplayName(string? stored, List<Beneficiary> beneficiaries)
+    {
+        var s = (stored ?? "").Trim();
+        if (string.IsNullOrEmpty(s)) return "";
+        var b = beneficiaries.FirstOrDefault(x => string.Equals((x.FullName ?? "").Trim(), s, StringComparison.Ordinal));
+        if (b != null) return (b.FullName ?? "").Trim();
+        b = beneficiaries.FirstOrDefault(x => string.Equals((x.Username ?? "").Trim(), s, StringComparison.OrdinalIgnoreCase));
+        if (b != null) return (b.FullName ?? "").Trim();
+        return s;
     }
 }

@@ -51,6 +51,12 @@ function fstFilter() {
     fstRenderTable();
 }
 
+function fstClearFilter() {
+    var inp = document.getElementById('fstSearchInput');
+    if (inp) inp.value = '';
+    fstFilter();
+}
+
 function fstRenderTable() {
     var body = document.getElementById('fstBody');
     if (fstFiltered.length === 0) {
@@ -89,9 +95,10 @@ function fstRenderTable() {
             '<td style="color:var(--gray-500);font-size:13px;max-width:220px;">' + (desc ? esc(desc) : '<span style="color:var(--gray-300);">—</span>') + '</td>' +
             '<td style="text-align:center;"><span class="fst-status-pill ' + statusClass + '"><span class="fst-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
-                '<div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-                    '<button type="button" class="fst-btn-table-update" onclick="fstShowEditModal(' + sid + ')">تحديث</button>' +
-                    '<button type="button" class="fst-btn-table-delete" onclick="fstShowDeleteModal(' + sid + ',\'' + safeName + '\')">حذف</button>' +
+                '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
+                    '<button type="button" class="fst-action-btn fst-action-btn-detail" onclick="fstShowDetails(' + sid + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
+                    '<button type="button" class="fst-action-btn fst-action-btn-edit" onclick="fstShowEditModal(' + sid + ')"><i class="bi bi-pencil-fill"></i> تحديث</button>' +
+                    '<button type="button" class="fst-action-btn fst-action-btn-delete" onclick="fstShowDeleteModal(' + sid + ',\'' + safeName + '\')"><i class="bi bi-trash3-fill"></i> حذف</button>' +
                 '</div>' +
             '</td>' +
             '</tr>';
@@ -159,6 +166,69 @@ async function fstSubmitAdd() {
         errEl.textContent = (r && r.message) || 'حدث خطأ';
         errEl.classList.remove('d-none');
     }
+}
+
+function fstShowDetails(id) {
+    var row = fstAll.find(function (s) { return (s.id === id || s.Id === id); });
+    if (!row) return;
+
+    var ord = row.sortOrder != null ? row.sortOrder : row.SortOrder;
+    var nm = row.name || row.Name || '';
+    var desc = row.description || row.Description || '';
+    var col = row.color || row.Color || '#25935F';
+    var active = row.isActive !== undefined ? row.isActive : row.IsActive;
+    var statusClass = active ? 'active' : 'inactive';
+    var statusText = active ? 'مفعل' : 'معطل';
+    var createdBy = row.createdBy != null ? row.createdBy : row.CreatedBy;
+    var updatedBy = row.updatedBy != null ? row.updatedBy : row.UpdatedBy;
+    var createdAt = row.createdAt != null ? row.createdAt : row.CreatedAt;
+    var updatedAt = row.updatedAt != null ? row.updatedAt : row.UpdatedAt;
+
+    var html =
+        '<div class="fst-section-title"><i class="bi bi-info-circle-fill"></i>التفاصيل</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">الترتيب</div>' +
+            '<div class="fst-detail-value" style="font-weight:700;">' + esc(String(ord)) + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">تصنيف الحالة</div>' +
+            '<div class="fst-detail-value">' + fstCategoryHtml(fstGetCategory(row)) + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">اسم الحالة</div>' +
+            '<div class="fst-detail-value" style="font-weight:700;">' + esc(nm) + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">الوصف</div>' +
+            '<div class="fst-detail-value">' + (desc ? esc(desc) : '<span style="color:var(--gray-400);">لا يوجد وصف</span>') + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">اللون</div>' +
+            '<div class="fst-detail-value"><span class="fst-color-circle" style="background:' + esc(col) + ';margin-left:10px;"></span><span style="direction:ltr;font-size:13px;color:var(--gray-500);">' + esc(col) + '</span></div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">التفعيل</div>' +
+            '<div class="fst-detail-value"><span class="fst-status-pill ' + statusClass + '"><span class="fst-status-dot"></span>' + statusText + '</span></div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">أضيف بواسطة</div>' +
+            '<div class="fst-detail-value" style="font-weight:700;">' + (createdBy && String(createdBy).trim() ? esc(String(createdBy).trim()) : '<span style="color:var(--gray-400);font-weight:400;">—</span>') + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">تاريخ الإنشاء</div>' +
+            '<div class="fst-detail-value">' + (createdAt ? esc(String(createdAt)) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">آخر تعديل بواسطة</div>' +
+            '<div class="fst-detail-value">' + (updatedBy && String(updatedBy).trim() ? esc(String(updatedBy).trim()) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
+        '</div>' +
+        '<div class="fst-detail-row">' +
+            '<div class="fst-detail-label">تاريخ التعديل</div>' +
+            '<div class="fst-detail-value">' + (updatedAt ? esc(String(updatedAt)) : '<span style="color:var(--gray-400);">لم يتم التعديل بعد</span>') + '</div>' +
+        '</div>';
+
+    document.getElementById('fstDetailsBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('fstDetailsModal')).show();
 }
 
 function fstShowEditModal(id) {

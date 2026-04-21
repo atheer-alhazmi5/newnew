@@ -67,7 +67,7 @@ public class SettingsController : BaseController
                 CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
             }),
             organizationalUnits = orgUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder)
-                .Select(u => new { u.Id, u.Name }).ToList(),
+                .Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
             beneficiaries = beneficiaries.Where(b => b.IsActive)
                 .Select(b => new { b.Id, b.FullName, b.NationalId, b.OrganizationalUnitId }).ToList()
         });
@@ -605,6 +605,9 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.ListClassificationsAsync();
+        var auditLogs = await _ds.ListAllAuditLogsAsync();
+        var creatorByEntityId = MapCreatorUserNameFromAudit(auditLogs, "Classification", "إضافة تصنيف");
+
         return Json(new
         {
             success = true,
@@ -616,7 +619,7 @@ public class SettingsController : BaseController
                 c.Color,
                 c.SortOrder,
                 c.IsActive,
-                c.CreatedBy,
+                CreatedBy = ResolveStoredCreatedByDisplay(c.CreatedBy, c.Id, creatorByEntityId),
                 c.UpdatedBy,
                 CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
@@ -647,7 +650,7 @@ public class SettingsController : BaseController
             Color = req.Color ?? "#25935F",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
-            CreatedBy = "مدير النظام"
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddClassificationAsync(cls);
@@ -737,6 +740,8 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.ListFormClassesAsync();
+        var auditLogs = await _ds.ListAllAuditLogsAsync();
+        var creatorById = MapCreatorUserNameFromAudit(auditLogs, "FormClass", "إضافة صنف نموذج");
         return Json(new
         {
             success = true,
@@ -749,7 +754,7 @@ public class SettingsController : BaseController
                 c.Icon,
                 c.SortOrder,
                 c.IsActive,
-                c.CreatedBy,
+                CreatedBy = ResolveStoredCreatedByDisplay(c.CreatedBy, c.Id, creatorById),
                 c.UpdatedBy,
                 CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
@@ -781,7 +786,7 @@ public class SettingsController : BaseController
             Icon = req.Icon ?? "",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
-            CreatedBy = "مدير النظام"
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddFormClassAsync(cls);
@@ -813,7 +818,7 @@ public class SettingsController : BaseController
         cls.Color = req.Color ?? cls.Color;
         cls.Icon = req.Icon ?? cls.Icon;
         cls.IsActive = req.IsActive;
-        cls.UpdatedBy = CurrentUserFullName;
+        cls.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         cls.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateFormClassAsync(cls);
@@ -835,6 +840,9 @@ public class SettingsController : BaseController
         var cls = await _ds.GetFormClassByIdAsync(req.Id);
         if (cls == null)
             return Json(new { success = false, message = "الصنف غير موجود" });
+
+        if (await _ds.IsFormClassLinkedAsync(req.Id))
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteFormClassAsync(req.Id);
 
@@ -867,6 +875,8 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.ListFormSectionsAsync();
+        var auditLogs = await _ds.ListAllAuditLogsAsync();
+        var creatorById = MapCreatorUserNameFromAudit(auditLogs, "FormSection", "إضافة نوع نموذج", "إضافة قسم نموذج");
         return Json(new
         {
             success = true,
@@ -879,7 +889,7 @@ public class SettingsController : BaseController
                 c.Icon,
                 c.SortOrder,
                 c.IsActive,
-                c.CreatedBy,
+                CreatedBy = ResolveStoredCreatedByDisplay(c.CreatedBy, c.Id, creatorById),
                 c.UpdatedBy,
                 CreatedAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = c.UpdatedAt.HasValue ? c.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
@@ -910,7 +920,7 @@ public class SettingsController : BaseController
             Icon = req.Icon ?? "",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
-            CreatedBy = "مدير النظام"
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddFormSectionAsync(row);
@@ -941,7 +951,7 @@ public class SettingsController : BaseController
         row.Color = req.Color ?? row.Color;
         row.Icon = req.Icon ?? row.Icon;
         row.IsActive = req.IsActive;
-        row.UpdatedBy = CurrentUserFullName;
+        row.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         row.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateFormSectionAsync(row);
@@ -999,6 +1009,14 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.ListFormStatusesAsync();
+        var auditLogs = await _ds.ListAllAuditLogsAsync();
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var users = await _ds.ListUsersAsync();
+        var benByNid = BuildBeneficiaryFullNameByNationalId(beneficiaries);
+        var userById = BuildUserFullNameById(users);
+        var creatorById = MapCreatorUserDisplayFromAudit(auditLogs, benByNid, userById, "FormStatus", "إضافة حالة نموذج");
+        var lastUpdaterById = MapLastAuditActorDisplayByEntity(auditLogs, benByNid, userById, "FormStatus", "تحديث حالة نموذج");
+
         return Json(new
         {
             success = true,
@@ -1011,10 +1029,10 @@ public class SettingsController : BaseController
                 s.Color,
                 s.SortOrder,
                 s.IsActive,
-                s.CreatedBy,
-                s.UpdatedBy,
-                CreatedAt = s.CreatedAt.ToString("yyyy-MM-dd"),
-                UpdatedAt = s.UpdatedAt.HasValue ? s.UpdatedAt.Value.ToString("yyyy-MM-dd") : ""
+                CreatedBy = ResolveFormStatusCreatedByDisplay(s.CreatedBy, s.Id, creatorById),
+                UpdatedBy = ResolveFormStatusUpdatedByDisplay(s.UpdatedBy, s.Id, lastUpdaterById),
+                CreatedAt = s.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = s.UpdatedAt.HasValue ? s.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             })
         });
     }
@@ -1046,7 +1064,7 @@ public class SettingsController : BaseController
             Color = req.Color ?? "#25935F",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
-            CreatedBy = "مدير النظام"
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddFormStatusAsync(row);
@@ -1081,7 +1099,7 @@ public class SettingsController : BaseController
         row.Description = req.Description?.Trim() ?? "";
         row.Color = req.Color ?? row.Color;
         row.IsActive = req.IsActive;
-        row.UpdatedBy = CurrentUserFullName;
+        row.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         row.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateFormStatusAsync(row);
@@ -1103,6 +1121,9 @@ public class SettingsController : BaseController
         var row = await _ds.GetFormStatusByIdAsync(req.Id);
         if (row == null)
             return Json(new { success = false, message = "الحالة غير موجودة" });
+
+        if (await _ds.IsFormStatusLinkedAsync(req.Id))
+            return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteFormStatusAsync(req.Id);
 
@@ -1128,6 +1149,8 @@ public class SettingsController : BaseController
         var units = await _ds.ListOrganizationalUnitsAsync();
         var classifications = await _ds.ListClassificationsAsync();
         var activeClassifications = classifications.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList();
+        var auditLogs = await _ds.ListAllAuditLogsAsync();
+        var ouCreatorById = MapCreatorUserNameFromAudit(auditLogs, "OrganizationalUnit", "إضافة وحدة تنظيمية");
         return Json(new
         {
             success = true,
@@ -1143,7 +1166,7 @@ public class SettingsController : BaseController
                 ParentName = u.ParentId.HasValue ? units.FirstOrDefault(p => p.Id == u.ParentId.Value)?.Name ?? "" : "",
                 u.IsActive,
                 u.SortOrder,
-                u.CreatedBy,
+                CreatedBy = ResolveStoredCreatedByDisplay(u.CreatedBy, u.Id, ouCreatorById),
                 u.UpdatedBy,
                 CreatedAt = u.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedAt = u.UpdatedAt.HasValue ? u.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
@@ -1177,7 +1200,7 @@ public class SettingsController : BaseController
             ParentId = req.Level == "فرعي" ? req.ParentId : null,
             IsActive = req.IsActive,
             SortOrder = nextOrder,
-            CreatedBy = "مدير النظام"
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddOrganizationalUnitAsync(unit);
@@ -1212,7 +1235,7 @@ public class SettingsController : BaseController
         unit.Level = req.Level ?? unit.Level;
         unit.ParentId = req.Level == "فرعي" ? req.ParentId : null;
         unit.IsActive = req.IsActive;
-        unit.UpdatedBy = "مدير النظام";
+        unit.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         unit.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateOrganizationalUnitAsync(unit);
@@ -1495,10 +1518,8 @@ public class SettingsController : BaseController
         if (string.IsNullOrWhiteSpace(req.Phone))
             return "رقم الجوال مطلوب";
         var phone = ((string?)req.Phone ?? "").Trim();
-        if (!phone.StartsWith("05"))
-            return "رقم الجوال يجب أن يبدأ بـ 05";
-        if (phone.Length < 10 || !phone.All(c => char.IsDigit(c)))
-            return "رقم الجوال يجب أن يبدأ بـ 05";
+        if (phone.Length != 10 || !phone.All(char.IsDigit) || !phone.StartsWith("05", StringComparison.Ordinal))
+            return "رقم الجوال ١٠ ارقام تبدا ب ٠٥";
 
         if (string.IsNullOrWhiteSpace(req.Email))
             return "البريد الإلكتروني مطلوب";
@@ -1624,6 +1645,144 @@ public class SettingsController : BaseController
             return name;
         return a.OrganizationalUnit ?? "";
     }
+ 
+    private static Dictionary<string, string> MapCreatorUserNameFromAudit(
+        IEnumerable<AuditLog> logs,
+        string entityType,
+        params string[] addActions)
+    {
+        if (addActions == null || addActions.Length == 0)
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        var actionSet = new HashSet<string>(addActions, StringComparer.Ordinal);
+        return logs
+            .Where(l => string.Equals(l.EntityType, entityType, StringComparison.Ordinal)
+                && !string.IsNullOrEmpty(l.EntityId)
+                && actionSet.Contains(l.Action))
+            .GroupBy(l => l.EntityId!, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(x => x.CreatedAt)
+                    .Select(x => (x.UserName ?? "").Trim())
+                    .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "",
+                StringComparer.Ordinal);
+    }
+
+  
+    private static string ResolveStoredCreatedByDisplay(
+        string? storedCreatedBy,
+        int entityId,
+        IReadOnlyDictionary<string, string> creatorFromAudit)
+    {
+        var s = (storedCreatedBy ?? "").Trim();
+        if (!string.IsNullOrEmpty(s) && !string.Equals(s, "مدير النظام", StringComparison.Ordinal))
+            return s;
+        if (creatorFromAudit.TryGetValue(entityId.ToString(), out var fromAudit))
+        {
+            var a = (fromAudit ?? "").Trim();
+            if (!string.IsNullOrEmpty(a)) return a;
+        }
+        return "";
+    }
+
+    private static string ResolveFormStatusCreatedByDisplay(
+        string? storedCreatedBy,
+        int entityId,
+        IReadOnlyDictionary<string, string> creatorFromAudit)
+    {
+        if (creatorFromAudit.TryGetValue(entityId.ToString(), out var fromAudit))
+        {
+            var a = (fromAudit ?? "").Trim();
+            if (!string.IsNullOrEmpty(a)) return a;
+        }
+        var s = (storedCreatedBy ?? "").Trim();
+        if (!string.IsNullOrEmpty(s) && !string.Equals(s, "مدير النظام", StringComparison.Ordinal))
+            return s;
+        return "";
+    }
+
+    private static string ResolveFormStatusUpdatedByDisplay(
+        string? storedUpdatedBy,
+        int entityId,
+        IReadOnlyDictionary<string, string> lastUpdaterFromAudit)
+    {
+        if (lastUpdaterFromAudit.TryGetValue(entityId.ToString(), out var fromAudit))
+        {
+            var a = (fromAudit ?? "").Trim();
+            if (!string.IsNullOrEmpty(a)) return a;
+        }
+        return (storedUpdatedBy ?? "").Trim();
+    }
+
+    private static Dictionary<string, string> BuildBeneficiaryFullNameByNationalId(IEnumerable<Beneficiary> beneficiaries)
+    {
+        return beneficiaries
+            .Where(b => !string.IsNullOrWhiteSpace(b.NationalId))
+            .GroupBy(b => b.NationalId.Trim(), StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => (g.First().FullName ?? "").Trim(), StringComparer.Ordinal);
+    }
+
+    private static Dictionary<int, string> BuildUserFullNameById(IEnumerable<User> users)
+        => users.ToDictionary(u => u.Id, u => (u.FullName ?? "").Trim());
+
+    private static string ResolveAuditLogActorDisplay(
+        AuditLog x,
+        IReadOnlyDictionary<string, string> benFullByNationalId,
+        IReadOnlyDictionary<int, string> userFullById)
+    {
+        var nid = (x.NationalId ?? "").Trim();
+        if (!string.IsNullOrEmpty(nid) && benFullByNationalId.TryGetValue(nid, out var bn) && !string.IsNullOrWhiteSpace(bn))
+            return bn.Trim();
+        if (x.UserId > 0 && userFullById.TryGetValue(x.UserId, out var un) && !string.IsNullOrWhiteSpace(un))
+            return un.Trim();
+        return (x.UserName ?? "").Trim();
+    }
+
+    private static Dictionary<string, string> MapCreatorUserDisplayFromAudit(
+        IEnumerable<AuditLog> logs,
+        IReadOnlyDictionary<string, string> benFullByNationalId,
+        IReadOnlyDictionary<int, string> userFullById,
+        string entityType,
+        params string[] addActions)
+    {
+        if (addActions == null || addActions.Length == 0)
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        var actionSet = new HashSet<string>(addActions, StringComparer.Ordinal);
+        return logs
+            .Where(l => string.Equals(l.EntityType, entityType, StringComparison.Ordinal)
+                && !string.IsNullOrEmpty(l.EntityId)
+                && actionSet.Contains(l.Action))
+            .GroupBy(l => l.EntityId!, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var x = g.OrderBy(a => a.CreatedAt).First();
+                    return ResolveAuditLogActorDisplay(x, benFullByNationalId, userFullById);
+                },
+                StringComparer.Ordinal);
+    }
+
+    private static Dictionary<string, string> MapLastAuditActorDisplayByEntity(
+        IEnumerable<AuditLog> logs,
+        IReadOnlyDictionary<string, string> benFullByNationalId,
+        IReadOnlyDictionary<int, string> userFullById,
+        string entityType,
+        string action)
+    {
+        return logs
+            .Where(l => string.Equals(l.EntityType, entityType, StringComparison.Ordinal)
+                && !string.IsNullOrEmpty(l.EntityId)
+                && string.Equals(l.Action, action, StringComparison.Ordinal))
+            .GroupBy(l => l.EntityId!, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var x = g.OrderByDescending(a => a.CreatedAt).First();
+                    return ResolveAuditLogActorDisplay(x, benFullByNationalId, userFullById);
+                },
+                StringComparer.Ordinal);
+    }
 
     private static string? ValidateBeneficiaryPasswordStrength(string password)
     {
@@ -1639,6 +1798,231 @@ public class SettingsController : BaseController
         if (!password.Any(c => specials.Contains(c)))
             return "كلمة المرور يجب أن تحتوي على رمز خاص من المجموعة: ! @ # $ % ^ & *";
         return null;
+    }
+
+    // ─── DELEGATIONS ──────────────────────────────────────────────────────────
+    public IActionResult Delegations()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin")
+            return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "التفويضات";
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetDelegations()
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var list = await _ds.ListDelegationsAsync();
+        var bens = await _ds.ListBeneficiariesAsync();
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+
+        var benById = bens.ToDictionary(b => b.Id);
+        var unitById = units.ToDictionary(u => u.Id);
+
+        var data = list.Select(d =>
+        {
+            benById.TryGetValue(d.DelegatorBeneficiaryId, out var dor);
+            benById.TryGetValue(d.DelegateeBeneficiaryId, out var dee);
+            unitById.TryGetValue(d.DelegatorOrgUnitId, out var dorU);
+            unitById.TryGetValue(d.DelegateeOrgUnitId, out var deeU);
+            return new
+            {
+                d.Id,
+                d.DelegatorBeneficiaryId,
+                DelegatorName = dor?.FullName ?? "",
+                d.DelegatorOrgUnitId,
+                DelegatorOrgUnitName = dorU?.Name ?? "",
+                d.DelegateeBeneficiaryId,
+                DelegateeName = dee?.FullName ?? "",
+                d.DelegateeOrgUnitId,
+                DelegateeOrgUnitName = deeU?.Name ?? "",
+                StartDate = d.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = d.EndDate.ToString("yyyy-MM-dd"),
+                StatusCode = ComputeDelegationStatus(d),
+                d.CreatedBy,
+                CreatedAt = d.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                d.UpdatedBy,
+                UpdatedAt = d.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
+            };
+        }).ToList();
+
+        return Json(new
+        {
+            success = true,
+            data,
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
+            beneficiaries = bens.Where(b => b.IsActive)
+                .Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId })
+                .OrderBy(x => x.FullName).ToList()
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetDelegation(int id)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var d = await _ds.GetDelegationByIdAsync(id);
+        if (d == null) return Json(new { success = false, message = "غير موجود" });
+
+        return Json(new
+        {
+            success = true,
+            data = new
+            {
+                d.Id,
+                d.DelegatorBeneficiaryId,
+                d.DelegatorOrgUnitId,
+                d.DelegateeBeneficiaryId,
+                d.DelegateeOrgUnitId,
+                StartDate = d.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = d.EndDate.ToString("yyyy-MM-dd"),
+                d.Status,
+                StatusCode = ComputeDelegationStatus(d),
+                d.CreatedBy,
+                CreatedAt = d.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                d.UpdatedBy,
+                UpdatedAt = d.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
+            }
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddDelegation([FromBody] DelegationRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var err = await ValidateDelegationAsync(req);
+        if (err != null) return Json(new { success = false, message = err });
+
+        var d = new Delegation
+        {
+            DelegatorBeneficiaryId = req.DelegatorBeneficiaryId,
+            DelegatorOrgUnitId = req.DelegatorOrgUnitId,
+            DelegateeBeneficiaryId = req.DelegateeBeneficiaryId,
+            DelegateeOrgUnitId = req.DelegateeOrgUnitId,
+            StartDate = ParseDelegationDate(req.StartDate!),
+            EndDate = ParseDelegationDate(req.EndDate!),
+            Status = req.SaveAsDraft ? "draft" : "active",
+            CreatedBy = CurrentUserFullName
+        };
+        await _ds.AddDelegationAsync(d);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة تفويض", "Delegation", d.Id.ToString(), ""));
+        return Json(new { success = true, message = "تم الحفظ بنجاح", id = d.Id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateDelegation([FromBody] DelegationUpdateRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var d = await _ds.GetDelegationByIdAsync(req.Id);
+        if (d == null) return Json(new { success = false, message = "التفويض غير موجود" });
+
+        if (d.Status == "cancelled")
+            return Json(new { success = false, message = "لا يمكن تعديل تفويض ملغي" });
+
+        // دعم إلغاء التفويض مباشرة من واجهة التعديل
+        if (req.Cancel)
+        {
+            d.Status = "cancelled";
+            d.UpdatedBy = CurrentUserFullName;
+            d.UpdatedAt = DateTime.Now;
+            await _ds.UpdateDelegationAsync(d);
+            await _ds.AddAuditLogAsync(BuildAuditEntry("إلغاء تفويض", "Delegation", d.Id.ToString(), ""));
+            return Json(new { success = true, message = "تم إلغاء التفويض" });
+        }
+
+        var err = await ValidateDelegationAsync(req);
+        if (err != null) return Json(new { success = false, message = err });
+
+        d.DelegatorBeneficiaryId = req.DelegatorBeneficiaryId;
+        d.DelegatorOrgUnitId = req.DelegatorOrgUnitId;
+        d.DelegateeBeneficiaryId = req.DelegateeBeneficiaryId;
+        d.DelegateeOrgUnitId = req.DelegateeOrgUnitId;
+        d.StartDate = ParseDelegationDate(req.StartDate!);
+        d.EndDate = ParseDelegationDate(req.EndDate!);
+        // لو كان مسودة وأراد النشر، ارفع الحالة
+        if (!req.SaveAsDraft && d.Status == "draft") d.Status = "active";
+        if (req.SaveAsDraft) d.Status = "draft";
+        d.UpdatedBy = CurrentUserFullName;
+        d.UpdatedAt = DateTime.Now;
+
+        await _ds.UpdateDelegationAsync(d);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث تفويض", "Delegation", d.Id.ToString(), ""));
+        return Json(new { success = true, message = "تم التحديث بنجاح" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteDelegation([FromBody] DelegationDeleteRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var d = await _ds.GetDelegationByIdAsync(req.Id);
+        if (d == null) return Json(new { success = false, message = "غير موجود" });
+
+        await _ds.DeleteDelegationAsync(req.Id);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف تفويض", "Delegation", req.Id.ToString(), ""));
+        return Json(new { success = true, message = "تم الحذف" });
+    }
+
+    private async Task<string?> ValidateDelegationAsync(DelegationRequest req)
+    {
+        if (req.DelegatorOrgUnitId <= 0) return "الوحدة التنظيمية للمفوض مطلوبة";
+        if (req.DelegatorBeneficiaryId <= 0) return "المفوض مطلوب";
+        if (req.DelegateeOrgUnitId <= 0) return "الوحدة التنظيمية للمفوض له مطلوبة";
+        if (req.DelegateeBeneficiaryId <= 0) return "المفوض له مطلوب";
+        if (req.DelegatorBeneficiaryId == req.DelegateeBeneficiaryId)
+            return "لا يمكن أن يكون المفوض والمفوض له نفس الشخص";
+        if (string.IsNullOrWhiteSpace(req.StartDate)) return "تاريخ بداية التفويض مطلوب";
+        if (string.IsNullOrWhiteSpace(req.EndDate)) return "تاريخ نهاية التفويض مطلوب";
+
+        DateTime start, end;
+        try { start = ParseDelegationDate(req.StartDate!); } catch { return "تاريخ البداية غير صالح"; }
+        try { end = ParseDelegationDate(req.EndDate!); } catch { return "تاريخ النهاية غير صالح"; }
+        if (end <= start) return "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+
+        var bens = await _ds.ListBeneficiariesAsync();
+        var dor = bens.FirstOrDefault(b => b.Id == req.DelegatorBeneficiaryId);
+        var dee = bens.FirstOrDefault(b => b.Id == req.DelegateeBeneficiaryId);
+        if (dor == null || !dor.IsActive) return "المفوض غير صالح";
+        if (dee == null || !dee.IsActive) return "المفوض له غير صالح";
+        if (dor.OrganizationalUnitId != req.DelegatorOrgUnitId)
+            return "المفوض لا ينتمي إلى الوحدة التنظيمية المحدّدة";
+        if (dee.OrganizationalUnitId != req.DelegateeOrgUnitId)
+            return "المفوض له لا ينتمي إلى الوحدة التنظيمية المحدّدة";
+        return null;
+    }
+
+    private static DateTime ParseDelegationDate(string s)
+    {
+        // التاريخ يأتي من input[type=date] بصيغة yyyy-MM-dd
+        return DateTime.ParseExact(s.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).Date;
+    }
+
+    /// <summary>
+    /// القيم: draft / scheduled / active / expired / cancelled.
+    /// التخزين يحتفظ بـ draft أو cancelled فقط؛ الباقي يُستنتج من التواريخ.
+    /// </summary>
+    private static string ComputeDelegationStatus(Delegation d)
+    {
+        var status = (d.Status ?? "").Trim().ToLowerInvariant();
+        if (status == "cancelled") return "cancelled";
+        if (status == "draft") return "draft";
+        var today = DateTime.Today;
+        if (today < d.StartDate.Date) return "scheduled";
+        if (today > d.EndDate.Date) return "expired";
+        return "active";
     }
 }
 
@@ -1794,6 +2178,29 @@ public class FormStatusUpdateRequest
 }
 
 public class FormStatusDeleteRequest
+{
+    public int Id { get; set; }
+}
+
+public class DelegationRequest
+{
+    public int DelegatorBeneficiaryId { get; set; }
+    public int DelegatorOrgUnitId { get; set; }
+    public int DelegateeBeneficiaryId { get; set; }
+    public int DelegateeOrgUnitId { get; set; }
+    public string? StartDate { get; set; }
+    public string? EndDate { get; set; }
+    public bool SaveAsDraft { get; set; }
+}
+
+public class DelegationUpdateRequest : DelegationRequest
+{
+    public int Id { get; set; }
+   
+    public bool Cancel { get; set; }
+}
+
+public class DelegationDeleteRequest
 {
     public int Id { get; set; }
 }

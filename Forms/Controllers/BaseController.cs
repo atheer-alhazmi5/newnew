@@ -8,6 +8,9 @@ namespace FormsSystem.Controllers;
 
 public abstract class BaseController : Controller
 {
+    protected const string LinkedEntityDeleteBlockedMessage =
+        "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف";
+
     protected int CurrentUserId => HttpContext.Session.GetInt32("UserId") ?? 0;
     protected string CurrentUserName => HttpContext.Session.GetString("UserName") ?? "";
     protected string CurrentUserFullName => HttpContext.Session.GetString("UserFullName") ?? "";

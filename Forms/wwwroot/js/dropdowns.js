@@ -10,7 +10,20 @@ var ddlHierLevelNames = [];
 var ddlHierLevelCount = 2;
 var ddlHierCurrentLevel = 1;
 
+/** صفحة القوائم للمدراء فقط: الملكية عامة */
+function ddlForcePublicOwnershipUi() {
+    var pubC = document.getElementById('ddlCreateOwnershipPublic');
+    var privC = document.getElementById('ddlCreateOwnershipPrivate');
+    var pubE = document.getElementById('ddlEditOwnershipPublic');
+    var privE = document.getElementById('ddlEditOwnershipPrivate');
+    if (pubC) { pubC.checked = true; pubC.disabled = false; }
+    if (privC) { privC.checked = false; privC.disabled = true; }
+    if (pubE) { pubE.checked = true; pubE.disabled = false; }
+    if (privE) { privE.checked = false; privE.disabled = true; }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    ddlForcePublicOwnershipUi();
     ddlLoad();
 });
 
@@ -23,6 +36,7 @@ async function ddlLoad() {
             ddlCurrentUser = r.currentUser || '';
             ddlApplyFilters();
             ddlFillOrgUnitFilter();
+            ddlForcePublicOwnershipUi();
         } else {
             document.getElementById('ddlBody').innerHTML =
                 '<tr><td colspan="8">' + emptyState('bi-ui-checks-grid', 'لا توجد قوائم منسدلة', 'أنشئ قائمة منسدلة للبدء') + '</td></tr>';
@@ -112,7 +126,7 @@ function ddlRenderTable() {
 function ddlShowCreateModal() {
     document.getElementById('ddlCreateName').value = '';
     document.getElementById('ddlCreateDescription').value = '';
-    document.querySelector('input[name="ddlCreateOwnership"][value="عام"]').checked = true;
+    ddlForcePublicOwnershipUi();
     document.getElementById('ddlCreateListTypeIndependent').checked = true;
     document.getElementById('ddlCreateParentListId').value = '';
     document.getElementById('ddlCreateLevelCount').value = '2';
@@ -167,7 +181,7 @@ async function ddlSubmitCreate() {
         }
     }
 
-    var ownership = document.querySelector('input[name="ddlCreateOwnership"]:checked')?.value || 'عام';
+    var ownership = 'عام';
     var parentListId = listType === 'قائمة فرعية' ? parseInt(document.getElementById('ddlCreateParentListId').value || '0') : null;
     var levelCount = listType === 'قائمة هرمية' ? parseInt(document.getElementById('ddlCreateLevelCount').value || '2') : 2;
     if (listType === 'قائمة هرمية') levelCount = Math.min(4, Math.max(2, levelCount));
@@ -1041,7 +1055,7 @@ async function ddlShowEditModal(id) {
     document.getElementById('ddlEditId').value = d.id;
     document.getElementById('ddlEditName').value = d.name || '';
     document.getElementById('ddlEditDescription').value = d.description || '';
-    document.querySelector('input[name="ddlEditOwnership"][value="' + (d.ownership || 'عام') + '"]').checked = true;
+    ddlForcePublicOwnershipUi();
     document.querySelector('input[name="ddlEditListType"][value="' + (d.listType || 'قائمة مستقلة') + '"]').checked = true;
     document.getElementById('ddlEditLevelCount').value = d.levelCount || 2;
     document.querySelector('input[name="ddlEditSelectionType"][value="' + (d.selectionType || 'خيار محدد') + '"]').checked = true;
@@ -1107,7 +1121,7 @@ async function ddlSubmitEdit() {
         id: id,
         name: name,
         description: document.getElementById('ddlEditDescription').value.trim(),
-        ownership: document.querySelector('input[name="ddlEditOwnership"]:checked')?.value || 'عام',
+        ownership: 'عام',
         listType: listType,
         parentListId: parentListId,
         levelCount: levelCount,

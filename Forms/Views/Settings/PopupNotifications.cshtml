@@ -281,11 +281,13 @@
                     </div>
                 </div>
 
+    
+
                 <!-- Target Users -->
-                <div class="mb-3">
+                <div class="mb-3" id="pnTargetUsersSection">
                     <div class="pn-target-header">
                         <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-people"></i> الموظفين المستهدفين</div>
-                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllUsers()">
+                        <button type="button" class="pn-select-all-btn" id="pnUsersSelectAllBtn" onclick="pnToggleAllUsers()">
                             <i class="bi bi-check2-all"></i> <span id="pnUsersAllLabel">تحديد الكل</span>
                         </button>
                     </div>
@@ -294,17 +296,17 @@
                             <div class="spinner-border spinner-border-sm"></div> جارٍ التحميل...
                         </div>
                     </div>
-                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                    <div class="pn-target-footnote-dashboard" style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
                         <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
                         في حال عدم التحديد سيرسل الإشعار لجميع الموظفين
                     </div>
                 </div>
 
                 <!-- Target Departments -->
-                <div class="mb-3">
+                <div class="mb-3" id="pnTargetDeptsSection">
                     <div class="pn-target-header">
                         <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
-                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllDepts()">
+                        <button type="button" class="pn-select-all-btn" id="pnDeptsSelectAllBtn" onclick="pnToggleAllDepts()">
                             <i class="bi bi-check2-all"></i> <span id="pnDeptsAllLabel">تحديد الكل</span>
                         </button>
                     </div>
@@ -313,7 +315,7 @@
                             <div class="spinner-border spinner-border-sm"></div>
                         </div>
                     </div>
-                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                    <div class="pn-target-footnote-dashboard" style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
                         <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
                         في حال عدم تحديد وحدة سيرسل لموظفي جميع الوحدات التنظيمية
                     </div>
@@ -322,7 +324,7 @@
                 <!-- Display Location -->
                 <div class="mb-2">
                     <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
-                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;">
+                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
                         <option value="landing">صفحة البداية (Landing)</option>
                         <option value="dashboard">لوحة التحكم</option>
                         <option value="login">صفحة تسجيل الدخول</option>
@@ -421,6 +423,65 @@ const pnPer = 12;
 let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
 let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal;
 let pnPublishAfterSave = false;
+let pnLastDisplayLocation = 'landing';
+
+function pnIsPublicDisplayLocation(loc) {
+    return loc === 'landing' || loc === 'login';
+}
+function pnAllUserIds() {
+    return pnAllUsers.map(u => u.id ?? u.Id);
+}
+function pnAllDeptIds() {
+    return pnAllDepts.map(d => d.id ?? d.Id);
+}
+function pnSetTargetingUiLocked(locked) {
+    const banner = document.getElementById('pnPublicTargetBanner');
+    const uBtn = document.getElementById('pnUsersSelectAllBtn');
+    const dBtn = document.getElementById('pnDeptsSelectAllBtn');
+    const footnotes = document.querySelectorAll('.pn-target-footnote-dashboard');
+    if (banner) banner.style.display = locked ? 'block' : 'none';
+    if (uBtn) uBtn.disabled = locked;
+    if (dBtn) dBtn.disabled = locked;
+    footnotes.forEach(f => { f.style.display = locked ? 'none' : 'flex'; });
+    document.querySelectorAll('.pn-user-cb, .pn-dept-cb').forEach(c => { c.disabled = locked; });
+    ['pnUsersList', 'pnDeptsList'].forEach(id => {
+        const l = document.getElementById(id);
+        if (!l) return;
+        l.style.opacity = locked ? '0.75' : '';
+        l.style.pointerEvents = locked ? 'none' : '';
+    });
+    document.querySelectorAll('.pn-dept-group-head').forEach(h => { h.style.pointerEvents = locked ? 'none' : ''; });
+}
+function pnApplyInitialDisplayLocationRules(selectedUserIds, selectedDeptIds) {
+    const loc = document.getElementById('pnDisplayLocation').value;
+    pnLastDisplayLocation = loc;
+    if (pnIsPublicDisplayLocation(loc)) {
+        pnBuildUsersList(pnAllUserIds());
+        pnBuildDeptsList(pnAllDeptIds());
+        pnSetTargetingUiLocked(true);
+    } else {
+        pnBuildUsersList(Array.isArray(selectedUserIds) ? selectedUserIds : []);
+        pnBuildDeptsList(Array.isArray(selectedDeptIds) ? selectedDeptIds : []);
+        pnSetTargetingUiLocked(false);
+    }
+}
+function pnOnDisplayLocationChange() {
+    const loc = document.getElementById('pnDisplayLocation').value;
+    const wasPublic = pnIsPublicDisplayLocation(pnLastDisplayLocation);
+    const isPublic = pnIsPublicDisplayLocation(loc);
+    if (isPublic) {
+        pnBuildUsersList(pnAllUserIds());
+        pnBuildDeptsList(pnAllDeptIds());
+        pnSetTargetingUiLocked(true);
+    } else {
+        pnSetTargetingUiLocked(false);
+        if (wasPublic) {
+            pnBuildUsersList([]);
+            pnBuildDeptsList([]);
+        }
+    }
+    pnLastDisplayLocation = loc;
+}
 
 const LOC_LABELS = { landing:'صفحة البداية (Landing)', dashboard:'لوحة التحكم', login:'صفحة تسجيل الدخول' };
 const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
@@ -577,8 +638,7 @@ function pnResetModal() {
     ['pnCategoryErr','pnContentTypeErr','pnTitleErr'].forEach(id =>
         document.getElementById(id).style.display = 'none');
     pnSyncContentType();
-    pnBuildUsersList([]);
-    pnBuildDeptsList([]);
+    pnApplyInitialDisplayLocationRules([], []);
 }
 
 function pnOpenModal() {
@@ -612,8 +672,7 @@ async function pnOpenEditModal(id) {
     if (d.startDate) document.getElementById('pnStartDate').value = d.startDate;
     if (d.endDate)   document.getElementById('pnEndDate').value   = d.endDate;
     document.getElementById('pnDisplayLocation').value = d.displayLocation || 'landing';
-    pnBuildUsersList(d.targetUserIds || []);
-    pnBuildDeptsList(d.targetDepartmentIds || []);
+    pnApplyInitialDisplayLocationRules(d.targetUserIds || [], d.targetDepartmentIds || []);
     pnModal.show();
 }
 
@@ -866,8 +925,10 @@ async function pnDoSave(publish) {
     if (!valid) return;
 
     const period  = document.querySelector('input[name="pnPeriod"]:checked')?.value || 'permanent';
-    const userIds = [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
-    const deptIds = [...document.querySelectorAll('.pn-dept-cb:checked')].map(c => +c.value);
+    const displayLoc = document.getElementById('pnDisplayLocation').value;
+    const isPublicLoc = pnIsPublicDisplayLocation(displayLoc);
+    const userIds = isPublicLoc ? [] : [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
+    const deptIds = isPublicLoc ? [] : [...document.querySelectorAll('.pn-dept-cb:checked')].map(c => +c.value);
 
     const payload = {
         id:           +document.getElementById('pnEditId').value,
@@ -883,7 +944,7 @@ async function pnDoSave(publish) {
         endDate:   period === 'specific' ? document.getElementById('pnEndDate').value   : null,
         targetUserIds:       userIds,
         targetDepartmentIds: deptIds,
-        displayLocation: document.getElementById('pnDisplayLocation').value,
+        displayLocation: displayLoc,
         status: 'draft'
     };
 
@@ -948,8 +1009,12 @@ async function pnShowDetails(id) {
         row('الحالة', d.status==='published'
             ? '<span class="pn-badge pn-b-published"><i class="bi bi-check-circle-fill"></i> منشور</span>'
             : '<span class="pn-badge pn-b-draft"><i class="bi bi-pencil-square"></i> مسودة</span>'),
-        row('الموظفون', (d.targetUserNames||[]).join('، ')||'—'),
-        row('الوحدات',  (d.targetDeptNames||[]).join('، ')||'—'),
+        row('الموظفون', pnIsPublicDisplayLocation(d.displayLocation||'')
+            ? 'جميع الموظفين (تلقائي لهذا المكان)'
+            : ((d.targetUserNames||[]).join('، ')||'—')),
+        row('الوحدات', pnIsPublicDisplayLocation(d.displayLocation||'')
+            ? 'جميع الوحدات التنظيمية (تلقائي لهذا المكان)'
+            : ((d.targetDeptNames||[]).join('، ')||'—')),
         row('أُنشئ بواسطة', esc(d.createdBy||'—')),
         row('تاريخ الإنشاء', esc(d.createdAt||'—')),
         row('تاريخ النشر',   esc(d.publishedAt||'—')),

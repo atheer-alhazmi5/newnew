@@ -128,8 +128,14 @@ public class TablesController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الجدول مطلوب" });
 
-        if (string.IsNullOrWhiteSpace(req.Ownership) || (req.Ownership != "عام" && req.Ownership != "خاص"))
+        var isAdminUser = CurrentUserRole == "Admin";
+        string ownership;
+        if (isAdminUser)
+            ownership = "عام";
+        else if (string.IsNullOrWhiteSpace(req.Ownership) || (req.Ownership != "عام" && req.Ownership != "خاص"))
             return Json(new { success = false, message = "الملكية مطلوبة (عام أو خاص)" });
+        else
+            ownership = req.Ownership!;
 
         if (req.RowCountMode == "مقيد" && (!req.MaxRows.HasValue || req.MaxRows.Value < 1))
             return Json(new { success = false, message = "يجب تحديد الحد الأقصى لعدد الصفوف عندما يكون الجدول مقيداً" });
@@ -147,7 +153,7 @@ public class TablesController : BaseController
             RowCountMode = req.RowCountMode ?? "مفتوح",
             MaxRows = req.RowCountMode == "مقيد" ? req.MaxRows : null,
             OrganizationalUnitId = orgUnitId,
-            Ownership = req.Ownership,
+            Ownership = ownership,
             ColumnHeaderColor = req.ColumnHeaderColor ?? "",
             IsActive = req.IsActive,
             CreatedBy = CurrentUserFullName
@@ -199,7 +205,7 @@ public class TablesController : BaseController
         if (req.SortOrder > 0) t.SortOrder = req.SortOrder;
         t.RowCountMode = req.RowCountMode ?? t.RowCountMode;
         t.MaxRows = req.RowCountMode == "مقيد" ? req.MaxRows : null;
-        t.Ownership = req.Ownership ?? t.Ownership;
+        t.Ownership = "عام";
         t.ColumnHeaderColor = req.ColumnHeaderColor ?? t.ColumnHeaderColor;
         t.IsActive = req.IsActive;
         t.UpdatedBy = CurrentUserFullName;
@@ -244,6 +250,9 @@ public class TablesController : BaseController
 
         var canDelete = t.CreatedBy == CurrentUserFullName || CurrentUserRole == "Admin";
         if (!canDelete) return Json(new { success = false, message = "غير مصرح بحذف هذا الجدول" });
+
+        if (await _ds.IsReadyTableLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteReadyTableAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف جدول جاهز", "ReadyTable", req.Id.ToString(), t.Name));

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using FormsSystem.Data;
 using FormsSystem.Models.Entities;
 using FormsSystem.Models.Enums;
@@ -706,6 +707,166 @@ public class DataService
     public Task<bool> IsFormSectionLinkedAsync(int sectionId)
         => Task.FromResult(_db.FormDefinitions.Any(f => f.FormTypeId == sectionId));
 
+    public Task<bool> IsFormClassLinkedAsync(int formClassId)
+        => Task.FromResult(_db.FormDefinitions.Any(f => f.FormClassId == formClassId));
+
+    public Task<bool> IsFormStatusLinkedAsync(int formStatusId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            var json = p.WorkflowStepsJson;
+            if (string.IsNullOrWhiteSpace(json)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
+                foreach (var step in doc.RootElement.EnumerateArray())
+                {
+                    foreach (var prop in new[] { "formStatusId", "FormStatusId" })
+                    {
+                        if (!step.TryGetProperty(prop, out var el) || el.ValueKind != JsonValueKind.Number)
+                            continue;
+                        if (el.TryGetInt32(out var n) && n == formStatusId)
+                            return Task.FromResult(true);
+                        if (el.TryGetInt64(out var ln) && ln == formStatusId)
+                            return Task.FromResult(true);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+               
+            }
+        }
+
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsFormDefinitionLinkedAsync(int formDefinitionId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (JsonObjectArrayHasIntProperty(p.UsedFormDefinitionsJson, formDefinitionId, "formDefinitionId", "FormDefinitionId"))
+                return Task.FromResult(true);
+            if (JsonObjectArrayHasIntProperty(p.WorkflowStepsJson, formDefinitionId, "formDefinitionId", "FormDefinitionId"))
+                return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsWorkProcedureLinkedAsync(int procedureId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (p.Id == procedureId) continue;
+            if (JsonIntArrayContains(p.PreviousProcedureIdsJson, procedureId)) return Task.FromResult(true);
+            if (JsonIntArrayContains(p.NextProcedureIdsJson, procedureId)) return Task.FromResult(true);
+            if (JsonIntArrayContains(p.ImplicitProcedureIdsJson, procedureId)) return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsReadyTableLinkedAsync(int tableId)
+        => Task.FromResult(_db.FormDefinitions.Any(f =>
+            FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "readyTableId", "ReadyTableId", tableId)));
+
+    public Task<bool> IsDropdownListLinkedAsync(int listId)
+    {
+        if (_db.FormDefinitions.Any(f =>
+                FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.ReadyTableFields.Any(rf =>
+                PropertiesJsonReferencesNumericId(rf.PropertiesJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.DropdownLists.Any(d => d.ParentListId == listId))
+            return Task.FromResult(true);
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsDropdownItemLinkedAsync(int itemId)
+        => Task.FromResult(_db.DropdownItems.Any(i => i.ParentItemId == itemId));
+
+    private static bool JsonIntArrayContains(string? json, int id)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n) && n == id)
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool JsonObjectArrayHasIntProperty(string? json, int id, params string[] propertyNames)
+    {
+        if (string.IsNullOrWhiteSpace(json) || propertyNames.Length == 0) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object) continue;
+                foreach (var name in propertyNames)
+                {
+                    if (!item.TryGetProperty(name, out var p)) continue;
+                    if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var n) && n == id)
+                        return true;
+                }
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool FormFieldsJsonReferencesNumericProperty(string? fieldsJson, string camelKey, string pascalKey, int targetId)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsJson)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(fieldsJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+            foreach (var field in doc.RootElement.EnumerateArray())
+            {
+                if (field.ValueKind != JsonValueKind.Object) continue;
+                if (!field.TryGetProperty("propertiesJson", out var pj) &&
+                    !field.TryGetProperty("PropertiesJson", out pj))
+                    continue;
+                if (pj.ValueKind != JsonValueKind.String) continue;
+                var inner = pj.GetString();
+                if (PropertiesJsonReferencesNumericId(inner, camelKey, pascalKey, targetId))
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool PropertiesJsonReferencesNumericId(string? propertiesJson, string camelKey, string pascalKey, int targetId)
+    {
+        if (string.IsNullOrWhiteSpace(propertiesJson)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(propertiesJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return false;
+            var root = doc.RootElement;
+            foreach (var key in new[] { camelKey, pascalKey })
+            {
+                if (!root.TryGetProperty(key, out var el)) continue;
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n) && n == targetId)
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
     // ─── FORM STATUSES (حالات النماذج) ───────────────────────────────────────
     public Task<List<FormStatus>> ListFormStatusesAsync()
         => Task.FromResult(_db.FormStatuses.OrderBy(s => s.SortOrder).ToList());
@@ -1327,10 +1488,10 @@ public class DataService
             var deptIds = p.TargetDepartmentIds ?? new List<int>();
             var hasU = userIds.Count > 0;
             var hasD = deptIds.Count > 0;
-            // صفحة البداية وتسجيل الدخول: لا يرتبط العرض بالوحدات — يُعرض للجميعن
+            // صفحة البداية وتسجيل الدخول: الاستهداف بالموظفين/الوحدات لا يطبَّق — يعرض للجميع
             var publicPage = string.Equals(location, "landing", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(location, "login", StringComparison.OrdinalIgnoreCase);
-            if (publicPage) hasD = false;
+            if (publicPage) { hasD = false; hasU = false; }
 
             if (userId == 0)
             {
@@ -1534,6 +1695,43 @@ public class DataService
 
     public Task AddAuditLogAsync(int userId, string userName, string action, string entityType, string entityId, string details = "")
         => AddAuditLogAsync(new AuditLog { UserId = userId, UserName = userName, Action = action, EntityType = entityType, EntityId = entityId, Details = details });
+
+    // ─── DELEGATIONS ─────────────────────────────────────────────────────────
+    public Task<List<Delegation>> ListDelegationsAsync()
+        => Task.FromResult(_db.Delegations.OrderByDescending(d => d.CreatedAt).ToList());
+
+    public Task<Delegation?> GetDelegationByIdAsync(int id)
+        => Task.FromResult(_db.Delegations.FirstOrDefault(d => d.Id == id));
+
+    public Task<Delegation> AddDelegationAsync(Delegation d)
+    {
+        var list = _db.Delegations;
+        d.Id = NextId(list, x => x.Id);
+        d.CreatedAt = DateTime.Now;
+        list.Add(d);
+        _db.SaveDelegations(list);
+        return Task.FromResult(d);
+    }
+
+    public Task<bool> UpdateDelegationAsync(Delegation d)
+    {
+        var list = _db.Delegations;
+        var idx = list.FindIndex(x => x.Id == d.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = d;
+        _db.SaveDelegations(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteDelegationAsync(int id)
+    {
+        var list = _db.Delegations;
+        var d = list.FirstOrDefault(x => x.Id == id);
+        if (d == null) return Task.FromResult(false);
+        list.Remove(d);
+        _db.SaveDelegations(list);
+        return Task.FromResult(true);
+    }
 }
 
 public class DirectoryLookupResult

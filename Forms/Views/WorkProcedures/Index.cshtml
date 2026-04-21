@@ -165,9 +165,35 @@
     color: var(--gray-400);
     cursor: not-allowed;
 }
+/* نموذج مرتبط سابقاً لكنه غير مفعّل/غير ضمن قائمة الاختيار الحالية */
+.wp-dd-check-row:has(.wp-used-form-extra) .wp-dd-check-row-label {
+    color: var(--gray-500);
+    font-style: italic;
+}
 #wpEditBody .fd-form-row.fd-form-row--wp-org-pair {
     align-items: start;
 }
+
+.wp-filt-ou-wrap { position:relative; min-width:220px; max-width:280px; }
+.wp-filt-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.wp-filt-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.wp-filt-ou-tree-panel { max-height:min(320px,70vh); overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.wp-filt-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; cursor:pointer; }
+.wp-filt-ou-tree-row:hover { background:var(--sa-25); }
+.wp-filt-ou-tree-row.is-selected { background:var(--info-50); }
+.wp-filt-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease,border-color .15s ease; }
+.wp-filt-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
+.wp-filt-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.wp-filt-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
+/* شجرة داخل قائمة المودال المنسدلة */
+.wp-ou-tree-dd-row { flex-wrap:nowrap; align-items:center; }
+.wp-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:6px; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.wp-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); }
+.wp-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; min-width:1.35rem; }
+/* شريط تحديد الكل — نفس أسلوب الإشعارات المنبثقة */
+.wp-target-ou-toolbar { flex-shrink:0; }
+.wp-select-all-btn { background:none;border:1px solid var(--gray-300);border-radius:8px;padding:3px 12px;font-size:11px;font-weight:700;color:var(--sa-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap; }
+.wp-select-all-btn:hover { background:var(--sa-50);border-color:var(--sa-400); }
 
 .wp-action-grid {
     display:grid;
@@ -212,9 +238,13 @@
         <option value="دائم">دائم</option>
         <option value="مؤقت">مؤقت</option>
     </select>
-    <select class="rt-filter-select form-select" id="wpFilterTargetOrg" onchange="wpLoad()" aria-label="الوحدات التنظيمية المستهدفة">
-        <option value="">الوحدات التنظيمية المستهدفة</option>
-    </select>
+    <div class="wp-filt-ou-wrap">
+        <input type="hidden" id="wpFilterTargetOrg" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 wp-filt-ou-tree-trigger" id="wpFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية المستهدفة">
+            <span class="wp-filt-ou-tree-label text-truncate d-block" id="wpFilterOuLabel">الوحدات التنظيمية المستهدفة</span>
+        </button>
+        <div class="wp-filt-ou-tree-panel d-none" id="wpFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;"></div>
+    </div>
     <select class="rt-filter-select form-select" id="wpFilterExecutor" onchange="wpLoad()" aria-label="المنفذ للإجراء">
         <option value="">المنفذ للإجراء</option>
     </select>

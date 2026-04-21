@@ -1,5 +1,6 @@
 /*  Executor Roles – Client Logic  */
 var erRoles = [], erOrgUnits = [], erBeneficiaries = [];
+var erFilterOuExpanded = {};
 var erOuExpandedC = {}, erOuExpandedE = {};
 var erSelectedOuIdsC = [], erSelectedOuIdsE = [];
 var erSelectedExecIdsC = [], erSelectedExecIdsE = [];
@@ -21,20 +22,7 @@ async function erLoad() {
     erRoles = res.data || [];
     erOrgUnits = res.organizationalUnits || [];
     erBeneficiaries = res.beneficiaries || [];
-    erPopulateFilterOrgUnits();
     erRenderTable(erRoles);
-}
-
-function erPopulateFilterOrgUnits() {
-    var sel = document.getElementById('erFilterOrgUnit');
-    var val = sel.value;
-    sel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
-    erOrgUnits.forEach(function(u) {
-        var indent = '';
-        for (var i = 0; i < (u.level || 0); i++) indent += '\u00A0\u00A0';
-        sel.innerHTML += '<option value="' + u.id + '">' + indent + erEsc(u.name) + '</option>';
-    });
-    sel.value = val;
 }
 
 /* ─── Table Rendering ───────────────────────────────────────── */
@@ -76,7 +64,7 @@ function erRenderTable(data) {
 function erApplyFilters() {
     var search = (document.getElementById('erSearchInput').value || '').trim().toLowerCase();
     var ownership = document.getElementById('erFilterOwnership').value;
-    var orgUnit = document.getElementById('erFilterOrgUnit').value;
+    var orgUnit = (document.getElementById('erFilterOrgUnit') && document.getElementById('erFilterOrgUnit').value) || '';
     var active = document.getElementById('erFilterActive').value;
     var filtered = erRoles.filter(function(r) {
         if (search && !(r.name || '').toLowerCase().includes(search) && !(r.description || '').toLowerCase().includes(search)) return false;
@@ -92,9 +80,97 @@ function erApplyFilters() {
 function erClearFilters() {
     document.getElementById('erSearchInput').value = '';
     document.getElementById('erFilterOwnership').value = '';
-    document.getElementById('erFilterOrgUnit').value = '';
+    var ouHid = document.getElementById('erFilterOrgUnit');
+    if (ouHid) ouHid.value = '';
+    var ouLab = document.getElementById('erFilterOuLabel');
+    if (ouLab) ouLab.textContent = 'الوحدة التنظيمية';
+    erFilterOuExpanded = {};
     document.getElementById('erFilterActive').value = '';
     erRenderTable(erRoles);
+}
+
+function erFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    erOrgUnits.forEach(function (u) { map[erOuUnitId(u)] = u; });
+    var u = map[selectId];
+    while (u) {
+        var pid = erOuParentId(u);
+        if (pid == null || pid === '' || !map[pid]) break;
+        erFilterOuExpanded[String(pid)] = true;
+        u = map[pid];
+    }
+}
+
+function erFilterOuTogglePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    var trig = document.getElementById('erFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = (document.getElementById('erFilterOrgUnit') || {}).value;
+        if (cur) erFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        erRenderFilterOuTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function erFilterOuClosePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    var trig = document.getElementById('erFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function erOuUnitId(u) { return u.id != null ? u.id : u.Id; }
+function erOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
+function erOuSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
+function erOuName(u) { return u.name != null ? u.name : (u.Name || ''); }
+
+function erRenderFilterOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var uid = erOuUnitId(u);
+        var idStr = String(uid);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = sel === idStr ? ' is-selected' : '';
+        html += '<div class="er-filt-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + uid + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="er-filt-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="er-filt-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="er-filt-ou-tree-name flex-grow-1">' + erEsc(erOuName(u)) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += erRenderFilterOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function erRenderFilterOuTreePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    if (!panel) return;
+    if (!erOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = erOuBuildTreeMap();
+    var selectedId = (document.getElementById('erFilterOrgUnit') || {}).value;
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="er-filt-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="er-filt-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="er-filt-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += erRenderFilterOuTreeRows(byParent, '', 0, selectedId, erFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
 }
 
 /* ─── Toggle Active ─────────────────────────────────────────── */
@@ -107,15 +183,21 @@ async function erToggleActive(id) {
 /* ─── Org Unit Tree ─────────────────────────────────────────── */
 function erOuBuildTreeMap() {
     var ids = {};
-    erOrgUnits.forEach(function(u) { ids[u.id] = true; });
+    erOrgUnits.forEach(function (u) { ids[erOuUnitId(u)] = true; });
     var byParent = {};
-    erOrgUnits.forEach(function(u) {
-        var pk = (u.parentId && ids[u.parentId]) ? String(u.parentId) : '';
+    erOrgUnits.forEach(function (u) {
+        var p = erOuParentId(u);
+        var pk = (p != null && p !== '' && ids[p]) ? String(p) : '';
         if (!byParent[pk]) byParent[pk] = [];
         byParent[pk].push(u);
     });
-    Object.keys(byParent).forEach(function(k) {
-        byParent[k].sort(function(a,b) { return (a.sortOrder||0) - (b.sortOrder||0); });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = erOuSortOrder(a);
+            var sb = erOuSortOrder(b);
+            if (sa !== sb) return sa - sb;
+            return erOuName(a).localeCompare(erOuName(b), 'ar');
+        });
     });
     return byParent;
 }
@@ -123,22 +205,24 @@ function erOuBuildTreeMap() {
 function erOuRenderRows(byParent, parentKey, depth, selectedIds, expandedMap, multiSelect) {
     var rows = byParent[parentKey] || [];
     var html = '';
-    rows.forEach(function(u) {
-        var idStr = String(u.id);
-        var hasChildren = !!byParent[idStr];
+    rows.forEach(function (u) {
+        var uid = erOuUnitId(u);
+        var idStr = String(uid);
+        var childList = byParent[idStr] || [];
+        var hasChildren = childList.length > 0;
         var expanded = !!expandedMap[idStr];
-        var isSelected = selectedIds.indexOf(u.id) >= 0;
+        var isSelected = selectedIds.indexOf(uid) >= 0;
         var selClass = isSelected ? ' selected' : '';
-        html += '<div class="er-ou-tree-row' + selClass + '" data-ou-id="' + u.id + '" style="padding-right:' + (10 + depth * 18) + 'px;">';
+        html += '<div class="er-ou-tree-row' + selClass + '" data-ou-id="' + uid + '" style="padding-right:' + (10 + depth * 18) + 'px;">';
         if (hasChildren) {
             html += '<span class="er-ou-tree-exp" data-exp="' + idStr + '"><i class="bi bi-' + (expanded ? 'dash' : 'plus') + '-lg" style="font-size:.7rem;"></i></span>';
         } else {
             html += '<span class="er-ou-tree-exp-spacer"></span>';
         }
         if (multiSelect) {
-            html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' style="accent-color:var(--sa-600);width:15px;height:15px;cursor:pointer;" data-ou-check="' + u.id + '">';
+            html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' style="accent-color:var(--sa-600);width:15px;height:15px;cursor:pointer;" data-ou-check="' + uid + '">';
         }
-        html += '<span class="er-ou-tree-name">' + erEsc(u.name) + '</span></div>';
+        html += '<span class="er-ou-tree-name">' + erEsc(erOuName(u)) + '</span></div>';
         if (hasChildren && expanded) {
             html += erOuRenderRows(byParent, idStr, depth + 1, selectedIds, expandedMap, multiSelect);
         }
@@ -183,7 +267,9 @@ function erUpdateOuLabel(mode) {
         return;
     }
     var names = [];
-    erOrgUnits.forEach(function(u) { if (selectedIds.indexOf(u.id) >= 0) names.push(u.name); });
+    erOrgUnits.forEach(function (u) {
+        if (selectedIds.indexOf(erOuUnitId(u)) >= 0) names.push(erOuName(u));
+    });
     labelEl.textContent = names.join('، ');
     labelEl.style.color = 'var(--gray-800)';
 }
@@ -252,7 +338,7 @@ function erRenderExecutors(mode) {
     }
 
     var ouMap = {};
-    erOrgUnits.forEach(function(u) { ouMap[u.id] = u.name; });
+    erOrgUnits.forEach(function (u) { ouMap[erOuUnitId(u)] = erOuName(u); });
 
     var grouped = {};
     erBeneficiaries.forEach(function(b) {
@@ -471,6 +557,11 @@ document.addEventListener('click', function(e) {
         var panel = document.getElementById(m === 'c' ? 'ercOuPanel' : 'ereOuPanel');
         if (wrap && panel && !wrap.contains(e.target)) panel.classList.remove('show');
     });
+    var erFw = document.querySelector('.er-filter-ou-wrap');
+    var erFp = document.getElementById('erFilterOuPanel');
+    if (erFw && erFp && !erFp.classList.contains('d-none') && !erFw.contains(e.target)) {
+        erFilterOuClosePanel();
+    }
 });
 
 /* ─── Panel delegated────────────────────────── */
@@ -479,5 +570,46 @@ document.addEventListener('DOMContentLoaded', function() {
         var panel = document.getElementById(mode === 'c' ? 'ercOuPanel' : 'ereOuPanel');
         if (panel) panel.addEventListener('click', function(ev) { erOuPanelClick(mode, ev); });
     });
+    var erFilterOuTrigger = document.getElementById('erFilterOuTrigger');
+    var erFilterOuPanel = document.getElementById('erFilterOuPanel');
+    if (erFilterOuTrigger && erFilterOuPanel) {
+        erFilterOuTrigger.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            erFilterOuTogglePanel();
+        });
+        erFilterOuPanel.addEventListener('click', function(ev) {
+            var expBtn = ev.target.closest('.er-filt-ou-tree-exp');
+            if (expBtn) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    erFilterOuExpanded[eid] = !erFilterOuExpanded[eid];
+                    erRenderFilterOuTreePanel();
+                }
+                return;
+            }
+            var row = ev.target.closest('.er-filt-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null) {
+                var rawId = row.getAttribute('data-id');
+                if (rawId === '') {
+                    document.getElementById('erFilterOrgUnit').value = '';
+                    var lab = document.getElementById('erFilterOuLabel');
+                    if (lab) lab.textContent = 'الوحدة التنظيمية';
+                } else {
+                    var uid = parseInt(rawId, 10);
+                    var u = erOrgUnits.find(function (x) { return erOuUnitId(x) === uid; });
+                    if (u) {
+                        document.getElementById('erFilterOrgUnit').value = String(erOuUnitId(u));
+                        var lab2 = document.getElementById('erFilterOuLabel');
+                        if (lab2) lab2.textContent = erOuName(u);
+                    }
+                }
+                erFilterOuClosePanel();
+                erRenderFilterOuTreePanel();
+                erApplyFilters();
+            }
+        });
+    }
     erLoad();
 });

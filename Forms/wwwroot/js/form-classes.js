@@ -77,6 +77,12 @@ function fmcFilter() {
     fmcRenderTable();
 }
 
+function fmcClearFilter() {
+    var inp = document.getElementById('fmcSearchInput');
+    if (inp) inp.value = '';
+    fmcFilter();
+}
+
 function fmcRenderTable() {
     var body = document.getElementById('fmcBody');
     if (fmcFiltered.length === 0) {
@@ -303,7 +309,7 @@ function fmcShowDetails(id) {
         '</div>' +
         '<div class="fmc-detail-row">' +
             '<div class="fmc-detail-label">أضيف بواسطة</div>' +
-            '<div class="fmc-detail-value">' + (row.createdBy ? esc(row.createdBy) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
+            '<div class="fmc-detail-value" style="font-weight:700;">' + (row.createdBy && String(row.createdBy).trim() ? esc(String(row.createdBy).trim()) : '<span style="color:var(--gray-400);font-weight:400;">—</span>') + '</div>' +
         '</div>' +
         '<div class="fmc-detail-row">' +
             '<div class="fmc-detail-label">تاريخ الإنشاء</div>' +

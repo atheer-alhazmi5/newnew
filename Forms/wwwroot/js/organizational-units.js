@@ -224,6 +224,14 @@ function ouFilter() {
     ouRenderTable();
 }
 
+function ouClearFilters() {
+    document.getElementById('ouSearchInput').value = '';
+    document.getElementById('ouFilterClassification').value = '';
+    document.getElementById('ouFilterLevel').value = '';
+    document.getElementById('ouFilterStatus').value = '';
+    ouFilter();
+}
+
 function ouRenderTable() {
     var body = document.getElementById('ouBody');
     if (ouFiltered.length === 0) {
@@ -465,7 +473,7 @@ function ouShowDetails(id) {
         '</div>' +
         '<div class="ou-detail-row">' +
             '<div class="ou-detail-label">أضيف بواسطة</div>' +
-            '<div class="ou-detail-value">' + (u.createdBy ? esc(u.createdBy) : 'مدير النظام') + '</div>' +
+            '<div class="ou-detail-value" style="font-weight:700;">' + (u.createdBy && String(u.createdBy).trim() ? esc(String(u.createdBy).trim()) : '<span style="color:var(--gray-400);font-weight:400;">—</span>') + '</div>' +
         '</div>' +
         '<div class="ou-detail-row">' +
             '<div class="ou-detail-label">تاريخ الإنشاء</div>' +

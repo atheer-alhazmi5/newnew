@@ -47,6 +47,33 @@ function rtcResetColumnHeaderColorUI() {
     rtcOnNoColumnHeaderColorChange();
 }
 
+/** مدير النظام: ملكية «عام» إلزامية — تعطيل «خاص» في النماذج */
+function rtApplyAdminOwnershipLock() {
+    var lock = !!rtIsAdmin;
+    var pub = document.getElementById('rtcOwPublic');
+    var priv = document.getElementById('rtcOwPrivate');
+    var pubE = document.getElementById('rtEditOwnershipPublic');
+    var privE = document.getElementById('rtEditOwnershipPrivate');
+    if (pub) { pub.disabled = false; }
+    if (priv) { priv.disabled = lock; if (lock) priv.checked = false; }
+    if (pubE) { pubE.disabled = false; }
+    if (privE) { privE.disabled = lock; if (lock) privE.checked = false; }
+    if (lock) {
+        if (pub) pub.checked = true;
+        if (pubE) pubE.checked = true;
+    }
+    document.querySelectorAll('.rt-ownership-admin-note').forEach(function (el) {
+        el.style.display = lock ? 'block' : 'none';
+    });
+}
+
+function rtEffectiveOwnership(isEdit) {
+    if (rtIsAdmin) return 'عام';
+    var nm = isEdit ? 'rtEditOwnership' : 'rtcOwnership';
+    var sel = document.querySelector('input[name="' + nm + '"]:checked');
+    return sel ? sel.value : 'عام';
+}
+
 function rtEditGetColumnHeaderColor() {
     var no = document.getElementById('rtEditNoColumnHeaderColor');
     if (no && no.checked) return '';
@@ -508,6 +535,7 @@ async function rtLoad() {
         rtIsAdmin = r.isAdmin || false;
         rtRenderOrgFilter();
         rtRenderTable();
+        rtApplyAdminOwnershipLock();
     } catch(e) { console.error('rtLoad error:', e); }
 }
 
@@ -597,6 +625,7 @@ function rtShowCreateModal() {
     document.getElementById('rtcCreateError').classList.add('d-none');
     var pi = document.getElementById('rtcPreviewInline');
     if (pi) pi.classList.add('d-none');
+    rtApplyAdminOwnershipLock();
     new bootstrap.Modal(document.getElementById('rtCreateModal')).show();
 }
 
@@ -805,7 +834,7 @@ async function rtcSubmitTable() {
     var maxRows = rowMode === 'مقيد' ? parseInt(document.getElementById('rtcMaxRows').value, 10) : null;
     if (rowMode === 'مقيد' && (!maxRows || maxRows < 1)) { showToast('يرجى تحديد عدد الصفوف', 'danger'); return; }
     if (rtcFields.length === 0) { showToast('يرجى إضافة حقل واحد على الأقل', 'danger'); return; }
-    var reqBody = { name:name, description:document.getElementById('rtcDesc').value.trim(), ownership:document.querySelector('input[name="rtcOwnership"]:checked').value, rowCountMode:rowMode, maxRows:maxRows, columnHeaderColor:rtcGetColumnHeaderColor(), isActive:document.querySelector('input[name="rtcActive"]:checked').value === '1', fields:rtcFields.map(function(f){return{fieldName:f.fieldName,fieldType:f.fieldType,isRequired:f.isRequired,subName:f.subName||'',placeholder:f.placeholder||'',tooltipText:f.tooltipText||'',propertiesJson:f.propertiesJson||'{}'};}) };
+    var reqBody = { name:name, description:document.getElementById('rtcDesc').value.trim(), ownership:rtEffectiveOwnership(false), rowCountMode:rowMode, maxRows:maxRows, columnHeaderColor:rtcGetColumnHeaderColor(), isActive:document.querySelector('input[name="rtcActive"]:checked').value === '1', fields:rtcFields.map(function(f){return{fieldName:f.fieldName,fieldType:f.fieldType,isRequired:f.isRequired,subName:f.subName||'',placeholder:f.placeholder||'',tooltipText:f.tooltipText||'',propertiesJson:f.propertiesJson||'{}'};}) };
     try {
         var r = await apiFetch('/Tables/AddReadyTable', 'POST', reqBody);
         if (r && r.success) {
@@ -1054,7 +1083,7 @@ function rtpAddRow(btn) {
 function rtcShowPreview() {
     var name = document.getElementById('rtcName').value.trim();
     var desc = document.getElementById('rtcDesc').value.trim();
-    var ownership = document.querySelector('input[name="rtcOwnership"]:checked').value;
+    var ownership = rtEffectiveOwnership(false);
     var rowMode = document.querySelector('input[name="rtcRowMode"]:checked').value;
     var maxRowsVal = rowMode === 'مقيد' ? document.getElementById('rtcMaxRows').value : '';
     var numRows = rowMode === 'مقيد' ? (parseInt(maxRowsVal, 10) || 1) : 1;
@@ -1209,6 +1238,7 @@ async function rtShowEditModal(id) {
 
         if (d.ownership === 'خاص') document.getElementById('rtEditOwnershipPrivate').checked = true;
         else document.getElementById('rtEditOwnershipPublic').checked = true;
+        rtApplyAdminOwnershipLock();
 
         rtEditApplyColumnHeaderColorFromValue(d.columnHeaderColor || '');
 
@@ -1406,7 +1436,7 @@ function rtEditRenderFieldsTable() {
 function rtEditShowPreview() {
     var name = document.getElementById('rtEditName').value.trim();
     var desc = document.getElementById('rtEditDescription').value.trim();
-    var ownership = document.querySelector('input[name="rtEditOwnership"]:checked').value;
+    var ownership = rtEffectiveOwnership(true);
     var rowMode = document.querySelector('input[name="rtEditRowMode"]:checked').value;
     var maxRowsVal = rowMode === 'مقيد' ? document.getElementById('rtEditMaxRows').value : '';
     var numRows = rowMode === 'مقيد' ? (parseInt(maxRowsVal, 10) || 1) : 1;
@@ -1488,7 +1518,7 @@ async function rtSubmitEdit() {
         sortOrder: parseInt(document.getElementById('rtEditSortOrder').value) || 0,
         rowCountMode: document.querySelector('input[name="rtEditRowMode"]:checked').value,
         maxRows: parseInt(document.getElementById('rtEditMaxRows').value) || null,
-        ownership: document.querySelector('input[name="rtEditOwnership"]:checked').value,
+        ownership: rtEffectiveOwnership(true),
         columnHeaderColor: rtEditGetColumnHeaderColor(),
         isActive: document.querySelector('input[name="rtEditIsActive"]:checked').value === '1',
         fields: rtEditFields.map(function(f) { return {

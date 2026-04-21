@@ -309,6 +309,9 @@ public class FormDefinitionsController : BaseController
         if (f.Status == "approved" && CurrentUserRole != "Admin")
             return Json(new { success = false, message = "لا يمكن حذف نموذج معتمد" });
 
+        if (await _ds.IsFormDefinitionLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
+
         await _ds.DeleteFormDefinitionAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف نموذج", "FormDefinition", req.Id.ToString(), f.Name));
         return Json(new { success = true });

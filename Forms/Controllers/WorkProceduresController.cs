@@ -131,7 +131,7 @@ public class WorkProceduresController : BaseController
         }).ToList();
 
         var workspacesForFilter = await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll);
-        var formDefsForFilter = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId);
+        var formDefsForFilter = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true);
         var orgUnitsForFilter = unitsAll.Where(u => u.IsActive && (isAdmin || allowedOrgIds.Contains(u.Id)))
             .OrderBy(u => u.SortOrder)
             .ToList();
@@ -167,7 +167,7 @@ public class WorkProceduresController : BaseController
 
         var workspaces = (await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll))
             .Select(w => new { w.Id, w.Name }).ToList();
-        var formDefs = (await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId))
+        var formDefs = (await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true))
             .Select(f => new { f.Id, f.Name, f.Ownership, f.OrganizationalUnitId, f.WorkspaceId }).ToList();
         var execRoles = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);
         var allowedBenIds = ParseBeneficiaryIdsFromExecutorRoles(execRoles);
@@ -219,6 +219,8 @@ public class WorkProceduresController : BaseController
         if (curWs != null && wsForSelect.All(x => x.id != curWs.Id))
             wsForSelect.Insert(0, new { id = curWs.Id, name = curWs.Name + (curWs.IsActive ? "" : " (غير مفعّل)") });
 
+        var usedFormPickerExtras = await BuildUsedFormPickerExtrasAsync(p, isAdmin, myOrgUnitId);
+
         return Json(new
         {
             success = true,
@@ -256,7 +258,8 @@ public class WorkProceduresController : BaseController
                 OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? "",
                 WorkflowStepsJson = p.WorkflowStepsJson ?? "[]"
             },
-            workspaces = wsForSelect
+            workspaces = wsForSelect,
+            usedFormPickerExtras
         });
     }
 
@@ -370,13 +373,13 @@ public class WorkProceduresController : BaseController
         return Json(new { success = true });
     }
 
+    /// <summary>دور منفذين يضمّ على الأقل مستفيداً معلّماً كمدير وحدة تنظيمية — مطلوب لتفعيل «خطوة متزامنة».</summary>
     private static bool IsExecutorRoleManagerLike(ExecutorRole role, HashSet<int> procBenIds, List<Beneficiary> beneficiaries)
     {
-        if (role.Name.Contains("مدير", StringComparison.OrdinalIgnoreCase)) return true;
         foreach (var bid in ParseCsvIntIds(role.ExecutorIds).Where(procBenIds.Contains))
         {
             var b = beneficiaries.FirstOrDefault(x => x.Id == bid);
-            if (b != null && (b.IsUnitManager || string.Equals(b.MainRole, "مدير", StringComparison.OrdinalIgnoreCase)))
+            if (b is { IsUnitManager: true })
                 return true;
         }
         return false;
@@ -539,7 +542,7 @@ public class WorkProceduresController : BaseController
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
-        var usedErr = await ValidateUsedFormsAsync(req.UsedForms, isAdmin, myOrgUnitId, req.WorkspaceId);
+        var usedErr = await ValidateUsedFormsAsync(req.UsedForms, isAdmin, myOrgUnitId, req.WorkspaceId, grandfatheredUsedFormDefIds: null);
         if (usedErr != null) return Json(new { success = false, message = usedErr });
         var execErr = await ValidateExecutorBeneficiaryIdsAsync(req.ExecutorBeneficiaryIds, isAdmin, allowedOrgIds);
         if (execErr != null) return Json(new { success = false, message = execErr });
@@ -590,7 +593,7 @@ public class WorkProceduresController : BaseController
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
-        var usedErr = await ValidateUsedFormsAsync(req.UsedForms, isAdmin, myOrgUnitId, req.WorkspaceId);
+        var usedErr = await ValidateUsedFormsAsync(req.UsedForms, isAdmin, myOrgUnitId, req.WorkspaceId, ParseUsedFormDefinitionIds(p).ToHashSet());
         if (usedErr != null) return Json(new { success = false, message = usedErr });
         var execErr = await ValidateExecutorBeneficiaryIdsAsync(req.ExecutorBeneficiaryIds, isAdmin, allowedOrgIds);
         if (execErr != null) return Json(new { success = false, message = execErr });
@@ -656,6 +659,9 @@ public class WorkProceduresController : BaseController
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
         if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
             return Json(new { success = false, message = "غير مصرح" });
+
+        if (await _ds.IsWorkProcedureLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteWorkProcedureAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف إجراء عمل", "WorkProcedure", req.Id.ToString(), p.Name));
@@ -774,21 +780,52 @@ public class WorkProceduresController : BaseController
         }
     }
 
-    private async Task<string?> ValidateUsedFormsAsync(List<UsedFormDefItem>? items, bool isAdmin, int myOrgUnitId, int workspaceId)
+    private async Task<string?> ValidateUsedFormsAsync(List<UsedFormDefItem>? items, bool isAdmin, int myOrgUnitId, int workspaceId, HashSet<int>? grandfatheredUsedFormDefIds)
     {
         if (items == null || items.Count == 0) return "النماذج المستخدمة مطلوبة";
         if (workspaceId <= 0) return "مساحة العمل مطلوبة";
-        var allowed = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId);
+        var allowed = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: false);
         var byId = allowed.ToDictionary(f => f.Id);
         foreach (var it in items)
         {
             if (it.FormDefinitionId <= 0) return "نموذج غير صالح";
             if (!byId.TryGetValue(it.FormDefinitionId, out var fd)) return "أحد النماذج المختارة غير مسموح به";
             if (fd.WorkspaceId != workspaceId) return "يجب أن تكون النماذج المستخدمة ضمن مساحة العمل المختارة";
+            var wasAlreadyUsed = grandfatheredUsedFormDefIds != null && grandfatheredUsedFormDefIds.Contains(it.FormDefinitionId);
+            if (!wasAlreadyUsed && (!FormDefinitionIsActiveApproved(fd)))
+                return "يجب اختيار نماذج معتمدة ومفعّلة فقط في النماذج المستخدمة";
             var vis = string.IsNullOrWhiteSpace(it.Visibility) ? "عام" : it.Visibility.Trim();
             if (vis != "عام" && vis != "خاص") return "قيمة ظهور النموذج يجب أن تكون عام أو خاص";
         }
         return null;
+    }
+
+    private static bool FormDefinitionIsActiveApproved(FormDefinition f)
+        => f.IsActive && string.Equals((f.Status ?? "").Trim(), "approved", StringComparison.OrdinalIgnoreCase);
+
+    private async Task<List<object>> BuildUsedFormPickerExtrasAsync(WorkProcedure p, bool isAdmin, int myOrgUnitId)
+    {
+        var usedIds = ParseUsedFormDefinitionIds(p);
+        if (usedIds.Count == 0) return new List<object>();
+
+        var activeInPicker = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true);
+        var activeInWs = activeInPicker.Where(f => f.WorkspaceId == p.WorkspaceId).Select(f => f.Id).ToHashSet();
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var byId = fdAll.ToDictionary(f => f.Id);
+
+        var list = new List<object>();
+        foreach (var id in usedIds)
+        {
+            if (activeInWs.Contains(id)) continue;
+            if (!byId.TryGetValue(id, out var f))
+            {
+                list.Add(new { id, name = $"نموذج #{id}", workspaceId = 0 });
+                continue;
+            }
+            var suffix = FormDefinitionIsActiveApproved(f) ? "" : " (غير مفعّل أو غير معتمد)";
+            list.Add(new { id, name = f.Name + suffix, workspaceId = f.WorkspaceId });
+        }
+        return list;
     }
 
     private static HashSet<int> ParseProcedureBeneficiaryIds(WorkProcedure p)
@@ -1028,13 +1065,17 @@ public class WorkProceduresController : BaseController
         return all.Where(w => allowed.Contains(w.OrganizationalUnitId)).OrderBy(w => w.SortOrder).ToList();
     }
 
-    private async Task<List<FormDefinition>> ListFormDefinitionsForUserAsync(bool isAdmin, int myOrgUnitId)
+    private async Task<List<FormDefinition>> ListFormDefinitionsForUserAsync(bool isAdmin, int myOrgUnitId, bool activeApprovedOnly = false)
     {
         var all = await _ds.ListFormDefinitionsAsync();
-        if (isAdmin) return all.OrderByDescending(f => f.CreatedAt).ToList();
-        return all.Where(f =>
-            f.Ownership == "عام" ||
-            (f.Ownership == "خاص" && f.OrganizationalUnitId == myOrgUnitId)).OrderByDescending(f => f.CreatedAt).ToList();
+        IEnumerable<FormDefinition> q = all;
+        if (!isAdmin)
+            q = q.Where(f =>
+                f.Ownership == "عام" ||
+                (f.Ownership == "خاص" && f.OrganizationalUnitId == myOrgUnitId));
+        if (activeApprovedOnly)
+            q = q.Where(FormDefinitionIsActiveApproved);
+        return q.OrderByDescending(f => f.CreatedAt).ToList();
     }
 
     private async Task<List<ExecutorRole>> ListExecutorRolesForUserAsync(bool isAdmin, HashSet<int> allowedOrgIds)

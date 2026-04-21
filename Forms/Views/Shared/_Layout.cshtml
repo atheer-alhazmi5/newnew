@@ -329,19 +329,20 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             items.Add(new SidebarItem { Url = "/Dropdowns/Index", Icon = "bi-ui-checks-grid", Label = "القوائم المنسدلة", PathPrefix = "/Dropdowns" });
 
             var settings = new SidebarItem { Url = "#", Icon = "bi-gear-fill", Label = "الاعدادات العامة", PathPrefix = "/Settings" };
-            settings.Children.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
-            settings.Children.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/Classifications", Icon = "bi-tags-fill", Label = "التصنيفات التنظيمية", PathPrefix = "/Settings/Classifications" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/OrganizationalUnits", Icon = "bi-building", Label = "الوحدات التنظيمية", PathPrefix = "/Settings/OrganizationalUnits" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Beneficiaries", Icon = "bi-people-fill", Label = "المستفيدين", PathPrefix = "/Settings/Beneficiaries" });
-            settings.Children.Add(new SidebarItem { Url = "/Settings/Classifications", Icon = "bi-tags-fill", Label = "التصنيفات التنظيمية", PathPrefix = "/Settings/Classifications" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/Delegations", Icon = "bi-arrow-left-right", Label = "التفويضات", PathPrefix = "/Settings/Delegations" });
+            settings.Children.Add(new SidebarItem { Url = "/Workspaces/Index", Icon = "bi-grid-1x2-fill", Label = "مساحات العمل", PathPrefix = "/Workspaces" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/FormClasses", Icon = "bi-folder2-open", Label = "أصناف النماذج", PathPrefix = "/Settings/FormClasses" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/FormSections", Icon = "bi-layout-text-sidebar-reverse", Label = "أنواع النماذج", PathPrefix = "/Settings/FormSections" });
+            settings.Children.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/FormStatuses", Icon = "bi-flag", Label = "حالات الإجراء", PathPrefix = "/Settings/FormStatuses" });
+            settings.Children.Add(new SidebarItem { Url = "/Templates/Index", Icon = "bi-file-earmark-richtext", Label = "إدارة القوالب", PathPrefix = "/Templates" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/PopupNotifications", Icon = "bi-bell-fill", Label = "الإشعارات المنبثقة", PathPrefix = "/Settings/PopupNotifications" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/AuditLog", Icon = "bi-clock-history", Label = "سجل العمليات", PathPrefix = "/Settings/AuditLog" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/SystemWarnings", Icon = "bi-shield-exclamation", Label = "تحذيرات النظام", PathPrefix = "/Settings/SystemWarnings" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/Backup", Icon = "bi-archive-fill", Label = "النسخ الاحتياطي", PathPrefix = "/Settings/Backup" });
-            settings.Children.Add(new SidebarItem { Url = "/Settings/PopupNotifications", Icon = "bi-bell-fill", Label = "الإشعارات المنبثقة", PathPrefix = "/Settings/PopupNotifications" });
-            settings.Children.Add(new SidebarItem { Url = "/Templates/Index", Icon = "bi-file-earmark-richtext", Label = "إدارة القوالب", PathPrefix = "/Templates" });
             items.Add(settings);
 
             return items;

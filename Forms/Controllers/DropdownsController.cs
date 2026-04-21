@@ -174,9 +174,6 @@ public class DropdownsController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
 
-        if (string.IsNullOrWhiteSpace(req.Ownership) || (req.Ownership != "عام" && req.Ownership != "خاص"))
-            return Json(new { success = false, message = "الملكية مطلوبة (عام أو خاص)" });
-
         if (string.IsNullOrWhiteSpace(req.ListType))
             return Json(new { success = false, message = "نوع القائمة المنسدلة مطلوب" });
         if (req.ListType != "قائمة مستقلة" && req.ListType != "قائمة فرعية" && req.ListType != "قائمة هرمية")
@@ -202,7 +199,7 @@ public class DropdownsController : BaseController
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             SortOrder = nextOrder,
-            Ownership = req.Ownership,
+            Ownership = "عام",
             OrganizationalUnitId = orgUnitId,
             ListType = req.ListType,
             ParentListId = req.ListType == "قائمة فرعية" ? req.ParentListId : null,
@@ -234,7 +231,7 @@ public class DropdownsController : BaseController
 
         d.Name = req.Name.Trim();
         d.Description = req.Description?.Trim() ?? "";
-        d.Ownership = req.Ownership ?? d.Ownership;
+        d.Ownership = "عام";
         d.ListType = req.ListType ?? d.ListType;
         d.ParentListId = req.ListType == "قائمة فرعية" ? req.ParentListId : null;
         d.LevelCount = req.ListType == "قائمة هرمية" ? Math.Clamp(req.LevelCount, 2, 4) : d.LevelCount;
@@ -258,6 +255,9 @@ public class DropdownsController : BaseController
         var d = await _ds.GetDropdownListByIdAsync(req.Id);
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        if (await _ds.IsDropdownListLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteDropdownListAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قائمة منسدلة", "DropdownList", req.Id.ToString(), d.Name));
@@ -356,6 +356,9 @@ public class DropdownsController : BaseController
         var ownerList = await _ds.GetDropdownListByIdAsync(item.DropdownListId);
         if (ownerList != null && !string.IsNullOrEmpty(ownerList.CreatedBy) && ownerList.CreatedBy != CurrentUserFullName)
             return Json(new { success = false, message = "يمكن حذف العناصر من قبل منشئ القائمة فقط" });
+
+        if (await _ds.IsDropdownItemLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteDropdownItemAsync(req.Id);
         return Json(new { success = true, message = "تم حذف العنصر بنجاح" });

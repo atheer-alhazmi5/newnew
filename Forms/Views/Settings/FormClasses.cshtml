@@ -48,10 +48,6 @@
 .fmc-detail-row:last-child { border-bottom:none; }
 .fmc-detail-label { font-weight:700; font-size:14px; color:var(--gray-600); min-width:120px; }
 .fmc-detail-value { font-size:14px; color:var(--gray-900); flex:1; }
-.fmc-search-box { position:relative; max-width:320px; }
-.fmc-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
-.fmc-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
-.fmc-search-box .fmc-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; pointer-events:none; }
 .fmc-modal-body .form-control,
 .fmc-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; transition:border-color .2s, box-shadow .2s; }
 .fmc-modal-body .form-control:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
@@ -76,11 +72,12 @@
     </button>
 </div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
-    <div class="fmc-search-box flex-grow-1" style="max-width:400px;">
-        <i class="bi bi-search fmc-search-icon"></i>
-        <input type="text" class="form-control" id="fmcSearchInput" placeholder="البحث عن صنف بالاسم..." oninput="fmcFilter()">
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="rt-search-box" style="flex:1;min-width:200px;max-width:400px;">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="fmcSearchInput" placeholder="البحث عن صنف بالاسم..." oninput="fmcFilter()" autocomplete="off">
     </div>
+    <button type="button" class="rt-clear-btn" onclick="fmcClearFilter()" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
 <div class="card">

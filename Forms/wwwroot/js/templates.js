@@ -546,6 +546,12 @@ async function tpShowDetails(id) {
     const showHL = t.showHeaderLine;
     const showFL = t.showFooterLine;
 
+    const createdAtDisp = (t.createdAtDisplay || t.CreatedAtDisplay || '').trim();
+    const updatedAtDisp = (t.updatedAtDisplay || t.UpdatedAtDisplay || '').trim();
+    const deletedAtDisp = (t.deletedAtDisplay || t.DeletedAtDisplay || '').trim();
+    const createdByDisp = (t.createdByDisplay || t.CreatedByDisplay || t.createdBy || t.CreatedBy || '').trim();
+    const updatedByDisp = (t.updatedByDisplay || t.UpdatedByDisplay || t.updatedBy || t.UpdatedBy || '').trim();
+
     let html = `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-info-circle-fill"></i> البيانات الأساسية</div>
         <div class="tp-detail-grid">
@@ -558,7 +564,11 @@ async function tpShowDetails(id) {
             <div class="tp-detail-label">الهوامش</div><div class="tp-detail-value">أعلى: ${t.marginTop}mm | أسفل: ${t.marginBottom}mm | يمين: ${t.marginRight}mm | يسار: ${t.marginLeft}mm</div>
             <div class="tp-detail-label">خط فاصل هيدر</div><div class="tp-detail-value">${t.showHeaderLine ? 'نعم' : 'لا'}</div>
             <div class="tp-detail-label">خط فاصل فوتر</div><div class="tp-detail-value">${t.showFooterLine ? 'نعم' : 'لا'}</div>
-            <div class="tp-detail-label">أنشأه</div><div class="tp-detail-value">${escHtml(t.createdBy)}</div>
+            <div class="tp-detail-label">تاريخ الإنشاء</div><div class="tp-detail-value">${createdAtDisp ? escHtml(createdAtDisp) : '—'}</div>
+            <div class="tp-detail-label">تاريخ آخر تحديث</div><div class="tp-detail-value">${updatedAtDisp ? escHtml(updatedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">تاريخ الحذف</div><div class="tp-detail-value">${deletedAtDisp ? escHtml(deletedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">أضيف بواسطة</div><div class="tp-detail-value">${createdByDisp ? escHtml(createdByDisp) : '—'}</div>
+            <div class="tp-detail-label">آخر تحديث بواسطة</div><div class="tp-detail-value">${updatedByDisp ? escHtml(updatedByDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
         </div>
     </div>`;
 

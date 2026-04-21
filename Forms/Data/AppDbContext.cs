@@ -65,6 +65,7 @@ public class AppDbContext
     public List<FormTemplate> FormTemplates => Load<FormTemplate>("form_templates");
     public List<FormDefinition> FormDefinitions => Load<FormDefinition>("form_definitions");
     public List<WorkProcedure> WorkProcedures => Load<WorkProcedure>("work_procedures");
+    public List<Delegation> Delegations => Load<Delegation>("delegations");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -94,6 +95,7 @@ public class AppDbContext
     public void SaveFormTemplates(List<FormTemplate> d) => Save("form_templates", d);
     public void SaveFormDefinitions(List<FormDefinition> d) => Save("form_definitions", d);
     public void SaveWorkProcedures(List<WorkProcedure> d) => Save("work_procedures", d);
+    public void SaveDelegations(List<Delegation> d) => Save("delegations", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }
