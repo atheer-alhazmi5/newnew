@@ -67,6 +67,14 @@ public class FormDefinitionsController : BaseController
         var templates = await _ds.ListFormTemplatesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
 
+        // مساحات العمل المتاحة للاختيار: لممثل الوحدة تُعرض مساحات وحدته فقط
+        var workspacesForSelect = activeWorkspaces;
+        if (!isAdmin)
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            workspacesForSelect = activeWorkspaces.Where(w => w.OrganizationalUnitId == myUnitId).ToList();
+        }
+
         var data = all.Select(f => new
         {
             f.Id, f.Name, f.Description, f.Ownership, f.Status,
@@ -91,7 +99,7 @@ public class FormDefinitionsController : BaseController
             currentUser = CurrentUserFullName,
             formClasses = formClasses.Select(c => new { c.Id, c.Name }),
             formTypes = formTypes.Select(t => new { t.Id, t.Name }),
-            workspaces = activeWorkspaces.Select(w => new { w.Id, w.Name }),
+            workspaces = workspacesForSelect.Select(w => new { w.Id, w.Name }),
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
         });
     }
@@ -119,12 +127,23 @@ public class FormDefinitionsController : BaseController
         if (curFormClass != null && !curFormClass.IsActive && formClassesForSelect.All(x => x.id != curFormClass.Id))
             formClassesForSelect.Add(new { id = curFormClass.Id, name = curFormClass.Name + " (غير مفعّل)" });
 
-        var wsForSelect = activeWorkspaces
+        // لغير الأدمن: يقتصر اختيار مساحة العمل على مساحات وحدته التنظيمية
+        var isAdminSingle = CurrentUserRole == "Admin";
+        var wsScoped = activeWorkspaces.AsEnumerable();
+        if (!isAdminSingle)
+        {
+            var myUnitIdForWs = await GetCreatorOrgUnitIdAsync();
+            wsScoped = wsScoped.Where(w => w.OrganizationalUnitId == myUnitIdForWs);
+        }
+        var wsForSelect = wsScoped
             .Select(w => new { id = w.Id, name = w.Name })
             .ToList();
         var currentWs = workspacesAll.FirstOrDefault(w => w.Id == f.WorkspaceId);
-        if (currentWs != null && !currentWs.IsActive && wsForSelect.All(x => x.id != currentWs.Id))
-            wsForSelect.Add(new { id = currentWs.Id, name = currentWs.Name + " (غير مفعّل)" });
+        if (currentWs != null && wsForSelect.All(x => x.id != currentWs.Id))
+        {
+            var suffix = !currentWs.IsActive ? " (غير مفعّل)" : "";
+            wsForSelect.Add(new { id = currentWs.Id, name = currentWs.Name + suffix });
+        }
 
         var tpl = templates.FirstOrDefault(t => t.Id == f.TemplateId);
         var hasSnapshot = !string.IsNullOrWhiteSpace(f.TemplateHeaderJsonSnapshot) || !string.IsNullOrWhiteSpace(f.TemplateFooterJsonSnapshot);
@@ -208,6 +227,8 @@ public class FormDefinitionsController : BaseController
         var isAdmin = CurrentUserRole == "Admin";
 
         var orgUnitId = await GetCreatorOrgUnitIdAsync();
+        if (!isAdmin && selWs.OrganizationalUnitId != orgUnitId)
+            return Json(new { success = false, message = "لا يمكن اختيار مساحة عمل خارج وحدتك التنظيمية" });
         var f = new FormDefinition
         {
             Name = req.Name.Trim(),
@@ -264,6 +285,15 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "مساحة العمل غير صالحة أو غير مفعّل" });
 
         var isAdmin = CurrentUserRole == "Admin";
+
+        if (!isAdmin)
+        {
+            var myUnitIdForUpd = await GetCreatorOrgUnitIdAsync();
+            // يسمح بالإبقاء على نفس مساحة العمل السابقة لو كانت مختلفة عن وحدته (grandfathered)،
+            // ولكن إذا غُيّرت يجب أن تكون ضمن مساحات وحدته
+            if (req.WorkspaceId != f.WorkspaceId && selWs.OrganizationalUnitId != myUnitIdForUpd)
+                return Json(new { success = false, message = "لا يمكن اختيار مساحة عمل خارج وحدتك التنظيمية" });
+        }
 
         f.Name = req.Name?.Trim() ?? f.Name;
         f.Description = req.Description?.Trim() ?? f.Description;

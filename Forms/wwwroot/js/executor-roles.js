@@ -18,7 +18,7 @@ function erBenIsUnitManager(b) {
 /* ─── Data Loading ──────────────────────────────────────────── */
 async function erLoad() {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoles');
-    if (!res || !res.success) { document.getElementById('erBody').innerHTML = '<tr><td colspan="9" class="er-empty-state"><i class="bi bi-exclamation-circle"></i><p>خطأ في تحميل البيانات</p></td></tr>'; return; }
+    if (!res || !res.success) { document.getElementById('erBody').innerHTML = '<tr><td colspan="8" class="er-empty-state"><i class="bi bi-exclamation-circle"></i><p>خطأ في تحميل البيانات</p></td></tr>'; return; }
     erRoles = res.data || [];
     erOrgUnits = res.organizationalUnits || [];
     erBeneficiaries = res.beneficiaries || [];
@@ -31,7 +31,7 @@ function erRenderTable(data) {
     if (badge) badge.textContent = '(' + data.length + ')';
     var body = document.getElementById('erBody');
     if (!data.length) {
-        body.innerHTML = '<tr><td colspan="9" class="er-empty-state"><i class="bi bi-person-badge"></i><p>لا توجد أدوار منفذين</p></td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="er-empty-state"><i class="bi bi-person-badge"></i><p>لا توجد أدوار منفذين</p></td></tr>';
         return;
     }
     var html = '';
@@ -43,19 +43,19 @@ function erRenderTable(data) {
             ? '<span title="' + erEsc(r.executorNames) + '" style="cursor:help;">' + r.executorCount + ' منفذ</span>'
             : '<span class="text-muted">—</span>';
         html += '<tr>'
-            + '<td style="text-align:center;font-weight:700;">' + r.id + '</td>'
+            + '<td style="text-align:center;font-weight:700;">' + r.sortOrder + '</td>'
             + '<td style="text-align:right;font-weight:600;">' + erEsc(r.name) + '</td>'
             + '<td style="text-align:right;font-size:12px;color:var(--gray-500);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + erEsc(r.description) + '">' + (r.description || '—') + '</td>'
             + '<td style="text-align:center;">' + ownerBadge + '</td>'
             + '<td style="text-align:center;">' + execDisplay + '</td>'
-            + '<td style="text-align:center;">' + r.sortOrder + '</td>'
             + '<td style="text-align:center;"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span></td>'
             + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(' + r.id + ')"><span class="er-slider"></span></label></td>'
             + '<td style="text-align:center;">'
-            + '<button class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')" title="تفاصيل"><i class="bi bi-eye-fill"></i></button> '
-            + '<button class="er-action-btn er-action-btn-edit" onclick="erShowEditModal(' + r.id + ')" title="تعديل"><i class="bi bi-pencil-fill"></i></button> '
-            + '<button class="er-action-btn er-action-btn-delete" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')" title="حذف"><i class="bi bi-trash3-fill"></i></button>'
-            + '</td></tr>';
+            + '<div class="er-action-cell-inner">'
+            + '<button type="button" class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>'
+            + '<button type="button" class="er-action-btn er-action-btn-edit" onclick="erShowEditModal(' + r.id + ')"><i class="bi bi-pencil-fill"></i> تحديث</button>'
+            + '<button type="button" class="er-action-btn er-action-btn-delete" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')"><i class="bi bi-trash3-fill"></i> حذف</button>'
+            + '</div></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -535,18 +535,25 @@ async function erShowDetails(id) {
 function erShowDeleteModal(id, name) {
     document.getElementById('erDeleteId').value = id;
     document.getElementById('erDeleteName').textContent = name;
+    var errEl = document.getElementById('erDeleteError');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('d-none'); }
     new bootstrap.Modal(document.getElementById('erDeleteModal')).show();
 }
 
 async function erSubmitDelete() {
     var id = parseInt(document.getElementById('erDeleteId').value);
+    var errEl = document.getElementById('erDeleteError');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('d-none'); }
     var res = await apiFetch('/ExecutorRoles/DeleteExecutorRole', 'POST', { id: id });
     if (res && res.success) {
         bootstrap.Modal.getInstance(document.getElementById('erDeleteModal'))?.hide();
         await erLoad();
         erApplyFilters();
+        if (typeof showToast === 'function') showToast(res.message || 'تم الحذف', 'success');
     } else {
-        alert((res && res.message) || 'خطأ في الحذف');
+        var msg = (res && res.message) || 'خطأ في الحذف';
+        if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); }
+        else alert(msg);
     }
 }
 

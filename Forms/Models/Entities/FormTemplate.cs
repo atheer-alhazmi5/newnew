@@ -24,6 +24,9 @@ public class FormTemplate
     public bool ShowHeaderLine { get; set; } = true;
     public bool ShowFooterLine { get; set; } = true;
 
+    public string WatermarkUrl { get; set; } = "";
+    public int WatermarkOpacity { get; set; } = 15; // نسبة شفافية 5..80 (%)
+
     public string CreatedBy { get; set; } = "";
     public string UpdatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

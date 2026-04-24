@@ -24,11 +24,11 @@
     "AdditionalOutputs": "",
     "Status": "approved",
     "RejectionReason": "",
-    "IsActive": true,
+    "IsActive": false,
     "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
     "CreatedAt": "2026-04-13T12:59:38.039983+03:00",
     "UpdatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
-    "UpdatedAt": "2026-04-16T09:26:27.022285+03:00",
+    "UpdatedAt": "2026-04-21T11:15:10.069403+03:00",
     "ApprovedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
     "ApprovedAt": "2026-04-13T12:59:38.039715+03:00"
   }

@@ -13,7 +13,6 @@ public class OutboxController : BaseController
     public IActionResult Index()
     {
         var auth = RequireAuth(); if (auth != null) return auth;
-        if (CurrentUserRole == "Staff") return RedirectToAction("Index", "Inbox");
         SetViewBagUser(_ui);
         return View();
     }

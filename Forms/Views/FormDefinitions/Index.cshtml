@@ -86,6 +86,27 @@
 .fd-field-row:hover { background:var(--sa-25); }
 .fd-field-name   { flex:1; font-size:13px; font-weight:600; color:var(--gray-800); }
 .fd-field-type   { font-size:11px; color:var(--sa-600); background:var(--sa-50); padding:2px 8px; border-radius:10px; font-weight:600; }
+.fd-sec-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.fd-sec-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:2px solid var(--gray-200); border-radius:999px; cursor:pointer; background:#fff; font-size:12.5px; font-weight:700; color:var(--gray-700); transition:all .15s; }
+.fd-sec-chip:hover { border-color:var(--sa-300); color:var(--sa-700); }
+.fd-sec-chip.active { background:var(--sa-600); border-color:var(--sa-600); color:#fff; }
+.fd-sec-chip-title { line-height:1; }
+.fd-sec-chip-count { background:rgba(0,0,0,.08); color:inherit; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:800; }
+.fd-sec-chip.active .fd-sec-chip-count { background:rgba(255,255,255,.25); }
+.fd-sec-chip-btn { background:transparent; border:none; color:inherit; padding:2px 4px; font-size:11px; cursor:pointer; opacity:.6; display:inline-flex; align-items:center; justify-content:center; }
+.fd-sec-chip-btn:hover { opacity:1; }
+.fd-sec-chip-btn-del:hover { color:#ef4444; }
+.fd-sec-chip.active .fd-sec-chip-btn { color:#fff; opacity:.8; }
+.fd-sec-add-btn { padding:6px 14px; border:2px dashed var(--sa-300); border-radius:999px; background:transparent; color:var(--sa-700); font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .15s; font-family:'Cairo',sans-serif; }
+.fd-sec-add-btn:hover { background:var(--sa-50); border-color:var(--sa-500); }
+
+/* Signature & Approval field (mirrors Beneficiary endorsement/signature) */
+.fd-sig-field { width:100%; }
+.fd-sig-canvas-wrap { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.fd-sig-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; display:block; width:100%; max-width:320px; }
+.fd-sig-canvas-wrap .btn-sm { padding:5px 14px; font-size:12px; }
+.fd-sig-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); background:#fff; padding:4px; }
+.fd-sig-attach-preview-wrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
 .fd-field-req    { font-size:10px; color:var(--error-700); background:var(--error-100); padding:2px 7px; border-radius:8px; font-weight:700; }
 .fd-empty-fields { text-align:center; padding:28px 16px; color:var(--gray-400) !important; font-style:normal !important; }
 .fd-empty-fields i { font-size:32px; display:block; margin-bottom:8px; color:var(--gray-300) !important; font-style:normal !important; }
@@ -252,6 +273,54 @@
                 <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="fdSubmitReject()">
                     <i class="bi bi-x-lg"></i> رفض
                 </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================== SECTION PROMPT MODAL =================== -->
+<div class="modal fade" id="fdSectionPromptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="fdSectionPromptHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="fdSectionPromptTitle">قسم جديد</h5>
+                <div class="fd-modal-subtitle" id="fdSectionPromptSub">حدّد اسم القسم</div>
+            </div>
+            <div class="fd-modal-body">
+                <div class="fd-form-group">
+                    <label><span class="required-star">*</span> اسم القسم</label>
+                    <input type="text" class="form-control" id="fdSectionPromptInput" placeholder="مثال: بيانات الموظف" autocomplete="off" maxlength="80">
+                </div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn send" id="fdSectionPromptOk"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =================== SECTION DELETE MODAL =================== -->
+<div class="modal fade" id="fdSectionDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">حذف القسم</h5>
+                <div class="fd-modal-subtitle" id="fdSectionDeleteSub">لا يمكن التراجع عن هذا الإجراء</div>
+            </div>
+            <div class="fd-modal-body text-center">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:44px;color:var(--error-500);"></i>
+                <p style="margin-top:10px;font-size:14px;font-weight:600;color:var(--gray-700);">
+                    هل أنت متأكد من حذف القسم <strong id="fdSectionDeleteName"></strong>؟
+                </p>
+                <div id="fdSectionDeleteNote" style="font-size:12px;color:var(--gray-500);margin-top:6px;"></div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:center;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" id="fdSectionDeleteOk"><i class="bi bi-trash3"></i> حذف</button>
                 <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>

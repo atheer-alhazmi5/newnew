@@ -108,7 +108,25 @@
 .tp-preview-header { display:grid; gap:0; min-height:60px; padding:12px 16px; align-items:center; }
 .tp-preview-footer { display:grid; gap:0; min-height:40px; padding:10px 16px; align-items:center; }
 .tp-preview-body { min-height:120px; padding:20px 16px; color:var(--gray-300); font-size:13px; display:flex; align-items:center; justify-content:center; }
-.tp-preview-line { height:2px; background:var(--gray-200); }
+.tp-preview-line { height:1px; background:var(--gray-200); opacity:.6; }
+.tp-mini-color { width:30px; height:30px; padding:2px; border:2px solid var(--gray-200); border-radius:8px; cursor:pointer; background:#fff; flex-shrink:0; }
+.tp-mini-color:hover { border-color:var(--sa-400); }
+.tp-mini-color::-webkit-color-swatch-wrapper { padding:0; }
+.tp-mini-color::-webkit-color-swatch { border:none; border-radius:6px; }
+
+/* Watermark controls */
+.tp-wm-row { display:grid; grid-template-columns:1fr 260px; gap:14px; align-items:stretch; }
+.tp-wm-upload { border:2px dashed var(--gray-300); border-radius:12px; padding:18px; text-align:center; cursor:pointer; color:var(--gray-500); transition:border-color .2s,background .2s; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:140px; background:#fff; }
+.tp-wm-upload:hover { border-color:var(--sa-400); background:var(--sa-25); color:var(--sa-700); }
+.tp-wm-upload i { font-size:34px; display:block; margin-bottom:6px; }
+.tp-wm-empty div { font-size:13px; font-weight:700; }
+.tp-wm-controls { display:flex; flex-direction:column; gap:10px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:12px; padding:14px; }
+.tp-wm-info { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--gray-600); background:#fff; border:1px dashed var(--gray-300); border-radius:10px; padding:10px; }
+.tp-wm-remove-btn { margin-top:4px; padding:8px 12px; border-radius:10px; border:2px solid var(--error-500); background:#fff; color:var(--error-500); font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; justify-content:center; transition:all .15s; font-family:'Cairo',sans-serif; }
+.tp-wm-remove-btn:hover { background:var(--error-50); }
+.tp-wm-bg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; overflow:hidden; }
+.tp-wm-bg img { max-width:60%; max-height:70%; object-fit:contain; }
+@@media (max-width:768px) { .tp-wm-row { grid-template-columns:1fr; } }
 .tp-preview-sec { display:flex; flex-direction:column; justify-content:center; padding:4px 8px; overflow:hidden; }
 .tp-mini-select { width:auto !important; font-size:12px !important; padding:6px 14px 6px 34px !important; border-radius:8px !important; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23666' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E") !important; background-repeat:no-repeat !important; background-position:left 10px center !important; background-size:11px !important; min-height:unset !important; height:auto !important; line-height:1.4 !important; text-align:right !important; appearance:none !important; -webkit-appearance:none !important; }
 .tp-logo-upload-zone { border:2px dashed var(--gray-300); border-radius:10px; padding:16px; text-align:center; cursor:pointer; color:var(--gray-400); font-size:12px; transition:border-color .2s; display:flex; flex-direction:column; align-items:center; gap:6px; }
@@ -339,6 +357,33 @@
                                 </label>
                             </div>
                         </div>
+                        <hr style="border-color:var(--gray-200);margin:16px 0;">
+                        <div class="tp-form-group" style="margin-bottom:10px;">
+                            <label><i class="bi bi-droplet" style="color:var(--sa-600);"></i> العلامة المائية (اختيارية)</label>
+                           
+                            <div class="tp-wm-row">
+                                <div class="tp-wm-upload" id="tpwWmZone" onclick="document.getElementById('tpwWmFile').click()">
+                                    <div class="tp-wm-empty" id="tpwWmEmpty">
+                                        <i class="bi bi-cloud-arrow-up"></i>
+                                        <div>اضغط لرفع صورة العلامة المائية</div>
+                                        <div style="font-size:11px;color:var(--gray-400);">PNG / JPG / SVG — حتى 5MB</div>
+                                    </div>
+                                    <img id="tpwWmPreview" src="" alt="" style="display:none;max-width:100%;max-height:120px;object-fit:contain;">
+                                </div>
+                                <input type="file" accept="image/*" id="tpwWmFile" style="display:none;" onchange="tpUploadWatermark(this)">
+                                <input type="hidden" id="tpwWatermarkUrl" value="">
+                                <input type="hidden" id="tpwWatermarkOpacity" value="15">
+                                <div class="tp-wm-controls">
+                                    <div class="tp-wm-info">
+                                        <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
+                                        <span>تُعرض العلامة المائية بشفافية موحّدة تلقائياً.</span>
+                                    </div>
+                                    <button type="button" class="tp-wm-remove-btn" id="tpwWmRemoveBtn" onclick="tpRemoveWatermark()" style="display:none;">
+                                        <i class="bi bi-trash3"></i> إزالة العلامة المائية
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Full Preview -->
@@ -385,6 +430,7 @@
             <div class="tp-modal-body text-center">
                 <i class="bi bi-exclamation-triangle" style="font-size:48px;color:var(--error-500);"></i>
                 <p style="margin-top:12px;font-size:14px;font-weight:600;">هل أنت متأكد من حذف القالب<br><strong id="tpDeleteName"></strong>؟</p>
+                <div id="tpDeleteError" class="alert alert-danger d-none mt-3" style="font-size:13px;text-align:right;"></div>
                 <input type="hidden" id="tpDeleteId">
             </div>
             <div class="tp-modal-footer" style="justify-content:center;">

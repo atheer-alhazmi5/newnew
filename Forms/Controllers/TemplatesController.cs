@@ -55,6 +55,7 @@ public class TemplatesController : BaseController
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.PageSize,
                 t.ShowHeaderLine, t.ShowFooterLine,
+                t.WatermarkUrl, t.WatermarkOpacity,
                 t.CreatedBy, t.CreatedAt
             })
         });
@@ -94,6 +95,7 @@ public class TemplatesController : BaseController
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.PageSize,
                 t.ShowHeaderLine, t.ShowFooterLine,
+                t.WatermarkUrl, t.WatermarkOpacity,
                 t.CreatedBy, t.CreatedAt, t.UpdatedBy, t.UpdatedAt,
                 CreatedAtDisplay = t.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
                 UpdatedAtDisplay = t.UpdatedAt.HasValue
@@ -133,6 +135,8 @@ public class TemplatesController : BaseController
             PageSize = req.PageSize ?? "A4",
             ShowHeaderLine = req.ShowHeaderLine ?? true,
             ShowFooterLine = req.ShowFooterLine ?? true,
+            WatermarkUrl = req.WatermarkUrl ?? "",
+            WatermarkOpacity = ClampWatermarkOpacity(req.WatermarkOpacity),
             CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
@@ -167,6 +171,8 @@ public class TemplatesController : BaseController
         if (req.PageSize != null) t.PageSize = req.PageSize;
         if (req.ShowHeaderLine.HasValue) t.ShowHeaderLine = req.ShowHeaderLine.Value;
         if (req.ShowFooterLine.HasValue) t.ShowFooterLine = req.ShowFooterLine.Value;
+        if (req.WatermarkUrl != null) t.WatermarkUrl = req.WatermarkUrl;
+        if (req.WatermarkOpacity.HasValue) t.WatermarkOpacity = ClampWatermarkOpacity(req.WatermarkOpacity);
 
         t.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         t.UpdatedAt = DateTime.Now;
@@ -184,6 +190,9 @@ public class TemplatesController : BaseController
         var tpl = await _ds.GetFormTemplateByIdAsync(req.Id);
         if (tpl == null)
             return Json(new { success = false, message = "القالب غير موجود" });
+
+        if (await _ds.IsFormTemplateLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قالب", "FormTemplate", req.Id.ToString(CultureInfo.InvariantCulture), tpl.Name));
 
@@ -256,6 +265,8 @@ public class TemplatesController : BaseController
         public string? PageSize { get; set; }
         public bool? ShowHeaderLine { get; set; }
         public bool? ShowFooterLine { get; set; }
+        public string? WatermarkUrl { get; set; }
+        public int? WatermarkOpacity { get; set; }
     }
 
     public class TemplateUpdateRequest : TemplateRequest
@@ -266,6 +277,14 @@ public class TemplatesController : BaseController
     public class TemplateIdRequest
     {
         public int Id { get; set; }
+    }
+
+    private static int ClampWatermarkOpacity(int? value)
+    {
+        var v = value ?? 15;
+        if (v < 5) v = 5;
+        if (v > 80) v = 80;
+        return v;
     }
 
     private static string ResolveBeneficiaryDisplayName(string? stored, List<Beneficiary> beneficiaries)

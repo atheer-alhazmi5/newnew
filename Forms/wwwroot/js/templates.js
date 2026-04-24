@@ -138,6 +138,7 @@ function tpShowCreateModal() {
     document.getElementById('tpwPageSize').value = 'A4';
     document.getElementById('tpwShowHeaderLine').checked = true;
     document.getElementById('tpwShowFooterLine').checked = true;
+    tpSetWatermark('');
 
     tpHeaderData = [tpDefaultSection(16, true)];
     tpFooterData = [tpDefaultSection(12, false)];
@@ -177,6 +178,7 @@ async function tpShowEditModal(id) {
     document.getElementById('tpwPageSize').value = t.pageSize;
     document.getElementById('tpwShowHeaderLine').checked = t.showHeaderLine;
     document.getElementById('tpwShowFooterLine').checked = t.showFooterLine;
+    tpSetWatermark(t.watermarkUrl || t.WatermarkUrl || '');
 
     try { tpHeaderData = JSON.parse(t.headerJson); } catch { tpHeaderData = [tpDefaultSection(16, true)]; }
     try { tpFooterData = JSON.parse(t.footerJson); } catch { tpFooterData = [tpDefaultSection(12, false)]; }
@@ -194,7 +196,7 @@ async function tpShowEditModal(id) {
 }
 
 function tpDefaultSection(fontSize, bold) {
-    return { type: 'text', lines: 1, align: 'center', fontSize: fontSize || 14, bold: bold || false, text: [''], imageUrl: '', logoWidth: 4, logoHeight: 2, imageAlign: 'center' };
+    return { type: 'text', lines: 1, align: 'center', fontSize: fontSize || 14, bold: bold || false, color: '#111827', text: [''], imageUrl: '', logoWidth: 4, logoHeight: 2, imageAlign: 'center' };
 }
 
 /* ──  Navigation ───────────────────────────────────────── */
@@ -335,12 +337,14 @@ function tpBuildSectionBody(zone, idx, sec) {
         linesHtml += `<input type="text" class="form-control" style="font-size:12px;padding:6px 10px;border-radius:8px;margin-bottom:4px;" id="tp_text_${pfx}_${l}" value="${escHtml((sec.text && sec.text[l]) || '')}" placeholder="السطر ${l + 1}" oninput="tpCollectAndPreview('${zone}')">`;
     }
 
+    const secColor = sec.color || '#111827';
     return `
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <select class="form-select tp-mini-select" id="tp_lines_${pfx}" onchange="tpOnLinesChange('${zone}',${idx})">
                 <option value="1" ${linesCount === 1 ? 'selected' : ''}>سطر 1</option>
                 <option value="2" ${linesCount === 2 ? 'selected' : ''}>2 أسطر</option>
                 <option value="3" ${linesCount === 3 ? 'selected' : ''}>3 أسطر</option>
+                <option value="4" ${linesCount === 4 ? 'selected' : ''}>4 أسطر</option>
             </select>
             <select class="form-select tp-mini-select" id="tp_align_${pfx}" onchange="tpCollectAndPreview('${zone}')">
                 <option value="right" ${sec.align === 'right' ? 'selected' : ''}>يمين</option>
@@ -350,6 +354,7 @@ function tpBuildSectionBody(zone, idx, sec) {
             <select class="form-select tp-mini-select" id="tp_fsize_${pfx}" onchange="tpCollectAndPreview('${zone}')">
                 ${[10,11,12,13,14,16,18,20,22,24].map(s => `<option value="${s}" ${sec.fontSize === s ? 'selected' : ''}>${s}px</option>`).join('')}
             </select>
+            <input type="color" class="tp-mini-color" id="tp_color_${pfx}" value="${escHtml(secColor)}" onchange="tpCollectAndPreview('${zone}')" title="لون الخط">
             <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;">
                 <input type="checkbox" id="tp_bold_${pfx}" ${sec.bold ? 'checked' : ''} onchange="tpCollectAndPreview('${zone}')" style="accent-color:var(--sa-600);width:16px;height:16px;">
                 غامق
@@ -423,6 +428,7 @@ function tpCollectZone(zone) {
             sec.align = document.getElementById(`tp_align_${pfx}`)?.value || 'center';
             sec.fontSize = parseInt(document.getElementById(`tp_fsize_${pfx}`)?.value) || 14;
             sec.bold = document.getElementById(`tp_bold_${pfx}`)?.checked || false;
+            sec.color = document.getElementById(`tp_color_${pfx}`)?.value || '#111827';
             sec.text = [];
             for (let l = 0; l < sec.lines; l++) {
                 sec.text.push(document.getElementById(`tp_text_${pfx}_${l}`)?.value || '');
@@ -445,13 +451,17 @@ function tpUpdatePreview(zone) {
 
 function tpRenderPreviewSection(sec) {
     if (sec.type === 'logo') {
+        const logoAlign = sec.imageAlign || 'center';
+        const justify = logoAlign === 'right' ? 'flex-end' : (logoAlign === 'left' ? 'flex-start' : 'center');
         const w = (sec.logoWidth || 4) * 37.8;
         const h = (sec.logoHeight || 2) * 37.8;
-        if (!sec.imageUrl) return `<div class="tp-preview-sec" style="text-align:${sec.imageAlign || 'center'};color:var(--gray-300);font-size:12px;"><i class="bi bi-image" style="font-size:24px;"></i><div style="font-size:11px;">شعار</div></div>`;
-        return `<div class="tp-preview-sec" style="text-align:${sec.imageAlign || 'center'};"><img src="${sec.imageUrl}" style="width:${w}px;height:${h}px;object-fit:contain;border-radius:4px;" alt=""></div>`;
+        if (!sec.imageUrl) return `<div class="tp-preview-sec" style="text-align:${logoAlign};align-items:${justify};color:var(--gray-300);font-size:12px;"><i class="bi bi-image" style="font-size:24px;"></i><div style="font-size:11px;">شعار</div></div>`;
+        return `<div class="tp-preview-sec" style="text-align:${logoAlign};align-items:${justify};"><img src="${sec.imageUrl}" style="width:${w}px;height:${h}px;object-fit:contain;border-radius:4px;" alt=""></div>`;
     }
-    const lines = (sec.text || ['']).map(t => `<div style="font-size:${sec.fontSize || 14}px;font-weight:${sec.bold ? '700' : '400'};line-height:1.5;">${escHtml(t) || '<span style="color:var(--gray-300);">نص</span>'}</div>`).join('');
-    return `<div class="tp-preview-sec" style="text-align:${sec.align || 'center'};">${lines}</div>`;
+    const textAlign = sec.align || 'center';
+    const textColor = sec.color || '#111827';
+    const lines = (sec.text || ['']).map(t => `<div style="font-size:${sec.fontSize || 14}px;font-weight:${sec.bold ? '700' : '400'};color:${textColor};text-align:${textAlign};width:100%;line-height:1.5;">${escHtml(t) || '<span style="color:var(--gray-300);">نص</span>'}</div>`).join('');
+    return `<div class="tp-preview-sec" style="text-align:${textAlign};align-items:stretch;">${lines}</div>`;
 }
 
 function tpBuildFullPreview() {
@@ -463,8 +473,15 @@ function tpBuildFullPreview() {
     const mr = document.getElementById('tpwMarginRight').value;
     const ml = document.getElementById('tpwMarginLeft').value;
     const dir = document.getElementById('tpwPageDirection').value;
+    const wmUrl = (document.getElementById('tpwWatermarkUrl')?.value || '').trim();
 
-    let html = `<div style="direction:${dir.toLowerCase()};padding:${mt}px ${mr}px ${mb}px ${ml}px;">`;
+    let html = `<div style="position:relative;direction:${dir.toLowerCase()};padding:${mt}px ${mr}px ${mb}px ${ml}px;min-height:320px;">`;
+
+    if (wmUrl) {
+        html += `<div class="tp-wm-bg"><img src="${escHtml(wmUrl)}" alt="watermark" style="opacity:${(TP_WATERMARK_OPACITY/100).toFixed(2)};"></div>`;
+    }
+
+    html += '<div style="position:relative;">';
 
     // Header
     html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;">`;
@@ -483,8 +500,53 @@ function tpBuildFullPreview() {
     tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec); });
     html += '</div>';
 
-    html += '</div>';
+    html += '</div></div>';
     document.getElementById('tpFullPreview').innerHTML = html;
+}
+
+/* ═══════════ WATERMARK ══════════════════════════════════════════ */
+const TP_WATERMARK_OPACITY = 15; // نسبة شفافية موحّدة لجميع القوالب
+
+function tpSetWatermark(url) {
+    const safeUrl = (url || '').trim();
+    const urlInput = document.getElementById('tpwWatermarkUrl');
+    const opInput = document.getElementById('tpwWatermarkOpacity');
+    const preview = document.getElementById('tpwWmPreview');
+    const empty = document.getElementById('tpwWmEmpty');
+    const removeBtn = document.getElementById('tpwWmRemoveBtn');
+    if (urlInput) urlInput.value = safeUrl;
+    if (opInput) opInput.value = TP_WATERMARK_OPACITY;
+    if (preview) {
+        if (safeUrl) {
+            preview.src = safeUrl;
+            preview.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            if (empty) empty.style.display = 'flex';
+        }
+    }
+    if (removeBtn) removeBtn.style.display = safeUrl ? 'inline-flex' : 'none';
+}
+
+async function tpUploadWatermark(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 5_000_000) { alert('حجم الملف يتجاوز 5MB'); input.value = ''; return; }
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/Templates/UploadTemplateImage', { method: 'POST', body: form });
+    const j = await r.json();
+    input.value = '';
+    if (!j.success) { alert(j.message || 'فشل رفع الصورة'); return; }
+    tpSetWatermark(j.url);
+    tpBuildFullPreview();
+}
+
+function tpRemoveWatermark() {
+    tpSetWatermark('');
+    tpBuildFullPreview();
 }
 
 /* ═══════════ SUBMIT ═══════════════════════════════════════════ */
@@ -509,7 +571,9 @@ async function tpSubmitWizard() {
         pageDirection: document.getElementById('tpwPageDirection').value,
         pageSize: document.getElementById('tpwPageSize').value,
         showHeaderLine: document.getElementById('tpwShowHeaderLine').checked,
-        showFooterLine: document.getElementById('tpwShowFooterLine').checked
+        showFooterLine: document.getElementById('tpwShowFooterLine').checked,
+        watermarkUrl: (document.getElementById('tpwWatermarkUrl')?.value || '').trim(),
+        watermarkOpacity: TP_WATERMARK_OPACITY
     };
 
     let url, reqBody;
@@ -564,6 +628,7 @@ async function tpShowDetails(id) {
             <div class="tp-detail-label">الهوامش</div><div class="tp-detail-value">أعلى: ${t.marginTop}mm | أسفل: ${t.marginBottom}mm | يمين: ${t.marginRight}mm | يسار: ${t.marginLeft}mm</div>
             <div class="tp-detail-label">خط فاصل هيدر</div><div class="tp-detail-value">${t.showHeaderLine ? 'نعم' : 'لا'}</div>
             <div class="tp-detail-label">خط فاصل فوتر</div><div class="tp-detail-value">${t.showFooterLine ? 'نعم' : 'لا'}</div>
+            <div class="tp-detail-label">العلامة المائية</div><div class="tp-detail-value">${(t.watermarkUrl || t.WatermarkUrl) ? `<img src="${escHtml(t.watermarkUrl || t.WatermarkUrl)}" alt="watermark" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;padding:4px;background:#fff;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">تاريخ الإنشاء</div><div class="tp-detail-value">${createdAtDisp ? escHtml(createdAtDisp) : '—'}</div>
             <div class="tp-detail-label">تاريخ آخر تحديث</div><div class="tp-detail-value">${updatedAtDisp ? escHtml(updatedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">تاريخ الحذف</div><div class="tp-detail-value">${deletedAtDisp ? escHtml(deletedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
@@ -573,20 +638,25 @@ async function tpShowDetails(id) {
     </div>`;
 
     // Full preview
+    const wmUrlDet = (t.watermarkUrl || t.WatermarkUrl || '').trim();
+    const wmOpDet = TP_WATERMARK_OPACITY / 100;
     html += `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-eye"></i> معاينة القالب</div>
         <div style="border:2px solid var(--gray-200);border-radius:12px;overflow:hidden;background:#fff;">
-            <div style="direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;">
-                <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;">
-                    ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s)).join('')}
-                </div>
-                ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
-                <div style="min-height:180px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:14px;padding:30px;">
-                    <div style="text-align:center;"><i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:8px;"></i> محتوى النموذج</div>
-                </div>
-                ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
-                <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;">
-                    ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s)).join('')}
+            <div style="position:relative;direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;min-height:320px;">
+                ${wmUrlDet ? `<div class="tp-wm-bg"><img src="${escHtml(wmUrlDet)}" alt="watermark" style="opacity:${wmOpDet.toFixed(2)};"></div>` : ''}
+                <div style="position:relative;">
+                    <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;">
+                        ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s)).join('')}
+                    </div>
+                    ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
+                    <div style="min-height:180px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:14px;padding:30px;">
+                        <div style="text-align:center;"><i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:8px;"></i> محتوى النموذج</div>
+                    </div>
+                    ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
+                    <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;">
+                        ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s)).join('')}
+                    </div>
                 </div>
             </div>
         </div>
@@ -600,19 +670,36 @@ async function tpShowDetails(id) {
 function tpShowDeleteModal(id) {
     const t = tpAllData.find(x => x.id === id);
     if (!t) return;
+    const errEl = document.getElementById('tpDeleteError');
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('d-none');
+    }
     document.getElementById('tpDeleteId').value = id;
     document.getElementById('tpDeleteName').textContent = t.name;
     new bootstrap.Modal(document.getElementById('tpDeleteModal')).show();
 }
 
 async function tpSubmitDelete() {
-    const id = parseInt(document.getElementById('tpDeleteId').value);
+    const id = parseInt(document.getElementById('tpDeleteId').value, 10);
+    const errEl = document.getElementById('tpDeleteError');
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('d-none');
+    }
     const r = await tpApiFetch('/Templates/DeleteTemplate', 'POST', { id });
-    if (r.success) {
+    if (r && r.success) {
         bootstrap.Modal.getInstance(document.getElementById('tpDeleteModal'))?.hide();
-        tpLoad();
+        await tpLoad();
+        if (typeof showToast === 'function') showToast(r.message || 'تم حذف القالب بنجاح', 'success');
     } else {
-        alert(r.message || 'حدث خطأ');
+        const msg = (r && r.message) || 'حدث خطأ';
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.classList.remove('d-none');
+        } else {
+            alert(msg);
+        }
     }
 }
 

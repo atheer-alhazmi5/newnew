@@ -17,6 +17,11 @@ let fdBindingLookupsLoaded = false;
 let fdDropdownItemsCache = {};
 let fdReadyTableGridCache = {};
 
+// Form sections (groupings of fields inside a single form definition)
+let fdSections = [{ id: 1, title: 'القسم الأول' }];
+let fdActiveSectionId = 1;
+let fdSectionSeq = 2;
+
 // ─── FIELD TYPE DEFINITIONS (mirrors ready-tables) ───────────────────────────
 const FD_FIELD_TYPES = {
     "الاسم الكامل": { props: [
@@ -183,6 +188,41 @@ const FD_FIELD_TYPES = {
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
         { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ]},
+    "عنوان": { props: [
+        { key:"fontSize", label:"حجم الخط (px)", type:"number", placeholder:"18" },
+        { key:"fontColor", label:"لون الخط", type:"color" },
+        { key:"textAlign", label:"المحاذاة", type:"select", options:["يمين","وسط","يسار"] },
+        { key:"bold", label:"غامق", type:"checkbox" }
+    ]},
+    "خط فاصل": { props: [
+        { key:"lineStyle", label:"نمط الخط", type:"select", options:["صلب","منقط","متقطع"] },
+        { key:"lineColor", label:"اللون", type:"color" },
+        { key:"lineThickness", label:"السماكة (px)", type:"number", placeholder:"1" }
+    ]},
+    "عملة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"currency", label:"العملة", type:"select", options:["ر.س","$","€","£","د.إ","د.ك","د.ب","د.أ","ج.م"] },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"minValue", label:"الحد الأدنى", type:"number" },
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"number", placeholder:"2" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ]},
+    "تأشير": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم"] },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ]},
+    "توقيع": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم"] },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" },
+        { key:"heightPx", label:"ارتفاع لوحة التوقيع (px)", type:"number", placeholder:"120" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ]}
 };
@@ -574,6 +614,28 @@ function fdBuildFieldInput(f, opt) {
         });
         t += '</tbody></table></div>';
         inp = t;
+    } else if (f.fieldType==='عنوان') {
+        const fs = parseInt(props.fontSize, 10) || 18;
+        const col = props.fontColor || '#0f172a';
+        const alignMap = { 'يمين':'right', 'يسار':'left', 'وسط':'center' };
+        const al = alignMap[props.textAlign] || 'right';
+        const bld = props.bold ? '800' : '700';
+        inp = `<div style="font-size:${fs}px;font-weight:${bld};color:${col};text-align:${al};padding:6px 0;"${ttAttr}>${esc(f.fieldName || '')}</div>`;
+    } else if (f.fieldType==='خط فاصل') {
+        const styleMap = { 'منقط':'dotted','متقطع':'dashed','صلب':'solid' };
+        const ls = styleMap[props.lineStyle] || 'solid';
+        const lc = props.lineColor || '#94a3b8';
+        const lt = parseInt(props.lineThickness, 10) || 1;
+        inp = `<hr style="border:none;border-top:${lt}px ${ls} ${lc};margin:8px 0;"${ttAttr}>`;
+    } else if (f.fieldType==='عملة') {
+        const cur = props.currency || 'ر.س';
+        const dec = (props.decimals != null && props.decimals !== '') ? parseInt(props.decimals,10) : 2;
+        const stepVal = dec > 0 ? (1 / Math.pow(10, dec)) : 1;
+        const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
+        const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
+        inp = `<div class="input-group"${ttAttr}${wStyle?` style="${wStyle}"`:''}><input type="number" class="form-control" placeholder="${ph||'0'}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr} style="text-align:left;direction:ltr;${roStyle}"><span class="input-group-text fw-bold" style="background:var(--sa-50);color:var(--sa-700);">${esc(cur)}</span></div>`;
+    } else if (f.fieldType === 'تأشير' || f.fieldType === 'توقيع') {
+        inp = fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr);
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     }
@@ -585,6 +647,281 @@ function fdBuildFieldInput(f, opt) {
 
 function fdSpinInc(btn) { const i=btn.parentElement.querySelector('input[type="number"]'); if(!i) return; const s=parseFloat(i.step)||1,m=i.max!==''?parseFloat(i.max):Infinity,v=parseFloat(i.value)||0; if(v+s<=m) i.value=+(v+s).toFixed(4); }
 function fdSpinDec(btn) { const i=btn.parentElement.querySelector('input[type="number"]'); if(!i) return; const s=parseFloat(i.step)||1,m=i.min!==''?parseFloat(i.min):-Infinity,v=parseFloat(i.value)||0; if(v-s>=m) i.value=+(v-s).toFixed(4); }
+
+// ─── SIGNATURE / APPROVAL FIELD (mirrors Beneficiary endorsement/signature) ──
+function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr) {
+    const isSig = f.fieldType === 'توقيع';
+    const currentMode = props.mode || 'مرفق';
+    const widthCss = props.widthPx ? `${parseInt(props.widthPx, 10)}px` : '100%';
+    const canvasH = props.heightPx ? parseInt(props.heightPx, 10) : 120;
+    const uid = 'fdSig_' + (f.id || Math.random().toString(36).slice(2, 8));
+    const selId = uid + '_sel';
+    const fileWrapId = uid + '_fileWrap';
+    const canvasWrapId = uid + '_canvasWrap';
+    const canvasId = uid + '_canvas';
+    const previewId = uid + '_preview';
+    const fileInputId = uid + '_fileInput';
+    const showFile = currentMode === 'مرفق' ? 'block' : 'none';
+    const showCanvas = currentMode === 'التوقيع بالقلم' ? 'block' : 'none';
+    const fileLbl = isSig ? 'رفع ملف التوقيع' : 'رفع ملف التأشير';
+    const canvasLbl = isSig ? 'التوقيع الإلكتروني' : 'التوقيع الإلكتروني للتأشير';
+    return `<div class="fd-sig-field" style="max-width:${widthCss};" data-fd-sig-canvas="${canvasId}"${ttAttr}>
+        <select class="form-select form-select-sm mb-2" id="${selId}" onchange="fdSigToggle('${uid}')"${roSel}>
+            <option value="مرفق" ${currentMode==='مرفق'?'selected':''}>مرفق (صورة أو PDF)</option>
+            <option value="التوقيع بالقلم" ${currentMode==='التوقيع بالقلم'?'selected':''}>التوقيع بالقلم</option>
+        </select>
+        <div id="${fileWrapId}" class="fd-sig-file-wrap" style="display:${showFile};">
+            <label class="form-label small mb-1" style="color:var(--gray-600);font-weight:700;">${fileLbl}</label>
+            <input type="file" class="form-control form-control-sm" id="${fileInputId}" accept="image/*,.pdf" onchange="fdSigFileChange(this,'${previewId}')"${roAttr}${reqAttr}>
+            <div id="${previewId}" class="fd-sig-attach-preview-wrap mt-2" style="display:none;"></div>
+        </div>
+        <div id="${canvasWrapId}" class="fd-sig-canvas-section" style="display:${showCanvas};">
+            <label class="form-label small mb-1" style="color:var(--gray-600);font-weight:700;">${canvasLbl}</label>
+            <div class="fd-sig-canvas-wrap">
+                <canvas class="fd-sig-canvas" id="${canvasId}" width="280" height="${canvasH}" data-fd-init-sig></canvas>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fdSigClearCanvas('${canvasId}')"><i class="bi bi-eraser"></i> مسح</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function fdSigToggle(uid) {
+    const sel = document.getElementById(uid + '_sel');
+    const fileWrap = document.getElementById(uid + '_fileWrap');
+    const canvasWrap = document.getElementById(uid + '_canvasWrap');
+    const canvas = document.getElementById(uid + '_canvas');
+    if (!sel || !fileWrap || !canvasWrap) return;
+    if (sel.value === 'مرفق') {
+        fileWrap.style.display = 'block';
+        canvasWrap.style.display = 'none';
+    } else {
+        fileWrap.style.display = 'none';
+        canvasWrap.style.display = 'block';
+        if (canvas) fdSigBindCanvas(canvas);
+    }
+}
+
+function fdSigFileChange(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+    const f = input.files && input.files[0];
+    if (!f) { preview.innerHTML = ''; preview.style.display = 'none'; return; }
+    const r = new FileReader();
+    r.onload = function () {
+        if ((f.type || '').indexOf('image') === 0) {
+            preview.innerHTML = `<img src="${r.result}" class="fd-sig-attach-preview">`;
+        } else {
+            preview.innerHTML = `<span class="badge bg-secondary" style="font-size:12px;padding:6px 10px;"><i class="bi bi-file-earmark-pdf"></i> PDF</span>`;
+        }
+        preview.style.display = 'flex';
+    };
+    r.readAsDataURL(f);
+}
+
+function fdSigBindCanvas(canvas) {
+    if (!canvas || canvas.dataset.fdSigReady === '1') return;
+    canvas.dataset.fdSigReady = '1';
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    let drawing = false, lastX = 0, lastY = 0;
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const sx = canvas.width / rect.width;
+        const sy = canvas.height / rect.height;
+        const cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        const cy = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        return { x: (cx - rect.left) * sx, y: (cy - rect.top) * sy };
+    }
+    function start(e) { e.preventDefault(); drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; }
+    function draw(e) { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke(); lastX = p.x; lastY = p.y; }
+    function end(e) { e.preventDefault(); drawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseout', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', end, { passive: false });
+}
+
+function fdSigClearCanvas(canvasId) {
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+function fdInitDynamicWidgets(root) {
+    (root || document).querySelectorAll('canvas[data-fd-init-sig]').forEach(fdSigBindCanvas);
+}
+
+// ─── SECTIONS HELPERS ──────────────────────────────────────────────────────
+function fdDefaultSections() { return [{ id: 1, title: 'القسم الأول' }]; }
+
+function fdParseFieldsJsonPayload(json) {
+    const def = { sections: fdDefaultSections(), fields: [] };
+    if (!json) return def;
+    let p;
+    try { p = JSON.parse(json); } catch { return def; }
+    if (Array.isArray(p)) {
+        p.forEach(f => { if (!f.sectionId) f.sectionId = 1; });
+        return { sections: def.sections, fields: p };
+    }
+    if (p && typeof p === 'object') {
+        const s = Array.isArray(p.sections) && p.sections.length
+            ? p.sections.map((x, i) => ({ id: x.id || (i + 1), title: x.title || `القسم ${i + 1}` }))
+            : def.sections;
+        const fs = Array.isArray(p.fields) ? p.fields : [];
+        const firstId = s[0].id;
+        const valid = new Set(s.map(x => x.id));
+        fs.forEach(f => { if (!f.sectionId || !valid.has(f.sectionId)) f.sectionId = firstId; });
+        return { sections: s, fields: fs };
+    }
+    return def;
+}
+
+function fdSerializeFieldsJson() {
+    return JSON.stringify({ sections: fdSections, fields: fdFields });
+}
+
+function fdResetSectionsState() {
+    fdSections = fdDefaultSections();
+    fdActiveSectionId = fdSections[0].id;
+    fdSectionSeq = 2;
+}
+
+function fdApplyParsedFieldsData(parsed) {
+    fdSections = (parsed.sections && parsed.sections.length) ? parsed.sections : fdDefaultSections();
+    fdActiveSectionId = fdSections[0].id;
+    const ids = fdSections.map(s => s.id);
+    fdSectionSeq = (ids.length ? Math.max(...ids) : 0) + 1;
+    fdFields = parsed.fields || [];
+    fdFields.forEach((f, i) => { if (!f.id) f.id = i + 1; });
+}
+
+function fdSyncSectionFieldSelect() {
+    const sel = document.getElementById('fdFieldSection');
+    if (!sel) return;
+    sel.innerHTML = fdSections.map(s => `<option value="${s.id}" ${s.id === fdActiveSectionId ? 'selected' : ''}>${esc(s.title)}</option>`).join('');
+}
+
+function fdPromptSection(title, subtitle, initial, onOk) {
+    const modalEl = document.getElementById('fdSectionPromptModal');
+    if (!modalEl) { const v = (prompt(title, initial || '') || '').trim(); if (v) onOk(v); return; }
+    document.getElementById('fdSectionPromptTitle').textContent = title;
+    document.getElementById('fdSectionPromptSub').textContent = subtitle || 'حدّد اسم القسم';
+    const input = document.getElementById('fdSectionPromptInput');
+    input.value = initial || '';
+    const okBtn = document.getElementById('fdSectionPromptOk');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    function cleanup() {
+        okBtn.onclick = null;
+        input.onkeydown = null;
+        modalEl.removeEventListener('hidden.bs.modal', cleanup);
+    }
+    function commit() {
+        const v = (input.value || '').trim();
+        if (!v) { input.focus(); input.classList.add('is-invalid'); setTimeout(() => input.classList.remove('is-invalid'), 800); return; }
+        cleanup();
+        modal.hide();
+        onOk(v);
+    }
+    okBtn.onclick = commit;
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } };
+    modalEl.addEventListener('shown.bs.modal', () => { input.focus(); input.select(); }, { once: true });
+    modalEl.addEventListener('hidden.bs.modal', cleanup);
+    modal.show();
+}
+
+function fdAddSection() {
+    const defaultTitle = `القسم ${fdSections.length + 1}`;
+    fdPromptSection('إضافة قسم جديد', 'أدخل اسم القسم الجديد', defaultTitle, (title) => {
+        const id = fdSectionSeq++;
+        fdSections.push({ id, title });
+        fdActiveSectionId = id;
+        fdRenderSectionsBar();
+        fdRenderFieldsTable();
+        fdSyncSectionFieldSelect();
+    });
+}
+
+function fdRenameSection(id) {
+    const s = fdSections.find(x => x.id === id);
+    if (!s) return;
+    fdPromptSection('إعادة تسمية القسم', `القسم الحالي: ${s.title}`, s.title, (title) => {
+        s.title = title;
+        fdRenderSectionsBar();
+        fdRenderFieldsTable();
+        fdSyncSectionFieldSelect();
+    });
+}
+
+function fdDeleteSection(id) {
+    if (fdSections.length <= 1) {
+        if (typeof showToast === 'function') showToast('لا يمكن حذف القسم الوحيد', 'error');
+        return;
+    }
+    const s = fdSections.find(x => x.id === id);
+    if (!s) return;
+    const fieldsInside = fdFields.filter(f => f.sectionId === id).length;
+    const modalEl = document.getElementById('fdSectionDeleteModal');
+    const nameEl = document.getElementById('fdSectionDeleteName');
+    const noteEl = document.getElementById('fdSectionDeleteNote');
+    const okBtn = document.getElementById('fdSectionDeleteOk');
+    if (!modalEl || !nameEl || !okBtn) {
+        if (!confirm(fieldsInside ? `سيتم نقل ${fieldsInside} حقل إلى القسم السابق. هل أنت متأكد؟` : 'هل أنت متأكد من حذف هذا القسم؟')) return;
+        fdApplySectionDelete(id);
+        return;
+    }
+    nameEl.textContent = s.title;
+    if (noteEl) noteEl.textContent = fieldsInside ? `سيتم نقل ${fieldsInside} حقل إلى القسم السابق.` : 'القسم لا يحتوي أي حقول.';
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    function cleanup() { okBtn.onclick = null; modalEl.removeEventListener('hidden.bs.modal', cleanup); }
+    okBtn.onclick = () => {
+        cleanup();
+        modal.hide();
+        fdApplySectionDelete(id);
+    };
+    modalEl.addEventListener('hidden.bs.modal', cleanup);
+    modal.show();
+}
+
+function fdApplySectionDelete(id) {
+    const idx = fdSections.findIndex(x => x.id === id);
+    if (idx < 0) return;
+    const targetId = fdSections[idx === 0 ? 1 : idx - 1].id;
+    fdFields.forEach(f => { if (f.sectionId === id) f.sectionId = targetId; });
+    fdSections.splice(idx, 1);
+    if (fdActiveSectionId === id) fdActiveSectionId = targetId;
+    fdRenderSectionsBar();
+    fdRenderFieldsTable();
+    fdSyncSectionFieldSelect();
+}
+
+function fdSelectSection(id) {
+    fdActiveSectionId = id;
+    fdRenderSectionsBar();
+    const sel = document.getElementById('fdFieldSection');
+    if (sel) sel.value = String(id);
+}
+
+function fdRenderSectionsBar() {
+    const host = document.getElementById('fdSectionsBar');
+    if (!host) return;
+    const chips = fdSections.map(s => {
+        const active = s.id === fdActiveSectionId;
+        const cls = active ? 'fd-sec-chip active' : 'fd-sec-chip';
+        const count = fdFields.filter(f => f.sectionId === s.id).length;
+        return `<div class="${cls}" onclick="fdSelectSection(${s.id})">
+            <span class="fd-sec-chip-title">${esc(s.title)}</span>
+            <span class="fd-sec-chip-count">${count}</span>
+            <button type="button" class="fd-sec-chip-btn" title="إعادة تسمية" onclick="event.stopPropagation();fdRenameSection(${s.id})"><i class="bi bi-pencil"></i></button>
+            <button type="button" class="fd-sec-chip-btn fd-sec-chip-btn-del" title="حذف" onclick="event.stopPropagation();fdDeleteSection(${s.id})"><i class="bi bi-x-lg"></i></button>
+        </div>`;
+    }).join('');
+    host.innerHTML = chips + `<button type="button" class="fd-sec-add-btn" onclick="fdAddSection()"><i class="bi bi-plus-lg"></i> إضافة قسم</button>`;
+}
 function fdStarClick(el,idx) { const w=el.closest('div'); if(!w) return; w.querySelectorAll('[data-i]').forEach(s=>{ s.style.color=parseInt(s.dataset.i)<=idx?'#f59e0b':'#d1d5db'; }); const l=w.querySelector('span:not([data-i])'); if(l) l.textContent=idx+'/'+(w.querySelectorAll('[data-i]').length); }
 
 function fdGetPropsSummary(f) {
@@ -721,6 +1058,7 @@ function fdShowCreate() {
     fdBindingLookupsLoaded = false;
     fdDropdownItemsCache = {};
     fdReadyTableGridCache = {};
+    fdResetSectionsState();
     fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, wsId:0, tplId:0 };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
@@ -752,8 +1090,7 @@ async function fdShowEdit(id) {
         };
         // Pre-cache the template data so Step 3 renders immediately without extra fetch
         fdCurrentTemplate = d.templateData || null;
-        try { fdFields = JSON.parse(d.fieldsJson || '[]'); } catch { fdFields = []; }
-        fdFields.forEach((f, i) => { if (!f.id) f.id = i + 1; });
+        fdApplyParsedFieldsData(fdParseFieldsJsonPayload(d.fieldsJson || ''));
         document.getElementById('fdWizardTitle').textContent = 'تعديل النموذج';
         document.getElementById('fdWizardSub').textContent = d.name;
         document.getElementById('fdWizardHead').className = 'fd-modal-header edit';
@@ -781,6 +1118,7 @@ function fdRenderStep(data) {
         <button class="fd-save-btn send" onclick="fdGoStep3()"><i class="bi bi-arrow-left-short"></i> التالي</button>`;
     } else {
         body.innerHTML = fdStep3Html();
+        fdInitDynamicWidgets(body);
         const primaryActionLabel = fdIsAdmin ? 'نشر النموذج' : 'إرسال للاعتماد';
         const primaryActionIcon  = fdIsAdmin ? 'bi-upload' : 'bi-send-fill';
         foot.innerHTML = `<button class="fd-cancel-btn" onclick="fdGoStepBack(3)"><i class="bi bi-arrow-right-short"></i> السابق</button>
@@ -835,7 +1173,12 @@ function fdStep1Html(d) {
 // ─── STEP 2 HTML (field builder — mirrors ready tables) ────────────────────────
 function fdStep2Html() {
     const typeOpts = Object.keys(FD_FIELD_TYPES).map(t=>`<option value="${t}">${t}</option>`).join('');
+    const sectionOpts = fdSections.map(s => `<option value="${s.id}" ${s.id === fdActiveSectionId ? 'selected' : ''}>${esc(s.title)}</option>`).join('');
     return `
+    <div class="fd-section" style="margin-bottom:16px;padding:14px 18px;">
+        <div class="fd-section-title"><i class="bi bi-layout-three-columns"></i> أقسام النموذج <span style="font-size:11px;font-weight:500;color:var(--gray-400);margin-inline-start:6px;">— اختر قسماً لعرضه أدناه أو أضف قسماً جديداً</span></div>
+        <div id="fdSectionsBar" class="fd-sec-bar"></div>
+    </div>
     <div class="fd-section" style="margin-bottom:0;">
         <div class="fd-section-title"><i class="bi bi-layout-text-sidebar"></i> حقول النموذج <span class="badge bg-secondary-subtle text-secondary ms-auto" id="fdFieldsCountBadge">0 حقل</span></div>
 
@@ -881,7 +1224,7 @@ function fdStep2Html() {
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="small fw-bold text-muted">اسم الحقل <span class="required-star">*</span></label>
+                    <label class="small fw-bold text-muted" id="fdFieldNameLabel">اسم الحقل <span class="required-star">*</span></label>
                     <input type="text" class="form-control form-control-sm" id="fdFieldName" placeholder="اسم الحقل">
                 </div>
                 <div class="col-md-2">
@@ -894,6 +1237,10 @@ function fdStep2Html() {
                 <div class="col-md-3">
                     <label class="small fw-bold text-muted">نص التلميح <span id="fdPropsCell" style="color:var(--sa-500);font-weight:600;"></span></label>
                     <input type="text" class="form-control form-control-sm" id="fdFieldTooltip" placeholder="يظهر عند التمرير">
+                </div>
+                <div class="col-md-3">
+                    <label class="small fw-bold text-muted">القسم <span class="required-star">*</span></label>
+                    <select class="form-select form-select-sm" id="fdFieldSection">${sectionOpts}</select>
                 </div>
             </div>
 
@@ -949,9 +1296,32 @@ function fdDisplayLayoutColClass(layout) {
 // formDesc  – string
 // fields    – array of field objects
 // interactive – true → render editable inputs (step-3), false → read-only display (details)
-function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive) {
+function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, sectionsOverride) {
+
+    const sections = (sectionsOverride && sectionsOverride.length) ? sectionsOverride : fdDefaultSections();
 
     // ── fields HTML ──────────────────────────────────────────────────────────
+    const renderField = f => {
+        const isStructural = f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل';
+        const colClass = fdDisplayLayoutColClass(f.displayLayout);
+        const tipAttr   = f.tooltipText ? ` title="${fdEscAttr(f.tooltipText)}"` : '';
+        const infoIcon  = f.tooltipText ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
+        const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:2px;font-style:normal;">${esc(f.subName)}</small>` : '';
+        const inputHtml = interactive
+            ? fdBuildFieldInput(f)
+            : fdBuildFieldInput(f, { forceReadOnly: true });
+        if (isStructural) {
+            return `<div class="${colClass}" style="font-style:normal;">${inputHtml}</div>`;
+        }
+        return `<div class="${colClass}" style="font-style:normal;">
+            <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
+                ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
+            </label>
+            ${subName}
+            ${inputHtml}
+        </div>`;
+    };
+
     let fieldsHtml = '';
     if (!fields.length) {
         fieldsHtml = `<div class="text-center py-4" style="color:var(--gray-400);font-style:normal;">
@@ -959,22 +1329,16 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive) {
             لم تُضف حقول بعد
         </div>`;
     } else {
-        fieldsHtml = '<div class="row g-3">' + fields.map(f => {
-            const colClass = fdDisplayLayoutColClass(f.displayLayout);
-            const tipAttr   = f.tooltipText ? ` title="${fdEscAttr(f.tooltipText)}"` : '';
-            const infoIcon  = f.tooltipText ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
-            const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:2px;font-style:normal;">${esc(f.subName)}</small>` : '';
-            const inputHtml = interactive
-                ? fdBuildFieldInput(f)
-                : fdBuildFieldInput(f, { forceReadOnly: true });
-            return `<div class="${colClass}" style="font-style:normal;">
-                <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
-                    ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
-                </label>
-                ${subName}
-                ${inputHtml}
-            </div>`;
-        }).join('') + '</div>';
+        const showSectionTitles = sections.length > 1;
+        fieldsHtml = sections.map(sec => {
+            const items = fields.filter(f => (f.sectionId || sections[0].id) === sec.id);
+            if (!items.length && !showSectionTitles) return '';
+            const head = showSectionTitles
+                ? `<div style="margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;">${esc(sec.title)}</div>`
+                : '';
+            if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
+            return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
+        }).join('');
     }
 
     // ── template layout ───────────────────────────────────────────────────────
@@ -1028,7 +1392,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive) {
 function fdStep3Html() {
     const fName = (fdStep1State?.name || '').trim() || 'اسم النموذج';
     const fDesc = (fdStep1State?.desc || '').trim() || '';
-    return fdBuildFormPreview(fdCurrentTemplate, fName, fDesc, fdFields, true);
+    return fdBuildFormPreview(fdCurrentTemplate, fName, fDesc, fdFields, true, fdSections);
 }
 
 // ─── STEP NAVIGATION ─────────────────────────────────────────────────────────
@@ -1157,7 +1521,9 @@ function fdAddField() {
         if (!rl || !String(rl.value || '').trim()) return showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'error');
     }
     const props = fdCollectFieldProps();
-    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired:document.getElementById('fdFieldRequired')?.value==='1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('fdFieldTooltip')?.value?.trim()||'', displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, propertiesJson:JSON.stringify(props) };
+    const secSel = document.getElementById('fdFieldSection');
+    const secId = secSel ? (parseInt(secSel.value, 10) || fdActiveSectionId) : fdActiveSectionId;
+    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired:document.getElementById('fdFieldRequired')?.value==='1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('fdFieldTooltip')?.value?.trim()||'', displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, sectionId: secId, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
     else { fdFields.push(field); showToast('تم إضافة الحقل','success'); }
     fdRenderFieldsTable(); fdResetFieldForm();
@@ -1172,6 +1538,8 @@ async function fdEditField(idx) {
     document.getElementById('fdFieldTooltip').value=f.tooltipText||'';
     const fdLay = document.getElementById('fdFieldDisplayLayout');
     if (fdLay) fdLay.value = (f.displayLayout != null && f.displayLayout !== '') ? f.displayLayout : '';
+    const fdSec = document.getElementById('fdFieldSection');
+    if (fdSec) fdSec.value = String(f.sectionId || fdActiveSectionId);
     document.getElementById('fdFieldNum').textContent=String(idx+1);
     document.getElementById('fdFieldFormLabel').textContent='تعديل حقل رقم';
     document.getElementById('fdAddFieldBtnTxt').textContent='تحديث الحقل';
@@ -1192,6 +1560,7 @@ function fdDeleteField(idx) {
 }
 
 function fdRenderFieldsTable() {
+    fdRenderSectionsBar();
     const body=document.getElementById('fdFieldsBody');
     const badge=document.getElementById('fdFieldsCountBadge');
     if(badge) badge.textContent=`${fdFields.length} حقل`;
@@ -1199,22 +1568,35 @@ function fdRenderFieldsTable() {
     if(num) num.textContent=String(fdEditingIdx>=0?fdEditingIdx+1:fdFields.length+1);
     if(!body) return;
     if(!fdFields.length){ body.innerHTML='<tr><td colspan="7" class="text-center py-3 text-muted">لا توجد حقول مضافة بعد</td></tr>'; return; }
-    body.innerHTML = fdFields.map((f,i) => {
-        const req=f.isRequired?'<span class="fd-field-req">نعم</span>':'<span style="font-size:11px;color:var(--gray-400);">لا</span>';
-        const props=fdGetPropsSummary(f);
-        return `<tr>
-            <td>${i+1}</td>
-            <td><span class="fd-field-type">${esc(f.fieldType)}</span></td>
-            <td style="font-weight:600;">${esc(f.fieldName)}</td>
-            <td style="text-align:center;">${req}</td>
-            <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fdEscAttr(props)}">${esc(props)}</td>
-            <td style="font-size:12px;color:var(--gray-500);">${esc(f.tooltipText||'-')}</td>
-            <td style="white-space:nowrap;">
-                <button class="fd-action-btn fd-action-btn-edit" onclick="fdEditField(${i})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-pencil"></i></button>
-                <button class="fd-action-btn fd-action-btn-delete" onclick="fdDeleteField(${i})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-trash"></i></button>
-            </td>
-        </tr>`;
-    }).join('');
+    let html = '';
+    let globalIdx = 0;
+    fdSections.forEach(sec => {
+        const items = [];
+        fdFields.forEach((f, origIdx) => { if ((f.sectionId || fdSections[0].id) === sec.id) items.push({ f, origIdx }); });
+        html += `<tr class="fd-sec-row-head"><td colspan="7" style="background:var(--sa-50);color:var(--sa-700);font-weight:700;font-size:12px;padding:8px 12px;border-top:2px solid var(--sa-100);"><i class="bi bi-collection"></i> ${esc(sec.title)} <span style="color:var(--gray-500);font-weight:500;margin-inline-start:6px;">(${items.length})</span></td></tr>`;
+        if (!items.length) {
+            html += `<tr><td colspan="7" class="text-center text-muted py-2" style="font-size:11px;">لا توجد حقول في هذا القسم</td></tr>`;
+            return;
+        }
+        items.forEach(({ f, origIdx }) => {
+            globalIdx++;
+            const req=f.isRequired?'<span class="fd-field-req">نعم</span>':'<span style="font-size:11px;color:var(--gray-400);">لا</span>';
+            const props=fdGetPropsSummary(f);
+            html += `<tr>
+                <td>${globalIdx}</td>
+                <td><span class="fd-field-type">${esc(f.fieldType)}</span></td>
+                <td style="font-weight:600;">${esc(f.fieldName)}</td>
+                <td style="text-align:center;">${req}</td>
+                <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fdEscAttr(props)}">${esc(props)}</td>
+                <td style="font-size:12px;color:var(--gray-500);">${esc(f.tooltipText||'-')}</td>
+                <td style="white-space:nowrap;">
+                    <button class="fd-action-btn fd-action-btn-edit" onclick="fdEditField(${origIdx})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-pencil"></i></button>
+                    <button class="fd-action-btn fd-action-btn-delete" onclick="fdDeleteField(${origIdx})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`;
+        });
+    });
+    body.innerHTML = html;
 }
 
 function fdResetFieldForm() {
@@ -1230,6 +1612,12 @@ function fdResetFieldForm() {
     const cell=document.getElementById('fdPropsCell'); if(cell) cell.innerHTML='';
     const btnTxt=document.getElementById('fdAddFieldBtnTxt'); if(btnTxt) btnTxt.textContent='إضافة الحقل';
     const cancelBtn=document.getElementById('fdCancelEditBtn'); if(cancelBtn) cancelBtn.style.display='none';
+    const nmLbl=document.getElementById('fdFieldNameLabel'); if(nmLbl) nmLbl.innerHTML='اسم الحقل <span class="required-star">*</span>';
+    const sec=document.getElementById('fdFieldSection');
+    if (sec) {
+        sec.innerHTML = fdSections.map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('');
+        sec.value = String(fdActiveSectionId);
+    }
     fdEditingIdx=-1;
 }
 
@@ -1250,7 +1638,7 @@ function fdCollect1() {
 async function fdSave(sendForApproval) {
     const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
-    const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:JSON.stringify(fdFields), sendForApproval };
+    const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:fdSerializeFieldsJson(), sendForApproval };
     try {
         let res;
         if (fdEditId) { payload.id=fdEditId; res=await apiFetch('/FormDefinitions/UpdateFormDefinition','POST',payload); }
@@ -1298,9 +1686,10 @@ async function fdShowDetails(id) {
         if (!res.success) return showToast(res.message, 'error');
         const d = res.data;
 
-        // Parse saved fields
-        let fields = [];
-        try { fields = JSON.parse(d.fieldsJson || '[]'); } catch {}
+        // Parse saved fields (supports sectioned payload)
+        const parsed = fdParseFieldsJsonPayload(d.fieldsJson || '');
+        const fields = parsed.fields;
+        const sections = parsed.sections;
 
         // Template data comes embedded in the response
         const tplData = d.templateData || null;
@@ -1343,10 +1732,12 @@ async function fdShowDetails(id) {
         // ── full form preview (template header + body + footer) ──────────────
         html += `<div class="fd-section" style="padding:18px 20px;">
             <div class="fd-section-title"><i class="bi bi-eye-fill"></i> معاينة النموذج <span style="font-size:11px;font-weight:400;color:var(--gray-400);">(القالب + الحقول)</span></div>
-            ${fdBuildFormPreview(tplData, d.name, d.description, fields, false)}
+            ${fdBuildFormPreview(tplData, d.name, d.description, fields, false, sections)}
         </div>`;
 
-        document.getElementById('fdDetailsBody').innerHTML = html;
+        const detailsBody = document.getElementById('fdDetailsBody');
+        detailsBody.innerHTML = html;
+        fdInitDynamicWidgets(detailsBody);
         fdDetModal().show();
     } catch(e) {
         showToast('خطأ في تحميل التفاصيل', 'error');

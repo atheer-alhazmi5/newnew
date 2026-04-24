@@ -188,6 +188,9 @@ public class ExecutorRolesController : BaseController
         var r = await _ds.GetExecutorRoleByIdAsync(req.Id);
         if (r == null) return Json(new { success = false, message = "الدور غير موجود" });
 
+        if (await _ds.IsExecutorRoleLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
+
         await _ds.DeleteExecutorRoleAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف دور منفذ", "ExecutorRole", req.Id.ToString(), r.Name));
         return Json(new { success = true, message = "تم حذف الدور بنجاح" });

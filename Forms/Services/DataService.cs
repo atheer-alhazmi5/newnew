@@ -1574,6 +1574,20 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    /// <summary>يتحقق ما إذا كان دور المنفذين مستخدمًا في أي خطوة سير عمل بإجراءات العمل.</summary>
+    public Task<bool> IsExecutorRoleLinkedAsync(int executorRoleId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (JsonObjectArrayHasIntProperty(p.WorkflowStepsJson, executorRoleId, "executorRoleId", "ExecutorRoleId"))
+                return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsFormTemplateLinkedAsync(int templateId)
+        => Task.FromResult(_db.FormDefinitions.Any(f => f.TemplateId == templateId));
+
     // ─── FORM TEMPLATES ─────────────────────────────────────────────────────
     public Task<List<FormTemplate>> ListFormTemplatesAsync()
         => Task.FromResult(_db.FormTemplates.OrderByDescending(t => t.CreatedAt).ToList());

@@ -32,7 +32,8 @@
 .er-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
 .er-form-group textarea.form-control { min-height:70px; resize:vertical; }
 .required-star { color:#ef4444; margin-right:4px; }
-.er-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.er-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; line-height:1.3; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.er-action-cell-inner { display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; }
 .er-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
 .er-action-btn-detail:hover { background:var(--info-50); }
 .er-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
@@ -144,19 +145,18 @@
             <table class="table mb-0" id="erTable">
                 <thead>
                     <tr>
-                        <th style="width:50px;text-align:center;">رقم</th>
+                        <th style="width:60px;text-align:center;">الترتيب</th>
                         <th style="text-align:right;">الدور</th>
                         <th style="text-align:right;">الوصف</th>
                         <th style="text-align:center;">الملكية</th>
                         <th style="text-align:center;">المنفذين</th>
-                        <th style="width:60px;text-align:center;">الترتيب</th>
                         <th style="width:60px;text-align:center;">اللون</th>
                         <th style="width:70px;text-align:center;">التفعيل</th>
                         <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="erBody">
-                    <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="8" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -355,6 +355,7 @@
                 <i class="bi bi-exclamation-triangle-fill" style="font-size:48px;color:var(--error-500);display:block;margin-bottom:12px;"></i>
                 <p style="font-size:15px;font-weight:600;color:var(--gray-700);margin:0;">سيتم حذف الدور <strong id="erDeleteName"></strong> نهائياً</p>
                 <p style="font-size:13px;color:var(--gray-500);margin-top:8px;">لا يمكن التراجع عن هذا الإجراء</p>
+                <div id="erDeleteError" class="alert alert-danger d-none mt-3" style="font-size:13px;text-align:right;"></div>
                 <input type="hidden" id="erDeleteId">
             </div>
             <div class="er-modal-footer" style="justify-content:center;">

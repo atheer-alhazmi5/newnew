@@ -13,8 +13,6 @@ public class DashboardController : BaseController
     public async Task<IActionResult> Index()
     {
         var auth = RequireAuth(); if (auth != null) return auth;
-        if (CurrentUserRole != "Manager" && CurrentUserRole != "Admin")
-            return RedirectToAction("Index", "Forms");
 
         SetViewBagUser(_ui);
         var kpis = await _ds.GetDashboardKpisAsync(CurrentUserId, CurrentDeptId);
