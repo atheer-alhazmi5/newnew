@@ -4,6 +4,18 @@ var bnfOuExpanded = {};
 var bnfFilterOuExpanded = {};
 var bnfSignCtx = {};
 
+function bnfIsSysAdminRole() {
+    var c = document.querySelector('input[name="bnfSubRole"]:checked');
+    return !!(c && c.value === 'مدير النظام');
+}
+
+function bnfApplyRoleVisibility() {
+    var sys = bnfIsSysAdminRole();
+    document.querySelectorAll('.bnf-rep-only').forEach(function (el) {
+        el.classList.toggle('d-none', sys);
+    });
+}
+
 function bnfBindDigitsOnly(inputId, maxLen) {
     var el = document.getElementById(inputId);
     if (!el) return;
@@ -61,6 +73,14 @@ document.addEventListener('DOMContentLoaded', function () {
         bnfRenderTable();
     });
     bnfBindDigitsOnly('bnfFilterNationalId', 10);
+
+    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) {
+        r.addEventListener('change', function () { bnfApplyRoleVisibility(); });
+    });
+    var bnfFormModal = document.getElementById('bnfFormModal');
+    if (bnfFormModal) {
+        bnfFormModal.addEventListener('shown.bs.modal', function () { bnfApplyRoleVisibility(); });
+    }
 
     document.getElementById('bnfPhoto').addEventListener('change', function (e) {
         var f = e.target.files[0];
@@ -535,11 +555,15 @@ function bnfGetFilteredBeneficiaries() {
         if (unitId && String(b.organizationalUnitId) !== String(unitId))
             return false;
         if (subRole) {
-            var sr = (b.subRole || '').trim();
-            if (subRole === '__none__') {
-                if (sr !== '') return false;
-            } else if (sr !== subRole)
-                return false;
+            var isUnitMgr = !!(b.isUnitManager || (b.mainRole || '').trim() === 'مدير');
+            if (subRole === '__employee__') {
+                if (isUnitMgr) return false;
+            } else if (subRole === '__unit_manager__') {
+                if (!isUnitMgr) return false;
+            } else {
+                var sr = (b.subRole || '').trim();
+                if (sr !== subRole) return false;
+            }
         }
         return true;
     });
@@ -632,6 +656,32 @@ function bnfCheckPasswordLive() {
 }
 
 function bnfValidate(isAdd) {
+    if (!document.querySelector('input[name="bnfSubRole"]:checked'))
+        return 'اختر الدور';
+
+    if (bnfIsSysAdminRole()) {
+        if (!document.getElementById('bnfFirstName').value.trim()) return 'الاسم الأول مطلوب';
+        if (!document.getElementById('bnfSecondName').value.trim()) return 'الاسم الثاني مطلوب';
+        if (!document.getElementById('bnfThirdName').value.trim()) return 'الاسم الثالث مطلوب';
+        if (!document.getElementById('bnfFourthName').value.trim()) return 'الاسم الرابع مطلوب';
+
+        var usernameSa = (document.getElementById('bnfUsername').value || '').trim();
+        if (!usernameSa) return 'اسم المستخدم مطلوب';
+        if (usernameSa.length < 3) return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
+        if (!/^[a-zA-Z0-9_]+$/.test(usernameSa)) return 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط';
+
+        var pwdSa = document.getElementById('bnfPassword').value;
+        var confirmSa = document.getElementById('bnfConfirmPassword').value;
+        if (isAdd && !pwdSa) return 'كلمة المرور مطلوبة عند إضافة مستفيد جديد';
+        if (pwdSa && pwdSa !== confirmSa)
+            return 'كلمة المرور وتأكيد كلمة المرور غير متطابقتين';
+        if (pwdSa) {
+            var pwStrengthSa = bnfValidatePasswordStrength(pwdSa);
+            if (pwStrengthSa) return pwStrengthSa;
+        }
+        return null;
+    }
+
     var nid = (document.getElementById('bnfNationalId').value || '').trim();
     if (!nid) return 'الهوية الوطنية مطلوبة';
     if (nid.length !== 10 || !/^\d+$/.test(nid))
@@ -661,7 +711,6 @@ function bnfValidate(isAdd) {
     if (username.length < 3) return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
     if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط';
 
-    // التأشير
     var endorsementType = document.getElementById('bnfEndorsementType').value;
     if (endorsementType === 'مرفق') {
         var endorsementFile = document.getElementById('bnfEndorsementFile').dataset.base64 || '';
@@ -671,7 +720,6 @@ function bnfValidate(isAdd) {
             return 'يجب التوقيع في مربع التأشير الإلكتروني';
     }
 
-    // التوقيع
     var signatureType = document.getElementById('bnfSignatureType').value;
     if (signatureType === 'مرفق') {
         var signatureFile = document.getElementById('bnfSignatureFile').dataset.base64 || '';
@@ -747,7 +795,11 @@ function bnfShowAddModal() {
     document.getElementById('bnfIsActive').checked = true;
     document.getElementById('bnfActivationStatus').textContent = 'مفعل';
     document.getElementById('bnfIsUnitManager').checked = false;
-    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = false; });
+    var bnfSubUnit = document.getElementById('bnfSubRoleUnit');
+    var bnfSubAdm = document.getElementById('bnfSubRoleAdmin');
+    if (bnfSubUnit) bnfSubUnit.checked = true;
+    if (bnfSubAdm) bnfSubAdm.checked = false;
+    bnfApplyRoleVisibility();
     document.getElementById('bnfUsername').value = '';
     document.getElementById('bnfUsername').readOnly = false;
     document.getElementById('bnfPassword').value = '';
@@ -823,6 +875,8 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfIsUnitManager').checked = !!b.isUnitManager || b.mainRole === 'مدير';
     var subRole = b.subRole || '';
     document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = (r.value === subRole); });
+    if (!document.querySelector('input[name="bnfSubRole"]:checked') && document.getElementById('bnfSubRoleUnit'))
+        document.getElementById('bnfSubRoleUnit').checked = true;
     document.getElementById('bnfUsername').value = b.username || '';
     document.getElementById('bnfPassword').value = '';
     document.getElementById('bnfConfirmPassword').value = '';
@@ -862,23 +916,26 @@ function bnfSubmit() {
     bnfClearDuplicateFieldHighlight();
 
     var photoData = document.getElementById('bnfPhoto').dataset.base64 || '';
+    var isSys = bnfIsSysAdminRole();
+    var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
+    var sysAdd = isSys && isAdd;
     var body = {
         photoUrl: photoData || undefined,
-        nationalId: document.getElementById('bnfNationalId').value.trim(),
-        endorsementType: document.getElementById('bnfEndorsementType').value,
-        endorsementFile: bnfGetEndorsementData(),
-        signatureType: document.getElementById('bnfSignatureType').value,
-        signatureFile: bnfGetSignatureData(),
+        nationalId: sysAdd ? '' : document.getElementById('bnfNationalId').value.trim(),
+        endorsementType: sysAdd ? 'مرفق' : document.getElementById('bnfEndorsementType').value,
+        endorsementFile: sysAdd ? '' : bnfGetEndorsementData(),
+        signatureType: sysAdd ? 'مرفق' : document.getElementById('bnfSignatureType').value,
+        signatureFile: sysAdd ? '' : bnfGetSignatureData(),
         firstName: document.getElementById('bnfFirstName').value.trim(),
         secondName: document.getElementById('bnfSecondName').value.trim(),
         thirdName: document.getElementById('bnfThirdName').value.trim(),
         fourthName: document.getElementById('bnfFourthName').value.trim(),
-        organizationalUnitId: parseInt(document.getElementById('bnfOrganizationalUnitId').value),
-        phone: document.getElementById('bnfPhone').value.trim(),
-        email: document.getElementById('bnfEmail').value.trim(),
+        organizationalUnitId: sysAdd ? 0 : ouVal,
+        phone: sysAdd ? '' : document.getElementById('bnfPhone').value.trim(),
+        email: sysAdd ? '' : document.getElementById('bnfEmail').value.trim(),
         username: document.getElementById('bnfUsername').value.trim(),
         isActive: document.getElementById('bnfIsActive').checked,
-        isUnitManager: !!document.getElementById('bnfIsUnitManager').checked,
+        isUnitManager: isSys ? false : !!document.getElementById('bnfIsUnitManager').checked,
         subRole: (document.querySelector('input[name="bnfSubRole"]:checked') || {}).value || '',
         password: document.getElementById('bnfPassword').value || undefined,
         confirmPassword: document.getElementById('bnfConfirmPassword').value || undefined

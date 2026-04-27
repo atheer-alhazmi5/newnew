@@ -1,0 +1,165 @@
+@{
+    Layout = null;
+    var options = ViewBag.Options as List<FormsSystem.Controllers.AccountController.DelegationChoiceVm> ?? new();
+    var ownName = (ViewBag.OwnFullName as string) ?? "";
+    var ownDept = (ViewBag.OwnDeptName as string) ?? "";
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اختيار الحساب</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+        --sa-50:#F3FCF6; --sa-100:#DFF6E7; --sa-200:#B8EACB; --sa-300:#88D8AD;
+        --sa-400:#54C08A; --sa-500:#25935F; --sa-600:#1B8354; --sa-700:#166A45;
+        --sa-800:#14573A; --sa-900:#104631;
+        --gold-500:#F5BD02;
+        --gray-50:#F8FAFC; --gray-100:#F1F5F9; --gray-200:#E2E8F0;
+        --gray-300:#CBD5E1; --gray-400:#94A3B8; --gray-500:#64748B;
+        --gray-600:#475569; --gray-700:#334155; --gray-800:#1E293B;
+    }
+    body {
+        font-family:'Cairo', sans-serif;
+        background: linear-gradient(135deg, var(--sa-50) 0%, #ffffff 50%, var(--sa-100) 100%);
+        min-height:100vh;
+        display:flex; align-items:center; justify-content:center;
+        padding:24px;
+        color:var(--gray-800);
+    }
+    .sa-shell { width:100%; max-width:1100px; }
+    .sa-head { text-align:center; margin-bottom:32px; }
+    .sa-head h1 { font-size:26px; font-weight:800; color:var(--sa-800); margin-bottom:8px; }
+    .sa-head p  { font-size:15px; color:var(--gray-500); }
+    .sa-grid {
+        display:grid;
+        grid-template-columns:repeat(2, 1fr);
+        grid-auto-rows:1fr;
+        align-items:stretch;
+        gap:18px;
+    }
+    @@media (max-width:768px) {
+        .sa-grid { grid-template-columns:1fr; }
+    }
+    .sa-grid > form {
+        display:flex;
+        min-height:0;
+        height:100%;
+    }
+    .sa-card {
+        background:#fff;
+        border:2px solid var(--gray-200);
+        border-radius:18px;
+        padding:24px;
+        display:flex; flex-direction:column; gap:14px;
+        flex:1;
+        width:100%;
+        min-height:420px;
+        height:100%;
+        cursor:pointer;
+        box-shadow:0 4px 14px rgba(15,23,42,.04);
+        transition:border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    .sa-card:hover { border-color:var(--sa-400); box-shadow:0 8px 22px rgba(20,87,58,.1); }
+    .sa-card.delegator:hover { border-color:#D97706; box-shadow:0 8px 22px rgba(180,83,9,.12); }
+    .sa-card-icon {
+        width:54px; height:54px; border-radius:14px;
+        display:inline-flex; align-items:center; justify-content:center;
+        background:var(--sa-50); color:var(--sa-700); font-size:26px;
+    }
+    .sa-card.delegator .sa-card-icon { background:#FEF3C7; color:#92400E; }
+    .sa-card-title  { font-size:17px; font-weight:800; color:var(--gray-800); }
+    .sa-card-meta   { font-size:13px; color:var(--gray-500); display:flex; flex-direction:column; gap:4px; }
+    .sa-card-meta i { color:var(--sa-500); margin-inline-end:4px; }
+    .sa-card.delegator .sa-card-meta i { color:#B45309; }
+    .sa-period {
+        background:var(--gray-50); border-radius:10px; padding:10px 12px;
+        font-size:12.5px; color:var(--gray-600);
+        border:1px dashed var(--gray-200);
+        display:flex; flex-direction:column; gap:4px;
+    }
+    .sa-period strong { color:var(--gray-700); font-weight:700; }
+    .sa-period--spacer {
+        visibility:hidden;
+        pointer-events:none;
+        flex-shrink:0;
+    }
+    .sa-go-btn {
+        margin-top:auto;
+        background:var(--sa-700); color:#fff; border:none;
+        border-radius:12px; padding:11px 18px; font-weight:700; font-size:14px;
+        font-family:'Cairo', sans-serif; cursor:pointer;
+        transition:all .15s; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .sa-go-btn:hover { background:var(--sa-800); }
+    .sa-card.delegator .sa-go-btn { background:#B45309; }
+    .sa-card.delegator .sa-go-btn:hover { background:#92400E; }
+    .sa-tag {
+        align-self:flex-start;
+        font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px;
+        background:var(--sa-100); color:var(--sa-700);
+    }
+    .sa-card.delegator .sa-tag { background:#FEF3C7; color:#92400E; }
+</style>
+</head>
+<body>
+<div class="sa-shell">
+    <div class="sa-head">
+        <h1>اختر الحساب الذي تريد الدخول به</h1>
+        <p>لديك تفويض نشط . اختر الحساب الذي ترغب الدخول به الآن.</p>
+    </div>
+    <div class="sa-grid">
+        <form method="post" asp-controller="Account" asp-action="SelectAccount">
+            <input type="hidden" name="choice" value="self" />
+            <button type="submit" class="sa-card" style="width:100%;text-align:right;">
+                <span class="sa-tag">حسابك</span>
+                <div class="sa-card-icon"><i class="bi bi-person-fill"></i></div>
+                <div class="sa-card-title">@ownName</div>
+                <div class="sa-card-meta">
+                    @if (!string.IsNullOrEmpty(ownDept))
+                    {
+                        <span><i class="bi bi-building"></i>@ownDept</span>
+                    }
+                    <span><i class="bi bi-shield-lock"></i>صلاحياتك الاعتيادية</span>
+                </div>
+                <div class="sa-period sa-period--spacer" aria-hidden="true">
+                    <span><strong>من:</strong> —</span>
+                    <span><strong>إلى:</strong> —</span>
+                </div>
+                <span class="sa-go-btn"><i class="bi bi-box-arrow-in-right"></i> الدخول بحسابي</span>
+            </button>
+        </form>
+
+        @foreach (var op in options)
+        {
+            <form method="post" asp-controller="Account" asp-action="SelectAccount">
+                <input type="hidden" name="choice" value="delegator" />
+                <input type="hidden" name="delegationId" value="@op.DelegationId" />
+                <button type="submit" class="sa-card delegator" style="width:100%;text-align:right;">
+                    <span class="sa-tag">تفويض نشط</span>
+                    <div class="sa-card-icon"><i class="bi bi-person-vcard-fill"></i></div>
+                    <div class="sa-card-title">@op.DelegatorName</div>
+                    <div class="sa-card-meta">
+                        @if (!string.IsNullOrEmpty(op.DelegatorUnitName))
+                        {
+                            <span><i class="bi bi-building"></i>@op.DelegatorUnitName</span>
+                        }
+                        <span><i class="bi bi-arrow-left-right"></i>الدخول نيابةً عن المفوِّض</span>
+                    </div>
+                    <div class="sa-period">
+                        <span><strong>من:</strong> @op.StartDate</span>
+                        <span><strong>إلى:</strong> @op.EndDate</span>
+                    </div>
+                    <span class="sa-go-btn"><i class="bi bi-box-arrow-in-right"></i> الدخول بحساب المفوض</span>
+                </button>
+            </form>
+        }
+    </div>
+</div>
+</body>
+</html>

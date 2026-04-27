@@ -178,7 +178,7 @@ public class FormBuilderController : BaseController
 
         if (targetDeptIds.Any())
         {
-            var deptUsers = allUsers.Where(u => targetDeptIds.Contains(u.DepartmentId) && u.Id != CurrentUserId)
+            var deptUsers = allUsers.Where(u => u.DepartmentId.HasValue && targetDeptIds.Contains(u.DepartmentId.Value) && u.Id != CurrentUserId)
                                     .Select(u => u.Id);
             targetUserIds = targetUserIds.Union(deptUsers).Distinct().ToList();
         }

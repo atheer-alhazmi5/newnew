@@ -271,7 +271,14 @@ a:hover { color: var(--primary-dark); }
 .sub-header-content i { font-size: 18px; color: var(--primary); }
 
 /*  BODY */
-#app-body { display: flex; flex: 1; align-items: flex-start; background: #fafafa; }
+#app-body {
+    display: flex;
+    flex: 1;
+    align-items: flex-start;
+    background: #fafafa;
+    min-width: 0;
+    width: 100%;
+}
 
 /* SIDEBAR */
 #sidebar {
@@ -353,9 +360,16 @@ a:hover { color: var(--primary-dark); }
 
 /* MAIN CONTENT */
 #main-content {
-    flex: 1; padding: 32px;
+    flex: 1 1 0%;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 32px;
     background: #fafafa;
-    min-height: 0; padding-bottom: 80px;
+    min-height: 0;
+    padding-bottom: 80px;
+    overflow-x: auto;
 }
 
 /* FOOTER */
@@ -807,7 +821,7 @@ body.accessible-mode input:focus {
     .header-title { font-size: 18px; }
     .header-logo { height: 120px; max-width: 220px; }
     #sidebar { width: 220px; min-width: 220px; max-height: 100vh; }
-    #main-content { padding: 20px; }
+    #main-content { padding: 20px; flex: 1 1 0%; min-width: 0; }
     .sidebar-item { padding: 12px 14px; font-size: 13px; }
     .sidebar-icon { width: 36px; height: 36px; font-size: 16px; }
 }
@@ -831,7 +845,7 @@ body.accessible-mode input:focus {
     .sidebar-children { padding-right: 0; }
     .sidebar-child { margin-right: 0; }
     .sidebar-arrow { display: none; }
-    #main-content { padding: 16px; }
+    #main-content { padding: 16px; flex: 1 1 0%; min-width: 0; }
     /* Login page responsive is handled inline in Login.cshtml */
     .kpi-card { padding: 16px; }
     .kpi-value { font-size: 28px; }
@@ -851,7 +865,7 @@ body.accessible-mode input:focus {
     .header-left { gap: 12px; }
     .user-details { display: none; }
     #sub-header { padding: 0 12px; }
-    #main-content { padding: 12px; }
+    #main-content { padding: 12px; flex: 1 1 0%; min-width: 0; }
     .page-title { font-size: 18px; }
     .btn { padding: 8px 16px; font-size: 13px; }
     .footer-grid { grid-template-columns: 1fr; gap: 20px; text-align: center; }

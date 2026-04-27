@@ -28,7 +28,9 @@ public class FormDefinitionsController : BaseController
 
     // ── GET LIST ─────────────────────────────────────────────────────────────
     [HttpGet]
-    public async Task<IActionResult> GetFormDefinitions(string? search, string? status, int? formClassId, int? typeId)
+    public async Task<IActionResult> GetFormDefinitions(
+        string? search, string? status, int? formClassId, int? typeId,
+        string? ownership, int? templateId, int? orgUnitId, string? activation)
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
 
@@ -57,6 +59,20 @@ public class FormDefinitionsController : BaseController
             all = all.Where(f => f.FormClassId == formClassId.Value).ToList();
         if (typeId.HasValue && typeId.Value > 0)
             all = all.Where(f => f.FormTypeId == typeId.Value).ToList();
+        if (!string.IsNullOrWhiteSpace(ownership) && (ownership == "عام" || ownership == "خاص"))
+            all = all.Where(f => f.Ownership == ownership).ToList();
+        if (templateId.HasValue && templateId.Value > 0)
+            all = all.Where(f => f.TemplateId == templateId.Value).ToList();
+        if (orgUnitId.HasValue && orgUnitId.Value > 0)
+            all = all.Where(f => f.OrganizationalUnitId == orgUnitId.Value).ToList();
+        if (!string.IsNullOrWhiteSpace(activation))
+        {
+            var act = activation.Trim().ToLowerInvariant();
+            if (act == "active")
+                all = all.Where(f => f.IsActive).ToList();
+            else if (act == "inactive")
+                all = all.Where(f => !f.IsActive).ToList();
+        }
 
         var formClassesAll = await _ds.ListFormClassesAsync();
         var formTypesAll = await _ds.ListFormSectionsAsync();
@@ -67,7 +83,6 @@ public class FormDefinitionsController : BaseController
         var templates = await _ds.ListFormTemplatesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
 
-        // مساحات العمل المتاحة للاختيار: لممثل الوحدة تُعرض مساحات وحدته فقط
         var workspacesForSelect = activeWorkspaces;
         if (!isAdmin)
         {
@@ -78,7 +93,8 @@ public class FormDefinitionsController : BaseController
         var data = all.Select(f => new
         {
             f.Id, f.Name, f.Description, f.Ownership, f.Status,
-            f.IsActive, f.CreatedBy, f.ApprovedBy,
+            f.IsActive, f.TemplateId, f.OrganizationalUnitId,
+            f.CreatedBy, f.ApprovedBy,
             CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd"),
             ApprovedAt = f.ApprovedAt?.ToString("yyyy-MM-dd"),
             f.RejectionReason,
@@ -91,6 +107,16 @@ public class FormDefinitionsController : BaseController
             OrgUnitName = units.FirstOrDefault(u => u.Id == f.OrganizationalUnitId)?.Name ?? "",
         }).ToList();
 
+        var templateFilters = templates
+            .OrderBy(t => t.Name)
+            .Select(t => new { id = t.Id, name = t.Name })
+            .ToList();
+        var orgUnitFilters = units
+            .OrderBy(u => u.SortOrder)
+            .ThenBy(u => u.Name)
+            .Select(u => new { id = u.Id, name = u.Name })
+            .ToList();
+
         return Json(new
         {
             success = true, data,
@@ -101,6 +127,8 @@ public class FormDefinitionsController : BaseController
             formTypes = formTypes.Select(t => new { t.Id, t.Name }),
             workspaces = workspacesForSelect.Select(w => new { w.Id, w.Name }),
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
+            templateFilters,
+            orgUnitFilters,
         });
     }
 
@@ -229,17 +257,18 @@ public class FormDefinitionsController : BaseController
         var orgUnitId = await GetCreatorOrgUnitIdAsync();
         if (!isAdmin && selWs.OrganizationalUnitId != orgUnitId)
             return Json(new { success = false, message = "لا يمكن اختيار مساحة عمل خارج وحدتك التنظيمية" });
+        var ownership = req.Ownership == "خاص" ? "خاص" : "عام";
         var f = new FormDefinition
         {
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
-            Ownership = isAdmin ? "عام" : (req.Ownership ?? "عام"),
+            Ownership = ownership,
             CategoryId = 0,
             FormClassId = req.FormClassId,
             FormTypeId = req.FormTypeId,
             WorkspaceId = req.WorkspaceId,
             TemplateId = req.TemplateId,
-            OrganizationalUnitId = orgUnitId,
+            OrganizationalUnitId = selWs.OrganizationalUnitId,
             Status = req.SendForApproval ? (isAdmin ? "approved" : "pending") : "draft",
             IsActive = req.SendForApproval && isAdmin,
             FieldsJson = req.FieldsJson ?? "[]",
@@ -289,20 +318,20 @@ public class FormDefinitionsController : BaseController
         if (!isAdmin)
         {
             var myUnitIdForUpd = await GetCreatorOrgUnitIdAsync();
-            // يسمح بالإبقاء على نفس مساحة العمل السابقة لو كانت مختلفة عن وحدته (grandfathered)،
-            // ولكن إذا غُيّرت يجب أن تكون ضمن مساحات وحدته
+        
             if (req.WorkspaceId != f.WorkspaceId && selWs.OrganizationalUnitId != myUnitIdForUpd)
                 return Json(new { success = false, message = "لا يمكن اختيار مساحة عمل خارج وحدتك التنظيمية" });
         }
 
         f.Name = req.Name?.Trim() ?? f.Name;
         f.Description = req.Description?.Trim() ?? f.Description;
-        f.Ownership = isAdmin ? "عام" : (req.Ownership ?? f.Ownership);
+        f.Ownership = req.Ownership == "خاص" ? "خاص" : (req.Ownership == "عام" ? "عام" : f.Ownership);
         f.CategoryId = 0;
         f.FormClassId = req.FormClassId;
         f.FormTypeId = req.FormTypeId;
         f.WorkspaceId = req.WorkspaceId;
         f.TemplateId = req.TemplateId;
+        f.OrganizationalUnitId = selWs.OrganizationalUnitId;
         f.FieldsJson = req.FieldsJson ?? f.FieldsJson;
         f.UpdatedBy = CurrentUserFullName;
         f.UpdatedAt = DateTime.Now;
@@ -464,8 +493,8 @@ public class FormDefinitionsController : BaseController
         var allLists = await _ds.ListDropdownListsAsync();
         if (!isAdmin)
             allLists = allLists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myOrgId)).ToList();
-        var dropdownLists = allLists.Where(l => l.IsActive && l.ListType == "قائمة مستقلة").OrderBy(l => l.SortOrder)
-            .Select(l => new { l.Id, l.Name }).ToList();
+        var dropdownLists = allLists.Where(l => l.IsActive).OrderBy(l => l.SortOrder)
+            .Select(l => new { l.Id, l.Name, l.ListType, l.ParentListId, l.LevelCount }).ToList();
 
         return Json(new { success = true, readyTables, dropdownLists });
     }

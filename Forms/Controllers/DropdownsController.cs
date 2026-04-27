@@ -202,8 +202,8 @@ public class DropdownsController : BaseController
         if (user != null && !string.IsNullOrEmpty(user.Email))
         {
             var beneficiary = await _ds.GetBeneficiaryByEmailAsync(user.Email);
-            if (beneficiary != null)
-                return beneficiary.OrganizationalUnitId;
+            if (beneficiary != null && beneficiary.OrganizationalUnitId.HasValue)
+                return beneficiary.OrganizationalUnitId.Value;
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
         return units.Count > 0 ? units.First().Id : 0;

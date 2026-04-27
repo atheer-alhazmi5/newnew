@@ -33,7 +33,14 @@
 .bnf-form-row-3 { grid-template-columns:repeat(3,1fr); }
 .bnf-photo-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--gray-200); background:var(--gray-100); }
 .bnf-photo-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.bnf-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.bnf-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-page-header > div:first-child { min-width:0; flex:1 1 auto; }
+.bnf-page-header .btn-primary { flex-shrink:0; }
+#bnfFiltersWrap { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+.bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:1040px; }
 .bnf-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
 .bnf-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
 .bnf-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
@@ -80,6 +87,7 @@
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
 
+<div class="bnf-settings-page">
 <div class="bnf-page-header">
     <div>
         <h2 class="page-title" style="margin:0;">المستفيدين</h2>
@@ -105,7 +113,8 @@
     </div>
     <select class="rt-filter-select form-select" id="bnfFilterSubRole" style="min-width:220px;">
         <option value="">الدور الفرعي</option>
-        <option value="__none__">بدون دور فرعي</option>
+        <option value="__employee__">الموظف</option>
+        <option value="__unit_manager__">مدير الوحده التنظيميه</option>
         <option value="ممثل الوحدة التنظيمية">ممثل الوحدة التنظيمية</option>
         <option value="مدير النظام">مدير النظام</option>
     </select>
@@ -138,6 +147,7 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Add/Edit Modal -->
 <div class="modal fade" id="bnfFormModal" tabindex="-1">
@@ -150,6 +160,26 @@
             </div>
             <div class="bnf-modal-body">
                 <input type="hidden" id="bnfId">
+
+                <!-- الدور — أول حقل في النموذج -->
+                <div class="bnf-section" id="bnfSectionRole">
+                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الدور</div>
+                    <div class="bnf-form-row">
+                        <div class="col-12">
+                            <label class="form-label">اختر الدور<span class="required-star">*</span></label>
+                            <div class="d-flex gap-4 flex-wrap" role="group" aria-label="الدور">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية" checked>
+                                    <label class="form-check-label" for="bnfSubRoleUnit">ممثل وحدة تنظيمية</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
+                                    <label class="form-check-label" for="bnfSubRoleAdmin">مدير نظام</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- قسم الصورة والهوية -->
                 <div class="bnf-section">
@@ -166,7 +196,7 @@
                                 <button type="button" class="btn btn-link btn-sm p-0" id="bnfPhotoChangeBtn" style="display:none;font-size:13px;" onclick="bnfShowPhotoFileInput()">تغيير الصورة</button>
                             </div>
                         </div>
-                        <div>
+                        <div class="bnf-rep-only" id="bnfWrapNationalId">
                             <label class="form-label">الهوية الوطنية<span class="required-star">*</span></label>
                             <input type="text" class="form-control" id="bnfNationalId" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="10 أرقام تبدأ بـ 10 أو 11">
                         </div>
@@ -176,7 +206,7 @@
                 </div>
 
                 <!-- قسم التأشير والتوقيع -->
-                <div class="bnf-section">
+                <div class="bnf-section bnf-rep-only" id="bnfSectionEndorsement">
                     <div class="bnf-section-title"><i class="bi bi-pencil-square"></i>التأشير والتوقيع</div>
                     <div class="bnf-form-row bnf-form-row-2">
                         <div>
@@ -244,7 +274,7 @@
                 </div>
 
                 <!-- قسم الوحدة والاتصال -->
-                <div class="bnf-section">
+                <div class="bnf-section bnf-rep-only" id="bnfSectionOuContact">
                     <div class="bnf-section-title"><i class="bi bi-building"></i>الوحدة والاتصال</div>
                     <div class="bnf-form-row">
                         <div>
@@ -274,27 +304,15 @@
                     </div>
                 </div>
 
-                <!-- قسم الأدوار وبيانات الدخول -->
-                <div class="bnf-section">
-                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وبيانات الدخول</div>
+                <!-- قسم بيانات الدخول -->
+                <div class="bnf-section" id="bnfSectionLogin">
+                    <div class="bnf-section-title"><i class="bi bi-key-fill"></i>بيانات الدخول</div>
                     <div class="bnf-form-row">
-                        <div>
-                            <label class="form-label">الدور</label>
-                            <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية">
-                                    <label class="form-check-label" for="bnfSubRoleUnit">ممثل الوحدة التنظيمية</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
-                                    <label class="form-check-label" for="bnfSubRoleAdmin">مدير النظام</label>
-                                </div>
-                            </div>
-                        </div>
                         <div>
                             <label class="form-label">اسم المستخدم<span class="required-star">*</span></label>
                             <input type="text" class="form-control" id="bnfUsername" placeholder="اسم المستخدم (إنجليزي)" autocomplete="off" dir="ltr" style="text-align:left;">
                         </div>
+                        <div></div>
                         <div></div>
                         <div></div>
                     </div>

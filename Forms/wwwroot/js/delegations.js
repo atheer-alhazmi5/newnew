@@ -194,11 +194,21 @@ function dlgFilterList() {
     });
 }
 
+function dlgComputeDays(startDate, endDate) {
+    if (!startDate || !endDate) return null;
+    var s = new Date(startDate);
+    var e = new Date(endDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+    var diffMs = e - s;
+    if (diffMs < 0) return 0;
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+}
+
 function dlgRenderTable() {
     var body = document.getElementById('dlgBody');
     var list = dlgFilterList();
     if (!list.length) {
-        body.innerHTML = '<tr><td colspan="9">' +
+        body.innerHTML = '<tr><td colspan="10">' +
             (typeof emptyState === 'function'
                 ? emptyState('bi-arrow-left-right', 'لا توجد تفويضات', 'أضف تفويض جديد للبدء')
                 : '<div class="text-center py-4 text-muted">لا توجد تفويضات</div>') +
@@ -207,6 +217,10 @@ function dlgRenderTable() {
     }
     var html = '';
     list.forEach(function (d, i) {
+        var days = dlgComputeDays(d.startDate, d.endDate);
+        var daysCell = (days == null)
+            ? '<span style="color:var(--gray-400);">—</span>'
+            : '<span style="font-weight:700;color:var(--sa-700);">' + days + '</span>';
         html += '<tr>' +
             '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (i + 1) + '</td>' +
             '<td style="font-weight:700;">' + dlgEsc(d.delegatorName || '—') + '</td>' +
@@ -215,6 +229,7 @@ function dlgRenderTable() {
             '<td>' + dlgEsc(d.delegateeOrgUnitName || '—') + '</td>' +
             '<td style="text-align:center;direction:ltr;">' + dlgEsc(d.startDate || '') + '</td>' +
             '<td style="text-align:center;direction:ltr;">' + dlgEsc(d.endDate || '') + '</td>' +
+            '<td style="text-align:center;">' + daysCell + '</td>' +
             '<td style="text-align:center;">' + dlgStatusPill(d.statusCode) + '</td>' +
             '<td style="text-align:center;">' +
                 '<div style="display:inline-flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +

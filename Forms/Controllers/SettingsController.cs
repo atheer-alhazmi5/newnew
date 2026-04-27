@@ -496,14 +496,14 @@ public class SettingsController : BaseController
             var isUnitManager = false;
             if (benByUsername.TryGetValue(u.Username.ToLower(), out var ben))
             {
-                ouId = ben.OrganizationalUnitId;
+                ouId = ben.OrganizationalUnitId ?? 0;
                 isUnitManager = ben.IsUnitManager;
                 ouMap.TryGetValue(ouId, out ouName);
                 ouName ??= "";
             }
             else
             {
-                ouId = u.DepartmentId;
+                ouId = u.DepartmentId ?? 0;
                 ouName = u.Department?.Name ?? "";
             }
             return new { u.Id, FullName = u.FullName, DepartmentId = ouId, DepartmentName = ouName, IsUnitManager = isUnitManager };
@@ -1305,7 +1305,7 @@ public class SettingsController : BaseController
                 b.ThirdName,
                 b.FourthName,
                 b.OrganizationalUnitId,
-                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == b.OrganizationalUnitId)?.Name ?? "",
+                OrganizationalUnitName = GetBeneficiaryOrganizationalUnitName(b.OrganizationalUnitId, units),
                 b.Phone,
                 b.Email,
                 b.Username,
@@ -1331,11 +1331,20 @@ public class SettingsController : BaseController
         var err = ValidateBeneficiary(req, isAdd: true);
         if (err != null) return Json(new { success = false, message = err });
 
-        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), req.Username!.Trim(), excludeId: null);
+        if (IsBeneficiarySysAdminRole(req.SubRole))
+        {
+            var defErr = ApplySysAdminBeneficiaryDefaultsForAdd(req);
+            if (defErr != null) return Json(new { success = false, message = defErr });
+        }
+
+        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId, req.Phone, req.Email, req.Username!.Trim(), excludeId: null);
         if (dup != null)
             return dup;
 
-        if (req.IsUnitManager && await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId))
+        if (req.IsUnitManager
+            && req.OrganizationalUnitId.HasValue
+            && req.OrganizationalUnitId.Value > 0
+            && await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId.Value))
             return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
 
         if (string.IsNullOrEmpty(req.Password))
@@ -1344,7 +1353,7 @@ public class SettingsController : BaseController
         var b = new Beneficiary
         {
             PhotoUrl = req.PhotoUrl ?? "",
-            NationalId = req.NationalId!.Trim(),
+            NationalId = string.IsNullOrWhiteSpace(req.NationalId) ? null : req.NationalId.Trim(),
             EndorsementType = req.EndorsementType ?? "مرفق",
             EndorsementFile = req.EndorsementFile ?? "",
             SignatureType = req.SignatureType ?? "مرفق",
@@ -1353,9 +1362,11 @@ public class SettingsController : BaseController
             SecondName = req.SecondName!.Trim(),
             ThirdName = req.ThirdName!.Trim(),
             FourthName = req.FourthName!.Trim(),
-            OrganizationalUnitId = req.OrganizationalUnitId,
-            Phone = req.Phone!.Trim(),
-            Email = req.Email!.Trim(),
+            OrganizationalUnitId = IsBeneficiarySysAdminRole(req.SubRole)
+                ? null
+                : (req.OrganizationalUnitId.HasValue && req.OrganizationalUnitId.Value > 0 ? req.OrganizationalUnitId : null),
+            Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim(),
             Username = req.Username!.Trim(),
             IsActive = req.IsActive,
             MainRole = "موظف",
@@ -1399,20 +1410,35 @@ public class SettingsController : BaseController
         var b = await _ds.GetBeneficiaryByIdAsync(req.Id);
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
 
-        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId!.Trim(), req.Phone!.Trim(), req.Email!.Trim(), req.Username!.Trim(), req.Id);
+        if (IsBeneficiarySysAdminRole(req.SubRole))
+        {
+            req.NationalId = string.IsNullOrWhiteSpace(req.NationalId) ? null : req.NationalId.Trim();
+            req.Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
+            req.Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
+            if (!(req.OrganizationalUnitId.HasValue && req.OrganizationalUnitId.Value > 0))
+                req.OrganizationalUnitId = null;
+            if (string.IsNullOrWhiteSpace(req.EndorsementFile)) req.EndorsementFile = b.EndorsementFile;
+            if (string.IsNullOrWhiteSpace(req.SignatureFile)) req.SignatureFile = b.SignatureFile;
+        }
+
+        var dup = await CheckBeneficiaryDuplicatesAsync(req.NationalId, req.Phone, req.Email, req.Username!.Trim(), req.Id);
         if (dup != null)
             return dup;
 
         var newIsUnitManager = req.IsUnitManager;
-        if (newIsUnitManager && (!b.IsUnitManager || b.OrganizationalUnitId != req.OrganizationalUnitId))
+        var reqOuId = req.OrganizationalUnitId;
+        if (newIsUnitManager
+            && reqOuId.HasValue
+            && reqOuId.Value > 0
+            && (!b.IsUnitManager || b.OrganizationalUnitId != reqOuId))
         {
-            if (await _ds.HasManagerInUnitAsync(req.OrganizationalUnitId, req.Id))
+            if (await _ds.HasManagerInUnitAsync(reqOuId.Value, req.Id))
                 return Json(new { success = false, message = "هذه الوحدة التنظيمية لديها مدير بالفعل. لا يمكن إضافة مدير آخر." });
         }
 
         var oldUsername = b.Username;
         b.PhotoUrl = req.PhotoUrl ?? b.PhotoUrl;
-        b.NationalId = req.NationalId!.Trim();
+        b.NationalId = string.IsNullOrWhiteSpace(req.NationalId) ? null : req.NationalId.Trim();
         b.EndorsementType = req.EndorsementType ?? b.EndorsementType;
         b.EndorsementFile = req.EndorsementFile ?? b.EndorsementFile;
         b.SignatureType = req.SignatureType ?? b.SignatureType;
@@ -1422,8 +1448,8 @@ public class SettingsController : BaseController
         b.ThirdName = req.ThirdName!.Trim();
         b.FourthName = req.FourthName!.Trim();
         b.OrganizationalUnitId = req.OrganizationalUnitId;
-        b.Phone = req.Phone!.Trim();
-        b.Email = req.Email!.Trim();
+        b.Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
+        b.Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
         b.Username = req.Username!.Trim();
         b.IsActive = req.IsActive;
         b.MainRole = "موظف";
@@ -1477,14 +1503,26 @@ public class SettingsController : BaseController
         return Json(new { success = true, message = "تم حذف المستفيد بنجاح" });
     }
 
-    private async Task<IActionResult?> CheckBeneficiaryDuplicatesAsync(string nationalId, string phone, string email, string username, int? excludeId)
+    private async Task<IActionResult?> CheckBeneficiaryDuplicatesAsync(string? nationalId, string? phone, string? email, string username, int? excludeId)
     {
-        if (await _ds.GetBeneficiaryByNationalIdAsync(nationalId, excludeId) != null)
-            return Json(new { success = false, message = "رقم الهوية مسجل مسبقًا", duplicateField = "nationalId" });
-        if (await _ds.GetBeneficiaryByPhoneAsync(phone, excludeId) != null)
-            return Json(new { success = false, message = "رقم الجوال مستخدم من قبل", duplicateField = "phone" });
-        if (await _ds.GetBeneficiaryByEmailAsync(email, excludeId) != null)
-            return Json(new { success = false, message = "البريد الإلكتروني مستخدم مسبقًا", duplicateField = "email" });
+        if (!string.IsNullOrWhiteSpace(nationalId))
+        {
+            var nid = nationalId.Trim();
+            if (await _ds.GetBeneficiaryByNationalIdAsync(nid, excludeId) != null)
+                return Json(new { success = false, message = "رقم الهوية مسجل مسبقًا", duplicateField = "nationalId" });
+        }
+        if (!string.IsNullOrWhiteSpace(phone))
+        {
+            var p = phone.Trim();
+            if (await _ds.GetBeneficiaryByPhoneAsync(p, excludeId) != null)
+                return Json(new { success = false, message = "رقم الجوال مستخدم من قبل", duplicateField = "phone" });
+        }
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var em = email.Trim();
+            if (await _ds.GetBeneficiaryByEmailAsync(em, excludeId) != null)
+                return Json(new { success = false, message = "البريد الإلكتروني مستخدم مسبقًا", duplicateField = "email" });
+        }
         if (await _ds.GetBeneficiaryByUsernameAsync(username, excludeId) != null)
             return Json(new { success = false, message = "اسم المستخدم مستخدم مسبقًا", duplicateField = "username" });
         var existingUser = await _ds.GetUserByUsernameAsync(username);
@@ -1505,8 +1543,67 @@ public class SettingsController : BaseController
         return UserRole.Staff;
     }
 
+    private static bool IsBeneficiarySysAdminRole(string? subRole) =>
+        string.Equals((subRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal);
+
+    private static string GetBeneficiaryOrganizationalUnitName(int? organizationalUnitId, IEnumerable<OrganizationalUnit> units)
+    {
+        if (!organizationalUnitId.HasValue || organizationalUnitId.Value <= 0) return "";
+        return units.FirstOrDefault(u => u.Id == organizationalUnitId.Value)?.Name ?? "";
+    }
+
+    /// <summary>
+    /// مدير النظام: لا هوية/جوال/بريد/وحدة — تُخزَّن كقيم null في قاعدة البيانات (بدون توليد عشوائي).
+    /// </summary>
+    private static string? ApplySysAdminBeneficiaryDefaultsForAdd(BeneficiaryRequest req)
+    {
+        req.NationalId = null;
+        req.Phone = null;
+        req.Email = null;
+        req.OrganizationalUnitId = null;
+        req.IsUnitManager = false;
+        if (string.IsNullOrWhiteSpace(req.EndorsementType)) req.EndorsementType = "مرفق";
+        req.EndorsementFile ??= "";
+        if (string.IsNullOrWhiteSpace(req.SignatureType)) req.SignatureType = "مرفق";
+        req.SignatureFile ??= "";
+        return null;
+    }
+
     private string? ValidateBeneficiary(dynamic req, bool isAdd)
     {
+        var subRole = ((string?)req.SubRole ?? "").Trim();
+        if (subRole != "ممثل الوحدة التنظيمية" && subRole != "مدير النظام")
+            return "اختر الدور: ممثل وحدة تنظيمية أو مدير نظام";
+
+        if (IsBeneficiarySysAdminRole(subRole))
+        {
+            if (string.IsNullOrWhiteSpace(req.Username))
+                return "اسم المستخدم مطلوب";
+            var usernameSa = ((string?)req.Username ?? "").Trim();
+            if (usernameSa.Length < 3)
+                return "اسم المستخدم يجب أن يكون 3 أحرف على الأقل";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(usernameSa, @"^[a-zA-Z0-9_]+$"))
+                return "اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط";
+
+            if (string.IsNullOrWhiteSpace(req.FirstName)) return "الاسم الأول مطلوب";
+            if (string.IsNullOrWhiteSpace(req.SecondName)) return "الاسم الثاني مطلوب";
+            if (string.IsNullOrWhiteSpace(req.ThirdName)) return "الاسم الثالث مطلوب";
+            if (string.IsNullOrWhiteSpace(req.FourthName)) return "الاسم الرابع مطلوب";
+
+            var pwd = (string?)req.Password;
+            var confirm = (string?)req.ConfirmPassword;
+            if (!string.IsNullOrEmpty(pwd) && pwd != (confirm ?? ""))
+                return "كلمة المرور وتأكيد كلمة المرور غير متطابقتين";
+            if (isAdd && string.IsNullOrEmpty(pwd))
+                return "كلمة المرور مطلوبة عند إضافة مستفيد جديد";
+            if (!string.IsNullOrEmpty(pwd))
+            {
+                var pwdErr = ValidateBeneficiaryPasswordStrength(pwd);
+                if (pwdErr != null) return pwdErr;
+            }
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(req.NationalId))
             return "الهوية الوطنية مطلوبة";
         var nid = ((string?)req.NationalId ?? "").Trim();
@@ -1539,15 +1636,15 @@ public class SettingsController : BaseController
         if (string.IsNullOrWhiteSpace(req.SecondName)) return "الاسم الثاني مطلوب";
         if (string.IsNullOrWhiteSpace(req.ThirdName)) return "الاسم الثالث مطلوب";
         if (string.IsNullOrWhiteSpace(req.FourthName)) return "الاسم الرابع مطلوب";
-        if (req.OrganizationalUnitId <= 0) return "الوحدة التنظيمية مطلوبة";
+        if ((req.OrganizationalUnitId ?? 0) <= 0) return "الوحدة التنظيمية مطلوبة";
 
-        var pwd = (string?)req.Password;
-        var confirm = (string?)req.ConfirmPassword;
-        if (!string.IsNullOrEmpty(pwd) && pwd != (confirm ?? ""))
+        var pwdRep = (string?)req.Password;
+        var confirmRep = (string?)req.ConfirmPassword;
+        if (!string.IsNullOrEmpty(pwdRep) && pwdRep != (confirmRep ?? ""))
             return "كلمة المرور وتأكيد كلمة المرور غير متطابقتين";
-        if (!string.IsNullOrEmpty(pwd))
+        if (!string.IsNullOrEmpty(pwdRep))
         {
-            var pwdErr = ValidateBeneficiaryPasswordStrength(pwd);
+            var pwdErr = ValidateBeneficiaryPasswordStrength(pwdRep);
             if (pwdErr != null) return pwdErr;
         }
         return null;
@@ -1594,11 +1691,12 @@ public class SettingsController : BaseController
         return a.NationalId ?? "";
     }
 
-    private static string ResolveUnitDisplayName(int departmentId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    private static string ResolveUnitDisplayName(int? departmentId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
     {
-        var d = depts.FirstOrDefault(x => x.Id == departmentId);
+        if (!departmentId.HasValue || departmentId.Value <= 0) return "";
+        var d = depts.FirstOrDefault(x => x.Id == departmentId.Value);
         if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
-        var ou = orgUnits.FirstOrDefault(x => x.Id == departmentId);
+        var ou = orgUnits.FirstOrDefault(x => x.Id == departmentId.Value);
         return ou?.Name?.Trim() ?? "";
     }
 
@@ -1717,7 +1815,7 @@ public class SettingsController : BaseController
     {
         return beneficiaries
             .Where(b => !string.IsNullOrWhiteSpace(b.NationalId))
-            .GroupBy(b => b.NationalId.Trim(), StringComparer.Ordinal)
+            .GroupBy(b => b.NationalId!.Trim(), StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => (g.First().FullName ?? "").Trim(), StringComparer.Ordinal);
     }
 
@@ -2038,7 +2136,7 @@ public class BeneficiaryRequest
     public string? SecondName { get; set; }
     public string? ThirdName { get; set; }
     public string? FourthName { get; set; }
-    public int OrganizationalUnitId { get; set; }
+    public int? OrganizationalUnitId { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Username { get; set; }

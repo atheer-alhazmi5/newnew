@@ -174,6 +174,22 @@
         <option value="approved">معتمد</option>
         <option value="rejected">مرفوض</option>
     </select>
+    <select class="rt-filter-select form-select" id="fdFilterOwnership" onchange="fdLoad()">
+        <option value="">الملكية</option>
+        <option value="عام">عام</option>
+        <option value="خاص">خاص</option>
+    </select>
+    <select class="rt-filter-select form-select" id="fdFilterTemplate" onchange="fdLoad()">
+        <option value="">القالب</option>
+    </select>
+    <select class="rt-filter-select form-select" id="fdFilterOrgUnit" onchange="fdLoad()">
+        <option value="">الوحدة التنظيمية</option>
+    </select>
+    <select class="rt-filter-select form-select" id="fdFilterActivation" onchange="fdLoad()">
+        <option value="">التفعيل</option>
+        <option value="active">نشط</option>
+        <option value="inactive">غير نشط</option>
+    </select>
     <button class="rt-clear-btn" onclick="fdClear()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
@@ -210,7 +226,7 @@
 
 <!-- =================== WIZARD MODAL =================== -->
 <div class="modal fade" id="fdWizardModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content fd-modal">
             <div class="fd-modal-header create" id="fdWizardHead">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -226,7 +242,10 @@
                     <span class="fd-step-num">2</span> بناء الحقول
                 </div>
                 <div class="fd-step" id="fdStep3El">
-                    <span class="fd-step-num">3</span> معاينة النموذج
+                    <span class="fd-step-num">3</span> المنطق الشرطي
+                </div>
+                <div class="fd-step" id="fdStep4El">
+                    <span class="fd-step-num">4</span> معاينة النموذج
                 </div>
             </div>
             <div class="fd-modal-body" id="fdWizardBody"></div>

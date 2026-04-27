@@ -223,7 +223,9 @@ public class DataService
     public Task<List<User>> ListUsersAsync(int? deptId = null)
     {
         var users = _db.Users;
-        var filtered = deptId.HasValue ? users.Where(u => u.DepartmentId == deptId.Value).ToList() : users;
+        var filtered = deptId.HasValue
+            ? users.Where(u => u.DepartmentId.HasValue && u.DepartmentId.Value == deptId.Value).ToList()
+            : users;
         foreach (var u in filtered)
             HydrateUserDepartment(u);
         return Task.FromResult(filtered);
@@ -233,10 +235,12 @@ public class DataService
     private void HydrateUserDepartment(User? u)
     {
         if (u == null) return;
+        if (!u.DepartmentId.HasValue) { u.Department = null; return; }
+        var deptId = u.DepartmentId.Value;
         var depts = _db.Departments;
-        u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+        u.Department = depts.FirstOrDefault(d => d.Id == deptId);
         if (u.Department != null) return;
-        var ou = _db.OrganizationalUnits.FirstOrDefault(o => o.Id == u.DepartmentId);
+        var ou = _db.OrganizationalUnits.FirstOrDefault(o => o.Id == deptId);
         if (ou == null) return;
         u.Department = new Department { Id = ou.Id, Name = ou.Name, Code = "", CreatedAt = DateTime.UtcNow };
     }
@@ -399,7 +403,7 @@ public class DataService
     public Task<List<ReceivedForm>> ListApprovalRequestsForManagerAsync(int managerId, int deptId)
     {
         // Manager sees approval requests sent to their department users or themselves
-        var users = _db.Users.Where(u => u.DepartmentId == deptId).Select(u => u.Id).ToHashSet();
+        var users = _db.Users.Where(u => u.DepartmentId.HasValue && u.DepartmentId.Value == deptId).Select(u => u.Id).ToHashSet();
         users.Add(managerId);
         var list = _db.ReceivedForms
             .Where(r => users.Contains(r.RecipientId) && r.Category == "approval_request")
@@ -831,8 +835,23 @@ public class DataService
         try
         {
             using var doc = JsonDocument.Parse(fieldsJson);
-            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
-            foreach (var field in doc.RootElement.EnumerateArray())
+            JsonElement fieldsArr;
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                fieldsArr = doc.RootElement;
+            }
+            else if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                     (doc.RootElement.TryGetProperty("fields", out fieldsArr) ||
+                      doc.RootElement.TryGetProperty("Fields", out fieldsArr)) &&
+                     fieldsArr.ValueKind == JsonValueKind.Array)
+            {
+                // OK — fieldsArr now points to the inner fields[] array
+            }
+            else
+            {
+                return false;
+            }
+            foreach (var field in fieldsArr.EnumerateArray())
             {
                 if (field.ValueKind != JsonValueKind.Object) continue;
                 if (!field.TryGetProperty("propertiesJson", out var pj) &&
@@ -1107,7 +1126,8 @@ public class DataService
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b => b.Id == id));
 
     public Task<Beneficiary?> GetBeneficiaryByNationalIdAsync(string nationalId, int? excludeId = null)
-        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b => b.NationalId == nationalId && (!excludeId.HasValue || b.Id != excludeId.Value)));
+        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
+            b.NationalId != null && b.NationalId == nationalId && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
     public Task<Beneficiary> AddBeneficiaryAsync(Beneficiary b)
     {
@@ -1167,14 +1187,14 @@ public class DataService
 
     public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
-            b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
+            b.Email != null && b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
             && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
     public Task<Beneficiary?> GetBeneficiaryByPhoneAsync(string phone, int? excludeId = null)
     {
         var p = phone.Trim();
         return Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
-            b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
+            b.Phone != null && b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
     }
 
     public Task<Beneficiary?> GetBeneficiaryByUsernameAsync(string username, int? excludeId = null)

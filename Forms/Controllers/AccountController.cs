@@ -148,7 +148,7 @@ public class AccountController : BaseController
         HttpContext.Session.SetString("UserName", user.Username);
         HttpContext.Session.SetString("UserFullName", user.FullName);
         HttpContext.Session.SetString("UserRole", user.RoleName);
-        HttpContext.Session.SetInt32("DepartmentId", user.DepartmentId);
+        HttpContext.Session.SetInt32("DepartmentId", user.DepartmentId ?? 0);
         HttpContext.Session.SetString("DepartmentName", user.Department?.Name ?? "");
         HttpContext.Session.SetString("UserNationalId", user.NationalId ?? "");
 
@@ -164,7 +164,155 @@ public class AccountController : BaseController
             IpAddress = ip, Browser = browser, OperatingSystem = os
         });
 
+        if (await UserHasActiveIncomingDelegationAsync(user))
+            return RedirectToAction("SelectAccount");
+
         return RedirectAfterLogin(user.RoleName);
+    }
+
+    private async Task<bool> UserHasActiveIncomingDelegationAsync(User user)
+    {
+        var bens = await _ds.ListBeneficiariesAsync();
+        var ben = bens.FirstOrDefault(b =>
+            (!string.IsNullOrEmpty(user.NationalId) && b.NationalId == user.NationalId) ||
+            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, user.Username, StringComparison.OrdinalIgnoreCase)));
+        if (ben == null) return false;
+        var delegations = await _ds.ListDelegationsAsync();
+        var today = DateTime.Today;
+        return delegations.Any(d =>
+            d.DelegateeBeneficiaryId == ben.Id &&
+            d.Status != "cancelled" && d.Status != "draft" &&
+            d.StartDate.Date <= today && d.EndDate.Date >= today);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SelectAccount()
+    {
+        if (!IsAuthenticated)
+            return RedirectToAction("Login");
+
+        var bens = await _ds.ListBeneficiariesAsync();
+        var ben = bens.FirstOrDefault(b =>
+            (!string.IsNullOrEmpty(CurrentUserNationalId) && b.NationalId == CurrentUserNationalId) ||
+            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, CurrentUserName, StringComparison.OrdinalIgnoreCase)));
+        if (ben == null)
+            return RedirectAfterLogin(CurrentUserRole);
+
+        var delegations = await _ds.ListDelegationsAsync();
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var today = DateTime.Today;
+        var active = delegations.Where(d =>
+            d.DelegateeBeneficiaryId == ben.Id &&
+            d.Status != "cancelled" && d.Status != "draft" &&
+            d.StartDate.Date <= today && d.EndDate.Date >= today).ToList();
+
+        if (!active.Any())
+            return RedirectAfterLogin(CurrentUserRole);
+
+        var benById = bens.ToDictionary(b => b.Id);
+        var unitById = units.ToDictionary(u => u.Id);
+        var options = active.Select(d =>
+        {
+            benById.TryGetValue(d.DelegatorBeneficiaryId, out var dor);
+            unitById.TryGetValue(d.DelegatorOrgUnitId, out var dorU);
+            return new DelegationChoiceVm
+            {
+                DelegationId = d.Id,
+                DelegatorName = dor?.FullName ?? "",
+                DelegatorUnitName = dorU?.Name ?? "",
+                StartDate = d.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = d.EndDate.ToString("yyyy-MM-dd")
+            };
+        }).ToList();
+
+        ViewBag.OwnFullName = CurrentUserFullName;
+        ViewBag.OwnDeptName = CurrentDeptName;
+        ViewBag.Options = options;
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelectAccount(string choice, int? delegationId)
+    {
+        if (!IsAuthenticated)
+            return RedirectToAction("Login");
+
+        if (choice == "self")
+            return RedirectAfterLogin(CurrentUserRole);
+
+        if (choice == "delegator" && delegationId.HasValue)
+        {
+            var d = await _ds.GetDelegationByIdAsync(delegationId.Value);
+            if (d == null)
+                return RedirectAfterLogin(CurrentUserRole);
+
+            var bens = await _ds.ListBeneficiariesAsync();
+            var meBen = bens.FirstOrDefault(b =>
+                (!string.IsNullOrEmpty(CurrentUserNationalId) && b.NationalId == CurrentUserNationalId) ||
+                (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, CurrentUserName, StringComparison.OrdinalIgnoreCase)));
+            if (meBen == null || d.DelegateeBeneficiaryId != meBen.Id)
+                return RedirectAfterLogin(CurrentUserRole);
+
+            var today = DateTime.Today;
+            var stillActive = d.Status != "cancelled" && d.Status != "draft" &&
+                              d.StartDate.Date <= today && d.EndDate.Date >= today;
+            if (!stillActive)
+                return RedirectAfterLogin(CurrentUserRole);
+
+            var dorBen = bens.FirstOrDefault(b => b.Id == d.DelegatorBeneficiaryId);
+            User? dorUser = null;
+            if (dorBen != null)
+            {
+                if (!string.IsNullOrEmpty(dorBen.Username))
+                    dorUser = await _ds.GetUserByUsernameAsync(dorBen.Username.Trim());
+            }
+            if (dorUser == null)
+                return RedirectAfterLogin(CurrentUserRole);
+
+            var impersonatorFullName = CurrentUserFullName;
+            var impersonatorUserId = CurrentUserId;
+
+            HttpContext.Session.SetInt32("ImpersonatorUserId", impersonatorUserId);
+            HttpContext.Session.SetString("ImpersonatorFullName", impersonatorFullName);
+            HttpContext.Session.SetInt32("DelegationId", d.Id);
+
+            HttpContext.Session.SetInt32("UserId", dorUser.Id);
+            HttpContext.Session.SetString("UserName", dorUser.Username);
+            HttpContext.Session.SetString("UserFullName", dorUser.FullName);
+            HttpContext.Session.SetString("UserRole", dorUser.RoleName);
+            HttpContext.Session.SetInt32("DepartmentId", dorUser.DepartmentId ?? 0);
+            HttpContext.Session.SetString("DepartmentName", dorUser.Department?.Name ?? "");
+            HttpContext.Session.SetString("UserNationalId", dorUser.NationalId ?? "");
+
+            await _ds.AddAuditLogAsync(new AuditLog
+            {
+                UserId = dorUser.Id,
+                UserName = dorUser.FullName,
+                NationalId = dorUser.NationalId ?? "",
+                OrganizationalUnit = dorUser.Department?.Name ?? "",
+                Action = "الدخول بصلاحية تفويض",
+                EntityType = "Delegation",
+                EntityId = d.Id.ToString(),
+                Details = $"تم الدخول بحساب المفوّض بواسطة {impersonatorFullName}",
+                IpAddress = GetClientIp(),
+                Browser = GetBrowserName(),
+                OperatingSystem = GetClientOS()
+            });
+
+            return RedirectAfterLogin(dorUser.RoleName);
+        }
+
+        return RedirectAfterLogin(CurrentUserRole);
+    }
+
+    public class DelegationChoiceVm
+    {
+        public int DelegationId { get; set; }
+        public string DelegatorName { get; set; } = "";
+        public string DelegatorUnitName { get; set; } = "";
+        public string StartDate { get; set; } = "";
+        public string EndDate { get; set; } = "";
     }
 
     [HttpPost]
