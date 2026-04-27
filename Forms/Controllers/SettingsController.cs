@@ -1537,9 +1537,10 @@ public class SettingsController : BaseController
 
     private static UserRole MapBeneficiaryToUserRole(bool isUnitManager, string subRole)
     {
-        if (subRole == "مدير النظام") return UserRole.Admin;
+        var sr = (subRole ?? "").Trim();
+        if (sr == "مدير النظام") return UserRole.Admin;
         if (isUnitManager) return UserRole.Manager;
-        if (subRole == "ممثل الوحدة التنظيمية") return UserRole.Employee;
+        if (sr == "ممثل الوحدة التنظيمية" || sr == "مستفيد فعلي") return UserRole.Employee;
         return UserRole.Staff;
     }
 
@@ -1572,8 +1573,11 @@ public class SettingsController : BaseController
     private string? ValidateBeneficiary(dynamic req, bool isAdd)
     {
         var subRole = ((string?)req.SubRole ?? "").Trim();
-        if (subRole != "ممثل الوحدة التنظيمية" && subRole != "مدير النظام")
-            return "اختر الدور: ممثل وحدة تنظيمية أو مدير نظام";
+        if (subRole != "مستفيد فعلي" && subRole != "ممثل الوحدة التنظيمية" && subRole != "مدير النظام")
+            return "اختر الدور: مستفيد فعلي أو مدير نظام";
+
+        if (subRole == "ممثل الوحدة التنظيمية" && req.IsUnitManager == true)
+            return "صفة ممثل الوحدة لا تُدمج مع مدير وحدة تنظيمية";
 
         if (IsBeneficiarySysAdminRole(subRole))
         {

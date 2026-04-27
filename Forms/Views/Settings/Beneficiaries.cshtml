@@ -115,6 +115,7 @@
         <option value="">الدور الفرعي</option>
         <option value="__employee__">الموظف</option>
         <option value="__unit_manager__">مدير الوحده التنظيميه</option>
+        <option value="مستفيد فعلي">مستفيد فعلي</option>
         <option value="ممثل الوحدة التنظيمية">ممثل الوحدة التنظيمية</option>
         <option value="مدير النظام">مدير النظام</option>
     </select>
@@ -167,10 +168,13 @@
                     <div class="bnf-form-row">
                         <div class="col-12">
                             <label class="form-label">اختر الدور<span class="required-star">*</span></label>
-                            <div class="d-flex gap-4 flex-wrap" role="group" aria-label="الدور">
+                            <div class="d-flex flex-column gap-3" role="group" aria-label="الدور">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية" checked>
-                                    <label class="form-check-label" for="bnfSubRoleUnit">ممثل وحدة تنظيمية</label>
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleActual" value="__actual__" checked>
+                                    <label class="form-check-label" for="bnfSubRoleActual">
+                                        مستفيد فعلي
+                                     
+                                    </label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
@@ -286,9 +290,18 @@
                                 </button>
                                 <div class="bnf-ou-tree-panel d-none" id="bnfOuTreePanel" role="listbox"></div>
                             </div>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" id="bnfIsUnitManager">
-                                <label class="form-check-label" for="bnfIsUnitManager">مدير وحدة تنظيمية</label>
+                            <div class="mt-3 pt-2 border-top border-light" id="bnfOuRelationWrap">
+                                <span class="form-label small text-muted mb-2 d-block"> اختر دور  <span style="font-weight:400;"></span></span>
+                                <div class="d-flex flex-wrap gap-3 align-items-center" role="group" aria-label="الصفة في الوحدة">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="radio" name="bnfOuRelation" id="bnfOuRelationMgr" value="manager">
+                                        <label class="form-check-label" for="bnfOuRelationMgr">مدير وحدة تنظيمية</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="radio" name="bnfOuRelation" id="bnfOuRelationRep" value="representative">
+                                        <label class="form-check-label" for="bnfOuRelationRep">ممثل وحدة تنظيمية</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div>

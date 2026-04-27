@@ -9,6 +9,18 @@ function bnfIsSysAdminRole() {
     return !!(c && c.value === 'مدير النظام');
 }
 
+/** ما يُحفظ في SubRole: مدير النظام | مستفيد فعلي | ممثل الوحدة التنظيمية */
+function bnfResolveSubRoleForSubmit() {
+    var main = document.querySelector('input[name="bnfSubRole"]:checked');
+    if (!main) return '';
+    if (main.value === 'مدير النظام') return 'مدير النظام';
+    var ouRel = document.querySelector('input[name="bnfOuRelation"]:checked');
+    if (!ouRel) return 'مستفيد فعلي';
+    if (ouRel.value === 'representative') return 'ممثل الوحدة التنظيمية';
+    if (ouRel.value === 'manager') return 'مستفيد فعلي';
+    return 'مستفيد فعلي';
+}
+
 function bnfApplyRoleVisibility() {
     var sys = bnfIsSysAdminRole();
     document.querySelectorAll('.bnf-rep-only').forEach(function (el) {
@@ -794,11 +806,16 @@ function bnfShowAddModal() {
     document.getElementById('bnfEmail').value = '';
     document.getElementById('bnfIsActive').checked = true;
     document.getElementById('bnfActivationStatus').textContent = 'مفعل';
-    document.getElementById('bnfIsUnitManager').checked = false;
-    var bnfSubUnit = document.getElementById('bnfSubRoleUnit');
-    var bnfSubAdm = document.getElementById('bnfSubRoleAdmin');
-    if (bnfSubUnit) bnfSubUnit.checked = true;
-    if (bnfSubAdm) bnfSubAdm.checked = false;
+    var bnfAct = document.getElementById('bnfSubRoleActual');
+    var bnfAdm = document.getElementById('bnfSubRoleAdmin');
+    if (bnfAct) bnfAct.checked = true;
+    if (bnfAdm) bnfAdm.checked = false;
+    var ouNone = document.getElementById('bnfOuRelationNone');
+    var ouMgr = document.getElementById('bnfOuRelationMgr');
+    var ouRep = document.getElementById('bnfOuRelationRep');
+    if (ouNone) ouNone.checked = true;
+    if (ouMgr) ouMgr.checked = false;
+    if (ouRep) ouRep.checked = false;
     bnfApplyRoleVisibility();
     document.getElementById('bnfUsername').value = '';
     document.getElementById('bnfUsername').readOnly = false;
@@ -872,11 +889,23 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfEmail').value = b.email || '';
     document.getElementById('bnfIsActive').checked = b.isActive !== false;
     document.getElementById('bnfActivationStatus').textContent = b.isActive !== false ? 'مفعل' : 'معطل';
-    document.getElementById('bnfIsUnitManager').checked = !!b.isUnitManager || b.mainRole === 'مدير';
-    var subRole = b.subRole || '';
-    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = (r.value === subRole); });
-    if (!document.querySelector('input[name="bnfSubRole"]:checked') && document.getElementById('bnfSubRoleUnit'))
-        document.getElementById('bnfSubRoleUnit').checked = true;
+    var subRole = (b.subRole || '').trim();
+    var isSys = subRole === 'مدير النظام';
+    var act = document.getElementById('bnfSubRoleActual');
+    var adm = document.getElementById('bnfSubRoleAdmin');
+    if (adm) adm.checked = isSys;
+    if (act) act.checked = !isSys;
+
+    var isUm = !!(b.isUnitManager || (b.mainRole || '').trim() === 'مدير');
+    var ouNone = document.getElementById('bnfOuRelationNone');
+    var ouMgr = document.getElementById('bnfOuRelationMgr');
+    var ouRep = document.getElementById('bnfOuRelationRep');
+    if (ouNone && ouMgr && ouRep) {
+        ouNone.checked = ouMgr.checked = ouRep.checked = false;
+        if (isUm) ouMgr.checked = true;
+        else if (subRole === 'ممثل الوحدة التنظيمية') ouRep.checked = true;
+        else ouNone.checked = true;
+    }
     document.getElementById('bnfUsername').value = b.username || '';
     document.getElementById('bnfPassword').value = '';
     document.getElementById('bnfConfirmPassword').value = '';
@@ -917,6 +946,10 @@ function bnfSubmit() {
 
     var photoData = document.getElementById('bnfPhoto').dataset.base64 || '';
     var isSys = bnfIsSysAdminRole();
+    var ouRelEl = document.querySelector('input[name="bnfOuRelation"]:checked');
+    var ouRel = ouRelEl ? ouRelEl.value : '';
+    var isUnitMgr = !isSys && ouRel === 'manager';
+    var subRoleSaved = bnfResolveSubRoleForSubmit();
     var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
     var sysAdd = isSys && isAdd;
     var body = {
@@ -935,8 +968,8 @@ function bnfSubmit() {
         email: sysAdd ? '' : document.getElementById('bnfEmail').value.trim(),
         username: document.getElementById('bnfUsername').value.trim(),
         isActive: document.getElementById('bnfIsActive').checked,
-        isUnitManager: isSys ? false : !!document.getElementById('bnfIsUnitManager').checked,
-        subRole: (document.querySelector('input[name="bnfSubRole"]:checked') || {}).value || '',
+        isUnitManager: isSys ? false : isUnitMgr,
+        subRole: subRoleSaved,
         password: document.getElementById('bnfPassword').value || undefined,
         confirmPassword: document.getElementById('bnfConfirmPassword').value || undefined
     };
@@ -996,8 +1029,14 @@ function bnfShowDetails(id) {
         '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-person-badge"></i>الأدوار وبيانات الدخول</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المستخدم:</strong></div><div class="col-md-10"><span dir="ltr">' + esc(b.username || '—') + '</span></div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>مدير وحدة تنظيمية:</strong></div><div class="col-md-10">' + ((b.isUnitManager || b.mainRole === 'مدير') ? 'نعم' : 'لا') + '</div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + (b.subRole ? esc(b.subRole) : '—') + '</div></div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + esc(b.roleDisplay || '—') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>الصفة في الوحدة:</strong></div><div class="col-md-10">' + esc((function () {
+            var sr = (b.subRole || '').trim();
+            if (sr === 'مدير النظام') return '—';
+            if (b.isUnitManager || (b.mainRole || '').trim() === 'مدير') return 'مدير وحدة تنظيمية';
+            if (sr === 'ممثل الوحدة التنظيمية') return 'ممثل وحدة تنظيمية';
+            return 'بدون تحديد';
+        })()) + '</div></div></div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-clock-history"></i>معلومات التدقيق</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المنشئ:</strong></div><div class="col-md-10">' + esc(b.createdBy || '—') + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>تاريخ الإنشاء:</strong></div><div class="col-md-10">' + esc(b.createdAt || '—') + '</div></div>' +
