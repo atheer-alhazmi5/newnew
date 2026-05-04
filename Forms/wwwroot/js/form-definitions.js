@@ -37,9 +37,7 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب (Placeholder)", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"مثال: 300" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
-        { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"fieldCount", label:"عدد الحقول", type:"number", placeholder:"مثال: 3" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"maxLength", label:"الحد الأقصى", type:"number" }
     ]},
     "البريد الإلكتروني": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -47,9 +45,7 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
-        { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"maxLength", label:"الحد الأقصى", type:"number" }
     ]},
     "رقم الهاتف": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -59,9 +55,7 @@ const FD_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] }
     ]},
     "نص قصير": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -69,9 +63,7 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
-        { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"maxLength", label:"الحد الأقصى", type:"number" }
     ]},
     "نص طويل": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -81,9 +73,7 @@ const FD_FIELD_TYPES = {
         { key:"heightPx", label:"الارتفاع", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] }
     ]},
     "فقرة": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -92,9 +82,7 @@ const FD_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] }
     ]},
     "رقم": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -102,53 +90,41 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
-        { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"maxValue", label:"الحد الأقصى", type:"number" }
     ]},
     "قائمة منسدلة": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"listType", label:"نوع القائمة", type:"select", options:["قائمة مستقلة","قائمة فرعية","قائمة هرمية"] },
-        { key:"dropdownListId", label:"اسم القائمة", type:"dropdownListPick" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"dropdownListId", label:"اسم القائمة", type:"dropdownListPick" }
     ]},
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
     ]},
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
     ]},
     "تاريخ": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"separator", label:"الفاصل", type:"select", options:["/",":","."] },
+        { key:"calendarType", label:"نوع التقويم", type:"select", options:["ميلادي","هجري"] },
         { key:"startDate", label:"تاريخ البداية", type:"date" },
-        { key:"endDate", label:"تاريخ النهاية", type:"date" },
-        { key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },
-        { key:"showCalendar", label:"ظهور التقويم", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"endDate", label:"تاريخ النهاية", type:"date" }
     ]},
     "وقت": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
-        { key:"autoTime", label:"الوقت التلقائي", type:"checkbox" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] }
     ]},
     "رفع ملف": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"buttonText", label:"نص الزر", type:"text", placeholder:"رفع ملف" },
         { key:"maxFiles", label:"حد عدد الملفات", type:"number" },
         { type:"fileMbLimitsPair", label:"حد حجم الملف (ميغابايت)", col:"col-12 mb-2" },
-        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" },
-        { key:"validateSize", label:"التحقق من الحجم", type:"checkbox" }
+        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" }
     ]},
     "دوار رقمي": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -156,46 +132,38 @@ const FD_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },
-        { key:"noDecimals", label:"بدون عشرية", type:"checkbox" },
-        { key:"negativeValue", label:"قيمة سلبية", type:"checkbox" }
+        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" }
     ]},
     "التقييم بالنجوم": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },
         { key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },
-        { key:"defaultValue", label:"القيمة التلقائية", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"defaultValue", label:"القيمة التلقائية", type:"number" }
     ]},
     "التقييم بالأرقام": { props: [
         { key:"lowRatingText", label:"نص أقل تقييم", type:"text" },
         { key:"highRatingText", label:"نص أعلى تقييم", type:"text" },
         { key:"minRating", label:"أقل قيمة", type:"number" },
-        { key:"maxRating", label:"أعلى قيمة", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"maxRating", label:"أعلى قيمة", type:"number" }
     ]},
     "جدول بيانات": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"readyTableId", label:"جدول بيانات ", type:"readyTablePick" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"readyTableId", label:"جدول بيانات ", type:"readyTablePick" }
     ]},
     "شبكة خيارات متعددة": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"اختيار واحد لكل صف." },
-        { key:"options", label:"عناوين الأعمدة (خيار لكل عمود)", type:"optionList", choiceMode:"single" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"options", label:"عناوين الأعمدة (خيار لكل عمود)", type:"optionList", choiceMode:"single" }
     ]},
     "شبكة مربعات اختيار": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
-        { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" }
     ]},
     "عنوان": { props: [
         { key:"fontSize", label:"حجم الخط (px)", type:"number", placeholder:"18" },
         { key:"fontColor", label:"لون الخط", type:"color" },
-        { key:"textAlign", label:"المحاذاة", type:"select", options:["يمين","وسط","يسار"] },
-        { key:"bold", label:"غامق", type:"checkbox" }
+        { key:"textAlign", label:"المحاذاة", type:"select", options:["يمين","وسط","يسار"] }
     ]},
     "خط فاصل": { props: [
         { key:"lineStyle", label:"نمط الخط", type:"select", options:["صلب","منقط","متقطع"] },
@@ -210,23 +178,25 @@ const FD_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"decimals", label:"عدد الخانات العشرية", type:"number", placeholder:"2" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"decimals", label:"عدد الخانات العشرية", type:"number", placeholder:"2" }
     ]},
     "تأشير": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم"] },
-        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم","التوقيع المعتمد في النظام"] },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" }
     ]},
     "توقيع": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم"] },
+        { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم","التوقيع المعتمد في النظام"] },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" },
-        { key:"heightPx", label:"ارتفاع لوحة التوقيع (px)", type:"number", placeholder:"120" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+        { key:"heightPx", label:"ارتفاع لوحة التوقيع (px)", type:"number", placeholder:"120" }
     ]}
 };
+
+(function fdAugmentFieldTypesReadOnly() {
+    const roProp = { key:'readOnly', label:'للقراءة فقط', type:'checkbox', checkboxLabel:'حقل للقراءة فقط', col:'col-md-6 col-sm-6 mb-3' };
+    Object.keys(FD_FIELD_TYPES).forEach(k => { FD_FIELD_TYPES[k].props.push({ ...roProp }); });
+})();
 
 const FD_FILE_TYPE_CHOICES = [
     { ext:'pdf', label:'PDF' }, { ext:'jpg', label:'JPG' }, { ext:'jpeg', label:'JPEG' },
@@ -256,14 +226,216 @@ async function fdEnsureFieldBindingLookups() {
 
 async function fdFetchDropdownItemsForField(listId) {
     const id = parseInt(listId, 10);
-    if (!id || fdDropdownItemsCache[id]) return;
+    if (!id) return;
+    const existing = fdDropdownItemsCache[id];
+    if (existing && typeof existing === 'object' && !Array.isArray(existing) && Array.isArray(existing.items)) return;
     try {
-        const res = await apiFetch(`/FormDefinitions/GetDropdownListItemsForField?id=${id}`);
-        if (res && res.success && Array.isArray(res.items)) fdDropdownItemsCache[id] = res.items;
-        else fdDropdownItemsCache[id] = [];
+        const res = await apiFetch(`/Dropdowns/GetDropdownListItemsForForm?id=${id}`);
+        if (res && res.success && Array.isArray(res.items)) {
+            fdDropdownItemsCache[id] = {
+                listType: res.listType || '',
+                selectionType: res.selectionType || '',
+                items: res.items
+            };
+        } else fdDropdownItemsCache[id] = { listType: '', selectionType: '', items: [] };
     } catch {
-        fdDropdownItemsCache[id] = [];
+        fdDropdownItemsCache[id] = { listType: '', selectionType: '', items: [] };
     }
+}
+
+function fdNormalizeDropdownCacheEntry(listId) {
+    const id = parseInt(listId, 10);
+    const raw = fdDropdownItemsCache[id];
+    if (!raw) return { listType: '', selectionType: '', items: [] };
+    if (Array.isArray(raw)) {
+        const items = raw.map(x => {
+            if (typeof x === 'string') return { id: 0, itemText: x, parentItemId: null, levelNumber: 1, sortOrder: 0, parentItemText: '' };
+            return {
+                id: x.id ?? x.Id ?? 0,
+                itemText: x.itemText ?? x.ItemText ?? '',
+                parentItemId: x.parentItemId ?? x.ParentItemId ?? null,
+                levelNumber: x.levelNumber ?? x.LevelNumber ?? 1,
+                parentItemText: x.parentItemText ?? x.ParentItemText ?? '',
+                sortOrder: x.sortOrder ?? x.SortOrder ?? 0
+            };
+        });
+        return { listType: 'قائمة مستقلة', selectionType: 'خيار محدد', items };
+    }
+    return {
+        listType: raw.listType || '',
+        selectionType: raw.selectionType || '',
+        items: Array.isArray(raw.items) ? raw.items : []
+    };
+}
+
+function fdSelectionIsMulti(selectionType) {
+    return String(selectionType || '').includes('متعدد');
+}
+
+/** مطابق لمنطق القوائم: جذور = مستوى أول بدون أب داخل القائمة */
+function fdBuildDropdownTreeNodes(items) {
+    const roots = items.filter(i => {
+        const ln = i.levelNumber ?? i.LevelNumber ?? 1;
+        const pid = i.parentItemId ?? i.ParentItemId;
+        return (ln <= 1 || ln === 0) && (pid == null || pid === '');
+    });
+    function getChildren(parentId) {
+        return items.filter(i => (i.parentItemId ?? i.ParentItemId) === parentId);
+    }
+    function sortItems(arr) {
+        return arr.slice().sort((a, b) => {
+            const oa = a.sortOrder ?? a.SortOrder ?? 0;
+            const ob = b.sortOrder ?? b.SortOrder ?? 0;
+            if (oa !== ob) return oa - ob;
+            return (a.id ?? a.Id ?? 0) - (b.id ?? b.Id ?? 0);
+        });
+    }
+    function buildNode(item) {
+        const iid = item.id ?? item.Id;
+        const rawKids = getChildren(iid);
+        const kids = sortItems(rawKids).map(buildNode);
+        return { item, children: kids };
+    }
+    return sortItems(roots).map(buildNode);
+}
+
+/** قائمة فرعية: كل العناصر ترتبط بعنصر من القائمة الأم — تجميع تحت عنوان كل عنصر أب */
+function fdBuildSublistGroupedRoots(items) {
+    const map = new Map();
+    items.forEach(it => {
+        const pid = it.parentItemId ?? it.ParentItemId;
+        const key = pid == null || pid === '' ? '__none__' : String(pid);
+        if (!map.has(key)) {
+            const pt = it.parentItemText ?? it.ParentItemText ?? '';
+            map.set(key, { parentId: pid, parentText: pt, items: [] });
+        }
+        map.get(key).items.push(it);
+    });
+    const groups = Array.from(map.values()).map(g => ({
+        ...g,
+        items: g.items.slice().sort((a, b) => {
+            const oa = a.sortOrder ?? a.SortOrder ?? 0;
+            const ob = b.sortOrder ?? b.SortOrder ?? 0;
+            if (oa !== ob) return oa - ob;
+            return (a.id ?? a.Id ?? 0) - (b.id ?? b.Id ?? 0);
+        })
+    }));
+    groups.sort((a, b) => String(a.parentText || '').localeCompare(String(b.parentText || ''), 'ar'));
+    return groups;
+}
+
+function fdPlanDropdownFormPresentation(listType, items) {
+    const lt = listType || '';
+    if (lt === 'قائمة هرمية') {
+        const nodes = fdBuildDropdownTreeNodes(items);
+        if (nodes.length) return { mode: 'nested', nodes };
+    }
+    if (lt === 'قائمة فرعية') {
+        const nested = fdBuildDropdownTreeNodes(items);
+        if (nested.length) return { mode: 'nested', nodes: nested };
+        const groups = fdBuildSublistGroupedRoots(items);
+        if (groups.length) return { mode: 'grouped', groups };
+    }
+    return { mode: 'flat' };
+}
+
+function fdRenderDropdownTreeLeaves(items, inputType, nameBase, disabled, defSingle, defMultiSet, depth) {
+    let html = '';
+    items.forEach((item, idx) => {
+        const id = item.id ?? item.Id ?? idx;
+        const txt = String(item.itemText ?? item.ItemText ?? '').trim();
+        const inputId = `${nameBase}_i_${id}_${idx}`;
+        const dis = disabled ? ' disabled' : '';
+        let checked = '';
+        if (inputType === 'checkbox') {
+            if (defMultiSet[txt]) checked = ' checked';
+        } else if (String(defSingle || '') === txt) checked = ' checked';
+        const prefix = depth > 0 ? '<span class="text-muted me-1" style="font-family:monospace;">└</span>' : '';
+        const inp = inputType === 'checkbox'
+            ? `<input class="form-check-input" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
+            : `<input class="form-check-input" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
+        html += `<li class="mb-1"><div class="form-check m-0">${inp}<label class="form-check-label" for="${fdEscAttr(inputId)}">${prefix}${esc(txt)}</label></div></li>`;
+    });
+    return html;
+}
+
+function fdRenderDropdownNestedNodes(nodes, inputType, nameBase, disabled, defSingle, defMultiSet, depth) {
+    let html = '';
+    nodes.forEach((node, idx) => {
+        const item = node.item;
+        const id = item.id ?? item.Id ?? idx;
+        const txt = String(item.itemText ?? item.ItemText ?? '').trim();
+        const hasKids = node.children && node.children.length > 0;
+        const inputId = `${nameBase}_n_${id}_${depth}_${idx}`;
+        const dis = disabled ? ' disabled' : '';
+        let checked = '';
+        if (inputType === 'checkbox') {
+            if (defMultiSet[txt]) checked = ' checked';
+        } else if (String(defSingle || '') === txt) checked = ' checked';
+        const prefix = depth > 0 ? '<span class="text-muted me-1" style="font-family:monospace;">└</span>' : '';
+        const inp = inputType === 'checkbox'
+            ? `<input class="form-check-input" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
+            : `<input class="form-check-input" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
+        let inner = `<div class="form-check m-0">${inp}<label class="form-check-label fw-semibold" for="${fdEscAttr(inputId)}">${prefix}${esc(txt)}</label></div>`;
+        if (hasKids) {
+            inner += `<ul class="list-unstyled pe-3 mt-1 mb-0 border-end border-secondary-subtle">${fdRenderDropdownNestedNodes(node.children, inputType, nameBase, disabled, defSingle, defMultiSet, depth + 1)}</ul>`;
+        }
+        html += `<li class="mb-2">${inner}</li>`;
+    });
+    return html;
+}
+
+function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph) {
+    const listId = props.dropdownListId;
+    const entry = fdNormalizeDropdownCacheEntry(listId);
+    const { listType, selectionType, items } = entry;
+    const multi = fdSelectionIsMulti(selectionType);
+    const emptyLab = (props.emptyText || ph || 'اختر...').replace(/</g, '&lt;');
+    const def = (props.defaultOption || '').trim();
+    const defMulti = {};
+    String(props.defaultOption || '').split(/,\s*/).forEach(d => { const t = d.trim(); if (t) defMulti[t] = true; });
+    const disabled = props.readOnly ? ' disabled' : '';
+    const nameBase = 'fd_dd_' + String(f.id ?? 'f') + '_' + String(listId);
+    const presentation = fdPlanDropdownFormPresentation(listType, items);
+
+    if (!items.length) {
+        return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option><option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
+    }
+
+    if (presentation.mode === 'flat') {
+        const labels = items.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean);
+        if (multi) {
+            const sz = Math.min(Math.max(labels.length + 1, 3), 12);
+            let h = `<select class="form-select" multiple size="${sz}"${reqAttr}${roSel}${ttAttr}${mk()}>`;
+            labels.forEach(o => {
+                const sel = defMulti[o] ? ' selected' : '';
+                h += `<option value="${fdEscAttr(o)}"${sel}>${o.replace(/</g, '&lt;')}</option>`;
+            });
+            return h + '</select>';
+        }
+        let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option>`;
+        labels.forEach(o => {
+            inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`;
+        });
+        return inp + '</select>';
+    }
+
+    const inputType = multi ? 'checkbox' : 'radio';
+    let innerUl = '';
+    if (presentation.mode === 'nested') {
+        innerUl = fdRenderDropdownNestedNodes(presentation.nodes, inputType, nameBase, disabled, def, defMulti, 0);
+    } else if (presentation.mode === 'grouped') {
+        innerUl = presentation.groups.map(g => {
+            const header = g.parentText
+                ? `<div class="fw-semibold small text-muted mb-1">${esc(g.parentText)}</div>`
+                : '';
+            const leaves = fdRenderDropdownTreeLeaves(g.items, inputType, nameBase, disabled, def, defMulti, 1);
+            return `<li class="mb-3">${header}<ul class="list-unstyled pe-3 mb-0">${leaves}</ul></li>`;
+        }).join('');
+    }
+
+    const reqHint = f.isRequired && !multi ? ' <span class="text-danger">*</span>' : '';
+    return `<div class="fd-ddl-tree border rounded-3 p-2 bg-white"${ttAttr}${mk('max-height:280px;overflow:auto;')}><div class="small text-muted mb-2">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><ul class="list-unstyled mb-0">${innerUl}</ul></div>`;
 }
 
 async function fdFetchReadyTableGridForField(tableId) {
@@ -493,7 +665,7 @@ function fdBuildSinglePropHtml(p, pfx) {
     }
     const fid = `${pfx}_${p.key}`;
     const col = p.col || 'col-md-4 col-sm-6 mb-3';
-    const hints = { subName:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص صغير يظهر أسفل الحقل</div>', defaultValue:'<div class="text-muted" style="font-size:10px;margin-top:2px;">قيمة تُعبأ تلقائياً في الحقل</div>', placeholder:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص إرشادي يختفي عند الكتابة</div>', readOnly:'<div class="text-muted" style="font-size:10px;margin-top:2px;">الحقل يظهر لكن لا يمكن تعديله</div>' };
+    const hints = { subName:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص صغير يظهر أسفل الحقل</div>', defaultValue:'<div class="text-muted" style="font-size:10px;margin-top:2px;">قيمة تُعبأ تلقائياً في الحقل</div>', placeholder:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص إرشادي يختفي عند الكتابة</div>' };
     let html = `<div class="${col}"><label class="d-block" style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:4px;">${p.label}</label>`;
     if (p.type === 'checkbox') {
         html += `<div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="${fid}"><label class="form-check-label" for="${fid}" style="font-size:12.5px;">${p.checkboxLabel||'تفعيل'}</label></div>`;
@@ -514,9 +686,10 @@ function fdParseLines(s) {
 
 // ─── FIELD INPUT BUILDER (for step-3 preview) ─────────────────────────────────
 function fdBuildFieldInput(f, opt) {
-    const ph = ((f.placeholder||'') || (f.tooltipText||'')).replace(/"/g,'&quot;');
     let props = {};
     try { props = JSON.parse(f.propertiesJson||'{}'); } catch(e) {}
+    const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (props.tooltipText || '')).trim();
+    const ph = ((f.placeholder||'') || tipMerged).replace(/"/g,'&quot;');
     if (opt && opt.forceReadOnly) props.readOnly = true;
     const defVal  = props.defaultValue != null ? String(props.defaultValue).replace(/"/g,'&quot;') : '';
     const roAttr  = props.readOnly ? ' readonly' : '';
@@ -526,7 +699,7 @@ function fdBuildFieldInput(f, opt) {
     const maxL    = (props.maxLength||props.charLimit) ? ` maxlength="${props.maxLength||props.charLimit}"` : '';
     const minL    = props.minLength ? ` minlength="${props.minLength}"` : '';
     const wStyle  = props.widthPx ? `width:${props.widthPx}px;` : '';
-    const ttAttr  = f.tooltipText ? ` title="${fdEscAttr(f.tooltipText)}"` : '';
+    const ttAttr  = tipMerged ? ` title="${fdEscAttr(tipMerged)}"` : '';
     function mk(extra) { const s=(wStyle+roStyle+(extra||'')).trim(); return s?` style="${s}"`:''; }
     let inp = '';
 
@@ -554,16 +727,21 @@ function fdBuildFieldInput(f, opt) {
         const st = props.stepValue!=null&&props.stepValue!==''?` step="${props.stepValue}"`:(props.noDecimals?' step="1"':'');
         const wrapStyle = wStyle ? ` style="${wStyle}"` : '';
         inp = `<div class="input-group"${ttAttr}${wrapStyle}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="number" class="form-control text-center" value="${defVal||props.minValue||'0'}"${mn}${mx}${st}${reqAttr}${roAttr}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
-    } else if (f.fieldType==='قائمة منسدلة'||f.fieldType==='قائمة اختيار الواحد') {
-        let opts = [];
-        if (f.fieldType === 'قائمة منسدلة' && props.dropdownListId) {
-            opts = fdDropdownItemsCache[props.dropdownListId] || [];
+    } else if (f.fieldType === 'قائمة منسدلة') {
+        if (props.dropdownListId) {
+            inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph);
+        } else {
+            let opts = props.options ? String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : [];
+            const def = (props.defaultOption || '').trim();
+            inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText || ph || 'اختر...').replace(/</g, '&lt;')}</option>`;
+            opts.forEach(o => { inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`; });
+            inp += '</select>';
         }
-        if (!opts.length && props.options) opts = String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean);
-        const def  = (props.defaultOption||'').trim();
-        inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText||ph||'اختر...').replace(/</g,'&lt;')}</option>`;
-        opts.forEach(o => { inp += `<option value="${o.replace(/"/g,'&quot;')}"${o===def?' selected':''}>${o.replace(/</g,'&lt;')}</option>`; });
-        if (f.fieldType === 'قائمة منسدلة' && props.dropdownListId && !opts.length) inp += '<option disabled>— لم تُحمَّل عناصر القائمة —</option>';
+    } else if (f.fieldType === 'قائمة اختيار الواحد') {
+        let opts = props.options ? String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : [];
+        const def = (props.defaultOption || '').trim();
+        inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText || ph || 'اختر...').replace(/</g, '&lt;')}</option>`;
+        opts.forEach(o => { inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`; });
         inp += '</select>';
     } else if (f.fieldType==='قائمة اختيار متعدد') {
         const opts = props.options ? String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean) : [];
@@ -573,7 +751,15 @@ function fdBuildFieldInput(f, opt) {
         if (!opts.length) inp += '<span class="text-muted">—</span>';
         inp += '</div>';
     } else if (f.fieldType==='تاريخ') {
-        inp = `<input type="date" class="form-control" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk()}>`;
+        const cal = String(props.calendarType || 'ميلادي').trim();
+        const mn = props.startDate ? ` min="${fdEscAttr(String(props.startDate))}"` : '';
+        const mx = props.endDate ? ` max="${fdEscAttr(String(props.endDate))}"` : '';
+        if (cal === 'هجري') {
+            const hijPh = fdEscAttr(ph || 'مثال: 1447/06/15');
+            inp = `<input type="text" class="form-control" dir="rtl" placeholder="${hijPh} — هجري" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk('direction:rtl;')}>`;
+        } else {
+            inp = `<input type="date" class="form-control" value="${defVal}"${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk()}>`;
+        }
     } else if (f.fieldType==='وقت') {
         inp = `<input type="time" class="form-control" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk()}>`;
     } else if (f.fieldType==='رفع ملف') {
@@ -672,7 +858,7 @@ function fdBuildFieldInput(f, opt) {
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
         inp = `<div class="input-group"${ttAttr}${wStyle?` style="${wStyle}"`:''}><input type="number" class="form-control" placeholder="${ph||'0'}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr} style="text-align:left;direction:ltr;${roStyle}"><span class="input-group-text fw-bold" style="background:var(--sa-50);color:var(--sa-700);">${esc(cur)}</span></div>`;
     } else if (f.fieldType === 'تأشير' || f.fieldType === 'توقيع') {
-        inp = fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr);
+        inp = fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt || {});
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     }
@@ -684,7 +870,20 @@ function fdSpinInc(btn) { const i=btn.parentElement.querySelector('input[type="n
 function fdSpinDec(btn) { const i=btn.parentElement.querySelector('input[type="number"]'); if(!i) return; const s=parseFloat(i.step)||1,m=i.min!==''?parseFloat(i.min):-Infinity,v=parseFloat(i.value)||0; if(v-s>=m) i.value=+(v-s).toFixed(4); }
 
 // ─── SIGNATURE / APPROVAL FIELD (mirrors Beneficiary endorsement/signature) ──
-function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr) {
+/** في شاشة التعبئة: عيّن window.fdBeneficiarySignatureContext = { endorsementFile, signatureFile } بنفس صيغة بطاقة المستفيد، أو مرّر opt.beneficiaryProfile إلى fdBuildFieldInput */
+const FD_SIG_MODE_SYSTEM = 'التوقيع المعتمد في النظام';
+
+function fdResolveBeneficiarySignatureAssets(opt) {
+    const fromOpt = opt && opt.beneficiaryProfile;
+    const g = (typeof window !== 'undefined' && window.fdBeneficiarySignatureContext) ? window.fdBeneficiarySignatureContext : null;
+    const b = fromOpt || g || {};
+    const endorsementFile = String(b.endorsementFile ?? b.EndorsementFile ?? '').trim();
+    const signatureFile = String(b.signatureFile ?? b.SignatureFile ?? '').trim();
+    return { endorsementFile, signatureFile };
+}
+
+function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt) {
+    opt = opt || {};
     const isSig = f.fieldType === 'توقيع';
     const currentMode = props.mode || 'مرفق';
     const widthCss = props.widthPx ? `${parseInt(props.widthPx, 10)}px` : '100%';
@@ -693,6 +892,7 @@ function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr) {
     const selId = uid + '_sel';
     const fileWrapId = uid + '_fileWrap';
     const canvasWrapId = uid + '_canvasWrap';
+    const systemWrapId = uid + '_systemWrap';
     const canvasId = uid + '_canvas';
     const previewId = uid + '_preview';
     const fileInputId = uid + '_fileInput';
@@ -700,10 +900,42 @@ function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr) {
     const showCanvas = currentMode === 'التوقيع بالقلم' ? 'block' : 'none';
     const fileLbl = isSig ? 'رفع ملف التوقيع' : 'رفع ملف التأشير';
     const canvasLbl = isSig ? 'التوقيع الإلكتروني' : 'التوقيع الإلكتروني للتأشير';
+    const assets = fdResolveBeneficiarySignatureAssets(opt);
+    const assetForField = isSig ? assets.signatureFile : assets.endorsementFile;
+    let systemInner = '';
+    if (assetForField.startsWith('data:image')) {
+        const safeSrc = assetForField.replace(/"/g, '&quot;');
+        systemInner = `<img src="${safeSrc}" alt="" class="fd-sig-attach-preview" style="max-height:${canvasH}px;max-width:100%;object-fit:contain;">`;
+    } else if (assetForField.startsWith('data:application/pdf')) {
+        systemInner = '<div class="d-flex align-items-center gap-2 flex-wrap"><span class="badge bg-success" style="font-size:12px;"><i class="bi bi-patch-check-fill"></i> ملف PDF معتمد من بطاقة المستفيد</span></div>';
+    } else if (assetForField.length > 40) {
+        systemInner = '<div class="d-flex align-items-center gap-2 flex-wrap"><span class="badge bg-success" style="font-size:12px;"><i class="bi bi-patch-check-fill"></i> ملف معتمد محفوظ في بطاقة المستفيد</span></div>';
+    } else {
+        systemInner = `<p class="text-muted small mb-0" style="font-style:normal;line-height:1.55;">عند تعبئة النموذج يُستخدم تلقائياً ${isSig ? '<strong>التوقيع</strong>' : '<strong>التأشير</strong>'} المعتمد المسجَّل في بطاقة المستفيد في النظام (لا يُطلب من المستخدم رفع ملف أو الرسم هنا).</p>`;
+    }
+
+    if (currentMode === FD_SIG_MODE_SYSTEM) {
+        const roleWord = isSig ? 'التوقيع' : 'التأشير';
+        const systemHeader = `<div class="d-flex align-items-start gap-2 mb-3 pb-3 border-bottom" style="border-color:var(--gray-200)!important;font-style:normal;">
+            <i class="bi bi-patch-check-fill text-success flex-shrink-0" style="font-size:1.35rem;margin-top:2px;"></i>
+            <div>
+                <div style="font-weight:700;font-size:13px;color:var(--sa-800);">${FD_SIG_MODE_SYSTEM}</div>
+                <div style="font-size:12px;color:var(--gray-600);margin-top:4px;line-height:1.5;">يُؤخذ ${roleWord} المستفيد المحفوظ في النظام تلقائياً عند التعبئة، وفق ما تم تسجيله عند إضافته كمستفيد.</div>
+            </div>
+        </div>`;
+        return `<div class="fd-sig-field fd-sig-field-system-only" style="max-width:${widthCss};font-style:normal;"${ttAttr}>
+            ${systemHeader}
+            <div class="fd-sig-system-wrap border rounded-3 p-3" style="background:var(--gray-50);border-color:var(--gray-200) !important;">
+                ${systemInner}
+            </div>
+        </div>`;
+    }
+
     return `<div class="fd-sig-field" style="max-width:${widthCss};" data-fd-sig-canvas="${canvasId}"${ttAttr}>
         <select class="form-select form-select-sm mb-2" id="${selId}" onchange="fdSigToggle('${uid}')"${roSel}>
             <option value="مرفق" ${currentMode==='مرفق'?'selected':''}>مرفق (صورة أو PDF)</option>
             <option value="التوقيع بالقلم" ${currentMode==='التوقيع بالقلم'?'selected':''}>التوقيع بالقلم</option>
+            <option value="${FD_SIG_MODE_SYSTEM}" ${currentMode===FD_SIG_MODE_SYSTEM?'selected':''}>التوقيع المعتمد في النظام</option>
         </select>
         <div id="${fileWrapId}" class="fd-sig-file-wrap" style="display:${showFile};">
             <label class="form-label small mb-1" style="color:var(--gray-600);font-weight:700;">${fileLbl}</label>
@@ -717,6 +949,9 @@ function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr) {
                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fdSigClearCanvas('${canvasId}')"><i class="bi bi-eraser"></i> مسح</button>
             </div>
         </div>
+        <div id="${systemWrapId}" class="fd-sig-system-wrap border rounded-3 p-3" style="display:none;background:var(--gray-50);border-color:var(--gray-200) !important;">
+            ${systemInner}
+        </div>
     </div>`;
 }
 
@@ -724,14 +959,21 @@ function fdSigToggle(uid) {
     const sel = document.getElementById(uid + '_sel');
     const fileWrap = document.getElementById(uid + '_fileWrap');
     const canvasWrap = document.getElementById(uid + '_canvasWrap');
+    const sysWrap = document.getElementById(uid + '_systemWrap');
     const canvas = document.getElementById(uid + '_canvas');
     if (!sel || !fileWrap || !canvasWrap) return;
     if (sel.value === 'مرفق') {
         fileWrap.style.display = 'block';
         canvasWrap.style.display = 'none';
+        if (sysWrap) sysWrap.style.display = 'none';
+    } else if (sel.value === FD_SIG_MODE_SYSTEM) {
+        fileWrap.style.display = 'none';
+        canvasWrap.style.display = 'none';
+        if (sysWrap) sysWrap.style.display = 'block';
     } else {
         fileWrap.style.display = 'none';
         canvasWrap.style.display = 'block';
+        if (sysWrap) sysWrap.style.display = 'none';
         if (canvas) fdSigBindCanvas(canvas);
     }
 }
@@ -1322,11 +1564,8 @@ function fdStep2Html() {
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="small fw-bold text-muted d-block">للقراءة فقط</label>
-                    <div class="form-check form-control form-control-sm" style="display:flex;align-items:center;border-radius:8px;background:#fff;height:calc(1.5em + 0.5rem + 2px);">
-                        <input class="form-check-input m-0 ms-1" type="checkbox" id="fdFieldReadOnly" onchange="fdOnReadOnlyChange()" style="margin-inline-end:6px !important;">
-                        <label class="form-check-label small mb-0" for="fdFieldReadOnly" style="cursor:pointer;">حقل للقراءة فقط</label>
-                    </div>
+                    <label class="small fw-bold text-muted">نص التلميح</label>
+                    <input type="text" class="form-control form-control-sm" id="fdFieldTooltip" placeholder="يظهر عند تمرير الماوس على الحقل والعنوان" title="يُحفظ مع الحقل ويُعرض كتلميح عند مرور المؤشر على العنوان أو منطقة الإدخال">
                 </div>
             </div>
 
@@ -1390,9 +1629,11 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
     const renderField = f => {
         const isStructural = f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل';
         const colClass = fdDisplayLayoutColClass(f.displayLayout);
-        const tipAttr   = f.tooltipText ? ` title="${fdEscAttr(f.tooltipText)}"` : '';
-        const infoIcon  = f.tooltipText ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
-        const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:2px;font-style:normal;">${esc(f.subName)}</small>` : '';
+        let _tipPo = {}; try { _tipPo = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
+        const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (_tipPo.tooltipText || '')).trim();
+        const tipAttr   = tipMerged ? ` title="${fdEscAttr(tipMerged)}"` : '';
+        const infoIcon  = tipMerged ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
+        const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:6px;font-style:normal;">${esc(f.subName)}</small>` : '';
         const inputHtml = interactive
             ? fdBuildFieldInput(f, f.isReadOnly ? { forceReadOnly: true } : undefined)
             : fdBuildFieldInput(f, { forceReadOnly: true });
@@ -1403,8 +1644,8 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
             <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
                 ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
             </label>
-            ${subName}
             ${inputHtml}
+            ${subName}
         </div>`;
     };
 
@@ -1663,17 +1904,16 @@ async function fdOnFieldTypeChange() {
     const def = FD_FIELD_TYPES[type];
     if(area) area.style.display='block';
     if(cell) cell.innerHTML=`<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ${def.props.length} خاصية</span>`;
-    let html='', cbStarted=false;
-    def.props.forEach(p => {
-        if(p.type==='checkbox'&&!cbStarted){ cbStarted=true; html+=`<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>`; }
-        html += fdBuildSinglePropHtml(p,'fdProp');
-    });
+    let html = '';
+    def.props.forEach(p => { html += fdBuildSinglePropHtml(p,'fdProp'); });
     if(cont) cont.innerHTML = html;
     fdApplyPropsSpecialEditors(type,'fdProp',null);
     if (needsBinding) fdWireBindingPropListeners(type);
     if(type==='رقم الهاتف'){ const el=document.getElementById('fdProp_phoneFormat'); if(el&&!el.value) el.value='+966 (9 أرقام)'; }
-    const tipEl = document.getElementById('fdFieldTooltip');
-    if(tipEl&&!tipEl.value){ const d={'الاسم الكامل':'أدخل الاسم الكامل','البريد الإلكتروني':'أدخل البريد الإلكتروني','رقم الهاتف':'أدخل رقم الهاتف','نص قصير':'أدخل النص','نص طويل':'أدخل النص','فقرة':'أدخل الفقرة','رقم':'أدخل الرقم','قائمة منسدلة':'اختر من القائمة','قائمة اختيار الواحد':'اختر خياراً','قائمة اختيار متعدد':'اختر خياراً أو أكثر','تاريخ':'اختر التاريخ','وقت':'اختر الوقت','رفع ملف':'ارفع ملفاً','دوار رقمي':'حدد الرقم','التقييم بالنجوم':'حدد التقييم','التقييم بالأرقام':'حدد التقييم','جدول بيانات':'عبّئ الجدول','شبكة خيارات متعددة':'اختر خياراً لكل صف','شبكة مربعات اختيار':'حدد الخانات المطلوبة'}; tipEl.value=d[type]||'أدخل قيمة الحقل'; }
+    if(type==='تاريخ'){ const cal=document.getElementById('fdProp_calendarType'); if(cal&&!cal.value) cal.value='ميلادي'; }
+    const roCb = document.getElementById('fdProp_readOnly');
+    if (roCb) roCb.onchange = fdSyncRequiredDisabledFromReadOnly;
+    fdSyncRequiredDisabledFromReadOnly();
 }
 
 function fdCollectFieldProps() {
@@ -1749,11 +1989,10 @@ function fdAddField() {
     const props = fdCollectFieldProps();
     const secSel = document.getElementById('fdFieldSection');
     const secId = secSel ? (parseInt(secSel.value, 10) || fdActiveSectionId) : fdActiveSectionId;
-    const isReadOnly = !!document.getElementById('fdFieldReadOnly')?.checked;
-    if (isReadOnly) props.readOnly = true;
+    const isReadOnly = !!props.readOnly;
     const isRequired = !isReadOnly && document.getElementById('fdFieldRequired')?.value === '1';
-    const existingTip = (fdEditingIdx >= 0 ? (fdFields[fdEditingIdx].tooltipText || '') : '');
-    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:existingTip, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, sectionId: secId, propertiesJson:JSON.stringify(props) };
+    const tooltipText = document.getElementById('fdFieldTooltip')?.value?.trim() || '';
+    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, sectionId: secId, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
     else { fdFields.push(field); showToast('تم إضافة الحقل','success'); }
     fdRenderFieldsTable(); fdResetFieldForm();
@@ -1767,10 +2006,9 @@ async function fdEditField(idx) {
     let po = {};
     try { po = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
     const ro = !!(f.isReadOnly || po.readOnly);
-    const roEl = document.getElementById('fdFieldReadOnly');
-    if (roEl) roEl.checked = ro;
+    if (ro) po.readOnly = true;
+    document.getElementById('fdFieldTooltip').value = f.tooltipText || '';
     document.getElementById('fdFieldRequired').value = (!ro && f.isRequired) ? '1' : '0';
-    fdOnReadOnlyChange();
     const fdLay = document.getElementById('fdFieldDisplayLayout');
     if (fdLay) fdLay.value = (f.displayLayout != null && f.displayLayout !== '') ? f.displayLayout : '';
     const fdSec = document.getElementById('fdFieldSection');
@@ -1781,13 +2019,14 @@ async function fdEditField(idx) {
     document.getElementById('fdCancelEditBtn').style.display='';
     await fdOnFieldTypeChange();
     fdSetFieldProps(f.fieldType, po);
+    fdSyncRequiredDisabledFromReadOnly();
     if (po.dropdownListId) await fdFetchDropdownItemsForField(po.dropdownListId);
     if (po.readyTableId) await fdFetchReadyTableGridForField(po.readyTableId);
     document.getElementById('fdPropsArea')?.scrollIntoView({behavior:'smooth'});
 }
 
-function fdOnReadOnlyChange() {
-    const ro = !!document.getElementById('fdFieldReadOnly')?.checked;
+function fdSyncRequiredDisabledFromReadOnly() {
+    const ro = !!document.getElementById('fdProp_readOnly')?.checked;
     const reqSel = document.getElementById('fdFieldRequired');
     if (!reqSel) return;
     if (ro) {
@@ -1859,7 +2098,7 @@ function fdResetFieldForm() {
     const ft=document.getElementById('fdFieldType'); if(ft) ft.value='';
     const fname=document.getElementById('fdFieldName'); if(fname) fname.value='';
     const req=document.getElementById('fdFieldRequired'); if(req) { req.value='1'; req.disabled=false; req.title=''; }
-    const ro=document.getElementById('fdFieldReadOnly'); if(ro) ro.checked=false;
+    const tip=document.getElementById('fdFieldTooltip'); if(tip) tip.value='';
     const fdLay=document.getElementById('fdFieldDisplayLayout'); if(fdLay) fdLay.value='';
     const area=document.getElementById('fdPropsArea'); if(area) area.style.display='none';
     const flds=document.getElementById('fdPropsFields'); if(flds) flds.innerHTML='';

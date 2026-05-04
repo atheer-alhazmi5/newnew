@@ -5,6 +5,7 @@ public class OrganizationalUnit
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public int ClassificationId { get; set; }
+    /// <summary>يُعبأ تلقائياً من ParentId عند الحفظ: بدون أب = رئيسي، مع أب = فرعي. يُبقى للتوافق مع البيانات المخزنة.</summary>
     public string Level { get; set; } = "رئيسي"; // رئيسي | فرعي
     public int? ParentId { get; set; }
     public bool IsActive { get; set; } = true;

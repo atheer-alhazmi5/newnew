@@ -1,516 +1,340 @@
-var ouAll = [];
-var ouFiltered = [];
-var ouClassifications = [];
-var ouMainUnits = [];
-var ouCurrentPage = 1;
-var ouPerPage = 10;
-var ouAddTreeExpanded = {};
-var ouEditTreeExpanded = {};
+'use strict';
 
-document.addEventListener('DOMContentLoaded', function () {
-    ouLoad();
-    document.getElementById('ouAddIsActive').addEventListener('change', function () {
-        document.getElementById('ouAddIsActiveLabel').textContent = this.checked ? 'مفعل' : 'معطل';
+function ouEsc(t) {
+    if (typeof esc === 'function') return esc(t);
+    var s = t == null ? '' : String(t);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+var ouRows = [];
+var ouClassifications = [];
+var ouEditingId = null;
+
+function ouExcludedIdsForParentPicker(editUnitId) {
+    if (!editUnitId) return {};
+    var byParent = {};
+    ouRows.forEach(function (u) {
+        var pid = u.parentId != null ? u.parentId : u.ParentId;
+        var k = (pid != null && pid !== '') ? String(pid) : '';
+        if (!byParent[k]) byParent[k] = [];
+        byParent[k].push(u.id);
     });
-    document.getElementById('ouEditIsActive').addEventListener('change', function () {
-        document.getElementById('ouEditIsActiveLabel').textContent = this.checked ? 'مفعل' : 'معطل';
+    var ex = {};
+    function walk(id) {
+        ex[id] = true;
+        (byParent[String(id)] || []).forEach(walk);
+    }
+    walk(editUnitId);
+    return ex;
+}
+
+function ouFillParentSelect() {
+    var sel = document.getElementById('ouParentId');
+    if (!sel) return;
+    var exclude = ouExcludedIdsForParentPicker(ouEditingId);
+    var allowed = ouRows.filter(function (u) { return !exclude[u.id]; });
+    var allowedIds = {};
+    allowed.forEach(function (u) { allowedIds[u.id] = true; });
+
+    var childrenOf = {};
+    function addChild(key, node) {
+        if (!childrenOf[key]) childrenOf[key] = [];
+        childrenOf[key].push(node);
+    }
+    allowed.forEach(function (u) {
+        var pid = u.parentId != null ? u.parentId : u.ParentId;
+        if (pid && allowedIds[pid]) addChild(String(pid), u);
+        else addChild('__root__', u);
     });
-    ouInitTreePanel('ouAddTreeTrigger', 'ouAddTreePanel', 'ouAddParentId', 'ouAddTreeLabel', function () { return ouAddTreeExpanded; }, null);
-    ouInitTreePanel('ouEditTreeTrigger', 'ouEditTreePanel', 'ouEditParentId', 'ouEditTreeLabel', function () { return ouEditTreeExpanded; }, function () {
-        return parseInt(document.getElementById('ouEditId').value) || null;
-    });
-});
+
+    function sortUnits(arr) {
+        return arr.slice().sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            if (sa !== sb) return sa - sb;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
+        });
+    }
+
+    var prev = sel.value;
+    var parts = ['<option value="">— وحدة رئيسية (بدون أب في الشجرة) —</option>'];
+
+    function walk(nodes, depth) {
+        sortUnits(nodes || []).forEach(function (u) {
+            var prefix = '';
+            if (depth > 0) {
+                prefix = '\u200f' + '\u00A0\u00A0'.repeat(depth) + '\u2514\u00A0';
+            }
+            parts.push('<option value="' + u.id + '">' + prefix + ouEsc(u.name || '') + '</option>');
+            walk(childrenOf[String(u.id)], depth + 1);
+        });
+    }
+
+    walk(childrenOf['__root__'], 0);
+
+    sel.innerHTML = parts.join('');
+    if (prev && Array.prototype.some.call(sel.options, function (o) { return o.value === prev; }))
+        sel.value = prev;
+}
 
 async function ouLoad() {
     try {
         var r = await apiFetch('/Settings/GetOrganizationalUnits');
-        if (r && r.success) {
-            ouAll = r.data;
-            ouClassifications = r.classifications || [];
-            ouMainUnits = r.mainUnits || [];
-            ouFillClassificationFilter();
-            ouFillClassificationDropdowns();
-            ouFilter();
-        } else {
+        if (!r || !r.success) {
             document.getElementById('ouBody').innerHTML =
-                '<tr><td colspan="6">' + emptyState('bi-building', 'لا توجد وحدات', 'أضف وحدات تنظيمية للبدء') + '</td></tr>';
-        }
-    } catch (e) {
-        document.getElementById('ouBody').innerHTML =
-            '<tr><td colspan="6" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
-    }
-}
-
-function ouFillClassificationFilter() {
-    var sel = document.getElementById('ouFilterClassification');
-    sel.innerHTML = '<option value="">التصنيف</option>';
-    ouClassifications.forEach(function (c) {
-        sel.innerHTML += '<option value="' + c.id + '">' + esc(c.name) + '</option>';
-    });
-}
-
-function ouFillClassificationDropdowns() {
-    var html = '';
-    ouClassifications.forEach(function (c) {
-        html += '<option value="' + c.id + '">' + esc(c.name) + '</option>';
-    });
-    document.getElementById('ouAddClassificationId').innerHTML = html;
-    document.getElementById('ouEditClassificationId').innerHTML = html;
-}
-
-function ouFillParentDropdowns(excludeId) {}
-
-function ouInitTreePanel(triggerId, panelId, hiddenId, labelId, getExpandedFn, excludeIdFn) {
-    var trigger = document.getElementById(triggerId);
-    var panel = document.getElementById(panelId);
-    if (!trigger || !panel) return;
-    trigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (panel.classList.contains('d-none')) {
-            ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
-            panel.classList.remove('d-none');
-            trigger.setAttribute('aria-expanded', 'true');
-        } else {
-            panel.classList.add('d-none');
-            trigger.setAttribute('aria-expanded', 'false');
-        }
-    });
-    panel.addEventListener('click', function (e) {
-        var expBtn = e.target.closest('.ou-tree-exp');
-        if (expBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            var eid = expBtn.getAttribute('data-exp');
-            if (eid) {
-                var expanded = getExpandedFn();
-                expanded[eid] = !expanded[eid];
-                ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
-            }
+                '<tr><td colspan="9" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
             return;
         }
-        var row = e.target.closest('.ou-tree-row');
-        if (row) {
-            var uid = row.getAttribute('data-id');
-            if (uid === '') {
-                document.getElementById(hiddenId).value = '';
-                document.getElementById(labelId).textContent = 'بدون وحدة تنظيمية رئيسية';
-            } else {
-                var u = ouAll.find(function (x) { return x.id === parseInt(uid); });
-                if (u) {
-                    document.getElementById(hiddenId).value = u.id;
-                    document.getElementById(labelId).textContent = u.name;
-                }
-            }
-            panel.classList.add('d-none');
-            document.getElementById(triggerId).setAttribute('aria-expanded', 'false');
-            ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
-        }
-    });
-}
-
-function ouGetDescendantIds(unitId) {
-    var ids = {};
-    function collect(pid) {
-        ouAll.forEach(function (u) {
-            if (u.parentId === pid && !ids[u.id]) {
-                ids[u.id] = true;
-                collect(u.id);
-            }
-        });
-    }
-    collect(unitId);
-    return ids;
-}
-
-function ouBuildTreeMap(excludeIds) {
-    var byParent = {};
-    ouAll.forEach(function (u) {
-        if (excludeIds && excludeIds[u.id]) return;
-        var pk = (u.parentId != null && u.parentId !== '' && !excludeIds[u.parentId]) ? String(u.parentId) : '';
-        if (!byParent[pk]) byParent[pk] = [];
-        byParent[pk].push(u);
-    });
-    Object.keys(byParent).forEach(function (k) {
-        byParent[k].sort(function (a, b) {
-            var sa = a.sortOrder != null ? a.sortOrder : 0;
-            var sb = b.sortOrder != null ? b.sortOrder : 0;
-            if (sa !== sb) return sa - sb;
-            return (a.name || '').localeCompare(b.name || '', 'ar');
-        });
-    });
-    return byParent;
-}
-
-function ouRenderTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
-    var rows = byParent[parentKey] || [];
-    var html = '';
-    rows.forEach(function (u) {
-        var idStr = String(u.id);
-        var children = byParent[idStr] || [];
-        var hasChildren = children.length > 0;
-        var expanded = !!expandedMap[idStr];
-        var indent = depth * 22;
-        var sel = String(selectedId) === idStr ? ' is-selected' : '';
-        html += '<div class="ou-tree-row' + sel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
-        if (hasChildren) {
-            html += '<button type="button" class="ou-tree-exp" data-exp="' + idStr + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
-        } else {
-            html += '<span class="ou-tree-exp-spacer"></span>';
-        }
-        html += '<span class="ou-tree-name">' + esc(u.name) + '</span></div>';
-        if (hasChildren && expanded) {
-            html += ouRenderTreeRows(byParent, idStr, depth + 1, selectedId, expandedMap);
-        }
-    });
-    return html;
-}
-
-function ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn) {
-    var panel = document.getElementById(panelId);
-    if (!panel) return;
-    var excludeIds = {};
-    if (excludeIdFn) {
-        var exId = excludeIdFn();
-        if (exId) {
-            excludeIds[exId] = true;
-            var desc = ouGetDescendantIds(exId);
-            Object.keys(desc).forEach(function (k) { excludeIds[parseInt(k)] = true; });
-        }
-    }
-    if (!ouAll.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
-        return;
-    }
-    var selectedId = document.getElementById(hiddenId).value;
-    var byParent = ouBuildTreeMap(excludeIds);
-    var noParentSel = !selectedId ? ' is-selected' : '';
-    var html = '<div class="ou-tree-row' + noParentSel + '" data-id="" role="option" dir="rtl" style="padding:8px 12px;"><span class="ou-tree-exp-spacer"></span><span class="ou-tree-name" style="color:var(--gray-500);">بدون وحدة تنظيمية رئيسية</span></div>';
-    html += ouRenderTreeRows(byParent, '', 0, selectedId, getExpandedFn());
-    panel.innerHTML = html;
-}
-
-function ouTreeExpandAncestors(unitId, expandedMap) {
-    var map = {};
-    ouAll.forEach(function (u) { map[u.id] = u; });
-    var u = map[unitId];
-    while (u && u.parentId != null && u.parentId !== '') {
-        expandedMap[String(u.parentId)] = true;
-        u = map[u.parentId];
+        ouRows = r.data || [];
+        ouClassifications = r.classifications || [];
+        ouFillClassificationSelect('ouClassificationId');
+        ouFillClassificationSelect('ouFilterClassification');
+        ouRenderTable();
+    } catch (e) {
+        document.getElementById('ouBody').innerHTML =
+            '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
     }
 }
 
-function ouTreeSetSelection(hiddenId, labelId, id, name, panelId, getExpandedFn, excludeIdFn) {
-    var hid = document.getElementById(hiddenId);
-    var lab = document.getElementById(labelId);
-    if (hid) hid.value = (id != null && id !== '') ? String(id) : '';
-    if (lab) lab.textContent = (name && String(name).trim()) ? name : 'بدون وحدة تنظيمية رئيسية';
-    ouRenderTreePanel(panelId, hiddenId, getExpandedFn, excludeIdFn);
+function ouFillClassificationSelect(elId) {
+    var sel = document.getElementById(elId);
+    if (!sel) return;
+    var keep = sel.value;
+    sel.innerHTML = elId === 'ouFilterClassification'
+        ? '<option value="">كل التصنيفات</option>'
+        : '<option value="">— اختر التصنيف —</option>';
+    ouClassifications.forEach(function (c) {
+        sel.innerHTML += '<option value="' + c.id + '">' + ouEsc(c.name || '') + '</option>';
+    });
+    sel.value = keep;
 }
 
-function ouFilter() {
-    var q = (document.getElementById('ouSearchInput').value || '').trim().toLowerCase();
-    var catId = document.getElementById('ouFilterClassification').value;
-    var level = document.getElementById('ouFilterLevel').value;
-    var status = document.getElementById('ouFilterStatus').value;
-
-    ouFiltered = ouAll.filter(function (u) {
-        if (q && !u.name.toLowerCase().includes(q)) return false;
-        if (catId && String(u.classificationId) !== catId) return false;
-        if (level && u.level !== level) return false;
-        if (status !== '' && String(u.isActive ? 1 : 0) !== status) return false;
+function ouFilteredRows() {
+    var q = (document.getElementById('ouSearch') && document.getElementById('ouSearch').value || '').trim().toLowerCase();
+    var cf = document.getElementById('ouFilterClassification') ? document.getElementById('ouFilterClassification').value : '';
+    return ouRows.filter(function (u) {
+        if (q && String(u.name || '').toLowerCase().indexOf(q) === -1) return false;
+        if (cf && String(u.classificationId) !== String(cf)) return false;
         return true;
     });
-    ouCurrentPage = 1;
-    ouRenderTable();
-}
-
-function ouClearFilters() {
-    document.getElementById('ouSearchInput').value = '';
-    document.getElementById('ouFilterClassification').value = '';
-    document.getElementById('ouFilterLevel').value = '';
-    document.getElementById('ouFilterStatus').value = '';
-    ouFilter();
 }
 
 function ouRenderTable() {
     var body = document.getElementById('ouBody');
-    if (ouFiltered.length === 0) {
-        body.innerHTML = '<tr><td colspan="6">' +
-            emptyState('bi-building', 'لا توجد وحدات', 'لم يتم العثور على نتائج') +
-            '</td></tr>';
-        document.getElementById('ouPaginationContainer').innerHTML = '';
+    if (!body) return;
+    var list = ouFilteredRows();
+    if (!list.length) {
+        body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
         return;
     }
-
-    var start = (ouCurrentPage - 1) * ouPerPage;
-    var page = ouFiltered.slice(start, start + ouPerPage);
+    list.sort(function (a, b) {
+        var sa = a.sortOrder != null ? a.sortOrder : 0;
+        var sb = b.sortOrder != null ? b.sortOrder : 0;
+        if (sa !== sb) return sa - sb;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
+    });
     var html = '';
-
-    page.forEach(function (u, idx) {
-        var statusClass = u.isActive ? 'active' : 'inactive';
-        var statusText = u.isActive ? 'مفعل' : 'معطل';
-        var levelColor = u.level === 'رئيسي' ? '#1570EF' : '#DC6803';
-        var safeName = esc(u.name).replace(/'/g, "\\'");
-
+    list.forEach(function (u, idx) {
+        var cls = ouClassifications.find(function (c) { return String(c.id) === String(u.classificationId); });
+        var badgeColor = cls && cls.color ? cls.color : '#25935F';
+        var parentNm = u.parentName ? ouEsc(u.parentName) : '<span class="text-muted">—</span>';
+        var mc = u.memberCount != null ? u.memberCount : (u.MemberCount != null ? u.MemberCount : 0);
+        var mgrNm = u.unitManagerName || u.UnitManagerName || '';
+        var mgrCell = mgrNm
+            ? '<span style="font-size:12px;font-weight:600;">' + ouEsc(mgrNm) + '</span>'
+            : '<span class="text-warning" style="font-size:12px;font-weight:700;">بدون مدير</span>';
+        var activePill = u.isActive !== false
+            ? '<span class="ou-status ou-on">مفعل</span>'
+            : '<span class="ou-status ou-off">معطل</span>';
         html += '<tr>' +
-            '<td style="text-align:center;font-weight:800;font-size:15px;color:var(--gray-700);">' + (start + idx + 1) + '</td>' +
-            '<td style="font-weight:700;font-size:14px;color:var(--gray-800);">' + esc(u.name) + '</td>' +
-            '<td><span class="ou-badge" style="background:' + (u.classificationColor || '#25935F') + '22;color:' + (u.classificationColor || '#25935F') + ';"><span class="ou-badge-dot" style="background:' + (u.classificationColor || '#25935F') + ';"></span>' + esc(u.classificationName) + '</span></td>' +
-            '<td><span class="ou-badge" style="background:' + levelColor + '22;color:' + levelColor + ';"><span class="ou-badge-dot" style="background:' + levelColor + ';"></span>' + esc(u.level) + '</span></td>' +
-            '<td><span class="ou-status-pill ' + statusClass + '"><span class="ou-badge-dot" style="background:' + (u.isActive ? '#0f9f5c' : '#ef4444') + ';"></span>' + statusText + '</span></td>' +
-            '<td>' +
-                '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +
-                    '<button class="ou-action-btn ou-action-btn-detail" onclick="ouShowDetails(' + u.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="ou-action-btn ou-action-btn-edit" onclick="ouShowEditModal(' + u.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="ou-action-btn ou-action-btn-delete" onclick="ouShowDeleteModal(' + u.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
-                '</div>' +
-            '</td>' +
+            '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td>' +
+            '<td style="font-weight:700;">' + ouEsc(u.name || '') + '</td>' +
+            '<td><span class="badge rounded-pill" style="background:' + badgeColor + ';font-size:11px;">' + ouEsc(u.classificationName || '') + '</span></td>' +
+            '<td style="font-size:12px;">' + parentNm + '</td>' +
+            '<td style="text-align:center;font-weight:700;">' + mc + '</td>' +
+            '<td style="font-size:12px;max-width:220px;">' + mgrCell + '</td>' +
+            '<td style="text-align:center;">' + u.sortOrder + '</td>' +
+            '<td style="text-align:center;">' + activePill + '</td>' +
+            '<td style="white-space:nowrap;text-align:center;">' +
+            '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
+            '<button type="button" class="ou-action-btn ou-action-btn-detail" onclick="ouShowDetails(' + u.id + ')" title="تفاصيل"><i class="bi bi-eye"></i> تفاصيل</button>' +
+            '<button type="button" class="ou-action-btn ou-action-btn-edit" onclick="ouEdit(' + u.id + ')" title="تحديث"><i class="bi bi-pencil"></i> تحديث</button>' +
+            '<button type="button" class="ou-action-btn ou-action-btn-delete" onclick="ouConfirmDelete(' + u.id + ')" title="حذف"><i class="bi bi-trash3"></i> حذف</button>' +
+            '</div></td>' +
             '</tr>';
     });
-
     body.innerHTML = html;
-    renderPagination(document.getElementById('ouPaginationContainer'), ouFiltered.length, ouCurrentPage, ouPerPage, 'ouGoToPage');
-}
-
-function ouGoToPage(p) {
-    ouCurrentPage = p;
-    ouRenderTable();
-}
-
-function ouToggleParentField() {
-    var level = document.getElementById('ouAddLevel').value;
-    var wrap = document.getElementById('ouAddParentWrap');
-    wrap.style.display = level === 'فرعي' ? 'block' : 'none';
-    if (level === 'فرعي') {
-        ouRenderTreePanel('ouAddTreePanel', 'ouAddParentId', function () { return ouAddTreeExpanded; }, null);
-    }
-}
-
-function ouToggleParentFieldEdit() {
-    var level = document.getElementById('ouEditLevel').value;
-    var wrap = document.getElementById('ouEditParentWrap');
-    wrap.style.display = level === 'فرعي' ? 'block' : 'none';
-    if (level === 'فرعي') {
-        var editId = parseInt(document.getElementById('ouEditId').value);
-        ouRenderTreePanel('ouEditTreePanel', 'ouEditParentId', function () { return ouEditTreeExpanded; }, function () { return editId; });
-    }
-}
-
-function ouShowAddModal() {
-    document.getElementById('ouAddName').value = '';
-    document.getElementById('ouAddClassificationId').selectedIndex = ouClassifications.length > 0 ? 0 : -1;
-    document.getElementById('ouAddLevel').value = 'رئيسي';
-    document.getElementById('ouAddParentWrap').style.display = 'none';
-    ouAddTreeExpanded = {};
-    document.getElementById('ouAddParentId').value = '';
-    document.getElementById('ouAddTreeLabel').textContent = 'بدون وحدة تنظيمية رئيسية';
-    document.getElementById('ouAddTreePanel').classList.add('d-none');
-    document.getElementById('ouAddIsActive').checked = true;
-    document.getElementById('ouAddIsActiveLabel').textContent = 'مفعل';
-    document.getElementById('ouAddError').classList.add('d-none');
-    new bootstrap.Modal(document.getElementById('ouAddModal')).show();
-}
-
-async function ouSubmitAdd() {
-    var name = document.getElementById('ouAddName').value.trim();
-    var errEl = document.getElementById('ouAddError');
-    errEl.classList.add('d-none');
-
-    if (!name) {
-        errEl.textContent = 'اسم الوحدة مطلوب';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var dupAdd = ouAll.find(function (u) { return (u.name || '').trim() === name; });
-    if (dupAdd) {
-        errEl.textContent = 'اسم الوحدة موجود مسبقاً، لا يمكن تكرار الاسم';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var classificationId = parseInt(document.getElementById('ouAddClassificationId').value);
-    if (!classificationId && ouClassifications.length > 0) {
-        errEl.textContent = 'اختر التصنيف';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var level = document.getElementById('ouAddLevel').value;
-    var parentIdVal = document.getElementById('ouAddParentId').value;
-    var parentId = level === 'فرعي' ? (parseInt(parentIdVal) || null) : null;
-
-    var body = {
-        name: name,
-        classificationId: classificationId,
-        level: level,
-        parentId: parentId,
-        isActive: document.getElementById('ouAddIsActive').checked
-    };
-
-    var r = await apiFetch('/Settings/AddOrganizationalUnit', 'POST', body);
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('ouAddModal')).hide();
-        showToast(r.message, 'success');
-        await ouLoad();
-    } else {
-        errEl.textContent = (r && r.message) || 'حدث خطأ';
-        errEl.classList.remove('d-none');
-    }
-}
-
-function ouShowEditModal(id) {
-    var u = ouAll.find(function (x) { return x.id === id; });
-    if (!u) return;
-
-    document.getElementById('ouEditId').value = u.id;
-    document.getElementById('ouEditName').value = u.name;
-    document.getElementById('ouEditClassificationId').value = u.classificationId;
-    document.getElementById('ouEditLevel').value = u.level;
-    document.getElementById('ouEditParentWrap').style.display = u.level === 'فرعي' ? 'block' : 'none';
-    ouEditTreeExpanded = {};
-    document.getElementById('ouEditTreePanel').classList.add('d-none');
-    if (u.level === 'فرعي' && u.parentId) {
-        ouTreeExpandAncestors(u.parentId, ouEditTreeExpanded);
-        var parent = ouAll.find(function (x) { return x.id === u.parentId; });
-        document.getElementById('ouEditParentId').value = u.parentId;
-        document.getElementById('ouEditTreeLabel').textContent = parent ? parent.name : 'بدون وحدة تنظيمية رئيسية';
-    } else {
-        document.getElementById('ouEditParentId').value = '';
-        document.getElementById('ouEditTreeLabel').textContent = 'بدون وحدة تنظيمية رئيسية';
-    }
-    document.getElementById('ouEditSortOrder').value = u.sortOrder;
-    document.getElementById('ouEditSortOrder').setAttribute('max', ouAll.length);
-    document.getElementById('ouEditIsActive').checked = u.isActive;
-    document.getElementById('ouEditIsActiveLabel').textContent = u.isActive ? 'مفعل' : 'معطل';
-    document.getElementById('ouEditError').classList.add('d-none');
-
-    new bootstrap.Modal(document.getElementById('ouEditModal')).show();
-}
-
-async function ouSubmitEdit() {
-    var id = parseInt(document.getElementById('ouEditId').value);
-    var name = document.getElementById('ouEditName').value.trim();
-    var errEl = document.getElementById('ouEditError');
-    errEl.classList.add('d-none');
-
-    if (!name) {
-        errEl.textContent = 'اسم الوحدة مطلوب';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var dupEdit = ouAll.find(function (u) { return (u.name || '').trim() === name && u.id !== id; });
-    if (dupEdit) {
-        errEl.textContent = 'اسم الوحدة موجود مسبقاً، لا يمكن تكرار الاسم';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var sortOrder = parseInt(document.getElementById('ouEditSortOrder').value);
-    if (isNaN(sortOrder) || sortOrder < 1) {
-        errEl.textContent = 'الترتيب يجب أن يبدأ من 1';
-        errEl.classList.remove('d-none');
-        return;
-    }
-
-    var level = document.getElementById('ouEditLevel').value;
-    var parentIdVal = document.getElementById('ouEditParentId').value;
-    var parentId = level === 'فرعي' ? (parseInt(parentIdVal) || null) : null;
-
-    var body = {
-        id: id,
-        name: name,
-        classificationId: parseInt(document.getElementById('ouEditClassificationId').value),
-        level: level,
-        parentId: parentId,
-        isActive: document.getElementById('ouEditIsActive').checked,
-        sortOrder: sortOrder
-    };
-
-    var r = await apiFetch('/Settings/UpdateOrganizationalUnit', 'POST', body);
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('ouEditModal')).hide();
-        showToast(r.message, 'success');
-        await ouLoad();
-    } else {
-        errEl.textContent = (r && r.message) || 'حدث خطأ';
-        errEl.classList.remove('d-none');
-    }
 }
 
 function ouShowDetails(id) {
-    var u = ouAll.find(function (x) { return x.id === id; });
+    var u = ouRows.find(function (x) { return x.id === id; });
     if (!u) return;
+    var sub = document.getElementById('ouDetailsSubtitle');
+    var body = document.getElementById('ouDetailsBody');
+    if (!sub || !body) return;
+    sub.textContent = u.name || '';
 
-    var statusClass = u.isActive ? 'active' : 'inactive';
-    var statusText = u.isActive ? 'مفعل' : 'معطل';
+    var lev = u.level || u.Level || '';
+    var parentNm = u.parentName || '';
+    var mc = u.memberCount != null ? u.memberCount : (u.MemberCount != null ? u.MemberCount : 0);
+    var mgrNm = u.unitManagerName || u.UnitManagerName || '';
+    var mgrHtml = mgrNm
+        ? ouEsc(mgrNm)
+        : '<span class="text-warning fw-semibold">بدون مدير مسجّل لهذه الوحدة</span>';
 
-    var html =
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">اسم الوحدة</div>' +
-            '<div class="ou-detail-value" style="font-weight:700;">' + esc(u.name) + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">التصنيف</div>' +
-            '<div class="ou-detail-value"><span class="ou-badge" style="background:' + (u.classificationColor || '#25935F') + '22;color:' + (u.classificationColor || '#25935F') + ';"><span class="ou-badge-dot" style="background:' + (u.classificationColor || '#25935F') + ';"></span>' + esc(u.classificationName) + '</span></div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">المستوى</div>' +
-            '<div class="ou-detail-value">' + esc(u.level) + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">الوحدة التنظيمية الرئيسية</div>' +
-            '<div class="ou-detail-value">' + (u.parentName ? esc(u.parentName) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">الحالة</div>' +
-            '<div class="ou-detail-value"><span class="ou-status-pill ' + statusClass + '"><span class="ou-badge-dot" style="background:' + (u.isActive ? '#0f9f5c' : '#ef4444') + ';"></span>' + statusText + '</span></div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">الترتيب</div>' +
-            '<div class="ou-detail-value">' + esc(String(u.sortOrder)) + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">أضيف بواسطة</div>' +
-            '<div class="ou-detail-value" style="font-weight:700;">' + (u.createdBy && String(u.createdBy).trim() ? esc(String(u.createdBy).trim()) : '<span style="color:var(--gray-400);font-weight:400;">—</span>') + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">تاريخ الإنشاء</div>' +
-            '<div class="ou-detail-value">' + esc(u.createdAt) + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">آخر تعديل بواسطة</div>' +
-            '<div class="ou-detail-value">' + (u.updatedBy ? esc(u.updatedBy) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
-        '</div>' +
-        '<div class="ou-detail-row">' +
-            '<div class="ou-detail-label">تاريخ التعديل</div>' +
-            '<div class="ou-detail-value">' + (u.updatedAt ? esc(u.updatedAt) : '<span style="color:var(--gray-400);">لم يتم التعديل بعد</span>') + '</div>' +
-        '</div>';
+    function detailRow(label, innerHtml) {
+        return '<div class="d-flex flex-wrap py-2 border-bottom border-light" style="gap:8px;"><div class="text-muted fw-bold" style="min-width:170px;">' + ouEsc(label) + '</div><div class="flex-grow-1">' + innerHtml + '</div></div>';
+    }
 
-    document.getElementById('ouDetailsBody').innerHTML = html;
-    new bootstrap.Modal(document.getElementById('ouDetailsModal')).show();
+    var activeTxt = u.isActive !== false ? 'مفعّلة' : 'معطّلة';
+    body.innerHTML =
+        detailRow('التصنيف التنظيمي', ouEsc(u.classificationName || '—')) +
+        detailRow('نوع الوحدة في الهيكل', ouEsc(lev || '—')) +
+        detailRow('الوحدة التنظيمية الرئيسية', parentNm ? ouEsc(parentNm) : '<span class="text-muted">وحدة رئيسية (جذر)</span>') +
+        detailRow('عدد المنسوبين', '<strong>' + mc + '</strong> مستفيد مرتبط بالوحدة التنظيمية') +
+        detailRow('مدير الوحدة التنظيمية', mgrHtml) +
+        detailRow('ترتيب العرض', String(u.sortOrder != null ? u.sortOrder : '')) +
+        detailRow('التفعيل', ouEsc(activeTxt)) +
+        detailRow('أنشئ بواسطة', ouEsc(u.createdBy || '—')) +
+        detailRow('تاريخ الإنشاء', ouEsc(u.createdAt || u.CreatedAt || '—')) +
+        detailRow('آخر تحديث بواسطة', ouEsc(u.updatedBy || u.UpdatedBy || '—')) +
+        detailRow('تاريخ التحديث', ouEsc(u.updatedAt || u.UpdatedAt || '—'));
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ouDetailsModal')).show();
 }
 
-function ouShowDeleteModal(id, name) {
-    document.getElementById('ouDeleteId').value = id;
-    document.getElementById('ouDeleteNameLabel').textContent = name;
-    document.getElementById('ouDeleteError').classList.add('d-none');
-    new bootstrap.Modal(document.getElementById('ouDeleteModal')).show();
+function ouShowAddModal() {
+    ouEditingId = null;
+    document.getElementById('ouModalTitle').textContent = 'إضافة وحدة تنظيمية';
+    document.getElementById('ouName').value = '';
+    document.getElementById('ouClassificationId').value = '';
+    document.getElementById('ouIsActive').checked = true;
+    document.getElementById('ouSortWrap').style.display = 'none';
+    ouFillParentSelect();
+    document.getElementById('ouParentId').value = '';
+    document.getElementById('ouError').classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ouModal')).show();
 }
 
-async function ouSubmitDelete() {
-    var id = parseInt(document.getElementById('ouDeleteId').value);
-    var errEl = document.getElementById('ouDeleteError');
+function ouEdit(id) {
+    var u = ouRows.find(function (x) { return x.id === id; });
+    if (!u) return;
+    ouEditingId = id;
+    document.getElementById('ouModalTitle').textContent = 'تعديل وحدة تنظيمية';
+    document.getElementById('ouName').value = u.name || '';
+    document.getElementById('ouClassificationId').value = String(u.classificationId || '');
+    document.getElementById('ouIsActive').checked = u.isActive !== false;
+    document.getElementById('ouSortWrap').style.display = '';
+    document.getElementById('ouSortOrder').value = u.sortOrder != null ? u.sortOrder : '';
+    ouFillParentSelect();
+    var pid = u.parentId != null ? u.parentId : u.ParentId;
+    document.getElementById('ouParentId').value = pid ? String(pid) : '';
+    document.getElementById('ouError').classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ouModal')).show();
+}
+
+async function ouSave() {
+    var errEl = document.getElementById('ouError');
     errEl.classList.add('d-none');
+    var name = (document.getElementById('ouName').value || '').trim();
+    var cid = parseInt(document.getElementById('ouClassificationId').value, 10);
+    var pidRaw = document.getElementById('ouParentId').value;
+    var parentId = pidRaw ? parseInt(pidRaw, 10) : null;
+    if (!name) {
+        errEl.textContent = 'اسم الوحدة مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (!cid) {
+        errEl.textContent = 'اختر التصنيف التنظيمي';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (pidRaw && (!parentId || parentId <= 0)) {
+        errEl.textContent = 'اختيار الوحدة الرئيسية غير صالح';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ouEditingId && parentId === ouEditingId) {
+        errEl.textContent = 'لا يمكن أن تكون الوحدة تابعة لنفسها';
+        errEl.classList.remove('d-none');
+        return;
+    }
 
-    var r = await apiFetch('/Settings/DeleteOrganizationalUnit', 'POST', { id: id });
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('ouDeleteModal')).hide();
-        showToast(r.message, 'success');
-        await ouLoad();
-    } else {
-        errEl.textContent = (r && r.message) || 'حدث خطأ';
+    try {
+        if (ouEditingId) {
+            var sortOrder = parseInt(document.getElementById('ouSortOrder').value, 10);
+            if (!sortOrder || sortOrder < 1) sortOrder = 1;
+            var r = await apiFetch('/Settings/UpdateOrganizationalUnit', 'POST', {
+                id: ouEditingId,
+                name: name,
+                classificationId: cid,
+                parentId: parentId,
+                isActive: document.getElementById('ouIsActive').checked,
+                sortOrder: sortOrder
+            });
+            if (r.success) {
+                bootstrap.Modal.getInstance(document.getElementById('ouModal')).hide();
+                showToast(r.message || 'تم التحديث', 'success');
+                ouLoad();
+            } else {
+                errEl.textContent = r.message || 'خطأ';
+                errEl.classList.remove('d-none');
+            }
+        } else {
+            var r2 = await apiFetch('/Settings/AddOrganizationalUnit', 'POST', {
+                name: name,
+                classificationId: cid,
+                parentId: parentId,
+                isActive: document.getElementById('ouIsActive').checked
+            });
+            if (r2.success) {
+                bootstrap.Modal.getInstance(document.getElementById('ouModal')).hide();
+                showToast(r2.message || 'تم الإضافة', 'success');
+                ouLoad();
+            } else {
+                errEl.textContent = r2.message || 'خطأ';
+                errEl.classList.remove('d-none');
+            }
+        }
+    } catch (e) {
+        errEl.textContent = 'خطأ في الاتصال';
         errEl.classList.remove('d-none');
     }
 }
+
+var ouDeleteId = null;
+function ouConfirmDelete(id) {
+    ouDeleteId = id;
+    var u = ouRows.find(function (x) { return x.id === id; });
+    document.getElementById('ouDeleteName').textContent = u ? (u.name || '') : '';
+    document.getElementById('ouDeleteErr').classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ouDeleteModal')).show();
+}
+
+async function ouSubmitDelete() {
+    var err = document.getElementById('ouDeleteErr');
+    err.classList.add('d-none');
+    try {
+        var r = await apiFetch('/Settings/DeleteOrganizationalUnit', 'POST', { id: ouDeleteId });
+        if (r.success) {
+            bootstrap.Modal.getInstance(document.getElementById('ouDeleteModal')).hide();
+            showToast(r.message || 'تم الحذف', 'success');
+            ouLoad();
+        } else {
+            err.textContent = r.message || 'فشل الحذف';
+            err.classList.remove('d-none');
+        }
+    } catch (e) {
+        err.textContent = 'خطأ في الاتصال';
+        err.classList.remove('d-none');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var s = document.getElementById('ouSearch');
+    var f = document.getElementById('ouFilterClassification');
+    if (s) s.addEventListener('input', function () { ouRenderTable(); });
+    if (f) f.addEventListener('change', function () { ouRenderTable(); });
+    ouLoad();
+});

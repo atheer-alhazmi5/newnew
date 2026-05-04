@@ -33,6 +33,17 @@ public class WorkProceduresController : BaseController
         return View();
     }
 
+    /// <summary>عرض التفويضات الخاصة بالمستخدم بعد تسجيل الدخول.</summary>
+    public IActionResult MyDelegations()
+    {
+        var auth = RequireAuth();
+        if (auth != null) return auth;
+        SetViewBagUser(_ui);
+        ViewBag.Title = "التفويضات";
+        ViewBag.PageName = "التفويضات";
+        return View();
+    }
+
     [HttpGet]
     public IActionResult Workflow(int id)
     {
@@ -132,10 +143,10 @@ public class WorkProceduresController : BaseController
 
         var workspacesForFilter = await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll);
         var formDefsForFilter = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true);
-        var orgUnitsForFilter = unitsAll.Where(u => u.IsActive && (isAdmin || allowedOrgIds.Contains(u.Id)))
+        var orgUnitsForFilter = unitsAll.Where(u => u.IsActive)
             .OrderBy(u => u.SortOrder)
             .ToList();
-        var execRoles = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);
+        var execRoles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
         var allowedBenIds = ParseBeneficiaryIdsFromExecutorRoles(execRoles);
         var beneficiaries = await _ds.ListBeneficiariesAsync();
         var executorBenForFilter = beneficiaries
@@ -169,7 +180,7 @@ public class WorkProceduresController : BaseController
             .Select(w => new { w.Id, w.Name }).ToList();
         var formDefs = (await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true))
             .Select(f => new { f.Id, f.Name, f.Ownership, f.OrganizationalUnitId, f.WorkspaceId }).ToList();
-        var execRoles = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);
+        var execRoles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
         var allowedBenIds = ParseBeneficiaryIdsFromExecutorRoles(execRoles);
         var beneficiaries = await _ds.ListBeneficiariesAsync();
         var executorBeneficiaries = beneficiaries
@@ -188,9 +199,9 @@ public class WorkProceduresController : BaseController
             })
             .Where(x => x.beneficiaryIds.Count > 0)
             .ToList();
-        var orgUnits = unitsAll.Where(u => u.IsActive && (isAdmin || allowedOrgIds.Contains(u.Id)))
+        var orgUnits = unitsAll.Where(u => u.IsActive)
             .OrderBy(u => u.SortOrder)
-            .Select(u => new { u.Id, u.Name, u.ParentId, u.Level }).ToList();
+            .Select(u => new { u.Id, u.Name, u.ParentId, Level = u.ParentId.HasValue ? "فرعي" : "رئيسي" }).ToList();
 
         var myUnit = unitsAll.FirstOrDefault(u => u.Id == myOrgUnitId);
         var myOrgUnitName = myUnit?.Name ?? "";
@@ -561,8 +572,8 @@ public class WorkProceduresController : BaseController
         else
             req.OrganizationalUnitId = myOrgUnitId;
 
-        if (!ValidateTargetOrgUnits(req.TargetOrganizationalUnitIds ?? new List<int>(), allowedOrgIds, isAdmin))
-            return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير مسموحة" });
+        if (!ValidateTargetOrganizationalUnitsActive(req.TargetOrganizationalUnitIds ?? new List<int>(), unitsAll))
+            return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير موجودة أو غير مفعّلة" });
 
         var send = req.SendForApproval;
         var w = BuildEntityFromRequest(req, new WorkProcedure(), isAdmin, send);
@@ -615,8 +626,8 @@ public class WorkProceduresController : BaseController
         else
             req.OrganizationalUnitId = p.OrganizationalUnitId;
 
-        if (!ValidateTargetOrgUnits(req.TargetOrganizationalUnitIds ?? new List<int>(), allowedOrgIds, isAdmin))
-            return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير مسموحة" });
+        if (!ValidateTargetOrganizationalUnitsActive(req.TargetOrganizationalUnitIds ?? new List<int>(), unitsAll))
+            return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير موجودة أو غير مفعّلة" });
 
         BuildEntityFromRequest(req, p, isAdmin, req.SendForApproval);
         p.UpdatedBy = CurrentUserFullName;
@@ -865,7 +876,7 @@ public class WorkProceduresController : BaseController
     private async Task<string?> ValidateExecutorBeneficiaryIdsAsync(List<int>? ids, bool isAdmin, HashSet<int> allowedOrgIds)
     {
         if (ids == null || ids.Count == 0) return "المنفذين للإجراء مطلوبون";
-        var roles = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);
+        var roles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
         var allowed = ParseBeneficiaryIdsFromExecutorRoles(roles);
         foreach (var id in ids)
         {
@@ -1086,6 +1097,14 @@ public class WorkProceduresController : BaseController
         return active.Where(r => RoleTouchesOrgUnits(r, allowedOrgIds)).OrderBy(r => r.SortOrder).ToList();
     }
 
+    private async Task<List<ExecutorRole>> ListExecutorRolesForProcedureExecutorsPicklistAsync(bool isAdmin, HashSet<int> allowedOrgIds)
+    {
+        if (isAdmin)
+            return await ListExecutorRolesForUserAsync(true, allowedOrgIds);
+        var all = await _ds.ListExecutorRolesAsync();
+        return all.Where(r => r.IsActive).OrderBy(r => r.SortOrder).ToList();
+    }
+
     private static bool RoleTouchesOrgUnits(ExecutorRole r, HashSet<int> allowedOrgIds)
     {
         if (string.IsNullOrWhiteSpace(r.OrgUnitIds)) return true;
@@ -1097,12 +1116,12 @@ public class WorkProceduresController : BaseController
         return false;
     }
 
-    private static bool ValidateTargetOrgUnits(List<int> targets, HashSet<int> allowedOrgIds, bool isAdmin)
+    private static bool ValidateTargetOrganizationalUnitsActive(List<int> targets, List<OrganizationalUnit> unitsAll)
     {
+        var activeIds = unitsAll.Where(u => u.IsActive).Select(u => u.Id).ToHashSet();
         foreach (var t in targets)
         {
-            if (t <= 0) return false;
-            if (!isAdmin && !allowedOrgIds.Contains(t)) return false;
+            if (t <= 0 || !activeIds.Contains(t)) return false;
         }
         return true;
     }

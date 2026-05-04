@@ -224,6 +224,7 @@ var RT_FIELD_TYPES = {
     "تاريخ": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"separator", label:"الفاصل", type:"select", options:["/",":","."] },
+        { key:"calendarType", label:"نوع التقويم", type:"select", options:["ميلادي","هجري"] },
         { key:"startDate", label:"تاريخ البداية", type:"date" },
         { key:"endDate", label:"تاريخ النهاية", type:"date" },
         { key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },
@@ -677,6 +678,10 @@ function rtcOnFieldTypeChange() {
         var pfmt = document.getElementById('rtcProp_phoneFormat');
         if (pfmt && !pfmt.value) pfmt.value = '+966 (9 أرقام)';
     }
+    if (type === 'تاريخ') {
+        var calRtc = document.getElementById('rtcProp_calendarType');
+        if (calRtc && !calRtc.value) calRtc.value = 'ميلادي';
+    }
     var tooltip = document.getElementById('rtcFieldTooltip');
     if (!tooltip.value) {
         var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم","جدول بيانات":"عبّئ الجدول","شبكة خيارات متعددة":"اختر خياراً لكل صف","شبكة مربعات اختيار":"حدد الخانات المطلوبة" };
@@ -957,7 +962,15 @@ function rtpBuildFieldInput(f, opt) {
         if (opts2.length === 0) inp += '<span class="text-muted">—</span>';
         inp += '</div>';
     } else if (f.fieldType === 'تاريخ') {
-        inp = '<input type="date" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + '>';
+        var calT = String(props.calendarType || 'ميلادي').trim();
+        var dtMin = props.startDate ? ' min="' + rtEscAttr(String(props.startDate)) + '"' : '';
+        var dtMax = props.endDate ? ' max="' + rtEscAttr(String(props.endDate)) + '"' : '';
+        if (calT === 'هجري') {
+            var hijPh = rtEscAttr(ph || 'مثال: 1447/06/15');
+            inp = '<input type="text" class="form-control" dir="rtl" placeholder="' + hijPh + ' — هجري" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle('direction:rtl;') + '>';
+        } else {
+            inp = '<input type="date" class="form-control" value="' + defVal + '"' + dtMin + dtMax + reqAttr + roAttr + ttAttr + mkStyle() + '>';
+        }
     } else if (f.fieldType === 'وقت') {
         var tfmt = props.timeFormat || '';
         inp = '<input type="time" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + (tfmt === '24 ساعة' ? '' : ' step="3600"') + '>';
@@ -1305,6 +1318,10 @@ function rtEditOnFieldTypeChange() {
     if (type === 'رقم الهاتف') {
         var pfmt2 = document.getElementById('rtEditProp_phoneFormat');
         if (pfmt2 && !pfmt2.value) pfmt2.value = '+966 (9 أرقام)';
+    }
+    if (type === 'تاريخ') {
+        var calEdit = document.getElementById('rtEditProp_calendarType');
+        if (calEdit && !calEdit.value) calEdit.value = 'ميلادي';
     }
     var tooltip = document.getElementById('rtEditFieldTooltip');
     if (tooltip && !tooltip.value) {

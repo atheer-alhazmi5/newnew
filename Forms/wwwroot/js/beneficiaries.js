@@ -611,7 +611,7 @@ function bnfRenderTable() {
             '<td><span dir="ltr" style="font-family:Consolas,monospace;font-size:12px;">' + esc(b.nationalId || '') + '</span></td>' +
             '<td><span dir="ltr" style="font-size:12px;">' + esc(b.phone || '') + '</span></td>' +
             '<td><span dir="ltr" style="font-size:11px;">' + esc(b.email || '') + '</span></td>' +
-            '<td style="font-size:12px;">' + esc(b.roleDisplay) + '</td>' +
+            '<td style="font-size:12px;">' + esc(b.roleDisplayTable || b.RoleDisplayTable || b.roleDisplay || '') + '</td>' +
             '<td style="font-size:12px;">' + esc(b.organizationalUnitName || '') + '</td>' +
             '<td style="text-align:center;"><span class="bnf-status-pill ' + statusClass + '"><span class="bnf-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +

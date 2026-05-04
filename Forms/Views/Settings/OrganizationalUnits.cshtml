@@ -4,244 +4,139 @@
 }
 
 <style>
-.ou-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
-.ou-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
-.ou-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
-.ou-modal-header .btn-close-x:hover { color:#fff; }
-.ou-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
-.ou-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
-.ou-modal-body { padding:28px; }
-.ou-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; justify-content:flex-start; }
-.ou-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
-.ou-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
-.ou-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
-.ou-cancel-btn:hover { background:#4b5563; }
-.ou-section-title { font-weight:700; font-size:15px; color:var(--sa-800); margin-bottom:20px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:2px solid var(--sa-100); }
-.ou-section-title i { font-size:18px; }
-.required-star { color:#ef4444; margin-right:4px; font-weight:700; }
-.ou-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; line-height:1.3; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.ou-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
-.ou-action-btn-detail:hover { background:var(--info-50); }
-.ou-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
-.ou-action-btn-edit:hover { background:var(--sa-50); }
-.ou-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
-.ou-action-btn-delete:hover { background:var(--error-50); }
-.ou-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
-.ou-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
-.ou-status-pill.inactive { background:#fde8e8; color:#ef4444; }
-.ou-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
-.ou-badge-dot { width:8px; height:8px; border-radius:50%; }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.ou-search-box { position:relative; }
-.ou-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
-.ou-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
-.ou-search-box .ou-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; pointer-events:none; }
-.ou-modal-body .form-control, .ou-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; }
-.ou-modal-body .form-control:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
-.ou-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
-.ou-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
-.ou-page-header .ou-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
-.ou-detail-row { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--gray-100); }
-.ou-detail-row:last-child { border-bottom:none; }
-.ou-detail-label { font-weight:700; font-size:14px; color:var(--gray-600); min-width:140px; }
-.ou-detail-value { font-size:14px; color:var(--gray-900); flex:1; }
-#ouPageTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; border-bottom:2px solid var(--gray-200); }
-#ouPageTable tbody tr:hover { background:var(--sa-25); }
-.ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + .75rem + 2px); }
-.ou-tree-label { font-weight:500; color:var(--gray-800); }
-.ou-tree-panel { max-height:260px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
-.ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; display:flex; align-items:center; cursor:pointer; }
-.ou-tree-row:hover { background:var(--sa-25); }
-.ou-tree-row.is-selected { background:var(--info-50); }
-.ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s,border-color .15s,box-shadow .15s,transform .12s; }
-.ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
-.ou-tree-exp:active { transform:scale(0.94); }
-.ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
-.ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; flex-grow:1; }
+.bnf-modal { border-radius:16px; border:none; overflow:hidden; box-shadow:0 8px 50px rgba(0,0,0,.2); }
+.bnf-modal-header { background:var(--sa-700); padding:18px 24px; position:relative; }
+.bnf-modal-header .btn-close-x { position:absolute; top:14px; left:14px; background:none; border:none; color:rgba(255,255,255,.7); font-size:18px; cursor:pointer; }
+.bnf-modal-header .btn-close-x:hover { color:#fff; }
+.bnf-modal-title { color:#fff; font-weight:700; font-size:16px; margin:0; }
+.bnf-modal-subtitle { color:rgba(255,255,255,.7); font-size:12px; margin-top:2px; }
+.bnf-modal-body { padding:24px; max-height:75vh; overflow-y:auto; }
+.bnf-modal-footer { padding:16px 24px; display:flex; flex-wrap:wrap; gap:10px; border:none; justify-content:flex-end; align-items:center; background:var(--gray-50); border-top:1px solid var(--gray-100); }
+.bnf-save-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .15s; }
+.bnf-save-btn:hover { background:var(--sa-700); }
+.bnf-cancel-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .15s; }
+.bnf-cancel-btn:hover { background:#4b5563; }
+.bnf-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+.bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:1180px; font-size:13px; }
+.bnf-tbl .table > :not(caption) > * > * { padding-top:0.72rem; padding-bottom:0.72rem; vertical-align:middle; }
+.bnf-tbl .table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding-left:10px; padding-right:10px; }
+.bnf-tbl .table tbody tr { transition:background .15s; }
+.bnf-tbl .table tbody tr:hover { background:var(--sa-25); }
+.bnf-tbl .table tbody td { border-bottom:1px solid var(--gray-100); padding-left:10px; padding-right:10px; }
+.ou-action-btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.ou-action-btn-detail { background:var(--gray-100); color:var(--gray-700); }
+.ou-action-btn-detail:hover { background:var(--gray-200); color:var(--gray-800); }
+.ou-action-btn-edit { background:#198754; color:#fff; }
+.ou-action-btn-edit:hover { background:#157347; color:#fff; }
+.ou-action-btn-delete { background:#dc3545; color:#fff; }
+.ou-action-btn-delete:hover { background:#bb2d3b; color:#fff; }
+.ou-status { display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-weight:700; font-size:11px; }
+.ou-on { background:#dcf5e8; color:#0f9f5c; }
+.ou-off { background:#fde8e8; color:#ef4444; }
+.required-star { color:#ef4444; margin-right:4px; }
 </style>
 
-<div class="ou-page-header">
-    <div>
-        <h2 class="page-title" style="margin:0;">الوحدات التنظيمية</h2>
-        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة الوحدات في الهيكل التنظيمي</p>
-    </div>
-    <button class="btn btn-primary ou-add-btn" onclick="ouShowAddModal()">
-        <i class="bi bi-plus-lg"></i>إضافة وحدة
-    </button>
-</div>
-
-<!-- Search and Filters -->
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
-    <div class="rt-search-box" style="min-width:200px;max-width:280px;">
-        <i class="bi bi-search rt-search-icon"></i>
-        <input type="text" class="form-control" id="ouSearchInput" placeholder="بحث بالاسم" oninput="ouFilter()" autocomplete="off">
-    </div>
-    <select class="rt-filter-select form-select" id="ouFilterClassification" style="width:auto;min-width:160px;" onchange="ouFilter()" aria-label="التصنيف">
-        <option value="">التصنيف</option>
-    </select>
-    <select class="rt-filter-select form-select" id="ouFilterLevel" style="width:auto;min-width:140px;" onchange="ouFilter()" aria-label="المستوى">
-        <option value="">المستوى</option>
-        <option value="رئيسي">رئيسي</option>
-        <option value="فرعي">فرعي</option>
-    </select>
-    <select class="rt-filter-select form-select" id="ouFilterStatus" style="width:auto;min-width:120px;" onchange="ouFilter()" aria-label="الحالة">
-        <option value="">الحالة</option>
-        <option value="1">مفعل</option>
-        <option value="0">معطل</option>
-    </select>
-    <button type="button" class="rt-clear-btn" onclick="ouClearFilters()" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
-</div>
-
-<!-- Table -->
-<div class="card">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table mb-0" id="ouPageTable">
-                <thead>
-                    <tr>
-                        <th style="width:60px;">#</th>
-                        <th>اسم الوحدة</th>
-                        <th style="width:140px;">التصنيف</th>
-                        <th style="width:110px;">المستوى</th>
-                        <th style="width:110px;">الحالة</th>
-                        <th style="width:260px;">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="ouBody">
-                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
-                </tbody>
-            </table>
+<div class="bnf-settings-page">
+    <div class="bnf-page-header">
+        <div>
+            <h2 class="page-title" style="margin:0;">الوحدات التنظيمية</h2>
+            <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إضافة وتعديل الوحدات؛ تحديد الرئيسية أو الفرعية من خلال «الوحدة التنظيمية الرئيسية» فقط.</p>
         </div>
+        <button type="button" class="btn btn-primary" onclick="ouShowAddModal()" style="border-radius:12px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
+            <i class="bi bi-plus-lg"></i> إضافة وحدة
+        </button>
     </div>
-</div>
 
-<div id="ouPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+    <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+        <div class="rt-search-box" style="min-width:200px;max-width:280px;">
+            <i class="bi bi-search rt-search-icon"></i>
+            <input type="text" class="form-control" id="ouSearch" placeholder="بحث بالاسم..." autocomplete="off">
+        </div>
+        <select class="form-select rt-filter-select" id="ouFilterClassification" style="min-width:200px;">
+            <option value="">كل التصنيفات</option>
+        </select>
+    </div>
 
-<!-- Add Modal -->
-<div class="modal fade" id="ouAddModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ou-modal">
-            <div class="ou-modal-header">
-                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ou-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة وحدة جديدة</h5>
-                <div class="ou-modal-subtitle">أدخل بيانات الوحدة التنظيمية</div>
-            </div>
-            <div class="ou-modal-body">
-                <div class="ou-section-title"><i class="bi bi-info-circle-fill"></i>معلومات الوحدة</div>
-                <div class="mb-3">
-                    <label class="form-label">اسم الوحدة<span class="required-star">*</span></label>
-                    <input type="text" class="form-control" id="ouAddName" >
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">التصنيف<span class="required-star">*</span></label>
-                    <select class="form-select" id="ouAddClassificationId"></select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">المستوى<span class="required-star">*</span></label>
-                    <select class="form-select" id="ouAddLevel" onchange="ouToggleParentField()">
-                        <option value="رئيسي">رئيسي</option>
-                        <option value="فرعي">فرعي</option>
-                    </select>
-                </div>
-                <div class="mb-3" id="ouAddParentWrap" style="display:none;">
-                    <label class="form-label">الوحدة التنظيمية الرئيسية</label>
-                    <div class="ou-tree-wrap">
-                        <input type="hidden" id="ouAddParentId" value="">
-                        <button type="button" class="form-select ou-tree-trigger text-end w-100" id="ouAddTreeTrigger" aria-expanded="false">
-                            <span class="ou-tree-label text-truncate d-block" id="ouAddTreeLabel">بدون وحدة تنظيمية رئيسية</span>
-                        </button>
-                        <div class="ou-tree-panel d-none" id="ouAddTreePanel" role="listbox"></div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">الحالة</label>
-                    <div class="d-flex align-items-center gap-3 mt-2">
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="ouAddIsActive" checked style="width:48px;height:24px;">
-                        </div>
-                        <label class="form-check-label" for="ouAddIsActive" id="ouAddIsActiveLabel" style="font-weight:600;">مفعل</label>
-                    </div>
-                </div>
-                <div id="ouAddError" class="alert alert-danger d-none" style="font-size:14px;"></div>
-            </div>
-            <div class="ou-modal-footer">
-                <button class="ou-save-btn" onclick="ouSubmitAdd()">حفظ</button>
-                <button class="ou-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+    <div class="card bnf-tbl">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>اسم الوحدة</th>
+                            <th>التصنيف</th>
+                            <th>الوحدة الرئيسية</th>
+                            <th style="width:88px;text-align:center;">عدد المنسوبين</th>
+                            <th>مدير الوحدة التنظيمية</th>
+                            <th style="width:90px;">الترتيب</th>
+                            <th style="width:100px;">التفعيل</th>
+                            <th style="min-width:280px;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ouBody">
+                        <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="ouEditModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ou-modal">
-            <div class="ou-modal-header">
+<div class="modal fade" id="ouModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ou-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i>تحديث الوحدة</h5>
-                <div class="ou-modal-subtitle">تعديل بيانات الوحدة</div>
+                <h5 class="bnf-modal-title" id="ouModalTitle"><i class="bi bi-diagram-3" style="margin-left:8px;"></i>إضافة وحدة تنظيمية</h5>
+                <div class="bnf-modal-subtitle">اختر الوحدة الرئيسية من قائمة تعرض الهيكل شجرياً حسب التبعية.</div>
             </div>
-            <div class="ou-modal-body">
-                <input type="hidden" id="ouEditId">
-                <div class="ou-section-title"><i class="bi bi-info-circle-fill"></i>معلومات الوحدة</div>
+            <div class="bnf-modal-body">
                 <div class="mb-3">
                     <label class="form-label">اسم الوحدة<span class="required-star">*</span></label>
-                    <input type="text" class="form-control" id="ouEditName">
+                    <input type="text" class="form-control" id="ouName" maxlength="200" autocomplete="off">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">التصنيف</label>
-                    <select class="form-select" id="ouEditClassificationId"></select>
+                    <label class="form-label">التصنيف التنظيمي<span class="required-star">*</span></label>
+                    <select class="form-select" id="ouClassificationId"></select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">المستوى</label>
-                    <select class="form-select" id="ouEditLevel" onchange="ouToggleParentFieldEdit()">
-                        <option value="رئيسي">رئيسي</option>
-                        <option value="فرعي">فرعي</option>
-                    </select>
+                    <label class="form-label" for="ouParentId">الوحدة التنظيمية الرئيسية</label>
+                    <select class="form-select" id="ouParentId" style="font-family:'Cairo',sans-serif;"></select>
+                    <p class="text-muted small mb-0 mt-2" style="font-size:11px;">المسافة والرمز └ تمثل مستوى التبعية في الشجرة؛ اترك «وحدة رئيسية» لإنشاء وحدة في الجذر.</p>
                 </div>
-                <div class="mb-3" id="ouEditParentWrap" style="display:none;">
-                    <label class="form-label">الوحدة التنظيمية الرئيسية</label>
-                    <div class="ou-tree-wrap">
-                        <input type="hidden" id="ouEditParentId" value="">
-                        <button type="button" class="form-select ou-tree-trigger text-end w-100" id="ouEditTreeTrigger" aria-expanded="false">
-                            <span class="ou-tree-label text-truncate d-block" id="ouEditTreeLabel">بدون وحدة تنظيمية رئيسية</span>
-                        </button>
-                        <div class="ou-tree-panel d-none" id="ouEditTreePanel" role="listbox"></div>
-                    </div>
+                <div class="mb-3" id="ouSortWrap" style="display:none;">
+                    <label class="form-label">ترتيب العرض<span class="required-star">*</span></label>
+                    <input type="number" class="form-control" id="ouSortOrder" min="1" step="1">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">الترتيب</label>
-                    <input type="number" class="form-control" id="ouEditSortOrder" min="1">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="ouIsActive" checked>
+                    <label class="form-check-label" for="ouIsActive">الوحدة مفعّلة</label>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">الحالة</label>
-                    <div class="d-flex align-items-center gap-3 mt-2">
-                        <div class="form-check form-switch m-0">
-                            <input class="form-check-input" type="checkbox" id="ouEditIsActive" style="width:48px;height:24px;">
-                        </div>
-                        <label class="form-check-label" for="ouEditIsActive" id="ouEditIsActiveLabel" style="font-weight:600;">مفعل</label>
-                    </div>
-                </div>
-                <div id="ouEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+                <div id="ouError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>
-            <div class="ou-modal-footer">
-                <button class="ou-save-btn" onclick="ouSubmitEdit()"><i class="bi bi-check-lg"></i>حفظ التعديلات</button>
-                <button class="ou-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            <div class="bnf-modal-footer">
+                <button type="button" class="bnf-save-btn" onclick="ouSave()">حفظ</button>
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="modal fade" id="ouDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ou-modal">
-            <div class="ou-modal-header" style="background:var(--info-700);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--info-700);">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ou-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل الوحدة</h5>
-                <div class="ou-modal-subtitle">عرض بيانات الوحدة</div>
+                <h5 class="bnf-modal-title"><i class="bi bi-info-circle" style="margin-left:8px;"></i>تفاصيل الوحدة التنظيمية</h5>
+                <div class="bnf-modal-subtitle" id="ouDetailsSubtitle"></div>
             </div>
-            <div class="ou-modal-body" id="ouDetailsBody"></div>
-            <div class="ou-modal-footer" style="justify-content:flex-end;">
-                <button class="ou-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            <div class="bnf-modal-body" id="ouDetailsBody"></div>
+            <div class="bnf-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
     </div>
@@ -249,20 +144,19 @@
 
 <div class="modal fade" id="ouDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content ou-modal">
-            <div class="ou-modal-header" style="background:var(--error-600);">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--error-600);">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ou-modal-title">حذف الوحدة</h5>
+                <h5 class="bnf-modal-title">حذف وحدة تنظيمية</h5>
             </div>
-            <div class="ou-modal-body text-center">
-                <input type="hidden" id="ouDeleteId">
-                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذه الوحدة؟</p>
-                <p style="font-size:14px;color:var(--gray-500);" id="ouDeleteNameLabel"></p>
-                <div id="ouDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            <div class="bnf-modal-body text-center">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من الحذف؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="ouDeleteName"></p>
+                <div id="ouDeleteErr" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
             </div>
-            <div class="ou-modal-footer" style="justify-content:center;">
-                <button class="ou-save-btn" style="background:var(--error-600);" onclick="ouSubmitDelete()">نعم، حذف</button>
-                <button class="ou-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            <div class="bnf-modal-footer" style="justify-content:center;">
+                <button type="button" class="bnf-save-btn" style="background:var(--error-600);" onclick="ouSubmitDelete()">نعم، حذف</button>
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>

@@ -1,513 +1,679 @@
-
 'use strict';
 
-var dlgAll = [];
-var dlgUnits = [];
-var dlgBeneficiaries = [];
-var dlgEditId = null;
-
-// حالات توسيع الشجرة لكل منسدلة
-var dlgOuExp = { filterDor: {}, filterDee: {}, formDor: {}, formDee: {} };
-
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-function dlgEsc(s) {
-    if (s == null) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-function dlgOuId(u) { return u.id != null ? u.id : u.Id; }
-function dlgOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
-function dlgOuSort(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
-function dlgOuName(u) { return u.name != null ? u.name : (u.Name || ''); }
-
-function dlgUnitById(id) {
-    var n = parseInt(id, 10);
-    return dlgUnits.find(function (u) { return dlgOuId(u) === n; });
+function delEsc(t) {
+    if (typeof esc === 'function') return esc(t);
+    var s = t == null ? '' : String(t);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function dlgBuildOuByParent() {
+function delNameRoleCell(name, role) {
+    var r = (role || '').trim();
+    var sub = r ? '<div class="small text-muted mt-1" style="font-size:11px;line-height:1.35;">' + delEsc(r) + '</div>' : '';
+    return '<div class="fw-semibold">' + delEsc(name || '') + '</div>' + sub;
+}
+
+function delDetailRow(label, innerHtml) {
+    return '<div class="d-flex flex-wrap py-2 border-bottom border-light" style="gap:8px;"><div class="text-muted fw-bold" style="min-width:170px;">' + delEsc(label) + '</div><div class="flex-grow-1">' + innerHtml + '</div></div>';
+}
+
+var delBeneficiaries = [];
+var delOrgUnits = [];
+var delRows = [];
+var delEditingId = null;
+
+function delBenId(b) {
+    return b.id != null ? b.id : b.Id;
+}
+
+function delBenOu(b) {
+    var v = b.organizationalUnitId != null ? b.organizationalUnitId : b.OrganizationalUnitId;
+    return v != null ? parseInt(v, 10) : 0;
+}
+
+function delBenName(b) {
+    return (b.fullName || b.FullName || '').trim();
+}
+
+function delBenRole(b) {
+    return (b.roleDisplay || b.RoleDisplay || '').trim();
+}
+
+/** تسمية المستفيد في القائمة: الاسم أولاً ثم الصلاحية ضمن الوحدة المختارة */
+function delBenOptionLabel(b) {
+    var name = delBenName(b);
+    var role = delBenRole(b);
+    if (!role) return delEsc(name);
+    return delEsc(name) + ' — ' + delEsc(role);
+}
+
+/** تعبئة قائمة المفوِّض: أسماء من يخصّون وحدة المفوض فقط بعد اختيار الوحدة من الشجرة */
+function delRebuildDelegatorBenOptions() {
+    var hid = document.getElementById('delDelegatorOuId');
+    var sel = document.getElementById('delDelegatorBen');
+    if (!hid || !sel) return;
+    var ouId = parseInt(hid.value, 10) || 0;
+    var keep = sel.value;
+    if (!ouId) {
+        sel.innerHTML = '<option value="">— اختر وحدة المفوض أولاً —</option>';
+        sel.value = '';
+        delRebuildDelegateeBenOptions();
+        return;
+    }
+    sel.innerHTML = '<option value="">— اختر اسم المفوض من هذه الوحدة —</option>';
+    delBeneficiaries.filter(function (b) {
+        return b.isActive !== false && delBenOu(b) === ouId;
+    }).sort(function (a, b) {
+        return delBenName(a).localeCompare(delBenName(b), 'ar');
+    }).forEach(function (b) {
+        var id = delBenId(b);
+        sel.innerHTML += '<option value="' + id + '">' + delBenOptionLabel(b) + '</option>';
+    });
+    if (keep && Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }))
+        sel.value = keep;
+    else sel.value = '';
+    delRebuildDelegateeBenOptions();
+}
+
+/**
+ * قائمة المفوَّض له: مستفيدو وحدة المفوض له فقط؛ بعد تحديد الوحدة؛ مع استثناء المفوِّض.
+ */
+function delRebuildDelegateeBenOptions() {
+    var hid = document.getElementById('delDelegateeOuId');
+    var sel = document.getElementById('delDelegateeBen');
+    var delegatorSel = document.getElementById('delDelegatorBen');
+    if (!hid || !sel || !delegatorSel) return;
+    var ouId = parseInt(hid.value, 10) || 0;
+    var delegatorId = parseInt(delegatorSel.value, 10) || 0;
+    var keep = sel.value;
+    if (!ouId) {
+        sel.innerHTML = '<option value="">— اختر وحدة المفوض له أولاً —</option>';
+        sel.value = '';
+        return;
+    }
+    sel.innerHTML = '<option value="">— اختر اسم المفوض له من هذه الوحدة —</option>';
+    delBeneficiaries.filter(function (b) {
+        var bid = delBenId(b);
+        if (delegatorId && bid === delegatorId) return false;
+        return b.isActive !== false && delBenOu(b) === ouId;
+    }).sort(function (a, b) {
+        return delBenName(a).localeCompare(delBenName(b), 'ar');
+    }).forEach(function (b) {
+        var id = delBenId(b);
+        sel.innerHTML += '<option value="' + id + '">' + delBenOptionLabel(b) + '</option>';
+    });
+    var keepNum = parseInt(keep, 10);
+    if (delegatorId && keepNum === delegatorId) sel.value = '';
+    else if (keep && Array.prototype.some.call(sel.options, function (o) { return o.value === keep; }))
+        sel.value = keep;
+    else sel.value = '';
+}
+
+var delOuExpandedDelegator = {};
+var delOuExpandedDelegatee = {};
+
+function delNormalizeOrgUnits(raw) {
+    return (raw || []).map(function (u) {
+        var id = u.id != null ? u.id : u.Id;
+        var pid = u.parentId != null ? u.parentId : u.ParentId;
+        return {
+            id: parseInt(id, 10),
+            name: (u.name || u.Name || '').trim(),
+            parentId: pid != null && pid !== '' ? parseInt(pid, 10) : null,
+            sortOrder: u.sortOrder != null ? parseInt(u.sortOrder, 10) : (u.SortOrder != null ? parseInt(u.SortOrder, 10) : 0)
+        };
+    }).filter(function (u) { return !isNaN(u.id); });
+}
+
+function delOuLookupName(unitId) {
+    var n = parseInt(unitId, 10);
+    if (!n) return '';
+    var u = delOrgUnits.find(function (x) { return x.id === n; });
+    return u ? u.name : '';
+}
+
+function delOrgUnitByParent() {
     var ids = {};
-    dlgUnits.forEach(function (u) { ids[dlgOuId(u)] = true; });
+    delOrgUnits.forEach(function (u) { ids[u.id] = true; });
     var byParent = {};
-    dlgUnits.forEach(function (u) {
-        var p = dlgOuParentId(u);
-        var pk = (p != null && p !== '' && ids[p]) ? String(p) : '';
+    delOrgUnits.forEach(function (u) {
+        var pk = '';
+        if (u.parentId != null && u.parentId !== '' && !isNaN(u.parentId) && ids[u.parentId]) {
+            pk = String(u.parentId);
+        }
         if (!byParent[pk]) byParent[pk] = [];
         byParent[pk].push(u);
     });
     Object.keys(byParent).forEach(function (k) {
         byParent[k].sort(function (a, b) {
-            var sa = dlgOuSort(a), sb = dlgOuSort(b);
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
             if (sa !== sb) return sa - sb;
-            return dlgOuName(a).localeCompare(dlgOuName(b), 'ar');
+            return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
         });
     });
     return byParent;
 }
 
-/* ── OU tree dropdowns (trigger + panel) ────────────────────────────────── */
-/** @param {{triggerId:string,panelId:string,hiddenId:string,labelId:string,expandedKey:string,allowClear:boolean,onSelect:(unit:object|null)=>void}} cfg */
-function dlgBindOuDropdown(cfg) {
-    var trigger = document.getElementById(cfg.triggerId);
-    var panel = document.getElementById(cfg.panelId);
-    if (!trigger || !panel) return;
-
-    trigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (panel.classList.contains('d-none')) {
-            dlgRenderOuTreePanel(cfg);
-            panel.classList.remove('d-none');
-            trigger.setAttribute('aria-expanded', 'true');
-        } else {
-            panel.classList.add('d-none');
-            trigger.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    panel.addEventListener('click', function (e) {
-        var expBtn = e.target.closest('.dlg-ou-tree-exp');
-        if (expBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            var eid = expBtn.getAttribute('data-exp');
-            if (eid) {
-                dlgOuExp[cfg.expandedKey][eid] = !dlgOuExp[cfg.expandedKey][eid];
-                dlgRenderOuTreePanel(cfg);
-            }
-            return;
-        }
-        var row = e.target.closest('.dlg-ou-tree-row');
-        if (row && row.getAttribute('data-id') !== null) {
-            var raw = row.getAttribute('data-id');
-            if (raw === '') {
-                document.getElementById(cfg.hiddenId).value = '';
-                document.getElementById(cfg.labelId).textContent = trigger.getAttribute('data-default-label') || '-- اختر --';
-                if (cfg.onSelect) cfg.onSelect(null);
-            } else {
-                var u = dlgUnitById(raw);
-                if (u) {
-                    document.getElementById(cfg.hiddenId).value = String(dlgOuId(u));
-                    document.getElementById(cfg.labelId).textContent = dlgOuName(u);
-                    if (cfg.onSelect) cfg.onSelect(u);
-                }
-            }
-            panel.classList.add('d-none');
-            trigger.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    // إغلاق عند النقر خارج الحقل
-    document.addEventListener('click', function (e) {
-        var wrap = trigger.closest('[data-wrap]') || trigger.parentElement;
-        if (!wrap || panel.classList.contains('d-none')) return;
-        if (!wrap.contains(e.target)) {
-            panel.classList.add('d-none');
-            trigger.setAttribute('aria-expanded', 'false');
-        }
-    });
-}
-
-function dlgRenderOuTreePanel(cfg) {
-    var panel = document.getElementById(cfg.panelId);
-    if (!panel) return;
-    if (!dlgUnits.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
-        return;
-    }
-    var byParent = dlgBuildOuByParent();
-    var selectedId = document.getElementById(cfg.hiddenId).value;
-    var html = '';
-    if (cfg.allowClear) {
-        var allSel = !selectedId ? ' is-selected' : '';
-        html += '<div class="dlg-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
-            '<span class="dlg-ou-tree-exp-spacer" aria-hidden="true"></span>' +
-            '<span class="dlg-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
-    }
-    html += dlgRenderOuTreeRows(byParent, '', 0, selectedId, dlgOuExp[cfg.expandedKey]);
-    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
-}
-
-function dlgRenderOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+function delRenderOuTreeRows(byParent, parentKey, depth, selectedIdStr, expandedMap) {
     var rows = byParent[parentKey] || [];
-    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var sel = selectedIdStr !== undefined && selectedIdStr !== null ? String(selectedIdStr) : '';
     var html = '';
     rows.forEach(function (u) {
-        var uid = dlgOuId(u);
-        var idStr = String(uid);
+        var idStr = String(u.id);
         var children = byParent[idStr] || [];
         var hasChildren = children.length > 0;
         var expanded = !!expandedMap[idStr];
         var indent = depth * 22;
         var rowSel = sel === idStr ? ' is-selected' : '';
-        html += '<div class="dlg-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + uid + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:' + (12 + indent) + 'px;">';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
         if (hasChildren) {
-            html += '<button type="button" class="dlg-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
         } else {
-            html += '<span class="dlg-ou-tree-exp-spacer" aria-hidden="true"></span>';
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
         }
-        html += '<span class="dlg-ou-tree-name flex-grow-1">' + dlgEsc(dlgOuName(u)) + '</span></div>';
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + delEsc(u.name) + '</span></div>';
         if (hasChildren && expanded) {
-            html += dlgRenderOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+            html += delRenderOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
         }
     });
     return html;
 }
 
-/* ── Load + Render ──────────────────────────────────────────────────────── */
-async function dlgLoad() {
-    try {
-        var r = await apiFetch('/Settings/GetDelegations');
-        if (!r || !r.success) {
-            document.getElementById('dlgBody').innerHTML =
-                '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
-            return;
-        }
-        dlgAll = r.data || [];
-        dlgUnits = r.organizationalUnits || [];
-        dlgBeneficiaries = r.beneficiaries || [];
-        dlgRenderTable();
-    } catch (e) {
-        console.error('dlgLoad', e);
-        document.getElementById('dlgBody').innerHTML =
-            '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
+function delRenderDelegatorOuPanel() {
+    var panel = document.getElementById('delDelegatorOuPanel');
+    if (!panel) return;
+    if (!delOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = delOrgUnitByParent();
+    var selectedId = document.getElementById('delDelegatorOuId').value;
+    panel.innerHTML = delRenderOuTreeRows(byParent, '', 0, selectedId, delOuExpandedDelegator) || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function delRenderDelegateeOuPanel() {
+    var panel = document.getElementById('delDelegateeOuPanel');
+    if (!panel) return;
+    if (!delOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = delOrgUnitByParent();
+    var selectedId = document.getElementById('delDelegateeOuId').value;
+    panel.innerHTML = delRenderOuTreeRows(byParent, '', 0, selectedId, delOuExpandedDelegatee) || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function delDelegatorOuClose() {
+    var panel = document.getElementById('delDelegatorOuPanel');
+    var trig = document.getElementById('delDelegatorOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function delDelegateeOuClose() {
+    var panel = document.getElementById('delDelegateeOuPanel');
+    var trig = document.getElementById('delDelegateeOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function delDelegatorOuToggle(ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    var panel = document.getElementById('delDelegatorOuPanel');
+    var trig = document.getElementById('delDelegatorOuTrigger');
+    if (!panel || !trig) return;
+    delDelegateeOuClose();
+    if (panel.classList.contains('d-none')) {
+        var cur = parseInt(document.getElementById('delDelegatorOuId').value, 10);
+        if (cur) delOuExpandAncestors(delOuExpandedDelegator, cur);
+        delRenderDelegatorOuPanel();
+        panel.classList.remove('d-none');
+        trig.setAttribute('aria-expanded', 'true');
+    } else delDelegatorOuClose();
+}
+
+function delDelegateeOuToggle(ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    var panel = document.getElementById('delDelegateeOuPanel');
+    var trig = document.getElementById('delDelegateeOuTrigger');
+    if (!panel || !trig) return;
+    delDelegatorOuClose();
+    if (panel.classList.contains('d-none')) {
+        var cur = parseInt(document.getElementById('delDelegateeOuId').value, 10);
+        if (cur) delOuExpandAncestors(delOuExpandedDelegatee, cur);
+        delRenderDelegateeOuPanel();
+        panel.classList.remove('d-none');
+        trig.setAttribute('aria-expanded', 'true');
+    } else delDelegateeOuClose();
+}
+
+function delOuExpandAncestors(expMap, selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    delOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '' && !isNaN(u.parentId)) {
+        expMap[String(u.parentId)] = true;
+        u = map[u.parentId];
     }
 }
 
-function dlgStatusPill(code) {
-    var labels = { draft: 'مسودة', scheduled: 'مجدول', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي' };
-    var c = (code || 'draft').toLowerCase();
-    var lbl = labels[c] || code;
-    return '<span class="dlg-status-pill dlg-status-' + dlgEsc(c) + '"><span class="dlg-status-dot"></span>' + dlgEsc(lbl) + '</span>';
+function delDelegatorOuSetSelection(id, nameOpt) {
+    var hid = document.getElementById('delDelegatorOuId');
+    var lab = document.getElementById('delDelegatorOuLabel');
+    var num = id != null && id !== '' ? parseInt(id, 10) : 0;
+    if (hid) hid.value = num > 0 && !isNaN(num) ? String(num) : '';
+    var disp = nameOpt != null && String(nameOpt).trim() !== '' ? String(nameOpt).trim() : (num > 0 ? delOuLookupName(num) : '');
+    if (lab) {
+        lab.textContent = disp || '-- اختر --';
+    }
+    delRenderDelegatorOuPanel();
+    delRebuildDelegatorBenOptions();
 }
 
-function dlgFilterList() {
-    var q = (document.getElementById('dlgFilterSearch').value || '').trim().toLowerCase();
-    var dorOu = parseInt(document.getElementById('dlgFilterDorUnit').value || '0', 10);
-    var deeOu = parseInt(document.getElementById('dlgFilterDeeUnit').value || '0', 10);
-    return dlgAll.filter(function (d) {
-        if (q) {
-            var hay = ((d.delegatorName || '') + ' ' + (d.delegateeName || '')).toLowerCase();
-            if (!hay.includes(q)) return false;
-        }
-        if (dorOu > 0 && d.delegatorOrgUnitId !== dorOu) return false;
-        if (deeOu > 0 && d.delegateeOrgUnitId !== deeOu) return false;
-        return true;
+function delDelegateeOuSetSelection(id, nameOpt) {
+    var hid = document.getElementById('delDelegateeOuId');
+    var lab = document.getElementById('delDelegateeOuLabel');
+    var num = id != null && id !== '' ? parseInt(id, 10) : 0;
+    if (hid) hid.value = num > 0 && !isNaN(num) ? String(num) : '';
+    var disp = nameOpt != null && String(nameOpt).trim() !== '' ? String(nameOpt).trim() : (num > 0 ? delOuLookupName(num) : '');
+    if (lab) {
+        lab.textContent = disp || '-- اختر --';
+    }
+    delRenderDelegateeOuPanel();
+    delRebuildDelegateeBenOptions();
+}
+
+function delInitOuTreePanels() {
+    var dgTrig = document.getElementById('delDelegatorOuTrigger');
+    var dgPanel = document.getElementById('delDelegatorOuPanel');
+    if (dgTrig && dgPanel) {
+        dgTrig.addEventListener('click', delDelegatorOuToggle);
+        dgPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    delOuExpandedDelegator[eid] = !delOuExpandedDelegator[eid];
+                    delRenderDelegatorOuPanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null && row.getAttribute('data-id') !== '') {
+                var uid = parseInt(row.getAttribute('data-id'), 10);
+                var u = delOrgUnits.find(function (x) { return x.id === uid; });
+                if (u) {
+                    delDelegatorOuSetSelection(u.id, u.name);
+                    delDelegatorOuClose();
+                }
+            }
+        });
+    }
+    var deTrig = document.getElementById('delDelegateeOuTrigger');
+    var dePanel = document.getElementById('delDelegateeOuPanel');
+    if (deTrig && dePanel) {
+        deTrig.addEventListener('click', delDelegateeOuToggle);
+        dePanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    delOuExpandedDelegatee[eid] = !delOuExpandedDelegatee[eid];
+                    delRenderDelegateeOuPanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null && row.getAttribute('data-id') !== '') {
+                var uid = parseInt(row.getAttribute('data-id'), 10);
+                var u = delOrgUnits.find(function (x) { return x.id === uid; });
+                if (u) {
+                    delDelegateeOuSetSelection(u.id, u.name);
+                    delDelegateeOuClose();
+                }
+            }
+        });
+    }
+    document.addEventListener('click', function (e) {
+        var w1 = document.querySelector('.del-delegator-ou-wrap');
+        var w2 = document.querySelector('.del-delegatee-ou-wrap');
+        var p1 = document.getElementById('delDelegatorOuPanel');
+        var p2 = document.getElementById('delDelegateeOuPanel');
+        if (p1 && !p1.classList.contains('d-none') && w1 && !w1.contains(e.target)) delDelegatorOuClose();
+        if (p2 && !p2.classList.contains('d-none') && w2 && !w2.contains(e.target)) delDelegateeOuClose();
     });
 }
 
-function dlgComputeDays(startDate, endDate) {
-    if (!startDate || !endDate) return null;
-    var s = new Date(startDate);
-    var e = new Date(endDate);
-    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
-    var diffMs = e - s;
-    if (diffMs < 0) return 0;
-    return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+function delStatusLabel(code) {
+    switch ((code || '').toLowerCase()) {
+        case 'active': return '<span class="badge bg-success">ساري</span>';
+        case 'scheduled': return '<span class="badge bg-info text-dark">مجدول</span>';
+        case 'expired': return '<span class="badge bg-secondary">منتهي</span>';
+        case 'cancelled': return '<span class="badge bg-dark">ملغى</span>';
+        case 'draft': return '<span class="badge bg-warning text-dark">مسودة</span>';
+        default: return '<span class="badge bg-light text-dark">' + delEsc(code || '') + '</span>';
+    }
 }
 
-function dlgRenderTable() {
-    var body = document.getElementById('dlgBody');
-    var list = dlgFilterList();
-    if (!list.length) {
-        body.innerHTML = '<tr><td colspan="10">' +
-            (typeof emptyState === 'function'
-                ? emptyState('bi-arrow-left-right', 'لا توجد تفويضات', 'أضف تفويض جديد للبدء')
-                : '<div class="text-center py-4 text-muted">لا توجد تفويضات</div>') +
-            '</td></tr>';
+async function delLoad() {
+    try {
+        var r = await apiFetch('/Settings/GetDelegations');
+        if (!r || !r.success) {
+            document.getElementById('delBody').innerHTML =
+                '<tr><td colspan="9" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
+            return;
+        }
+        delRows = r.data || [];
+        delBeneficiaries = r.beneficiaries || [];
+        delOrgUnits = delNormalizeOrgUnits(r.organizationalUnits || []);
+        delRenderTable();
+    } catch (e) {
+        document.getElementById('delBody').innerHTML =
+            '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
+    }
+}
+
+function delRenderTable() {
+    var body = document.getElementById('delBody');
+    if (!body) return;
+    if (!delRows.length) {
+        body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد تفويضات</td></tr>';
         return;
     }
     var html = '';
-    list.forEach(function (d, i) {
-        var days = dlgComputeDays(d.startDate, d.endDate);
-        var daysCell = (days == null)
-            ? '<span style="color:var(--gray-400);">—</span>'
-            : '<span style="font-weight:700;color:var(--sa-700);">' + days + '</span>';
+    delRows.forEach(function (d, idx) {
+        var rawCode = d.statusCode != null ? d.statusCode : d.StatusCode;
+        var sc = String(rawCode || '').toLowerCase();
+        var locked = sc === 'cancelled' || sc === 'expired';
+        /** الحذف مسموح من الواجهة للمسودة فقط (يتوافق مع DeleteDelegation في الخادم). */
+        var showDelete = sc === 'draft';
+        var rowId = d.id != null ? d.id : d.Id;
         html += '<tr>' +
-            '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (i + 1) + '</td>' +
-            '<td style="font-weight:700;">' + dlgEsc(d.delegatorName || '—') + '</td>' +
-            '<td>' + dlgEsc(d.delegatorOrgUnitName || '—') + '</td>' +
-            '<td style="font-weight:700;">' + dlgEsc(d.delegateeName || '—') + '</td>' +
-            '<td>' + dlgEsc(d.delegateeOrgUnitName || '—') + '</td>' +
-            '<td style="text-align:center;direction:ltr;">' + dlgEsc(d.startDate || '') + '</td>' +
-            '<td style="text-align:center;direction:ltr;">' + dlgEsc(d.endDate || '') + '</td>' +
-            '<td style="text-align:center;">' + daysCell + '</td>' +
-            '<td style="text-align:center;">' + dlgStatusPill(d.statusCode) + '</td>' +
-            '<td style="text-align:center;">' +
-                '<div style="display:inline-flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-                    '<button type="button" class="dlg-action-btn dlg-action-btn-detail" onclick="dlgShowDetails(' + d.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button type="button" class="dlg-action-btn dlg-action-btn-edit" onclick="dlgShowEditModal(' + d.id + ')"><i class="bi bi-pencil-fill"></i> تعديل</button>' +
-                    '<button type="button" class="dlg-action-btn dlg-action-btn-delete" onclick="dlgShowDeleteModal(' + d.id + ')"><i class="bi bi-trash3-fill"></i> حذف</button>' +
-                '</div>' +
-            '</td>' +
+            '<td style="text-align:center;">' + (idx + 1) + '</td>' +
+            '<td>' + delNameRoleCell(d.delegatorName, d.delegatorRoleDisplay) + '</td>' +
+            '<td style="font-size:12px;">' + delEsc(d.delegatorOrgUnitName || '') + '</td>' +
+            '<td>' + delNameRoleCell(d.delegateeName, d.delegateeRoleDisplay) + '</td>' +
+            '<td style="font-size:12px;">' + delEsc(d.delegateeOrgUnitName || '') + '</td>' +
+            '<td dir="ltr" style="font-size:12px;">' + delEsc(d.startDate || '') + '</td>' +
+            '<td dir="ltr" style="font-size:12px;">' + delEsc(d.endDate || '') + '</td>' +
+            '<td style="text-align:center;">' + delStatusLabel(d.statusCode) + '</td>' +
+            '<td>' +
+            '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
+            '<button type="button" class="del-action-btn del-action-btn-detail" onclick="delShowDetails(' + rowId + ')" title="تفاصيل"><i class="bi bi-eye"></i> تفاصيل</button>' +
+            (!locked
+                ? '<button type="button" class="del-action-btn del-action-btn-edit" onclick="delEdit(' + rowId + ')" title="تحديث"><i class="bi bi-pencil"></i> تحديث</button>'
+                : '') +
+            (showDelete
+                ? '<button type="button" class="del-action-btn del-action-btn-delete" onclick="delConfirmDelete(' + rowId + ')" title="حذف"><i class="bi bi-trash3"></i> حذف</button>'
+                : '') +
+            '</div></td>' +
             '</tr>';
     });
     body.innerHTML = html;
 }
 
-/* ── Form: populate beneficiaries by OU ─────────────────────────────────── */
-function dlgPopulateBeneficiariesForSelect(selectId, ouId, selectedBenId) {
-    var sel = document.getElementById(selectId);
-    if (!sel) return;
-    sel.innerHTML = '';
-    var nId = parseInt(ouId, 10) || 0;
-    if (!nId) {
-        sel.innerHTML = '<option value="">-- اختر الوحدة أولاً --</option>';
-        return;
-    }
-    var list = dlgBeneficiaries.filter(function (b) {
-        return (b.organizationalUnitId || b.OrganizationalUnitId) === nId;
-    });
-    if (!list.length) {
-        sel.innerHTML = '<option value="">لا يوجد موظفون في هذه الوحدة</option>';
-        return;
-    }
-    var html = '<option value="">-- اختر --</option>';
-    list.forEach(function (b) {
-        var bid = b.id != null ? b.id : b.Id;
-        var name = b.fullName || b.FullName || '';
-        var sel2 = selectedBenId && selectedBenId === bid ? ' selected' : '';
-        html += '<option value="' + bid + '"' + sel2 + '>' + dlgEsc(name) + '</option>';
-    });
-    sel.innerHTML = html;
-}
-
-/* ── Add / Edit Modal ───────────────────────────────────────────────────── */
-function dlgResetForm() {
-    dlgEditId = null;
-    document.getElementById('dlgId').value = '';
-    document.getElementById('dlgFormDorUnit').value = '';
-    document.getElementById('dlgFormDorLabel').textContent = '-- اختر --';
-    document.getElementById('dlgFormDeeUnit').value = '';
-    document.getElementById('dlgFormDeeLabel').textContent = '-- اختر --';
-    document.getElementById('dlgFormDor').innerHTML = '<option value="">-- اختر الوحدة أولاً --</option>';
-    document.getElementById('dlgFormDee').innerHTML = '<option value="">-- اختر الوحدة أولاً --</option>';
-    document.getElementById('dlgFormStart').value = '';
-    document.getElementById('dlgFormEnd').value = '';
-    document.getElementById('dlgFormError').classList.add('d-none');
-    document.getElementById('dlgFormError').textContent = '';
-    dlgOuExp.formDor = {};
-    dlgOuExp.formDee = {};
-    document.getElementById('dlgEditRevokeWrap').style.display = 'none';
-}
-
-function dlgShowAddModal() {
-    dlgResetForm();
-    document.getElementById('dlgModalHeader').className = 'dlg-modal-header';
-    document.getElementById('dlgModalTitle').innerHTML = '<i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة تفويض';
-    document.getElementById('dlgModalSubtitle').textContent = 'أدخل بيانات التفويض';
-    new bootstrap.Modal(document.getElementById('dlgFormModal')).show();
-}
-
-async function dlgShowEditModal(id) {
-    dlgResetForm();
+async function delShowDetails(id) {
     try {
         var r = await apiFetch('/Settings/GetDelegation?id=' + encodeURIComponent(id));
-        if (!r || !r.success) {
-            if (typeof showToast === 'function') showToast((r && r.message) || 'خطأ في التحميل', 'error');
+        if (!r || !r.success || !r.data) {
+            showToast('تعذر تحميل التفويض', 'error');
+            return;
+        }
+        var x = r.data;
+        var statusHtml = delStatusLabel(x.statusCode);
+        document.getElementById('delDetailsBody').innerHTML =
+            delDetailRow('المفوض', delNameRoleCell(x.delegatorName, x.delegatorRoleDisplay)) +
+            delDetailRow('وحدة المفوض', delEsc(x.delegatorOrgUnitName || '—')) +
+            delDetailRow('المفوض له', delNameRoleCell(x.delegateeName, x.delegateeRoleDisplay)) +
+            delDetailRow('وحدة المفوض له', delEsc(x.delegateeOrgUnitName || '—')) +
+            delDetailRow('تاريخ البداية', '<span dir="ltr">' + delEsc(x.startDate || '') + '</span>') +
+            delDetailRow('تاريخ النهاية', '<span dir="ltr">' + delEsc(x.endDate || '') + '</span>') +
+            delDetailRow('الحالة', statusHtml) +
+            delDetailRow('أنشئ بواسطة', delEsc(x.createdBy || '—')) +
+            delDetailRow('تاريخ الإنشاء', delEsc(x.createdAt || '—')) +
+            delDetailRow('آخر تحديث', delEsc(x.updatedAt || '—'));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('delDetailsModal')).show();
+    } catch (e) {
+        showToast('خطأ في الاتصال', 'error');
+    }
+}
+
+function delShowAddModal() {
+    delEditingId = null;
+    var titleText = document.getElementById('delModalTitleText');
+    if (titleText) titleText.textContent = 'إضافة تفويض';
+    delOuExpandedDelegator = {};
+    delOuExpandedDelegatee = {};
+    var h1 = document.getElementById('delDelegatorOuId');
+    var l1 = document.getElementById('delDelegatorOuLabel');
+    var h2 = document.getElementById('delDelegateeOuId');
+    var l2 = document.getElementById('delDelegateeOuLabel');
+    if (h1) h1.value = '';
+    if (l1) {
+        l1.textContent = '-- اختر --';
+    }
+    if (h2) h2.value = '';
+    if (l2) {
+        l2.textContent = '-- اختر --';
+    }
+    delDelegatorOuClose();
+    delDelegateeOuClose();
+    delRebuildDelegatorBenOptions();
+    document.getElementById('delStartDate').value = '';
+    document.getElementById('delEndDate').value = '';
+    document.getElementById('delDraft').checked = false;
+    var draftWrap = document.getElementById('delDraftWrap');
+    if (draftWrap) draftWrap.classList.remove('d-none');
+    document.getElementById('delErr').classList.add('d-none');
+    var btnCancelDel = document.getElementById('delBtnCancelDelegation');
+    if (btnCancelDel) btnCancelDel.classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('delModal')).show();
+}
+
+async function delEdit(id) {
+    try {
+        var r = await apiFetch('/Settings/GetDelegation?id=' + encodeURIComponent(id));
+        if (!r || !r.success || !r.data) {
+            showToast('تعذر تحميل التفويض', 'error');
             return;
         }
         var d = r.data;
-        dlgEditId = d.id;
-        document.getElementById('dlgId').value = d.id;
-        document.getElementById('dlgModalHeader').className = 'dlg-modal-header edit';
-        document.getElementById('dlgModalTitle').innerHTML = '<i class="bi bi-pencil-square" style="margin-left:8px;"></i>تعديل التفويض';
-        document.getElementById('dlgModalSubtitle').textContent = 'تحديث بيانات التفويض';
-
-        // وحدة المفوِّض
-        var dorU = dlgUnitById(d.delegatorOrgUnitId);
-        if (dorU) {
-            document.getElementById('dlgFormDorUnit').value = String(dlgOuId(dorU));
-            document.getElementById('dlgFormDorLabel').textContent = dlgOuName(dorU);
-            dlgPopulateBeneficiariesForSelect('dlgFormDor', d.delegatorOrgUnitId, d.delegatorBeneficiaryId);
+        var sc = String(d.statusCode || '').toLowerCase();
+        if (sc === 'cancelled' || sc === 'expired') {
+            showToast('لا يمكن تعديل تفويض منتهي أو ملغى', 'error');
+            return;
         }
-        // وحدة المفوَّض له
-        var deeU = dlgUnitById(d.delegateeOrgUnitId);
-        if (deeU) {
-            document.getElementById('dlgFormDeeUnit').value = String(dlgOuId(deeU));
-            document.getElementById('dlgFormDeeLabel').textContent = dlgOuName(deeU);
-            dlgPopulateBeneficiariesForSelect('dlgFormDee', d.delegateeOrgUnitId, d.delegateeBeneficiaryId);
-        }
-
-        document.getElementById('dlgFormStart').value = d.startDate || '';
-        document.getElementById('dlgFormEnd').value = d.endDate || '';
-
-        // زر الإلغاء يظهر فقط لتفويض فعّال/مجدول (غير ملغي)
-        var canRevoke = d.statusCode && d.statusCode !== 'cancelled' && d.statusCode !== 'expired';
-        document.getElementById('dlgEditRevokeWrap').style.display = canRevoke ? '' : 'none';
-
-        new bootstrap.Modal(document.getElementById('dlgFormModal')).show();
+        delEditingId = id;
+        var mt = document.getElementById('delModalTitleText');
+        if (mt) mt.textContent = 'تعديل تفويض';
+        var dorId = parseInt(d.delegatorOrgUnitId, 10) || 0;
+        var deeId = parseInt(d.delegateeOrgUnitId, 10) || 0;
+        delOuExpandedDelegator = {};
+        if (dorId) delOuExpandAncestors(delOuExpandedDelegator, dorId);
+        delDelegatorOuSetSelection(d.delegatorOrgUnitId, delOuLookupName(dorId));
+        document.getElementById('delDelegatorBen').value = String(d.delegatorBeneficiaryId || '');
+        delOuExpandedDelegatee = {};
+        if (deeId) delOuExpandAncestors(delOuExpandedDelegatee, deeId);
+        delDelegateeOuSetSelection(d.delegateeOrgUnitId, delOuLookupName(deeId));
+        document.getElementById('delDelegateeBen').value = String(d.delegateeBeneficiaryId || '');
+        document.getElementById('delStartDate').value = d.startDate || '';
+        document.getElementById('delEndDate').value = d.endDate || '';
+        document.getElementById('delDraft').checked = false;
+        var draftWrap = document.getElementById('delDraftWrap');
+        if (draftWrap) draftWrap.classList.add('d-none');
+        document.getElementById('delErr').classList.add('d-none');
+        var btnCancelDel = document.getElementById('delBtnCancelDelegation');
+        if (btnCancelDel) btnCancelDel.classList.remove('d-none');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('delModal')).show();
     } catch (e) {
-        console.error('dlgShowEditModal', e);
-        if (typeof showToast === 'function') showToast('خطأ في تحميل بيانات التفويض', 'error');
+        showToast('خطأ في الاتصال', 'error');
     }
 }
 
-async function dlgSubmit(asDraft) {
-    var errEl = document.getElementById('dlgFormError');
+async function delSave() {
+    var errEl = document.getElementById('delErr');
     errEl.classList.add('d-none');
-    errEl.textContent = '';
 
-    var dorOu = parseInt(document.getElementById('dlgFormDorUnit').value || '0', 10);
-    var dor = parseInt(document.getElementById('dlgFormDor').value || '0', 10);
-    var deeOu = parseInt(document.getElementById('dlgFormDeeUnit').value || '0', 10);
-    var dee = parseInt(document.getElementById('dlgFormDee').value || '0', 10);
-    var s = document.getElementById('dlgFormStart').value;
-    var e = document.getElementById('dlgFormEnd').value;
+    var delegatorBeneficiaryId = parseInt(document.getElementById('delDelegatorBen').value, 10);
+    var delegatorOrgUnitId = parseInt(document.getElementById('delDelegatorOuId').value, 10);
+    var delegateeBeneficiaryId = parseInt(document.getElementById('delDelegateeBen').value, 10);
+    var delegateeOrgUnitId = parseInt(document.getElementById('delDelegateeOuId').value, 10);
+    var startDate = (document.getElementById('delStartDate').value || '').trim();
+    var endDate = (document.getElementById('delEndDate').value || '').trim();
+    var saveAsDraft = document.getElementById('delDraft').checked;
 
-    if (!dorOu) return dlgShowErr('الوحدة التنظيمية للمفوض مطلوبة');
-    if (!dor) return dlgShowErr('المفوض مطلوب');
-    if (!deeOu) return dlgShowErr('الوحدة التنظيمية للمفوض له مطلوبة');
-    if (!dee) return dlgShowErr('المفوض له مطلوب');
-    if (dor === dee) return dlgShowErr('لا يمكن أن يكون المفوض والمفوض له نفس الشخص');
-    if (!s) return dlgShowErr('تاريخ بداية التفويض مطلوب');
-    if (!e) return dlgShowErr('تاريخ نهاية التفويض مطلوب');
-    if (e <= s) return dlgShowErr('تاريخ النهاية يجب أن يكون بعد تاريخ البداية');
-
-    var body = {
-        delegatorBeneficiaryId: dor,
-        delegatorOrgUnitId: dorOu,
-        delegateeBeneficiaryId: dee,
-        delegateeOrgUnitId: deeOu,
-        startDate: s,
-        endDate: e,
-        saveAsDraft: !!asDraft
-    };
-    var url;
-    if (dlgEditId) {
-        body.id = dlgEditId;
-        body.cancel = false;
-        url = '/Settings/UpdateDelegation';
-    } else {
-        url = '/Settings/AddDelegation';
+    if (!delegatorOrgUnitId || !delegateeOrgUnitId) {
+        errEl.textContent = 'اختر وحدة المفوض ووحدة المفوض له من القائمة الشجرية';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (!delegatorBeneficiaryId || !delegateeBeneficiaryId) {
+        errEl.textContent = 'اختر المفوض والمفوض له من أسماء المستفيدين في كل وحدة';
+        errEl.classList.remove('d-none');
+        return;
     }
 
-    var r = await apiFetch(url, 'POST', body);
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('dlgFormModal')).hide();
-        if (typeof showToast === 'function') showToast(r.message || 'تم الحفظ', 'success');
-        await dlgLoad();
-    } else {
-        dlgShowErr((r && r.message) || 'حدث خطأ');
-    }
-}
-
-async function dlgRevoke() {
-    if (!dlgEditId) return;
-    if (!confirm('هل تريد إلغاء هذا التفويض؟ لا يمكن التراجع عن هذه العملية.')) return;
-    var r = await apiFetch('/Settings/UpdateDelegation', 'POST', { id: dlgEditId, cancel: true });
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('dlgFormModal')).hide();
-        if (typeof showToast === 'function') showToast(r.message || 'تم إلغاء التفويض', 'success');
-        await dlgLoad();
-    } else {
-        dlgShowErr((r && r.message) || 'حدث خطأ');
-    }
-}
-
-function dlgShowErr(msg) {
-    var el = document.getElementById('dlgFormError');
-    if (!el) return;
-    el.textContent = msg;
-    el.classList.remove('d-none');
-}
-
-/* ── Details ────────────────────────────────────────────────────────────── */
-function dlgShowDetails(id) {
-    var d = dlgAll.find(function (x) { return x.id === id; });
-    if (!d) return;
-    var body = document.getElementById('dlgDetailsBody');
-    body.innerHTML =
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">المفوض</div><div class="dlg-detail-value" style="font-weight:700;">' + dlgEsc(d.delegatorName || '—') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">وحدة المفوض</div><div class="dlg-detail-value">' + dlgEsc(d.delegatorOrgUnitName || '—') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">المفوض له</div><div class="dlg-detail-value" style="font-weight:700;">' + dlgEsc(d.delegateeName || '—') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">وحدة المفوض له</div><div class="dlg-detail-value">' + dlgEsc(d.delegateeOrgUnitName || '—') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">تاريخ البداية</div><div class="dlg-detail-value" style="direction:ltr;text-align:right;">' + dlgEsc(d.startDate || '') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">تاريخ النهاية</div><div class="dlg-detail-value" style="direction:ltr;text-align:right;">' + dlgEsc(d.endDate || '') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">الحالة</div><div class="dlg-detail-value">' + dlgStatusPill(d.statusCode) + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">أُنشئ بواسطة</div><div class="dlg-detail-value">' + dlgEsc(d.createdBy || '—') + '</div></div>' +
-        '<div class="dlg-detail-row"><div class="dlg-detail-label">تاريخ الإنشاء</div><div class="dlg-detail-value" style="direction:ltr;text-align:right;">' + dlgEsc(d.createdAt || '—') + '</div></div>' +
-        (d.updatedBy
-            ? '<div class="dlg-detail-row"><div class="dlg-detail-label">آخر تعديل بواسطة</div><div class="dlg-detail-value">' + dlgEsc(d.updatedBy) + '</div></div>' +
-              '<div class="dlg-detail-row"><div class="dlg-detail-label">تاريخ آخر تعديل</div><div class="dlg-detail-value" style="direction:ltr;text-align:right;">' + dlgEsc(d.updatedAt || '') + '</div></div>'
-            : '');
-    new bootstrap.Modal(document.getElementById('dlgDetailsModal')).show();
-}
-
-/* ── Delete ─────────────────────────────────────────────────────────────── */
-function dlgShowDeleteModal(id) {
-    var d = dlgAll.find(function (x) { return x.id === id; });
-    document.getElementById('dlgDeleteId').value = id;
-    document.getElementById('dlgDeleteLabel').textContent = d ? (d.delegatorName + ' ← ' + d.delegateeName) : '';
-    document.getElementById('dlgDeleteError').classList.add('d-none');
-    new bootstrap.Modal(document.getElementById('dlgDeleteModal')).show();
-}
-
-async function dlgSubmitDelete() {
-    var id = parseInt(document.getElementById('dlgDeleteId').value, 10);
-    var errEl = document.getElementById('dlgDeleteError');
-    errEl.classList.add('d-none');
-    var r = await apiFetch('/Settings/DeleteDelegation', 'POST', { id: id });
-    if (r && r.success) {
-        bootstrap.Modal.getInstance(document.getElementById('dlgDeleteModal')).hide();
-        if (typeof showToast === 'function') showToast(r.message || 'تم الحذف', 'success');
-        await dlgLoad();
-    } else {
-        errEl.textContent = (r && r.message) || 'حدث خطأ';
+    try {
+        if (delEditingId) {
+            var r = await apiFetch('/Settings/UpdateDelegation', 'POST', {
+                id: delEditingId,
+                delegatorBeneficiaryId: delegatorBeneficiaryId,
+                delegatorOrgUnitId: delegatorOrgUnitId,
+                delegateeBeneficiaryId: delegateeBeneficiaryId,
+                delegateeOrgUnitId: delegateeOrgUnitId,
+                startDate: startDate,
+                endDate: endDate,
+                saveAsDraft: false,
+                cancel: false
+            });
+            if (r.success) {
+                bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
+                showToast(r.message || 'تم التحديث', 'success');
+                delLoad();
+            } else {
+                errEl.textContent = r.message || 'خطأ';
+                errEl.classList.remove('d-none');
+            }
+        } else {
+            var r2 = await apiFetch('/Settings/AddDelegation', 'POST', {
+                delegatorBeneficiaryId: delegatorBeneficiaryId,
+                delegatorOrgUnitId: delegatorOrgUnitId,
+                delegateeBeneficiaryId: delegateeBeneficiaryId,
+                delegateeOrgUnitId: delegateeOrgUnitId,
+                startDate: startDate,
+                endDate: endDate,
+                saveAsDraft: saveAsDraft
+            });
+            if (r2.success) {
+                bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
+                showToast(r2.message || 'تم الحفظ', 'success');
+                delLoad();
+            } else {
+                errEl.textContent = r2.message || 'خطأ';
+                errEl.classList.remove('d-none');
+            }
+        }
+    } catch (e) {
+        errEl.textContent = 'خطأ في الاتصال';
         errEl.classList.remove('d-none');
     }
 }
 
-/* ── Init ───────────────────────────────────────────────────────────────── */
+function delOpenCancelDelegationConfirm() {
+    if (!delEditingId) return;
+    var err = document.getElementById('delCancelDelegationErr');
+    if (err) err.classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('delCancelDelegationModal')).show();
+}
+
+async function delSubmitCancelDelegation() {
+    if (!delEditingId) return;
+    var err = document.getElementById('delCancelDelegationErr');
+    if (err) err.classList.add('d-none');
+    try {
+        var r = await apiFetch('/Settings/UpdateDelegation', 'POST', {
+            id: delEditingId,
+            cancel: true,
+            delegatorBeneficiaryId: parseInt(document.getElementById('delDelegatorBen').value, 10) || 0,
+            delegatorOrgUnitId: parseInt(document.getElementById('delDelegatorOuId').value, 10) || 0,
+            delegateeBeneficiaryId: parseInt(document.getElementById('delDelegateeBen').value, 10) || 0,
+            delegateeOrgUnitId: parseInt(document.getElementById('delDelegateeOuId').value, 10) || 0,
+            startDate: (document.getElementById('delStartDate').value || '').trim(),
+            endDate: (document.getElementById('delEndDate').value || '').trim(),
+            saveAsDraft: false
+        });
+        if (r.success) {
+            bootstrap.Modal.getInstance(document.getElementById('delCancelDelegationModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
+            delEditingId = null;
+            var btnCancelDel = document.getElementById('delBtnCancelDelegation');
+            if (btnCancelDel) btnCancelDel.classList.add('d-none');
+            showToast(r.message || 'تم إلغاء التفويض', 'success');
+            delLoad();
+        } else if (err) {
+            err.textContent = r.message || 'تعذر إلغاء التفويض';
+            err.classList.remove('d-none');
+        }
+    } catch (e) {
+        if (err) {
+            err.textContent = 'خطأ في الاتصال';
+            err.classList.remove('d-none');
+        }
+    }
+}
+
+var delDeleteId = null;
+function delConfirmDelete(id) {
+    delDeleteId = id;
+    document.getElementById('delDeleteErr').classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('delDeleteModal')).show();
+}
+
+async function delSubmitDelete() {
+    var err = document.getElementById('delDeleteErr');
+    err.classList.add('d-none');
+    try {
+        var r = await apiFetch('/Settings/DeleteDelegation', 'POST', { id: delDeleteId });
+        if (r.success) {
+            bootstrap.Modal.getInstance(document.getElementById('delDeleteModal')).hide();
+            showToast(r.message || 'تم الحذف', 'success');
+            delLoad();
+        } else {
+            err.textContent = r.message || 'فشل الحذف';
+            err.classList.remove('d-none');
+        }
+    } catch (e) {
+        err.textContent = 'خطأ في الاتصال';
+        err.classList.remove('d-none');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
-    dlgLoad();
-
-    // فلتر البحث
-    var searchEl = document.getElementById('dlgFilterSearch');
-    if (searchEl) searchEl.addEventListener('input', dlgRenderTable);
-
-    // زر المسح
-    document.getElementById('dlgFilterClear').addEventListener('click', function () {
-        document.getElementById('dlgFilterSearch').value = '';
-        document.getElementById('dlgFilterDorUnit').value = '';
-        document.getElementById('dlgFilterDorLabel').textContent = 'وحدة المفوض';
-        document.getElementById('dlgFilterDeeUnit').value = '';
-        document.getElementById('dlgFilterDeeLabel').textContent = 'وحدة المفوض له';
-        dlgOuExp.filterDor = {};
-        dlgOuExp.filterDee = {};
-        dlgRenderTable();
-    });
-
-    // فلاتر شجرة الوحدة (مفوِّض / مفوَّض له)
-    dlgBindOuDropdown({
-        triggerId: 'dlgFilterDorTrigger', panelId: 'dlgFilterDorPanel',
-        hiddenId: 'dlgFilterDorUnit', labelId: 'dlgFilterDorLabel',
-        expandedKey: 'filterDor', allowClear: true,
-        onSelect: function () { dlgRenderTable(); }
-    });
-    document.getElementById('dlgFilterDorTrigger').setAttribute('data-default-label', 'وحدة المفوض');
-
-    dlgBindOuDropdown({
-        triggerId: 'dlgFilterDeeTrigger', panelId: 'dlgFilterDeePanel',
-        hiddenId: 'dlgFilterDeeUnit', labelId: 'dlgFilterDeeLabel',
-        expandedKey: 'filterDee', allowClear: true,
-        onSelect: function () { dlgRenderTable(); }
-    });
-    document.getElementById('dlgFilterDeeTrigger').setAttribute('data-default-label', 'وحدة المفوض له');
-
-    // شجرة وحدة داخل النموذج — تُعبّئ قائمة الموظفين بعد الاختيار
-    dlgBindOuDropdown({
-        triggerId: 'dlgFormDorTrigger', panelId: 'dlgFormDorPanel',
-        hiddenId: 'dlgFormDorUnit', labelId: 'dlgFormDorLabel',
-        expandedKey: 'formDor', allowClear: false,
-        onSelect: function (u) {
-            dlgPopulateBeneficiariesForSelect('dlgFormDor', u ? dlgOuId(u) : 0, null);
-        }
-    });
-    dlgBindOuDropdown({
-        triggerId: 'dlgFormDeeTrigger', panelId: 'dlgFormDeePanel',
-        hiddenId: 'dlgFormDeeUnit', labelId: 'dlgFormDeeLabel',
-        expandedKey: 'formDee', allowClear: false,
-        onSelect: function (u) {
-            dlgPopulateBeneficiariesForSelect('dlgFormDee', u ? dlgOuId(u) : 0, null);
-        }
-    });
+    delInitOuTreePanels();
+    var dBen = document.getElementById('delDelegatorBen');
+    if (dBen) dBen.addEventListener('change', delRebuildDelegateeBenOptions);
+    var delModalEl = document.getElementById('delModal');
+    if (delModalEl) {
+        delModalEl.addEventListener('hidden.bs.modal', function () {
+            delDelegatorOuClose();
+            delDelegateeOuClose();
+        });
+    }
+    var cancelModalEl = document.getElementById('delCancelDelegationModal');
+    if (cancelModalEl) {
+        cancelModalEl.addEventListener('hidden.bs.modal', function () {
+            var er = document.getElementById('delCancelDelegationErr');
+            if (er) er.classList.add('d-none');
+        });
+    }
+    delLoad();
 });
+
+/** لصفحات تستخدم نفس المعرّفات: إعادة بناء قائمة المفوض له بعد تغيير المفوِّض */
+window.delRebuildDelegatorBenOptions = delRebuildDelegatorBenOptions;
+window.delRebuildDelegateeBenOptions = delRebuildDelegateeBenOptions;

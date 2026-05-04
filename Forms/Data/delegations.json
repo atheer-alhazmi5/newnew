@@ -12,5 +12,33 @@
     "UpdatedBy": null,
     "CreatedAt": "2026-04-27T09:51:26.899979+03:00",
     "UpdatedAt": null
+  },
+  {
+    "Id": 2,
+    "DelegatorBeneficiaryId": 1,
+    "DelegatorOrgUnitId": 5,
+    "DelegateeBeneficiaryId": 2,
+    "DelegateeOrgUnitId": 5,
+    "StartDate": "2026-05-13T00:00:00",
+    "EndDate": "2026-05-17T00:00:00",
+    "Status": "cancelled",
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "UpdatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-05-04T08:32:18.983563+03:00",
+    "UpdatedAt": "2026-05-04T08:54:43.971511+03:00"
+  },
+  {
+    "Id": 3,
+    "DelegatorBeneficiaryId": 4,
+    "DelegatorOrgUnitId": 5,
+    "DelegateeBeneficiaryId": 3,
+    "DelegateeOrgUnitId": 5,
+    "StartDate": "2026-05-14T00:00:00",
+    "EndDate": "2026-05-16T00:00:00",
+    "Status": "active",
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "UpdatedBy": null,
+    "CreatedAt": "2026-05-04T08:54:35.3869+03:00",
+    "UpdatedAt": null
   }
 ]

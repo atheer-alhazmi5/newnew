@@ -31,9 +31,22 @@ function ddlApplyOwnershipUi() {
     }
 }
 
+/** تعطيل حقول نوع القائمة عند التحديث فقط */
+function ddlSetEditListTypeLocked(locked) {
+    document.querySelectorAll('input[name="ddlEditListType"]').forEach(function (el) {
+        el.disabled = !!locked;
+    });
+    var pl = document.getElementById('ddlEditParentListId');
+    var lc = document.getElementById('ddlEditLevelCount');
+    if (pl) pl.disabled = !!locked;
+    if (lc) lc.disabled = !!locked;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     ddlApplyOwnershipUi();
     ddlLoad();
+    var em = document.getElementById('ddlEditModal');
+    if (em) em.addEventListener('hidden.bs.modal', function () { ddlSetEditListTypeLocked(false); });
 });
 
 async function ddlLoad() {
@@ -1004,7 +1017,11 @@ async function ddlShowDetails(id) {
                 '<div class="row mb-3"><div class="col-4"><strong>خاصية الاختيار:</strong></div><div class="col-8">' + esc(d.selectionType) + '</div></div>' +
                 '<div class="row mb-3"><div class="col-4"><strong>الملكية:</strong></div><div class="col-8">' + esc(d.ownership) + '</div></div>' +
                 '<div class="row mb-3"><div class="col-4"><strong>الوحدة التنظيمية المالكة:</strong></div><div class="col-8">' + esc(d.organizationalUnitName || '—') + '</div></div>' +
-                '<div class="row mb-3"><div class="col-4"><strong>التفعيل:</strong></div><div class="col-8">' + (d.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>التفعيل:</strong></div><div class="col-8">' + (d.isActive ? 'مفعل' : 'معطل') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>أُنشئ بواسطة:</strong></div><div class="col-8">' + esc(d.createdBy || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>تاريخ الإنشاء:</strong></div><div class="col-8">' + esc(d.createdAt || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>التحديث بواسطة:</strong></div><div class="col-8">' + esc(d.updatedBy || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>تاريخ التحديث:</strong></div><div class="col-8">' + esc(d.updatedAt || '—') + '</div></div></div>' +
                 '<div class="ddl-section"><div class="ddl-section-title">العناصر</div>' + itemsHtml + '</div>';
 
             document.getElementById('ddlDetailsBody').innerHTML = html;
@@ -1083,7 +1100,13 @@ async function ddlShowEditModal(id) {
     ddlToggleEditTypeFields();
     ddlLoadIndependentListsForEdit(d.parentListId);
     if (d.listType === 'قائمة فرعية') {
-        setTimeout(function () { document.getElementById('ddlEditParentListId').value = d.parentListId || ''; }, 300);
+        setTimeout(function () {
+            var sel = document.getElementById('ddlEditParentListId');
+            if (sel) sel.value = d.parentListId || '';
+            ddlSetEditListTypeLocked(true);
+        }, 320);
+    } else {
+        ddlSetEditListTypeLocked(true);
     }
     new bootstrap.Modal(document.getElementById('ddlEditModal')).show();
 }
@@ -1121,21 +1144,6 @@ async function ddlSubmitEdit() {
         return;
     }
 
-    var listType = document.querySelector('input[name="ddlEditListType"]:checked')?.value || 'قائمة مستقلة';
-
-    if (listType === 'قائمة فرعية') {
-        var parentVal = document.getElementById('ddlEditParentListId').value;
-        if (!parentVal || parentVal === '') {
-            errEl.textContent = 'يجب اختيار القائمة المستقلة للقائمة الفرعية';
-            errEl.classList.remove('d-none');
-            return;
-        }
-    }
-
-    var parentListId = listType === 'قائمة فرعية' ? parseInt(document.getElementById('ddlEditParentListId').value || '0') : null;
-    var levelCount = parseInt(document.getElementById('ddlEditLevelCount').value || '2');
-    if (listType === 'قائمة هرمية') levelCount = Math.min(4, Math.max(2, levelCount));
-
     var editOwnership = (document.querySelector('input[name="ddlEditOwnership"]:checked')?.value) || 'عام';
     if (ddlIsAdmin) editOwnership = 'عام';
     var body = {
@@ -1143,9 +1151,6 @@ async function ddlSubmitEdit() {
         name: name,
         description: document.getElementById('ddlEditDescription').value.trim(),
         ownership: editOwnership,
-        listType: listType,
-        parentListId: parentListId,
-        levelCount: levelCount,
         selectionType: document.querySelector('input[name="ddlEditSelectionType"]:checked')?.value || 'خيار محدد',
         isActive: document.querySelector('input[name="ddlEditIsActive"]:checked')?.value === '1'
     };

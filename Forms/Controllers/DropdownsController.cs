@@ -148,8 +148,59 @@ public class DropdownsController : BaseController
                 ParentListName = parentList?.Name ?? "",
                 list.LevelCount,
                 list.LevelNamesJson,
+                list.CreatedBy,
+                CreatedAt = list.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedBy = list.UpdatedBy ?? "",
+                UpdatedAt = list.UpdatedAt.HasValue ? list.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "",
                 Items = items.Select(i => new { i.Id, i.ItemText, i.Description, i.Color, i.IsActive, i.SortOrder, i.ParentItemId, i.LevelNumber, i.LevelValuesJson })
             }
+        });
+    }
+
+    /// <summary>لمعاينة النماذج وبناء الحقول: يعيد عناصر القائمة مع نوعها ونوع الاختيار.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDropdownListItemsForForm(int id)
+    {
+        if (!IsAuthenticated || !IsAdminOrEmployee())
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var list = await _ds.GetDropdownListByIdAsync(id);
+        if (list == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        if (CurrentUserRole != "Admin" && list.Ownership == "خاص")
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            if (list.OrganizationalUnitId != myUnitId)
+                return Json(new { success = false, message = "غير مصرح" });
+        }
+
+        var items = await _ds.ListDropdownItemsByListIdAsync(id);
+        var activeItems = items.Where(i => i.IsActive).OrderBy(i => i.SortOrder).ThenBy(i => i.Id).ToList();
+
+        var parentItems = new List<DropdownItem>();
+        if (list.ListType == "قائمة فرعية" && list.ParentListId.HasValue)
+            parentItems = await _ds.ListDropdownItemsByListIdAsync(list.ParentListId.Value);
+
+        var rows = activeItems.Select(i => new
+        {
+            i.Id,
+            i.ItemText,
+            i.ParentItemId,
+            ParentItemText = i.ParentItemId.HasValue
+                ? parentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
+                : "",
+            i.LevelNumber,
+            i.LevelValuesJson,
+            i.SortOrder
+        }).ToList();
+
+        return Json(new
+        {
+            success = true,
+            list.ListType,
+            list.SelectionType,
+            items = rows
         });
     }
 
@@ -312,13 +363,12 @@ public class DropdownsController : BaseController
             d.Ownership = req.Ownership!;
         }
 
-        d.ListType = req.ListType ?? d.ListType;
-        d.ParentListId = req.ListType == "قائمة فرعية" ? req.ParentListId : null;
-        d.LevelCount = req.ListType == "قائمة هرمية" ? Math.Clamp(req.LevelCount, 2, 4) : d.LevelCount;
-        if (!string.IsNullOrEmpty(req.LevelNamesJson))
-            d.LevelNamesJson = req.LevelNamesJson;
+        // لا يُغيَّر نوع القائمة أو الربط الهرمي/الفرعي من شاشة التحديث لتجنّب أخطاء البيانات
         d.SelectionType = req.SelectionType ?? d.SelectionType;
         d.IsActive = req.IsActive;
+
+        d.UpdatedAt = DateTime.Now;
+        d.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
 
         await _ds.UpdateDropdownListAsync(d);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name));
@@ -372,6 +422,8 @@ public class DropdownsController : BaseController
         }
 
         d.LevelNamesJson = req.LevelNamesJson ?? "";
+        d.UpdatedAt = DateTime.Now;
+        d.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         await _ds.UpdateDropdownListAsync(d);
         return Json(new { success = true, message = "تم حفظ أسماء المستويات بنجاح" });
     }

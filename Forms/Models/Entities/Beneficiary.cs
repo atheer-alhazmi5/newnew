@@ -44,4 +44,21 @@ public class Beneficiary
             return string.Join(" - ", parts);
         }
     }
+
+    /// <summary>نفس <see cref="RoleDisplay"/> دون إظهار «مستفيد فعلي» (للجدول فقط؛ القيمة المحفوظة في SubRole لا تتغير).</summary>
+    public string RoleDisplayTable
+    {
+        get
+        {
+            var sr = (SubRole ?? "").Trim();
+            if (sr == "مدير النظام") return "مدير النظام";
+
+            var parts = new List<string> { "موظف" };
+            if (IsUnitManager || MainRole == "مدير") parts.Add("مدير وحدة تنظيمية");
+            if (sr == "ممثل الوحدة التنظيمية") parts.Add("ممثل وحدة تنظيمية");
+            else if (!string.IsNullOrEmpty(sr) && sr != "مستفيد فعلي") parts.Add(sr);
+
+            return string.Join(" - ", parts);
+        }
+    }
 }
