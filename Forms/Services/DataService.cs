@@ -197,7 +197,8 @@ public class DataService
     public Task<User?> GetUserByUsernameAsync(string username)
     {
         var users = _db.Users;
-        var u = users.FirstOrDefault(u => u.Username == username);
+        var u = users.FirstOrDefault(u =>
+            string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
         HydrateUserDepartment(u);
         return Task.FromResult(u);
     }

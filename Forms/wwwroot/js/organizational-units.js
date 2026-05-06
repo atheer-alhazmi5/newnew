@@ -187,6 +187,28 @@ function ouShowDetails(id) {
     }
 
     var activeTxt = u.isActive !== false ? 'مفعّلة' : 'معطّلة';
+    var members = u.members || u.Members || [];
+    var membersBlock = '';
+    if (members.length) {
+        var rows = '';
+        members.forEach(function (name, idx) {
+            rows += '<tr><td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td><td>' + ouEsc(String(name)) + '</td></tr>';
+        });
+        membersBlock =
+            '<div class="mt-3 pt-3 border-top border-light">' +
+            '<div class="table-responsive rounded border" style="max-height:280px;overflow-y:auto;">' +
+            '<table class="table table-sm table-striped mb-0" style="font-size:13px;">' +
+            '<thead class="table-light"><tr><th scope="col" style="width:44px;text-align:center;">ت</th><th scope="col">الاسم الكامل</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div></div>';
+    } else {
+        membersBlock =
+            '<div class="mt-3 pt-3 border-top border-light">' +
+            '<div class="table-responsive rounded border"><table class="table table-sm mb-0" style="font-size:13px;">' +
+            '<thead class="table-light"><tr><th scope="col" style="width:44px;text-align:center;">ت</th><th scope="col">الاسم الكامل</th></tr></thead>' +
+            '<tbody><tr><td colspan="2" class="text-muted text-center py-3 small">لا يوجد منسوبون مسجّلون لهذه الوحدة</td></tr></tbody>' +
+            '</table></div></div>';
+    }
+
     body.innerHTML =
         detailRow('التصنيف التنظيمي', ouEsc(u.classificationName || '—')) +
         detailRow('نوع الوحدة في الهيكل', ouEsc(lev || '—')) +
@@ -195,6 +217,7 @@ function ouShowDetails(id) {
         detailRow('مدير الوحدة التنظيمية', mgrHtml) +
         detailRow('ترتيب العرض', String(u.sortOrder != null ? u.sortOrder : '')) +
         detailRow('التفعيل', ouEsc(activeTxt)) +
+        membersBlock +
         detailRow('أنشئ بواسطة', ouEsc(u.createdBy || '—')) +
         detailRow('تاريخ الإنشاء', ouEsc(u.createdAt || u.CreatedAt || '—')) +
         detailRow('آخر تحديث بواسطة', ouEsc(u.updatedBy || u.UpdatedBy || '—')) +

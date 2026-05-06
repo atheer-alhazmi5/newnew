@@ -4,7 +4,11 @@ public class Delegation
 {
     public int Id { get; set; }
 
-    
+    /// <summary>مرجع فريد لكل تفويض (أعداد صحيحة موجبة فقط؛ 0 للسجلات القديمة قبل إضافة الحقل).</summary>
+    public int ReferenceNumber { get; set; }
+
+    public string DelegationReason { get; set; } = "";
+
     public int DelegatorBeneficiaryId { get; set; }
     public int DelegatorOrgUnitId { get; set; }
 

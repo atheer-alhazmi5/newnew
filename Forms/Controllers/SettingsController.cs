@@ -1190,6 +1190,13 @@ public class SettingsController : BaseController
                 g => g.Key,
                 g => string.Join("، ", g.OrderBy(x => x.FullName).Select(x => x.FullName.Trim()).Where(s => s.Length > 0)));
 
+        var memberFullNamesByOu = beneficiaries
+            .Where(b => b.OrganizationalUnitId.HasValue && b.OrganizationalUnitId.Value > 0)
+            .GroupBy(b => b.OrganizationalUnitId!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(x => x.FullName ?? "").Select(x => (x.FullName ?? "").Trim()).Where(fn => fn.Length > 0).ToList());
+
         var classifications = await _ds.ListClassificationsAsync();
         var activeClassifications = classifications.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList();
         var auditLogs = await _ds.ListAllAuditLogsAsync();
@@ -1208,6 +1215,7 @@ public class SettingsController : BaseController
                 u.ParentId,
                 ParentName = u.ParentId.HasValue ? units.FirstOrDefault(p => p.Id == u.ParentId.Value)?.Name ?? "" : "",
                 MemberCount = memberCountByOu.TryGetValue(u.Id, out var mc) ? mc : 0,
+                Members = memberFullNamesByOu.TryGetValue(u.Id, out var mfn) ? mfn : new List<string>(),
                 UnitManagerName = unitManagerNamesByOu.TryGetValue(u.Id, out var mn) ? mn : "",
                 HasUnitManager = !string.IsNullOrWhiteSpace(mn),
                 u.IsActive,
@@ -2017,6 +2025,8 @@ public class SettingsController : BaseController
             return new
             {
                 d.Id,
+                d.ReferenceNumber,
+                DelegationReason = d.DelegationReason ?? "",
                 d.DelegatorBeneficiaryId,
                 DelegatorName = dor?.FullName ?? "",
                 d.DelegatorOrgUnitId,
@@ -2080,6 +2090,8 @@ public class SettingsController : BaseController
             data = new
             {
                 d.Id,
+                d.ReferenceNumber,
+                DelegationReason = d.DelegationReason ?? "",
                 d.DelegatorBeneficiaryId,
                 DelegatorName = dor?.FullName ?? "",
                 DelegatorRoleDisplay = dor?.RoleDisplayTable ?? "",
@@ -2134,6 +2146,8 @@ public class SettingsController : BaseController
             return new
             {
                 d.Id,
+                d.ReferenceNumber,
+                DelegationReason = d.DelegationReason ?? "",
                 d.DelegatorBeneficiaryId,
                 DelegatorName = dor?.FullName ?? "",
                 DelegatorRoleDisplay = dor?.RoleDisplayTable ?? "",
@@ -2168,6 +2182,8 @@ public class SettingsController : BaseController
 
         var d = new Delegation
         {
+            ReferenceNumber = req.ReferenceNumber,
+            DelegationReason = (req.DelegationReason ?? "").Trim(),
             DelegatorBeneficiaryId = req.DelegatorBeneficiaryId,
             DelegatorOrgUnitId = req.DelegatorOrgUnitId,
             DelegateeBeneficiaryId = req.DelegateeBeneficiaryId,
@@ -2215,6 +2231,8 @@ public class SettingsController : BaseController
         d.DelegatorOrgUnitId = req.DelegatorOrgUnitId;
         d.DelegateeBeneficiaryId = req.DelegateeBeneficiaryId;
         d.DelegateeOrgUnitId = req.DelegateeOrgUnitId;
+        d.ReferenceNumber = req.ReferenceNumber;
+        d.DelegationReason = (req.DelegationReason ?? "").Trim();
         d.StartDate = ParseDelegationDate(req.StartDate!);
         d.EndDate = ParseDelegationDate(req.EndDate!);
         // لو كان مسودة وأراد النشر، ارفع الحالة
@@ -2247,6 +2265,13 @@ public class SettingsController : BaseController
 
     private async Task<string?> ValidateDelegationAsync(DelegationRequest req, int? excludeDelegationId)
     {
+        var reasonTrim = (req.DelegationReason ?? "").Trim();
+        if (string.IsNullOrEmpty(reasonTrim)) return "سبب التفويض مطلوب";
+        if (req.ReferenceNumber <= 0) return "المرجع مطلوب ويجب أن يكون رقماً صحيحاً أكبر من صفر";
+
+        if (await IsDelegationReferenceDuplicateAsync(req.ReferenceNumber, excludeDelegationId))
+            return "المرجع مستخدم في تفويض آخر ولا يُسمح بالتكرار";
+
         if (req.DelegatorOrgUnitId <= 0) return "الوحدة التنظيمية للمفوض مطلوبة";
         if (req.DelegatorBeneficiaryId <= 0) return "المفوض مطلوب";
         if (req.DelegateeOrgUnitId <= 0) return "الوحدة التنظيمية للمفوض له مطلوبة";
@@ -2280,6 +2305,15 @@ public class SettingsController : BaseController
             return "هناك تفويض قائم لمستفيد آخر وبالتالي لا يمكنك التفويض، قم بإلغاء التفويض القائم حتى تتمكن من إضافة هذا التفويض";
 
         return null;
+    }
+
+    private async Task<bool> IsDelegationReferenceDuplicateAsync(int referenceNumber, int? excludeDelegationId)
+    {
+        if (referenceNumber <= 0) return false;
+        var delegations = await _ds.ListDelegationsAsync();
+        return delegations.Any(d =>
+            d.ReferenceNumber == referenceNumber &&
+            (!excludeDelegationId.HasValue || d.Id != excludeDelegationId.Value));
     }
 
     private static bool DelegationIntervalsOverlap(DateTime aStart, DateTime aEnd, DateTime bStart, DateTime bEnd) =>
@@ -2482,6 +2516,8 @@ public class FormStatusDeleteRequest
 
 public class DelegationRequest
 {
+    public int ReferenceNumber { get; set; }
+    public string? DelegationReason { get; set; }
     public int DelegatorBeneficiaryId { get; set; }
     public int DelegatorOrgUnitId { get; set; }
     public int DelegateeBeneficiaryId { get; set; }

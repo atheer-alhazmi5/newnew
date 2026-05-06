@@ -277,7 +277,6 @@ var RT_FIELD_TYPES = {
     ] },
     "جدول بيانات": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"rowLabels", label:"عناوين الصفوف (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يُعرض عموداً أولاً للصفوف." },
         { key:"options", label:"عناوين الأعمدة (سطر لكل عمود)", type:"optionList", choiceMode:"single" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
@@ -304,7 +303,10 @@ var RT_FILE_TYPE_CHOICES = [
     { ext: 'docx', label: 'Word (.docx)' },
     { ext: 'xls', label: 'Excel (.xls)' },
     { ext: 'xlsx', label: 'Excel (.xlsx)' },
-    { ext: 'txt', label: 'TXT' }
+    { ext: 'txt', label: 'TXT' },
+    { ext: 'pptx', label: 'PowerPoint (.pptx)' },
+    { ext: 'zip', label: 'ZIP' },
+    { ext: 'rar', label: 'RAR' }
 ];
 
 function rtEscAttr(s) {
@@ -740,7 +742,7 @@ function rtcAddField() {
         var oc = rtCollectOptionListFromEditor('rtcProp', 'options');
         if (!oc || !String(oc.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
     }
-    if (type === 'جدول بيانات' || type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+    if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
         var rl = document.getElementById('rtcProp_rowLabels');
         if (!rl || !String(rl.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
@@ -923,7 +925,19 @@ function rtpBuildFieldInput(f, opt) {
         var spMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
         var spStep = (props.stepValue != null && props.stepValue !== '') ? ' step="' + props.stepValue + '"' : ' step="1"';
         var spNoD = props.noDecimals ? ' step="1"' : spStep;
-        inp = '<div class="input-group rt-spinner-group" style="' + wStyle + '"' + ttAttr + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="border-radius:8px 0 0 8px;padding:4px 10px;font-size:16px;font-weight:700;">−</button><input type="number" class="form-control text-center rt-spin-input" value="' + (defVal || props.minValue || '0') + '"' + spMin + spMax + spNoD + reqAttr + (props.readOnly ? ' readonly style="background:#f3f4f6;"' : '') + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="border-radius:0 8px 8px 0;padding:4px 10px;font-size:16px;font-weight:700;">+</button></div>';
+        var spinNum = NaN;
+        if (props.defaultValue != null && props.defaultValue !== '') spinNum = parseFloat(String(props.defaultValue).trim());
+        if (isNaN(spinNum)) {
+            if (props.minValue != null && props.minValue !== '') spinNum = parseFloat(String(props.minValue));
+            else spinNum = 0;
+        }
+        var loSpin = (props.minValue != null && props.minValue !== '') ? parseFloat(String(props.minValue)) : null;
+        var hiSpin = (props.maxValue != null && props.maxValue !== '') ? parseFloat(String(props.maxValue)) : null;
+        if (loSpin != null && !isNaN(loSpin) && spinNum < loSpin) spinNum = loSpin;
+        if (hiSpin != null && !isNaN(hiSpin) && spinNum > hiSpin) spinNum = hiSpin;
+        var spinValStr = String(spinNum);
+        var spinRtEv = props.readOnly ? '' : ' oninput="rtSpinClamp(this)" onblur="rtSpinClamp(this)"';
+        inp = '<div class="input-group rt-spinner-group" style="' + wStyle + '"' + ttAttr + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="border-radius:8px 0 0 8px;padding:4px 10px;font-size:16px;font-weight:700;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center rt-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + (props.readOnly ? ' readonly style="text-align:center;direction:ltr;background:#f3f4f6;"' : ' style="text-align:center;direction:ltr;"') + spinRtEv + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="border-radius:0 8px 8px 0;padding:4px 10px;font-size:16px;font-weight:700;">+</button></div>';
     } else if (f.fieldType === 'التقييم بالأرقام') {
         var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
         var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
@@ -976,7 +990,21 @@ function rtpBuildFieldInput(f, opt) {
         inp = '<input type="time" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + (tfmt === '24 ساعة' ? '' : ' step="3600"') + '>';
     } else if (f.fieldType === 'رفع ملف') {
         var acc = rtpFileAcceptFromProps(props);
-        inp = '<input type="file" class="form-control form-control-sm"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + reqAttr + ttAttr + '>';
+        var rtpMx = typeof window.fdResolvedMaxFilesFromProps === 'function'
+            ? window.fdResolvedMaxFilesFromProps(props)
+            : (function () {
+                var raw = props.maxFiles != null && props.maxFiles !== ''
+                    ? props.maxFiles
+                    : (props.MaxFiles != null && props.MaxFiles !== '' ? props.MaxFiles : null);
+                if (raw == null || raw === '') return 1;
+                var latin = String(raw).replace(/[\u0660-\u0669]/g, function (ch) { return String(ch.charCodeAt(0) - 0x0660); })
+                    .replace(/[\u06f0-\u06f9]/gi, function (ch) { return String(ch.charCodeAt(0) - 0x06f0); });
+                var x = parseInt(latin.trim(), 10);
+                if (isNaN(x) || x < 1) return 1;
+                return Math.min(x, 100);
+            })();
+        var rtpMulti = rtpMx > 1 ? ' multiple="multiple"' : '';
+        inp = '<div class="fd-file-upload-wrap" data-fd-max-files="' + rtpMx + '"><input type="file" class="form-control form-control-sm fd-file-input"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + rtpMulti + reqAttr + ttAttr + '></div>';
     } else if (f.fieldType === 'التقييم بالنجوم') {
         var range = parseInt(props.ratingRange) || 5;
         var icon = props.ratingIcon || 'نجمة';
@@ -990,16 +1018,15 @@ function rtpBuildFieldInput(f, opt) {
         inp += '<span class="rt-star-val ms-2 fw-bold" style="font-size:13px;">' + sdef + '/' + range + '</span></div>';
     } else if (f.fieldType === 'جدول بيانات') {
         var colsD = rtpParseLines(props.options);
-        var rowsD = rtpParseLines(props.rowLabels);
         var cD = colsD.length ? colsD : ['عمود'];
-        var rD = rowsD.length ? rowsD : ['صف'];
+        var numRows = 1;
         var roD = props.readOnly ? ' readonly' : '';
         var i, j;
-        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
+        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr>';
         for (i = 0; i < cD.length; i++) inp += '<th>' + String(cD[i]).replace(/</g, '&lt;') + '</th>';
         inp += '</tr></thead><tbody>';
-        for (i = 0; i < rD.length; i++) {
-            inp += '<tr><th scope="row" style="white-space:nowrap;background:var(--gray-50);">' + String(rD[i]).replace(/</g, '&lt;') + '</th>';
+        for (i = 0; i < numRows; i++) {
+            inp += '<tr>';
             for (j = 0; j < cD.length; j++) inp += '<td><input type="text" class="form-control form-control-sm"' + roD + reqAttr + '></td>';
             inp += '</tr>';
         }
@@ -1047,21 +1074,128 @@ function rtpBuildFieldInput(f, opt) {
     return inp;
 }
 
+function rtSpinArabicDigitsToAscii(s) {
+    return String(s)
+        .replace(/[\u0660-\u0669]/g, function(ch) { return String(ch.charCodeAt(0) - 0x0660); })
+        .replace(/[\u06F0-\u06F9]/g, function(ch) { return String(ch.charCodeAt(0) - 0x06F0); });
+}
+function rtSpinAllowsFraction(el) {
+    if (!el) return true;
+    var raw = String(el.getAttribute('step') || '').replace(/,/g, '.').trim();
+    if (!raw) return true;
+    var st = parseFloat(raw);
+    if (!(isFinite(st)) || st <= 0) return true;
+    if (st > 0 && st < 1) return true;
+    return st !== Math.floor(st);
+}
+function rtSpinAllowsNegative(el) {
+    var lo = rtSpinGetMin(el);
+    return lo === -Infinity || lo < 0;
+}
+function rtSpinCleanRaw(s, allowFrac, allowNeg) {
+    var t = rtSpinArabicDigitsToAscii(String(s)).replace(/\s/g, '').replace(/,/g, '.').replace(/\u066B/g, '.');
+    var out = '';
+    var seenDot = false;
+    var i = 0;
+    if (allowNeg && i < t.length && t[i] === '-') {
+        out += '-';
+        i++;
+    }
+    while (i < t.length) {
+        var c = t[i++];
+        if (c >= '0' && c <= '9') {
+            out += c;
+            continue;
+        }
+        if ((c === '.' || c === ',') && allowFrac && !seenDot) {
+            seenDot = true;
+            out += '.';
+        }
+    }
+    return out;
+}
+function rtSpinGetMin(el) {
+    if (!el || !el.hasAttribute('min')) return -Infinity;
+    var x = parseFloat(String(el.getAttribute('min')).replace(/,/g, '.'));
+    return isNaN(x) ? -Infinity : x;
+}
+function rtSpinGetMax(el) {
+    if (!el || !el.hasAttribute('max')) return Infinity;
+    var x = parseFloat(String(el.getAttribute('max')).replace(/,/g, '.'));
+    return isNaN(x) ? Infinity : x;
+}
+function rtSpinFormatForInput(v, el) {
+    var stAttr = el.getAttribute('step');
+    var st = (stAttr != null && stAttr !== '') ? parseFloat(String(stAttr).replace(/,/g, '.')) : NaN;
+    if (!isNaN(st) && st > 0 && st < 1) {
+        var decPart = String(st).split('.')[1] || '';
+        var dec = Math.min(Math.max(decPart.length || 2, 1), 10);
+        return (+v).toFixed(dec);
+    }
+    var rounded = +(+(v).toFixed(4));
+    return rounded === Math.floor(rounded) ? String(Math.floor(rounded)) : String(rounded);
+}
+function rtSpinClamp(el) {
+    if (!el || !el.classList.contains('rt-spin-input')) return;
+    if (el.readOnly || el.disabled) return;
+    var allowFrac = rtSpinAllowsFraction(el);
+    var allowNeg = rtSpinAllowsNegative(el);
+    var lo = rtSpinGetMin(el);
+    var hi = rtSpinGetMax(el);
+
+    var cleaned = rtSpinCleanRaw(el.value, allowFrac, allowNeg);
+    if (!allowFrac) {
+        var ixDot = cleaned.indexOf('.');
+        if (ixDot >= 0) cleaned = cleaned.slice(0, ixDot);
+    }
+    var t = cleaned.trim();
+    el.value = cleaned;
+
+    if (t === '' || t === '-' || !t) return;
+    if (allowFrac && (/^-?\d+\.$/).test(cleaned)) return;
+    if (allowFrac && (cleaned === '.' || cleaned === '-.')) return;
+
+    var pv = parseFloat(cleaned.replace(/,/g, '.'));
+    if (!isFinite(pv)) {
+        if (isFinite(lo)) el.value = rtSpinFormatForInput(lo, el);
+        else el.value = '';
+        return;
+    }
+    var x = pv;
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    el.value = rtSpinFormatForInput(x, el);
+}
 function rtSpinInc(btn) {
-    var inp = btn.parentElement.querySelector('.rt-spin-input');
-    if (!inp) return;
-    var step = parseFloat(inp.step) || 1;
-    var max = inp.max !== '' ? parseFloat(inp.max) : Infinity;
-    var v = parseFloat(inp.value) || 0;
-    if (v + step <= max) inp.value = +(v + step).toFixed(4);
+    var inp = btn.parentElement && btn.parentElement.querySelector('.rt-spin-input');
+    if (!inp || inp.readOnly || inp.disabled) return;
+    var stAttr = inp.getAttribute('step');
+    var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
+    var lo = rtSpinGetMin(inp), hi = rtSpinGetMax(inp);
+    var v = parseFloat(String(inp.value).replace(/,/g, '.'));
+    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
+    var next = v + step;
+    if (next > hi) next = hi;
+    inp.value = rtSpinFormatForInput(next, inp);
+    rtSpinClamp(inp);
 }
 function rtSpinDec(btn) {
-    var inp = btn.parentElement.querySelector('.rt-spin-input');
-    if (!inp) return;
-    var step = parseFloat(inp.step) || 1;
-    var min = inp.min !== '' ? parseFloat(inp.min) : -Infinity;
-    var v = parseFloat(inp.value) || 0;
-    if (v - step >= min) inp.value = +(v - step).toFixed(4);
+    var inp = btn.parentElement && btn.parentElement.querySelector('.rt-spin-input');
+    if (!inp || inp.readOnly || inp.disabled) return;
+    var stAttr = inp.getAttribute('step');
+    var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
+    var lo = rtSpinGetMin(inp), hi = rtSpinGetMax(inp);
+    var v = parseFloat(String(inp.value).replace(/,/g, '.'));
+    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
+    var next = v - step;
+    if (next < lo) next = lo;
+    inp.value = rtSpinFormatForInput(next, inp);
+    rtSpinClamp(inp);
+}
+if (typeof window !== 'undefined') {
+    window.rtSpinClamp = rtSpinClamp;
+    window.rtSpinInc = rtSpinInc;
+    window.rtSpinDec = rtSpinDec;
 }
 function rtStarClick(el, idx) {
     var wrap = el.closest('.rt-star-rating');
@@ -1091,6 +1225,44 @@ function rtpAddRow(btn) {
     var tr = document.createElement('tr');
     tr.innerHTML = fields.map(function(f){ return '<td>' + rtpBuildFieldInput(f) + '</td>'; }).join('');
     tbody.insertBefore(tr, addRow);
+    rtpWireFileUploadMulti(tr);
+}
+
+/** تفعيل اختيار عدة ملفات في معاينة الجداول الجاهزة (يربط fdFileUploadBindInRoot إن وُجد). */
+function rtpWireFileUploadMulti(rootEl) {
+    if (!rootEl || !rootEl.querySelectorAll) return;
+    if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] قبل', rootEl);
+    function fallbackApply() {
+        rootEl.querySelectorAll('.fd-file-upload-wrap input[type="file"]').forEach(function (inp) {
+            var w = inp.closest('.fd-file-upload-wrap');
+            if (!w) return;
+            var mf = parseInt(String(w.getAttribute('data-fd-max-files') || '1').replace(/[\u0660-\u0669]/g, function (ch) { return String(ch.charCodeAt(0) - 0x0660); }).replace(/[\u06f0-\u06f9]/gi, function (ch) { return String(ch.charCodeAt(0) - 0x06f0); }).trim(), 10);
+            if (isNaN(mf) || mf < 1) mf = 1;
+            if (mf > 100) mf = 100;
+            if (mf > 1) {
+                inp.setAttribute('multiple', 'multiple');
+            } else {
+                inp.removeAttribute('multiple');
+            }
+            try { inp.multiple = mf > 1; } catch (e) {}
+        });
+    }
+    if (typeof fdFileUploadBindInRoot === 'function') {
+        fdFileUploadBindInRoot(rootEl);
+    } else {
+        fallbackApply();
+    }
+    if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] بعد', rootEl);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(function () {
+            if (typeof window.fdFileUploadReassertMultipleInRoot === 'function') {
+                window.fdFileUploadReassertMultipleInRoot(rootEl);
+            } else {
+                fallbackApply();
+            }
+            if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] بعد requestAnimationFrame', rootEl);
+        });
+    }
 }
 
 function rtcShowPreview() {
@@ -1129,6 +1301,8 @@ function rtcShowPreview() {
     html += '</tbody></table></div>';
 
     body.innerHTML = html;
+
+    rtpWireFileUploadMulti(body);
 
     var createModal = document.getElementById('rtCreateModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
@@ -1381,7 +1555,7 @@ function rtEditAddField() {
         var oc2 = rtCollectOptionListFromEditor('rtEditProp', 'options');
         if (!oc2 || !String(oc2.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
     }
-    if (type === 'جدول بيانات' || type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+    if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
         var rl2 = document.getElementById('rtEditProp_rowLabels');
         if (!rl2 || !String(rl2.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
@@ -1490,6 +1664,7 @@ function rtEditShowPreview() {
     html += '</tbody></table></div>';
 
     body.innerHTML = html;
+    rtpWireFileUploadMulti(body);
     var editModal = document.getElementById('rtEditModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
     var editModalInstance = bootstrap.Modal.getInstance(editModal);

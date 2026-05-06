@@ -1499,3 +1499,125 @@ p, li, span {
     background: var(--gray-200);
 }
 
+/**
+ * حقول شبيهة بالفلاتر داخل الشريط (مرجع / تواريخ)، بعرض مريح.
+ */
+.rt-filters .rt-filter-text.rt-filter-fluid {
+    width: auto;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+/**
+ * منتقي الوحدة الشجري داخل صف الفلاتر — مطابقة إرتفاع وحدّ وحدود select الفلاتر.
+ */
+.rt-filters .bnf-ou-tree-wrap {
+    flex-shrink: 0;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.rt-filters .bnf-ou-tree-trigger.form-select {
+    min-height: 40px;
+    border-radius: 10px;
+    border: 2px solid var(--gray-200);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Cairo', sans-serif;
+    box-shadow: none;
+}
+
+.rt-filters .bnf-ou-tree-trigger.form-select:focus {
+    border-color: var(--sa-400);
+    box-shadow: none;
+    outline: none;
+}
+
+/* ── قوائم منسدلة مربوطة (هرمية/فرعية) في نماذج التعريف — شكل شجري مطابق لوحدة التنظيمية (مستفيد/تفويضات) ── */
+.fd-ddl-tree-panel {
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
+}
+
+.fd-ddl-tree .bnf-ou-tree-row {
+    user-select: none;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background .15s ease;
+}
+
+.fd-ddl-tree .bnf-ou-tree-row:last-child {
+    border-bottom: none;
+}
+
+.fd-ddl-tree .bnf-ou-tree-row:hover {
+    background: var(--sa-25);
+}
+
+.fd-ddl-tree .bnf-ou-tree-exp {
+    flex-shrink: 0;
+    width: 1.35rem;
+    height: 1.35rem;
+    min-width: 1.35rem;
+    padding: 0;
+    line-height: 1;
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--sa-600);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+
+.fd-ddl-tree .bnf-ou-tree-exp:hover {
+    background: var(--sa-50);
+    border-color: var(--sa-300);
+    box-shadow: 0 1px 3px rgba(37, 147, 95, .1);
+    color: var(--sa-700);
+}
+
+.fd-ddl-tree .bnf-ou-tree-exp:active {
+    transform: scale(0.94);
+}
+
+.fd-ddl-tree .bnf-ou-tree-exp-spacer {
+    flex-shrink: 0;
+    width: 1.35rem;
+    height: 1.35rem;
+    min-width: 1.35rem;
+}
+
+.fd-ddl-tree .form-check-label {
+    text-align: right;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.fd-ddl-tree-group-heading {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-50);
+}
+
+.fd-ddl-tree-group + .fd-ddl-tree-group {
+    border-top: 1px solid var(--gray-200);
+}
+
+/* الدوار الرقمي: حقول كنص لتصفية المحتوى (لا أسهم المتصفح) */
+input.fd-spin-input,
+input.rt-spin-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+

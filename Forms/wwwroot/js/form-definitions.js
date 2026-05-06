@@ -45,7 +45,8 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
-        { key:"maxLength", label:"الحد الأقصى", type:"number" }
+        { key:"maxLength", label:"الحد الأقصى", type:"number" },
+        { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" }
     ]},
     "رقم الهاتف": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -90,7 +91,8 @@ const FD_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
-        { key:"maxValue", label:"الحد الأقصى", type:"number" }
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"number", placeholder:"2" }
     ]},
     "قائمة منسدلة": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -100,12 +102,12 @@ const FD_FIELD_TYPES = {
     ]},
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
     ]},
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
     ]},
     "تاريخ": { props: [
@@ -201,7 +203,8 @@ const FD_FIELD_TYPES = {
 const FD_FILE_TYPE_CHOICES = [
     { ext:'pdf', label:'PDF' }, { ext:'jpg', label:'JPG' }, { ext:'jpeg', label:'JPEG' },
     { ext:'png', label:'PNG' }, { ext:'doc', label:'Word (.doc)' }, { ext:'docx', label:'Word (.docx)' },
-    { ext:'xls', label:'Excel (.xls)' }, { ext:'xlsx', label:'Excel (.xlsx)' }, { ext:'txt', label:'TXT' }
+    { ext:'xls', label:'Excel (.xls)' }, { ext:'xlsx', label:'Excel (.xlsx)' }, { ext:'txt', label:'TXT' },
+    { ext:'pptx', label:'PowerPoint (.pptx)' }, { ext:'zip', label:'ZIP' }, { ext:'rar', label:'RAR' }
 ];
 
 // ─── FIELD BUILDER HELPERS ────────────────────────────────────────────────────
@@ -339,22 +342,49 @@ function fdPlanDropdownFormPresentation(listType, items) {
     return { mode: 'flat' };
 }
 
+/** تبديل فروع قائمة الشجرة المربوطة بأزرار + / − */
+function fdDdlBranchToggleHandler(e) {
+    const btn = e.target.closest('.fd-ddl-tree .bnf-ou-tree-exp');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = btn.closest('.bnf-ou-tree-row');
+    if (!row) return;
+    const branch = row.nextElementSibling;
+    if (!branch || !branch.classList.contains('fd-ddl-tree-branch')) return;
+    const nowCollapsed = branch.classList.toggle('d-none');
+    btn.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+    btn.textContent = nowCollapsed ? '+' : '−';
+}
+
+function fdDdlEnsureTreeExpandDelegation() {
+    if (typeof window === 'undefined') return;
+    if (window.fdDdlTreeExpBound) return;
+    window.fdDdlTreeExpBound = true;
+    document.addEventListener('click', fdDdlBranchToggleHandler);
+}
+
 function fdRenderDropdownTreeLeaves(items, inputType, nameBase, disabled, defSingle, defMultiSet, depth) {
     let html = '';
+    const indent = Math.max(0, (depth || 0) * 22);
+    const pr = 12 + indent;
     items.forEach((item, idx) => {
         const id = item.id ?? item.Id ?? idx;
         const txt = String(item.itemText ?? item.ItemText ?? '').trim();
-        const inputId = `${nameBase}_i_${id}_${idx}`;
+        const inputId = `${nameBase}_i_${id}_${depth}_${idx}`;
         const dis = disabled ? ' disabled' : '';
         let checked = '';
         if (inputType === 'checkbox') {
             if (defMultiSet[txt]) checked = ' checked';
         } else if (String(defSingle || '') === txt) checked = ' checked';
-        const prefix = depth > 0 ? '<span class="text-muted me-1" style="font-family:monospace;">└</span>' : '';
         const inp = inputType === 'checkbox'
-            ? `<input class="form-check-input" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
-            : `<input class="form-check-input" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
-        html += `<li class="mb-1"><div class="form-check m-0">${inp}<label class="form-check-label" for="${fdEscAttr(inputId)}">${prefix}${esc(txt)}</label></div></li>`;
+            ? `<input class="form-check-input flex-shrink-0" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
+            : `<input class="form-check-input flex-shrink-0" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
+        html += `<div class="fd-ddl-tree-node">`;
+        html += `<div class="bnf-ou-tree-row d-flex align-items-center" dir="rtl" role="presentation" style="padding:8px 10px;padding-right:${pr}px;gap:8px;">`;
+        html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        html += `<div class="form-check m-0 flex-grow-1 d-flex align-items-center gap-2" style="min-width:0;">${inp}<label class="form-check-label mb-0" style="flex:1;min-width:0;" for="${fdEscAttr(inputId)}">${esc(txt)}</label></div>`;
+        html += '</div></div>';
     });
     return html;
 }
@@ -372,15 +402,24 @@ function fdRenderDropdownNestedNodes(nodes, inputType, nameBase, disabled, defSi
         if (inputType === 'checkbox') {
             if (defMultiSet[txt]) checked = ' checked';
         } else if (String(defSingle || '') === txt) checked = ' checked';
-        const prefix = depth > 0 ? '<span class="text-muted me-1" style="font-family:monospace;">└</span>' : '';
+        const indent = Math.max(0, depth * 22);
+        const pr = 12 + indent;
         const inp = inputType === 'checkbox'
-            ? `<input class="form-check-input" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
-            : `<input class="form-check-input" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
-        let inner = `<div class="form-check m-0">${inp}<label class="form-check-label fw-semibold" for="${fdEscAttr(inputId)}">${prefix}${esc(txt)}</label></div>`;
+            ? `<input class="form-check-input flex-shrink-0" type="checkbox" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`
+            : `<input class="form-check-input flex-shrink-0" type="radio" name="${fdEscAttr(nameBase)}" id="${fdEscAttr(inputId)}" value="${fdEscAttr(String(id))}" data-dd-text="${fdEscAttr(txt)}"${checked}${dis}>`;
+        html += '<div class="fd-ddl-tree-node">';
+        html += `<div class="bnf-ou-tree-row d-flex align-items-center" dir="rtl" role="presentation" style="padding:8px 10px;padding-right:${pr}px;gap:8px;">`;
         if (hasKids) {
-            inner += `<ul class="list-unstyled pe-3 mt-1 mb-0 border-end border-secondary-subtle">${fdRenderDropdownNestedNodes(node.children, inputType, nameBase, disabled, defSingle, defMultiSet, depth + 1)}</ul>`;
+            html += '<button type="button" class="bnf-ou-tree-exp" aria-expanded="false">+</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
         }
-        html += `<li class="mb-2">${inner}</li>`;
+        html += `<div class="form-check m-0 flex-grow-1 d-flex align-items-center gap-2" style="min-width:0;">${inp}<label class="form-check-label fw-semibold mb-0" style="flex:1;min-width:0;" for="${fdEscAttr(inputId)}">${esc(txt)}</label></div>`;
+        html += '</div>';
+        if (hasKids) {
+            html += `<div class="fd-ddl-tree-branch d-none">${fdRenderDropdownNestedNodes(node.children, inputType, nameBase, disabled, defSingle, defMultiSet, depth + 1)}</div>`;
+        }
+        html += '</div>';
     });
     return html;
 }
@@ -427,15 +466,15 @@ function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph) {
     } else if (presentation.mode === 'grouped') {
         innerUl = presentation.groups.map(g => {
             const header = g.parentText
-                ? `<div class="fw-semibold small text-muted mb-1">${esc(g.parentText)}</div>`
+                ? `<div class="fd-ddl-tree-group-heading fw-semibold small text-muted">${esc(g.parentText)}</div>`
                 : '';
-            const leaves = fdRenderDropdownTreeLeaves(g.items, inputType, nameBase, disabled, def, defMulti, 1);
-            return `<li class="mb-3">${header}<ul class="list-unstyled pe-3 mb-0">${leaves}</ul></li>`;
+            const leaves = fdRenderDropdownTreeLeaves(g.items, inputType, nameBase, disabled, def, defMulti, g.parentText ? 1 : 0);
+            return `<div class="fd-ddl-tree-group">${header}<div>${leaves}</div></div>`;
         }).join('');
     }
 
     const reqHint = f.isRequired && !multi ? ' <span class="text-danger">*</span>' : '';
-    return `<div class="fd-ddl-tree border rounded-3 p-2 bg-white"${ttAttr}${mk('max-height:280px;overflow:auto;')}><div class="small text-muted mb-2">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><ul class="list-unstyled mb-0">${innerUl}</ul></div>`;
+    return `<div class="fd-ddl-tree"${ttAttr}${mk()}><div class="small text-muted mb-2 px-1">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><div class="fd-ddl-tree-panel">${innerUl}</div></div>`;
 }
 
 async function fdFetchReadyTableGridForField(tableId) {
@@ -518,17 +557,23 @@ function fdInitOptionListEditor(pfx, mode, propsObj, propKey) {
         defStr = (po.defaultOption || '').trim();
     }
     const defMulti = mode === 'multi' ? defStr.split(/,\s*/).map(s => s.trim()).filter(Boolean) : [];
-    lines.forEach(t => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, t, defStr, defMulti, propKey)));
+    const perOther = el.getAttribute('data-fd-per-option-other') === '1';
+    const markLines = String(po.choiceOtherMarks || '').split(/[\r\n]+/);
+    lines.forEach((t, idx) => {
+        const mk = !!(perOther && (markLines[idx] === '1' || /^true$/i.test((markLines[idx] || '').trim())));
+        rowsHost.appendChild(fdCreateOptionRow(pfx, mode, t, defStr, defMulti, propKey, { showOtherCheckbox: perOther, otherChecked: mk }));
+    });
     el.appendChild(rowsHost);
     const btn = document.createElement('button'); btn.type = 'button';
     btn.className = 'btn btn-sm btn-outline-primary mt-2';
     btn.innerHTML = '<i class="bi bi-plus-lg"></i> إضافة خيار';
-    btn.onclick = () => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, '', '', [], propKey));
+    btn.onclick = () => rowsHost.appendChild(fdCreateOptionRow(pfx, mode, '', '', [], propKey, { showOtherCheckbox: perOther, otherChecked: false }));
     el.appendChild(btn);
 }
 
-function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr, propKey) {
+function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr, propKey, rowOpts) {
     propKey = propKey || 'options';
+    rowOpts = rowOpts || {};
     const wrap = document.createElement('div');
     wrap.className = 'rtc-opt-row d-flex align-items-center gap-2 mb-2 flex-wrap';
     const inp = document.createElement('input'); inp.type = 'text';
@@ -542,6 +587,14 @@ function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr, propKey) {
         if (trimmed && defMultiArr.includes(trimmed)) c.checked = true;
         const l = document.createElement('label'); l.className = 'form-check-label small'; l.textContent = 'افتراضي';
         d.appendChild(c); d.appendChild(l); wrap.appendChild(d);
+        if (rowOpts.showOtherCheckbox) {
+            const od = document.createElement('div'); od.className = 'form-check m-0 flex-shrink-0';
+            const oc = document.createElement('input'); oc.type = 'checkbox'; oc.className = 'form-check-input rtc-opt-choice-other';
+            //oc.title = 'عند التفعيل، يظهر مربع نص مرتبط بهذا الخيار عند اختياره في النموذج';
+            if (rowOpts.otherChecked) oc.checked = true;
+            const ol = document.createElement('label'); ol.className = 'form-check-label small'; ol.textContent = 'أخرى';
+            od.appendChild(oc); od.appendChild(ol); wrap.appendChild(od);
+        }
     } else {
         const d = document.createElement('div'); d.className = 'form-check m-0 flex-shrink-0';
         const r = document.createElement('input'); r.type = 'radio'; r.name = pfx + '_' + propKey + '_defaultOpt';
@@ -549,6 +602,14 @@ function fdCreateOptionRow(pfx, mode, text, defSingle, defMultiArr, propKey) {
         if (trimmed && defSingle && trimmed === defSingle) r.checked = true;
         const l = document.createElement('label'); l.className = 'form-check-label small'; l.textContent = 'افتراضي';
         d.appendChild(r); d.appendChild(l); wrap.appendChild(d);
+        if (rowOpts.showOtherCheckbox) {
+            const od = document.createElement('div'); od.className = 'form-check m-0 flex-shrink-0';
+            const oc = document.createElement('input'); oc.type = 'checkbox'; oc.className = 'form-check-input rtc-opt-choice-other';
+            //oc.title = 'عند التفعيل، يظهر مربع نص في المعاينة ليقوم المستخدم بكتابة خيار آخر بعد اختيار هذا الخيار';
+            if (rowOpts.otherChecked) oc.checked = true;
+            const ol = document.createElement('label'); ol.className = 'form-check-label small'; ol.textContent = 'أخرى';
+            od.appendChild(oc); od.appendChild(ol); wrap.appendChild(od);
+        }
     }
     const rm = document.createElement('button'); rm.type = 'button';
     rm.className = 'btn btn-sm btn-outline-danger flex-shrink-0';
@@ -567,16 +628,24 @@ function fdCollectOptionListFromEditor(pfx, propKey) {
     const el = document.getElementById(pfx + '_' + propKey + '_options_editor');
     if (!el) return null;
     const mode = el.getAttribute('data-mode') || 'single';
+    const perOther = el.getAttribute('data-fd-per-option-other') === '1';
     const host = el.querySelector('.rtc-opt-rows');
     if (!host) return { options:'', defaultOption:'' };
-    const lines = [], defMulti = []; let defOption = '';
+    const lines = [], defMulti = []; let defOption = ''; const otherMarks = [];
     host.querySelectorAll('.rtc-opt-row').forEach(row => {
         const t = (row.querySelector('.rtc-opt-text')?.value || '').trim();
         if (!t) return; lines.push(t);
-        if (mode === 'multi') { if (row.querySelector('.rtc-opt-def-multi')?.checked) defMulti.push(t); }
-        else { if (row.querySelector('.rtc-opt-def-single')?.checked) defOption = t; }
+        if (mode === 'multi') {
+            if (row.querySelector('.rtc-opt-def-multi')?.checked) defMulti.push(t);
+            if (perOther) otherMarks.push((row.querySelector('.rtc-opt-choice-other')?.checked) ? '1' : '0');
+        } else {
+            if (row.querySelector('.rtc-opt-def-single')?.checked) defOption = t;
+            if (perOther) otherMarks.push((row.querySelector('.rtc-opt-choice-other')?.checked) ? '1' : '0');
+        }
     });
-    return { options: lines.join('\n'), defaultOption: mode === 'multi' ? defMulti.join(', ') : defOption };
+    const out = { options: lines.join('\n'), defaultOption: mode === 'multi' ? defMulti.join(', ') : defOption };
+    if (perOther) out.choiceOtherMarks = otherMarks.join('\n');
+    return out;
 }
 
 function fdCollectFileTypesPick(pfx) {
@@ -602,6 +671,7 @@ function fdMergeSpecialProps(type, pfx, result) {
         result[p.key] = o.options;
         if (p.choiceMode === 'multi') result.defaultOption = o.defaultOption;
         else if (p.key === 'options') result.defaultOption = o.defaultOption;
+        if (p.perOptionOther && o.choiceOtherMarks != null) result.choiceOtherMarks = o.choiceOtherMarks;
     });
     if (def.props.some(p => p.type === 'fileTypesPick')) result.fileTypes = fdCollectFileTypesPick(pfx);
     return result;
@@ -644,9 +714,10 @@ function fdBuildSinglePropHtml(p, pfx) {
         </div></div>`;
     }
     if (p.type === 'optionList') {
+        const dOther = p.perOptionOther ? ' data-fd-per-option-other="1"' : '';
         return `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
         <p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً.</p>
-        <div id="${pfx}_${p.key}_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="${p.choiceMode||'single'}"></div></div>`;
+        <div id="${pfx}_${p.key}_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="${p.choiceMode||'single'}"${dOther}></div></div>`;
     }
     if (p.type === 'textarea') {
         const fid = `${pfx}_${p.key}`;
@@ -684,6 +755,1047 @@ function fdParseLines(s) {
     return String(s).split(/[\r\n]+/).map(x => x.trim()).filter(Boolean);
 }
 
+/** يُكمِّل «صيغة الرقم» بفرض «نمط الإدخال» في حقول المعاينة. */
+function fdPhoneInputPatternExtras(inputPatternRaw) {
+    const ip = String(inputPatternRaw || 'أرقام فقط').trim();
+    if (ip === 'حروف فقط')
+        return { inpType: 'text', pt: ' pattern="^[A-Za-z\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف فقط')}"` };
+    if (ip === 'حروف وأرقام')
+        return { inpType: 'text', pt: ' pattern="^[A-Za-z0-9\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف وأرقام')}"` };
+    return { inpType: 'tel', pt: ' pattern="^[0-9]+$"', inputmode: ' inputmode="numeric"', titleAttr: ` title="${fdEscAttr('أرقام فقط')}"` };
+}
+
+/** معاينة قائمة واحد/متعدد: مربع نص لكل خيار «أخرى»، وإلزامه عند ظهوره إذا كان الحقل مطلوباً. */
+function fdOcHideAllOtherWrapsInGroup(g) {
+    if (!g || !g.querySelectorAll) return;
+    g.querySelectorAll('.fd-oc-other-wrap').forEach(w => { w.style.display = 'none'; });
+    g.querySelectorAll('.fd-oc-other-input').forEach(t => { t.required = false; });
+}
+
+function fdOcGroupIsRequired(g) {
+    return g && g.getAttribute('data-fd-required') === '1';
+}
+
+function fdOcSyncCheckbox(cb) {
+    const item = cb && cb.closest ? cb.closest('.fd-oc-item') : null;
+    const g = cb && cb.closest ? cb.closest('.fd-oc-group') : null;
+    if (!item || !g) return;
+    const wrap = item.querySelector('.fd-oc-other-wrap');
+    const tInp = item.querySelector('.fd-oc-other-input');
+    if (!wrap) return;
+    const isOther = cb.getAttribute('data-fd-other') === '1';
+    const show = !!cb.checked && isOther;
+    wrap.style.display = show ? 'block' : 'none';
+    if (tInp) tInp.required = !!(show && fdOcGroupIsRequired(g));
+}
+
+function fdOcSyncRadioGroup(g) {
+    if (!g || !g.querySelectorAll) return;
+    const sel = g.querySelector('input[type="radio"]:checked');
+    if (!sel) { fdOcHideAllOtherWrapsInGroup(g); return; }
+    const req = fdOcGroupIsRequired(g);
+    g.querySelectorAll('.fd-oc-item').forEach(item => {
+        const r = item.querySelector('input[type="radio"]');
+        const wrap = item.querySelector('.fd-oc-other-wrap');
+        const tInp = item.querySelector('.fd-oc-other-input');
+        if (!wrap || !r) return;
+        const show = !!(r.checked && r.getAttribute('data-fd-other') === '1');
+        wrap.style.display = show ? 'block' : 'none';
+        if (tInp) tInp.required = !!(show && req);
+    });
+}
+
+function fdOcChoiceChange(el) {
+    const g = el && el.closest ? el.closest('.fd-oc-group') : null;
+    if (!g) return;
+    const mode = g.getAttribute('data-fd-oc-mode') || '';
+    if (el.type === 'radio' || mode === 'single') fdOcSyncRadioGroup(g);
+    else fdOcSyncCheckbox(el);
+}
+
+function fdOcInitGroup(g) {
+    const mode = g.getAttribute('data-fd-oc-mode') || '';
+    if (mode === 'single') fdOcSyncRadioGroup(g);
+    else g.querySelectorAll('input[type="checkbox"][data-fd-other]').forEach(cb => fdOcSyncCheckbox(cb));
+}
+if (typeof window !== 'undefined') window.fdOcChoiceChange = fdOcChoiceChange;
+
+// ─── HIJRI DATE PICKER (معاينة حقل تاريخ — يطابق تجربة type=date بقدر الإمكان) ─
+const FD_HIJRI_MONTH_NAMES = ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'];
+
+function fdHijriIntlSupported() {
+    try {
+        new Intl.DateTimeFormat('en', { calendar: 'islamic-umalqura' }).format(new Date());
+        return true;
+    } catch { return false; }
+}
+
+function fdUtcDate(y, m, d, h12) {
+    return new Date(Date.UTC(y, m - 1, d, typeof h12 === 'number' ? h12 : 12, 0, 0));
+}
+
+function fdAddDaysUtc(d, n) {
+    const x = new Date(d.getTime());
+    x.setUTCDate(x.getUTCDate() + n);
+    return x;
+}
+
+function fdIntlHijriPartsUtc(d) {
+    const fmt = new Intl.DateTimeFormat('en-US', { calendar: 'islamic-umalqura', timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' });
+    const parts = {}; fmt.formatToParts(d).forEach(p => { if (p.type !== 'literal') parts[p.type] = +p.value; });
+    return { y: parts.year, m: parts.month, d: parts.day };
+}
+
+function fdHijriMonthKey(y, m) {
+    return y * 12 + m;
+}
+
+function fdFindFirstGregorianDayOfHijriMonth(hy, hm) {
+    const targetKey = fdHijriMonthKey(hy, hm);
+    let d = fdAddDaysUtc(fdUtcDate(622, 7, 18, 12), Math.floor(((hy - 1) * 12 + (hm - 1)) * 29.530588853));
+    for (let i = 0; i < 200; i++) {
+        const h = fdIntlHijriPartsUtc(d);
+        const curKey = fdHijriMonthKey(h.y, h.m);
+        if (curKey === targetKey) break;
+        const step = Math.max(-90, Math.min(90, (targetKey - curKey) * 29));
+        d = fdAddDaysUtc(d, step === 0 ? (targetKey > curKey ? 1 : -1) : step);
+    }
+    for (let i = 0; i < 500; i++) {
+        const h = fdIntlHijriPartsUtc(d);
+        const curKey = fdHijriMonthKey(h.y, h.m);
+        if (curKey === targetKey) break;
+        d = fdAddDaysUtc(d, curKey < targetKey ? 1 : -1);
+    }
+    for (let i = 0; i < 35; i++) {
+        const p = fdIntlHijriPartsUtc(fdAddDaysUtc(d, -1));
+        if (p.y === hy && p.m === hm) d = fdAddDaysUtc(d, -1);
+        else break;
+    }
+    return d;
+}
+
+function fdDaysInHijriMonth(hy, hm) {
+    let nHy = hm === 12 ? hy + 1 : hy;
+    let nHm = hm === 12 ? 1 : hm + 1;
+    const s = fdFindFirstGregorianDayOfHijriMonth(hy, hm);
+    const e = fdFindFirstGregorianDayOfHijriMonth(nHy, nHm);
+    return Math.round((e.getTime() - s.getTime()) / 86400000);
+}
+
+function fdFormatHijriStored(hy, hm, hd) {
+    const p = (n, w) => String(n).padStart(w, '0');
+    return `${hy}/${p(hm, 2)}/${p(hd, 2)}`;
+}
+
+function fdParseHijriStored(s) {
+    if (s == null || String(s).trim() === '') return null;
+    const m = String(s).trim().match(/^(\d{4})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})$/);
+    if (!m) return null;
+    const hy = parseInt(m[1], 10), hm = parseInt(m[2], 10), hd = parseInt(m[3], 10);
+    if (hm < 1 || hm > 12 || hd < 1 || hd > 31) return null;
+    return { hy, hm, hd };
+}
+
+/** يَفهم قيم الواجهة المختلفة ويُحوّلها إلى طقم هجري Umm al-Qura (يوم كامل بتوقيت UTC). */
+function fdCoerceFlexibleInputToHijriParts(raw) {
+    if (raw == null || String(raw).trim() === '') return null;
+    const s = String(raw).trim();
+
+    const isoGre = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+    let m = s.match(isoGre);
+    if (m) {
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+        if (y >= 1900 && y <= 3100 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+            const g = fdUtcDate(y, mo, d, 12);
+            if (!isNaN(g.getTime())) return fdIntlHijriPartsUtc(g);
+        }
+        if (y < 1900 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+            const hj = fdParseHijriStored(s);
+            if (hj) return hj;
+        }
+    }
+
+    const dmyGre = /^(\d{1,2})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{4})$/;
+    m = s.match(dmyGre);
+    if (m) {
+        const dd = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+        if (y >= 1900 && y <= 3100 && mo >= 1 && mo <= 12 && dd >= 1 && dd <= 31) {
+            const g = fdUtcDate(y, mo, dd, 12);
+            if (!isNaN(g.getTime())) return fdIntlHijriPartsUtc(g);
+        }
+    }
+
+    const ymd4 = /^(\d{4})\s*[\/\-]\s*(\d{1,2})\s*[\/\-]\s*(\d{1,2})$/;
+    m = s.match(ymd4);
+    if (m) {
+        const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+        if (y >= 1900 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+            const g = fdUtcDate(y, mo, d, 12);
+            if (!isNaN(g.getTime())) return fdIntlHijriPartsUtc(g);
+        }
+    }
+
+    return fdParseHijriStored(s);
+}
+
+/** يُطبِّع الواجهة والمُخفي إلى «سنة/شهر/يوم» هجري وفق مدخلات المستخدم (ميلادي أو هجري). */
+function fdHijriNormalizeFaceAndStore(wrap, opts) {
+    if (!wrap) return false;
+    const face = wrap.querySelector('.fd-hijri-face');
+    const store = wrap.querySelector('.fd-hijri-store');
+    const raw = String((face && face.value) || (store && store.value) || '').trim();
+    if (!raw) return false;
+
+    let pv = fdCoerceFlexibleInputToHijriParts(raw);
+    if (!pv) return false;
+
+    const g = fdGregorianUtcFromHijri(pv.hy, pv.hm, pv.hd);
+    const minG = wrap._fdMinG || null;
+    const maxG = wrap._fdMaxG || null;
+    if (!fdHijriInRange(g, minG, maxG)) {
+        const clr = !!(opts && opts.clearOnInvalidRange);
+        if (clr) {
+            if (store) store.value = '';
+            if (face) face.value = '';
+            wrap.removeAttribute('data-fd-hy');
+            wrap.removeAttribute('data-fd-hm');
+        }
+        return false;
+    }
+
+    const disp = fdFormatHijriStored(pv.hy, pv.hm, pv.hd);
+    if (store) store.value = disp;
+    if (face) face.value = disp;
+    wrap.setAttribute('data-fd-hy', String(pv.hy));
+    wrap.setAttribute('data-fd-hm', String(pv.hm));
+    return true;
+}
+
+function fdGregorianUtcFromHijri(hy, hm, hd) {
+    const start = fdFindFirstGregorianDayOfHijriMonth(hy, hm);
+    return fdAddDaysUtc(start, hd - 1);
+}
+
+function fdParseIsoMinMax(s) {
+    if (!s || !/\d{4}-\d{2}-\d{2}/.test(String(s))) return null;
+    const [y, m, d] = String(s).split('-').map(x => parseInt(x, 10));
+    const u = fdUtcDate(y, m, d, 12);
+    return isNaN(u.getTime()) ? null : u;
+}
+
+function fdHijriInRange(gUtc, minG, maxG) {
+    if (!gUtc || isNaN(gUtc.getTime())) return false;
+    if (minG && +gUtc < +minG) return false;
+    if (maxG && +gUtc > +maxG) return false;
+    return true;
+}
+
+/** آخر لوحة تقويم هجري مفتوحة (يُغلق عند النقر خارجها). */
+let fdHijriOpenPanel = null;
+
+const FD_HIJRI_POP_PANEL_WIDTH = 270;
+
+/** تموضع اللوحة كـ «منتقي نظام صغير» بجانب المجموعة دون امتداد عرض عمود المعاينة. */
+function fdHijriPositionPanel(panel, wrap) {
+    if (!panel || !wrap) return;
+    const anchor = wrap.querySelector('.fd-date-input-group') || wrap;
+    const rr = anchor.getBoundingClientRect();
+    const vw = typeof window.innerWidth === 'number' ? window.innerWidth : 480;
+    const vh = typeof window.innerHeight === 'number' ? window.innerHeight : 600;
+    const gutter = 5;
+    const pw = FD_HIJRI_POP_PANEL_WIDTH;
+    panel.style.position = 'fixed';
+    panel.style.zIndex = '1090';
+    panel.style.margin = '0';
+    panel.style.width = pw + 'px';
+    panel.style.left = '';
+    panel.style.right = '';
+    panel.style.bottom = '';
+
+    let top = rr.bottom + gutter;
+    let left = rr.left;
+
+    const ph = panel.offsetHeight || 280;
+    if (top + ph > vh - 8 && rr.top > ph + gutter) top = rr.top - ph - gutter;
+    else if (top + ph > vh - 8) top = Math.max(8, vh - ph - 8);
+
+    if (left + pw > vw - 8) left = vw - pw - 8;
+    if (left < 8) left = 8;
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+}
+
+function fdHijriRepositionOpenPanel() {
+    const p = fdHijriOpenPanel;
+    if (!p || !p._fdAttachedWrap) return;
+    fdHijriPositionPanel(p, p._fdAttachedWrap);
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('click', e => {
+        const t = e.target;
+        if (!fdHijriOpenPanel) return;
+        const host = fdHijriOpenPanel.closest && fdHijriOpenPanel.closest('.fd-hijri-date');
+        if (host && host.contains(t)) return;
+        fdHijriOpenPanel.style.display = 'none';
+        try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
+        fdHijriOpenPanel = null;
+    });
+    document.addEventListener('keydown', e => {
+        if ((e.key === 'Escape' || e.code === 'Escape') && fdHijriOpenPanel) {
+            fdHijriOpenPanel.style.display = 'none';
+            try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
+            fdHijriOpenPanel = null;
+        }
+    });
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', () => fdHijriRepositionOpenPanel(), { capture: true, passive: true });
+    window.addEventListener('resize', () => fdHijriRepositionOpenPanel(), { passive: true });
+}
+
+function fdHijriBuildPanelHtml() {
+    return `<div class="fd-hijri-pop fd-hijri-pop--floating" dir="rtl" role="dialog" aria-label="منتقي التاريخ الهجري" style="display:none;">
+<div class="fd-hijri-pop-inner rounded-3 border bg-white shadow">
+<div class="d-flex fd-h-nav-row justify-content-between align-items-center gap-1 px-2 pt-2 pb-1">
+<button type="button" tabindex="-1" class="btn btn-sm btn-outline-secondary fd-h-prev px-2" aria-label="الشهر السابق">‹</button>
+<span class="fd-h-cap fw-bold mx-1 flex-grow-1 text-center"></span>
+<button type="button" tabindex="-1" class="btn btn-sm btn-outline-secondary fd-h-next px-2" aria-label="الشهر التالي">›</button></div>
+<div class="fd-h-head d-grid text-center px-2 mb-0"></div>
+<div class="fd-h-grid d-grid px-2 pb-2"></div>
+<div class="text-center fd-h-footer border-top py-1"><button type="button" tabindex="-1" class="btn btn-link btn-sm py-1 lh-sm fd-h-clear">مسح التاريخ</button></div>
+</div></div>`;
+}
+
+function fdHijriRenderMonth(panel, wrap) {
+    let hy = parseInt(wrap.getAttribute('data-fd-hy') || '', 10);
+    let hm = parseInt(wrap.getAttribute('data-fd-hm') || '', 10);
+    const hSel = fdParseHijriStored(wrap.querySelector('.fd-hijri-store')?.value);
+    if (!(hy > 0 && hm >= 1 && hm <= 12)) {
+        const b = fdIntlHijriPartsUtc(fdUtcDate(2000, 1, 1, 12));
+        hy = (hSel ? hSel.hy : b.y); hm = (hSel ? hSel.hm : b.m);
+    }
+    wrap.setAttribute('data-fd-hy', String(hy));
+    wrap.setAttribute('data-fd-hm', String(hm));
+    const cap = panel.querySelector('.fd-h-cap');
+    if (cap) cap.textContent = `${FD_HIJRI_MONTH_NAMES[hm - 1] || ''} ${hy} هـ`;
+    const head = panel.querySelector('.fd-h-head');
+    const grid = panel.querySelector('.fd-h-grid');
+    if (!head || !grid) return;
+    head.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+    head.style.gap = '2px';
+    grid.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+    grid.style.gap = '2px';
+    const wk = ['أ', 'إ', 'ث', 'ر', 'خ', 'ج', 'س'];
+    head.innerHTML = wk.map(c => `<span>${c}</span>`).join('');
+    const first = fdFindFirstGregorianDayOfHijriMonth(hy, hm);
+    const len = fdDaysInHijriMonth(hy, hm);
+    const startCol = first.getUTCDay();
+    const minG = wrap._fdMinG || null;
+    const maxG = wrap._fdMaxG || null;
+    let cells = '';
+    let skip = startCol % 7;
+    for (let i = 0; i < skip; i++) cells += '<span></span>';
+    for (let day = 1; day <= len; day++) {
+        const gd = fdAddDaysUtc(first, day - 1);
+        const ok = fdHijriInRange(gd, minG, maxG);
+        let cls = 'btn btn-light border fd-h-day btn-sm p-0 rounded text-dark lh-sm ';
+        cls += ok ? '' : ' text-muted opacity-50';
+        if (hSel && hSel.hy === hy && hSel.hm === hm && hSel.hd === day) cls = 'btn btn-primary border fd-h-day btn-sm p-0 rounded text-white lh-sm ';
+        cells += `<button type="button" tabindex="-1" class="${cls}" data-fd-d="${day}" ${ok ? '' : 'disabled aria-disabled="true"'}">${day}</button>`;
+    }
+    grid.innerHTML = cells;
+    grid.querySelectorAll('[data-fd-d]').forEach(btn => {
+        btn.addEventListener('mousedown', e => { e.preventDefault(); });
+        btn.onclick = e => {
+            e.stopPropagation();
+            const dd = parseInt(btn.getAttribute('data-fd-d') || '', 10);
+            if (!dd || btn.disabled) return;
+            const g = fdGregorianUtcFromHijri(hy, hm, dd);
+            if (!fdHijriInRange(g, minG, maxG)) return;
+            const stor = fdFormatHijriStored(hy, hm, dd);
+            const store = wrap.querySelector('.fd-hijri-store');
+            const face = wrap.querySelector('.fd-hijri-face');
+            if (store) store.value = stor;
+            if (face) face.value = stor;
+            panel.style.display = 'none';
+            try { panel._fdAttachedWrap = null; } catch (_) {}
+            if (fdHijriOpenPanel === panel) fdHijriOpenPanel = null;
+        };
+    });
+}
+
+function fdHijriBindWrap(wrap) {
+    if (!wrap || wrap.dataset.fdHijriBound === '1') return;
+    if (!fdHijriIntlSupported()) return;
+    const minS = wrap.getAttribute('data-fd-min') || '';
+    const maxS = wrap.getAttribute('data-fd-max') || '';
+    wrap._fdMinG = fdParseIsoMinMax(minS);
+    wrap._fdMaxG = fdParseIsoMinMax(maxS);
+    if (!wrap.style.position) wrap.style.position = 'relative';
+
+    let panel = wrap.querySelector(':scope > .fd-hijri-pop');
+    if (!panel) {
+        wrap.insertAdjacentHTML('beforeend', fdHijriBuildPanelHtml());
+        panel = wrap.querySelector(':scope > .fd-hijri-pop');
+    }
+    if (!panel) return;
+
+    const face = wrap.querySelector('.fd-hijri-face');
+    const btn = wrap.querySelector('.fd-hijri-btn');
+    const store = wrap.querySelector('.fd-hijri-store');
+
+    const hadRawInit = String((face?.value ?? store?.value ?? '')).trim();
+    if (hadRawInit) {
+        fdHijriNormalizeFaceAndStore(wrap, { clearOnInvalidRange: true });
+    }
+
+    let pv = fdParseHijriStored(String((store?.value || '')).trim());
+    if (!pv) {
+        const now = new Date();
+        const cur = fdIntlHijriPartsUtc(fdUtcDate(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate(), 12));
+        wrap.setAttribute('data-fd-hy', String(cur.y));
+        wrap.setAttribute('data-fd-hm', String(cur.m));
+    }
+
+    wrap.dataset.fdHijriBound = '1';
+
+    panel.querySelector('.fd-h-prev')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-h-prev')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        let hy = parseInt(wrap.getAttribute('data-fd-hy'), 10), hm = parseInt(wrap.getAttribute('data-fd-hm'), 10);
+        if (hm <= 1) { hm = 12; hy -= 1; } else hm -= 1;
+        wrap.setAttribute('data-fd-hy', String(hy));
+        wrap.setAttribute('data-fd-hm', String(hm));
+        fdHijriRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+    });
+    panel.querySelector('.fd-h-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-h-next')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        let hy = parseInt(wrap.getAttribute('data-fd-hy'), 10), hm = parseInt(wrap.getAttribute('data-fd-hm'), 10);
+        if (hm >= 12) { hm = 1; hy += 1; } else hm += 1;
+        wrap.setAttribute('data-fd-hy', String(hy));
+        wrap.setAttribute('data-fd-hm', String(hm));
+        fdHijriRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+    });
+    panel.querySelector('.fd-h-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-h-clear')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (store) store.value = '';
+        if (face) face.value = '';
+        if (fdHijriOpenPanel === panel) {
+            panel.style.display = 'none';
+            panel._fdAttachedWrap = null;
+            fdHijriOpenPanel = null;
+        }
+    });
+
+    function togglePop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const wasOpen = (fdHijriOpenPanel === panel && panel.style.display !== 'none');
+        if (fdHijriOpenPanel && fdHijriOpenPanel !== panel) {
+            fdHijriOpenPanel.style.display = 'none';
+            try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
+            fdHijriOpenPanel = null;
+        }
+        if (wasOpen) {
+            panel.style.display = 'none';
+            fdHijriOpenPanel = null;
+            panel._fdAttachedWrap = null;
+            return;
+        }
+        if (btn?.disabled || face?.readOnly) return;
+        fdHijriNormalizeFaceAndStore(wrap);
+        fdHijriOpenPanel = panel;
+        panel._fdAttachedWrap = wrap;
+        panel.style.display = 'block';
+        fdHijriRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+    }
+    btn?.addEventListener('click', togglePop);
+    face?.addEventListener('click', togglePop);
+    face?.addEventListener('blur', () => { fdHijriNormalizeFaceAndStore(wrap, { clearOnInvalidRange: true }); });
+}
+
+function fdHijriBindInRoot(root) {
+    (root || document).querySelectorAll('.fd-hijri-date').forEach(fdHijriBindWrap);
+}
+
+/** تنسيق موحَّد لمربّعات التاريخ الهجري/الميلادي (ارتفاع الزر وحقل الإدخال). */
+function fdEnsureDateFieldStyles() {
+    if (typeof document === 'undefined') return;
+    const id = 'fd-date-field-unified-styles-v3';
+    if (document.getElementById(id)) return;
+    document.querySelectorAll('style[id^="fd-date-field-unified-styles"]').forEach(s => s.remove());
+    const el = document.createElement('style');
+    el.id = id;
+    el.textContent = `
+.fd-date-field-wrap .fd-date-input-group {
+  align-items: stretch;
+  direction: ltr;
+  flex-direction: row;
+}
+.fd-date-field-wrap.fd-hijri-date,
+.fd-date-field-wrap.fd-date-miladi {
+  overflow: visible !important;
+}
+.fd-date-field-wrap .fd-date-input-group > .fd-date-control.form-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  direction: ltr;
+  min-height: calc(1.5em + 0.75rem + 2px);
+}
+.fd-date-field-wrap .fd-date-input-group > input[type="date"].fd-date-control.form-control {
+  color-scheme: light;
+}
+.fd-date-field-wrap .fd-date-input-group > input.fd-date-control.fd-hijri-face.form-control,
+.fd-date-field-wrap.fd-date-hijri-fallback .fd-date-input-group > .fd-date-control.form-control {
+  font-variant-numeric: tabular-nums;
+}
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding-inline: 0.65rem;
+  border-radius: 8px;
+}
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn .bi-calendar3 {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+.fd-date-field-wrap.fd-date-hijri-fallback .fd-date-cal-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* منتقي الهجري: نافذة عائمة صغيرة (مثل نمط منتقي النظام) */
+.fd-hijri-pop.fd-hijri-pop--floating {
+  position: fixed !important;
+  inset: unset !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  left: auto;
+  top: auto;
+  z-index: 1090 !important;
+  isolation: isolate;
+}
+.fd-hijri-pop-inner.shadow {
+  box-shadow: 0 0.4rem 1rem rgba(0,0,0,.12), 0 0.1rem 0.25rem rgba(0,0,0,.08) !important;
+}
+.fd-hijri-pop .fd-hijri-pop-inner {
+  width: ${FD_HIJRI_POP_PANEL_WIDTH}px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+}
+.fd-hijri-pop .fd-h-cap {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--bs-body-color, #1f2937);
+}
+.fd-hijri-pop .fd-h-prev,
+.fd-hijri-pop .fd-h-next {
+  min-height: calc(1.5em + 0.375rem + 2px);
+  padding-top: .2rem !important;
+  padding-bottom: .2rem !important;
+  border-radius: 8px !important;
+  font-size: 1rem;
+}
+.fd-hijri-pop .fd-h-head span {
+  display: inline-block;
+  font-size: 10px !important;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+.fd-hijri-pop .fd-h-grid .fd-h-day {
+  min-height: calc(2rem + 4px);
+  width: 100%;
+  max-width: 100%;
+  font-size: 12.5px !important;
+  font-weight: 500;
+}
+.fd-hijri-pop .fd-h-grid .btn-primary.fd-h-day {
+  font-weight: 700 !important;
+}
+.fd-hijri-pop .fd-h-footer .fd-h-clear {
+  font-size: 12px !important;
+  text-decoration: none;
+}`;
+    document.head.appendChild(el);
+}
+
+/** نفس بنية الحقل الهجري: مجموعة إدخال + زر يفتح منتقي التاريخ الأصلي (showPicker أو focus). */
+function fdGregorianDateBindWrap(wrap) {
+    if (!wrap || wrap.dataset.fdDateGregBound === '1') return;
+    const inp = wrap.querySelector('input[type="date"].fd-greg-datepicker');
+    const btn = wrap.querySelector('.fd-greg-datepicker-btn');
+    if (!inp || !btn) return;
+    wrap.dataset.fdDateGregBound = '1';
+    btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (btn.disabled || inp.disabled || inp.readOnly) return;
+        if (typeof inp.showPicker === 'function') {
+            try { inp.showPicker(); } catch (_) { inp.focus(); }
+        } else {
+            inp.focus();
+        }
+    });
+}
+
+function fdGregorianDateBindInRoot(root) {
+    (root || document).querySelectorAll('.fd-date-miladi').forEach(fdGregorianDateBindWrap);
+}
+
+/** التحقق من رفع ملفات المعاينة: العدد، الحجم، الامتداد. */
+const FD_FILE_UPLOAD_MAX_ITEMS = 100;
+
+/** ٠–٩ و ۰–۹ → 0–9 حتى لا يعود parseInt إلى NaN ويُفهم الحدّ كـ ملف واحد. */
+function fdDigitsToLatinDigits(s) {
+    if (s == null || s === '') return '';
+    return String(s)
+        .replace(/[\u0660-\u0669]/g, ch => String(ch.charCodeAt(0) - 0x0660))
+        .replace(/[\u06f0-\u06f9]/gi, ch => String(ch.charCodeAt(0) - 0x06f0));
+}
+
+/** يستخرج عدداً صحيحاً بين 1 و FD_FILE_UPLOAD_MAX_ITEMS أو null إن لم يوجد أو غير صالح. */
+function fdParseMaxFilesRaw(raw) {
+    if (raw == null || raw === '') return null;
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+        const n = Math.floor(Math.abs(raw));
+        if (n < 1) return null;
+        return Math.min(n, FD_FILE_UPLOAD_MAX_ITEMS);
+    }
+    const latin = fdDigitsToLatinDigits(String(raw).trim());
+    const n = parseInt(latin, 10);
+    if (isNaN(n) || n < 1) return null;
+    return Math.min(n, FD_FILE_UPLOAD_MAX_ITEMS);
+}
+
+/** أقصى عدد مسموح من الغلاف (data-fd-max-files). */
+function fdWrapMaxFiles(wrap) {
+    if (!wrap || !wrap.getAttribute) return 1;
+    const attr = wrap.getAttribute('data-fd-max-files');
+    const n = fdParseMaxFilesRaw(attr != null && attr !== '' ? attr : '1');
+    return n != null ? n : 1;
+}
+
+/** أقصى عدد من خصائص التعريف (يدعم تسمية Pascal من الخادم). */
+function fdResolvedMaxFilesFromProps(props) {
+    if (!props || typeof props !== 'object') return 1;
+    const raw = props.maxFiles ?? props.MaxFiles;
+    const n = fdParseMaxFilesRaw(raw);
+    return n != null ? n : 1;
+}
+
+/**
+ * تتبّع وقت التشغيل (اختياري): أضِف ?traceFileUpload=1 أو sessionStorage FD_TRACE_FILE_UPLOAD=1 أو window.FD_TRACE_FILE_UPLOAD=true
+ * يطبع maxFiles والخاصية multiple و مقطعاً من outerHTML لكل حقول الرفع ضمن الجذر.
+ */
+function fdShouldTraceFileUpload() {
+    try {
+        if (typeof window !== 'undefined' && window.FD_TRACE_FILE_UPLOAD === true) return true;
+        if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('FD_TRACE_FILE_UPLOAD') === '1') return true;
+        if (typeof location !== 'undefined' && /[?&]traceFileUpload=1(?:&|$)/.test(String(location.search || ''))) return true;
+    } catch (_) {}
+    return false;
+}
+
+/** @param {string} stage */
+function fdFileUploadTraceStage(stage, root) {
+    if (!fdShouldTraceFileUpload()) return;
+    const r = root || document;
+    const list = r.querySelectorAll ? r.querySelectorAll('.fd-file-upload-wrap input[type="file"]') : [];
+    list.forEach((inp, idx) => {
+        const wrap = inp && inp.closest ? inp.closest('.fd-file-upload-wrap') : null;
+        let mf = null;
+        try { mf = wrap ? fdWrapMaxFiles(wrap) : null; } catch (_) {}
+        console.info('[FormsSystem FD file]', stage, { idx, maxFiles: mf, inputMultiple: !!(inp && inp.multiple), hasAttrMultiple: !!(inp && inp.hasAttribute && inp.hasAttribute('multiple')), outerHTML: inp ? String(inp.outerHTML || '').slice(0, 520) : '' });
+    });
+    if (!list.length) console.info('[FormsSystem FD file]', stage, '(no file inputs under .fd-file-upload-wrap)');
+}
+
+/** يجد غلاف رفع الملفات حتى مع هيكلة DOM بسيطة (حقل واحد تحت الغلاف). */
+function fdFileUploadResolveWrapForInput(input) {
+    if (!input) return null;
+    let wrap = input.closest && input.closest('.fd-file-upload-wrap');
+    if (!wrap && input.parentElement && input.parentElement.classList && input.parentElement.classList.contains('fd-file-upload-wrap')) wrap = input.parentElement;
+    return wrap || null;
+}
+
+/** إعادة فرض الخاصية multiple وفق data-fd-max-files — بدون تكرار مستمع التغيير. */
+function fdFileUploadReassertMultipleInRoot(root) {
+    const r = root || document;
+    r.querySelectorAll('.fd-file-upload-wrap').forEach(wrap => {
+        const inp = wrap.querySelector('input[type="file"]');
+        if (!inp) return;
+        if (!inp.classList.contains('fd-file-input')) inp.classList.add('fd-file-input');
+        fdFileInputApplyMultiple(inp);
+    });
+}
+
+/** يفعِّل اختيار عدة ملفات في نفس الحوار وفق الحد المعروض في الغلاف. */
+function fdFileInputApplyMultiple(input) {
+    const wrap = fdFileUploadResolveWrapForInput(input);
+    if (!input || !wrap) {
+        if (fdShouldTraceFileUpload()) console.info('[FormsSystem FD file] fdFileInputApplyMultiple(skip: no wrap)', input ? input.outerHTML : null);
+        return;
+    }
+    const mf = fdWrapMaxFiles(wrap);
+    if (fdShouldTraceFileUpload()) {
+        console.info('[FormsSystem FD file] fdFileInputApplyMultiple BEFORE', { maxFiles: mf, inputMultiple: input.multiple, outerHTML: String(input.outerHTML || '').slice(0, 520) });
+    }
+    if (mf > 1) {
+        input.setAttribute('multiple', 'multiple');
+        try { input.multiple = true; } catch (_) {}
+    } else {
+        input.removeAttribute('multiple');
+        try { input.multiple = false; } catch (_) {}
+    }
+    if (fdShouldTraceFileUpload()) {
+        console.info('[FormsSystem FD file] fdFileInputApplyMultiple AFTER', { maxFiles: mf, inputMultiple: input.multiple, outerHTML: String(input.outerHTML || '').slice(0, 520) });
+    }
+}
+
+function fdFileUploadParseExtents(wrap) {
+    const raw = wrap.getAttribute('data-fd-accept-exts') || '';
+    if (!raw) return [];
+    return raw.split('|').map(s => s.trim().replace(/^\./, '').toLowerCase()).filter(Boolean);
+}
+
+function fdFileExtension(name) {
+    const m = String(name || '').match(/\.([^./\\]+)$/);
+    return (m ? m[1] : '').toLowerCase();
+}
+
+/** فحص اختيار الملفات (بدون مسح الإدخال) — لواجهات الحفظ/التحقق. */
+function fdFileUploadInspect(wrap, fileList) {
+    const ok = { ok: true, msg: '' };
+    if (!wrap || !fileList || fileList.length === 0) return ok;
+
+    const maxFiles = fdWrapMaxFiles(wrap);
+
+    const mnStr = wrap.getAttribute('data-fd-min-mb');
+    const mxStr = wrap.getAttribute('data-fd-max-mb');
+    let minMb = mnStr !== null && mnStr !== '' ? parseFloat(mnStr) : null;
+    let maxMb = mxStr !== null && mxStr !== '' ? parseFloat(mxStr) : null;
+    if (minMb !== null && (isNaN(minMb) || minMb < 0)) minMb = null;
+    if (maxMb !== null && (isNaN(maxMb) || maxMb < 0)) maxMb = null;
+
+    const allowed = fdFileUploadParseExtents(wrap);
+    const n = fileList.length;
+    if (n > maxFiles) {
+        return { ok: false, msg: `عدد الملفات المسموح بإرفاقها لا يتجاوز "${maxFiles}"` };
+    }
+
+    const minBytes = minMb != null ? minMb * 1024 * 1024 : null;
+    const maxBytes = maxMb != null ? maxMb * 1024 * 1024 : null;
+
+    for (let i = 0; i < n; i++) {
+        const f = fileList[i];
+        const ext = fdFileExtension(f.name);
+        if (allowed.length && !allowed.includes(ext)) {
+            return { ok: false, msg: `الامتداد «.${ext}» غير مسموح لملف "${f.name}".` };
+        }
+        if (minBytes != null && f.size < minBytes) {
+            return { ok: false, msg: `الملف "${f.name}" أصغر من الحد الأدنى (${minMb} ميغابايت).` };
+        }
+        if (maxBytes != null && f.size > maxBytes) {
+            const sizeLbl = `${maxMb} ميغابايت`;
+            return { ok: false, msg: `حجم الملفات المسموح بإرفاقها لا يتجاوز "${sizeLbl}"` };
+        }
+    }
+    return ok;
+}
+
+function fdFileUploadSetErr(wrap, msg) {
+    const errEl = wrap && wrap.querySelector ? wrap.querySelector('.fd-file-err') : null;
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.style.display = '';
+    } else {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+}
+
+function fdIvRangeMsg(loDisp, hiDisp) {
+    return `القيمة المدخلة يجب أن تتراوح بين "${loDisp}" و "${hiDisp}"`;
+}
+
+function fdIvParseOptionalInt(v) {
+    if (v == null || v === '') return null;
+    const n = parseInt(String(v).trim(), 10);
+    return Number.isFinite(n) ? n : null;
+}
+
+function fdIvParseOptionalFloat(v) {
+    if (v == null || v === '') return null;
+    const n = parseFloat(String(v).trim().replace(/,/g, '.'));
+    return Number.isFinite(n) ? n : null;
+}
+
+function fdIvUsesInlineValidation(f) {
+    const t = f.fieldType;
+    return t === 'الاسم الكامل' || t === 'نص قصير' || t === 'رقم الهاتف' || t === 'البريد الإلكتروني'
+        || t === 'نص طويل' || t === 'فقرة' || t === 'رقم' || t === 'دوار رقمي' || t === 'عملة';
+}
+
+function fdIvFindPrimaryControl(ft, slot) {
+    if (!slot) return null;
+    if (ft === 'نص طويل' || ft === 'فقرة') return slot.querySelector('textarea');
+    if (ft === 'دوار رقمي') return slot.querySelector('input.fd-spin-input');
+    if (ft === 'رقم' || ft === 'عملة') {
+        const g = slot.querySelector('.input-group input[type="number"]');
+        if (g) return g;
+        return slot.querySelector('input[type="number"]');
+    }
+    if (ft === 'رقم الهاتف') {
+        const ig = slot.querySelector('.input-group input.form-control');
+        if (ig) return ig;
+    }
+    return slot.querySelector('input:not([type=hidden]):not([type=file]), select');
+}
+
+function fdIvValidateWrap(wrap) {
+    if (!wrap || wrap.getAttribute('data-fd-iv') !== '1') return '';
+    let props = {};
+    try {
+        const rawProps = wrap.getAttribute('data-fd-props') || '{}';
+        props = JSON.parse(rawProps);
+    } catch (_) { props = {}; }
+    const ft = wrap.getAttribute('data-fd-ft') || '';
+    const slot = wrap.querySelector('.fd-iv-slot');
+    const el = fdIvFindPrimaryControl(ft, slot);
+    if (!el || el.disabled || el.readOnly) return '';
+
+    const textTypes = new Set(['الاسم الكامل','نص قصير','رقم الهاتف','البريد الإلكتروني','نص طويل','فقرة']);
+    const numTypes = new Set(['رقم','دوار رقمي','عملة']);
+
+    const loLbl = mn => (mn !== null ? String(mn) : '—');
+    const hiLbl = mx => (mx !== null ? String(mx) : '—');
+
+    if (textTypes.has(ft)) {
+        const raw = String(el.value != null ? el.value : '');
+        const len = raw.length;
+        const mn = fdIvParseOptionalInt(props.minLength);
+        let mx = fdIvParseOptionalInt(props.maxLength);
+        if (mx === null && props.charLimit != null && props.charLimit !== '') mx = fdIvParseOptionalInt(props.charLimit);
+        if (mn === null && mx === null) return '';
+        if (mn !== null && len < mn) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
+        if (mx !== null && len > mx) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
+        return '';
+    }
+
+    if (numTypes.has(ft)) {
+        const s = String(el.value != null ? el.value : '').trim();
+        if (!s) return '';
+        const num = parseFloat(s.replace(/,/g, '').replace(/\s+/g, ''));
+        if (!Number.isFinite(num)) return '';
+        const mn = fdIvParseOptionalFloat(props.minValue);
+        const mx = fdIvParseOptionalFloat(props.maxValue);
+        if (mn === null && mx === null) return '';
+        if (mn !== null && num < mn) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
+        if (mx !== null && num > mx) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
+        return '';
+    }
+    return '';
+}
+
+function fdIvApplyWrapErr(wrap, msg) {
+    const msgEl = wrap && wrap.querySelector ? wrap.querySelector('.fd-iv-msg') : null;
+    if (!msgEl) return;
+    if (msg) {
+        msgEl.textContent = msg;
+        msgEl.style.display = '';
+    } else {
+        msgEl.textContent = '';
+        msgEl.style.display = 'none';
+    }
+}
+
+/** تحقّق معاينة النموذج (خطوة 4): يُحدِّث رسائل الملف والحقول ويعيد أوّل رسالة خطأ. */
+function fdValidateInteractivePreview(root) {
+    const scope = root || document;
+    let first = '';
+
+    scope.querySelectorAll('input.fd-spin-input').forEach(el => {
+        if (!el.readOnly && !el.disabled) fdSpinClamp(el);
+    });
+
+    scope.querySelectorAll('.fd-file-upload-wrap').forEach(w => fdFileUploadSetErr(w, ''));
+    scope.querySelectorAll('input.fd-file-input[type="file"]').forEach(inp => {
+        const w = inp.closest('.fd-file-upload-wrap');
+        if (!w || inp.disabled) return;
+        const inv = fdFileUploadInspect(w, inp.files);
+        if (!inv.ok) {
+            fdFileUploadSetErr(w, inv.msg);
+            if (!first) first = inv.msg;
+        }
+    });
+
+    scope.querySelectorAll('.fd-iv-wrap[data-fd-iv="1"]').forEach(wrap => fdIvApplyWrapErr(wrap, ''));
+    scope.querySelectorAll('.fd-iv-wrap[data-fd-iv="1"]').forEach(wrap => {
+        const v = fdIvValidateWrap(wrap);
+        if (v) {
+            fdIvApplyWrapErr(wrap, v);
+            if (!first) first = v;
+        }
+    });
+    return first;
+}
+
+function fdIvBindLive(root) {
+    const scope = root || document;
+    if (scope.getAttribute('data-fd-iv-live') === '1') return;
+    scope.setAttribute('data-fd-iv-live', '1');
+
+    function onLive(ev) {
+        const target = ev.target;
+        if (target && target.matches && target.matches('input.fd-spin-input')
+            && scope.contains(target) && !target.readOnly && !target.disabled
+            && (ev.type === 'input' || ev.type === 'change' || ev.type === 'blur')) {
+            fdSpinClamp(target);
+        }
+        const wrapIv = target && target.closest ? target.closest('.fd-iv-wrap[data-fd-iv="1"]') : null;
+        if (wrapIv && scope.contains(wrapIv)) {
+            const v = fdIvValidateWrap(wrapIv);
+            fdIvApplyWrapErr(wrapIv, v);
+            return;
+        }
+        const fileIn = target && target.matches && target.matches('input.fd-file-input[type="file"]') ? target : null;
+        if (fileIn && scope.contains(fileIn)) {
+            const w = fileIn.closest('.fd-file-upload-wrap');
+            if (!w || fileIn.disabled) return;
+            const inv = fdFileUploadInspect(w, fileIn.files);
+            fdFileUploadSetErr(w, inv.ok ? '' : inv.msg);
+        }
+    }
+
+    scope.addEventListener('input', onLive, true);
+    scope.addEventListener('change', onLive, true);
+    scope.addEventListener('blur', onLive, true);
+    scope.addEventListener('click', ev => {
+        const btn = ev.target && ev.target.closest ? ev.target.closest('.input-group button') : null;
+        if (!btn || !scope.contains(btn)) return;
+        const wrapIv = btn.closest('.fd-iv-wrap[data-fd-iv="1"]');
+        if (!wrapIv) return;
+        queueMicrotask(() => {
+            const v = fdIvValidateWrap(wrapIv);
+            fdIvApplyWrapErr(wrapIv, v);
+        });
+    }, true);
+}
+
+function fdFileUploadValidate(input) {
+    const wrap = input && input.closest && input.closest('.fd-file-upload-wrap');
+    if (!wrap || !input.files) return true;
+    const errEl = wrap.querySelector('.fd-file-err');
+    const hintEl = wrap.querySelector('.fd-file-hint');
+    const listEl = wrap.querySelector('.fd-file-list');
+    function clearErr() {
+        if (errEl) {
+            errEl.textContent = '';
+            errEl.style.display = 'none';
+        }
+    }
+    function showErr(msg) {
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.style.display = '';
+        }
+        input.value = '';
+        if (listEl) {
+            listEl.innerHTML = '';
+            listEl.hidden = true;
+        }
+        return false;
+    }
+    clearErr();
+
+    const n = input.files.length;
+    if (n === 0) {
+        if (listEl) {
+            listEl.innerHTML = '';
+            listEl.hidden = true;
+        }
+        return true;
+    }
+
+    const inv = fdFileUploadInspect(wrap, input.files);
+    if (!inv.ok) return showErr(inv.msg);
+
+    let itemsHtml = '';
+    for (let i = 0; i < input.files.length; i++) {
+        const f = input.files[i];
+        const kb = Math.round((f.size / 1024) * 100) / 100;
+        itemsHtml += `<li class="text-muted">${fdEscAttr(f.name)} <span dir="ltr" class="badge bg-light text-secondary border">(${kb}&nbsp;KB)</span></li>`;
+    }
+    if (listEl && n > 0) {
+        listEl.innerHTML = itemsHtml;
+        listEl.hidden = false;
+    }
+    if (hintEl && hintEl.dataset.fdPlaceholder) {
+        hintEl.textContent = hintEl.dataset.fdPlaceholder;
+        hintEl.style.display = '';
+    }
+    return true;
+}
+
+function fdFileUploadBindWrap(wrap) {
+    if (!wrap) return;
+    const inp = wrap.querySelector('input.fd-file-input[type="file"]') || wrap.querySelector('input[type="file"]');
+    if (!inp) return;
+    if (!inp.classList.contains('fd-file-input')) inp.classList.add('fd-file-input');
+
+    fdFileInputApplyMultiple(inp);
+
+    if (wrap.dataset.fdFileBound === '1') return;
+    wrap.dataset.fdFileBound = '1';
+    if (fdShouldTraceFileUpload()) console.info('[FormsSystem FD file] fdFileUploadBindWrap (listeners attached)', { maxFiles: fdWrapMaxFiles(wrap), outerHTML: String(inp.outerHTML || '').slice(0, 520) });
+    const hint = wrap.querySelector('.fd-file-hint');
+    if (hint && hint.dataset.fdPlaceholder) {
+        hint.textContent = hint.dataset.fdPlaceholder;
+        hint.style.display = '';
+    }
+    inp.addEventListener('change', () => fdFileUploadValidate(inp));
+}
+
+function fdFileUploadBindInRoot(root) {
+    const r = root || document;
+    fdFileUploadTraceStage('[fdFileUploadBindInRoot] قبل الربط', r);
+    r.querySelectorAll('.fd-file-upload-wrap').forEach(fdFileUploadBindWrap);
+    fdFileUploadReassertMultipleInRoot(r);
+    fdFileUploadTraceStage('[fdFileUploadBindInRoot] بعد مرّة التزامن', r);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+            fdFileUploadReassertMultipleInRoot(r);
+            fdFileUploadTraceStage('[fdFileUploadBindInRoot] بعد requestAnimationFrame', r);
+        });
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.fdFileUploadValidate = fdFileUploadValidate;
+    window.fdValidateInteractivePreview = fdValidateInteractivePreview;
+    window.fdResolvedMaxFilesFromProps = fdResolvedMaxFilesFromProps;
+    window.fdShouldTraceFileUpload = fdShouldTraceFileUpload;
+    window.fdFileUploadTraceStage = fdFileUploadTraceStage;
+    window.fdFileUploadReassertMultipleInRoot = fdFileUploadReassertMultipleInRoot;
+}
+
 // ─── FIELD INPUT BUILDER (for step-3 preview) ─────────────────────────────────
 function fdBuildFieldInput(f, opt) {
     let props = {};
@@ -706,13 +1818,30 @@ function fdBuildFieldInput(f, opt) {
     if (f.fieldType==='الاسم الكامل'||f.fieldType==='نص قصير') {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${minL}${roAttr}${ttAttr}${mk()}>`;
     } else if (f.fieldType==='رقم الهاتف') {
-        const fmt = props.phoneFormat||'+966 (9 أرقام)';
+        const fmt = props.phoneFormat || '+966 (9 أرقام)';
+        const ie = fdPhoneInputPatternExtras(props.inputPattern);
         const wrapStyle = wStyle ? ` style="${wStyle}"` : '';
-        if (fmt==='+966 (9 أرقام)') inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" value="${defVal}"${reqAttr}${roAttr}></div>`;
-        else if (fmt==='05xxxxxxxx (10 أرقام)') inp = `<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk('direction:ltr;')}>`;
-        else inp = `<input type="tel" class="form-control" placeholder="${ph||'XXXXXXXX'}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk('direction:ltr;')}>`;
+        const maxLA = maxL || '';
+        const ltrSt = mk('direction:ltr;');
+        if (fmt === '+966 (9 أرقام)') {
+            if (ie.inpType === 'tel') {
+                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ie.inputmode}${ltrSt}></div>`;
+            } else {
+                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="${ph}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ltrSt}></div>`;
+            }
+        } else if (fmt === '05xxxxxxxx (10 أرقام)') {
+            if (ie.inpType === 'tel') {
+                inp = `<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ttAttr}${ie.inputmode}${ltrSt}>`;
+            } else {
+                inp = `<input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="05XXXXXXXX" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${ltrSt}>`;
+            }
+        } else if (fmt === 'تلفون') {
+            inp = `<input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}${ltrSt}>`;
+        } else {
+            inp = `<div class="input-group"${ttAttr}${mk('direction:ltr;')}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+</span><input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXX XXXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}></div>`;
+        }
     } else if (f.fieldType==='البريد الإلكتروني') {
-        const pat = props.emailFormat ? ' pattern="[^\\s@]+@almadinah\\.gov\\.sa"' : '';
+        const pat = props.emailFormat ? ` pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="${fdEscAttr('يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa')}"` : '';
         inp = `<input type="email" class="form-control" placeholder="${ph}" value="${defVal}"${pat}${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     } else if (f.fieldType==='نص طويل'||f.fieldType==='فقرة') {
         const hPx = props.heightPx ? `height:${props.heightPx}px;` : '';
@@ -720,13 +1849,28 @@ function fdBuildFieldInput(f, opt) {
     } else if (f.fieldType==='رقم') {
         const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
-        inp = `<input type="number" class="form-control" placeholder="${ph}" value="${defVal}"${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk()}>`;
+        let dec = (props.decimals != null && props.decimals !== '') ? parseInt(props.decimals, 10) : 0;
+        if (isNaN(dec) || dec < 0) dec = 0;
+        const stepVal = dec > 0 ? (1 / Math.pow(10, dec)) : 1;
+        inp = `<input type="number" class="form-control" placeholder="${ph}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk('text-align:left;direction:ltr;')}>`;
     } else if (f.fieldType==='دوار رقمي') {
         const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
         const st = props.stepValue!=null&&props.stepValue!==''?` step="${props.stepValue}"`:(props.noDecimals?' step="1"':'');
         const wrapStyle = wStyle ? ` style="${wStyle}"` : '';
-        inp = `<div class="input-group"${ttAttr}${wrapStyle}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="number" class="form-control text-center" value="${defVal||props.minValue||'0'}"${mn}${mx}${st}${reqAttr}${roAttr}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
+        let spinNum = NaN;
+        if (props.defaultValue != null && props.defaultValue !== '') spinNum = parseFloat(String(props.defaultValue).trim());
+        if (isNaN(spinNum)) {
+            if (props.minValue != null && props.minValue !== '') spinNum = parseFloat(String(props.minValue));
+            else spinNum = 0;
+        }
+        const loSpin = (props.minValue != null && props.minValue !== '') ? parseFloat(String(props.minValue)) : null;
+        const hiSpin = (props.maxValue != null && props.maxValue !== '') ? parseFloat(String(props.maxValue)) : null;
+        if (loSpin != null && !isNaN(loSpin) && spinNum < loSpin) spinNum = loSpin;
+        if (hiSpin != null && !isNaN(hiSpin) && spinNum > hiSpin) spinNum = hiSpin;
+        const spinVal = String(spinNum);
+        const spinClampEv = props.readOnly ? '' : ' oninput="fdSpinClamp(this)" onblur="fdSpinClamp(this)"';
+        inp = `<div class="input-group fd-spinner-group"${ttAttr}${wrapStyle}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input" value="${spinVal}"${mn}${mx}${st}${reqAttr}${roAttr} style="text-align:center;direction:ltr"${spinClampEv}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
     } else if (f.fieldType === 'قائمة منسدلة') {
         if (props.dropdownListId) {
             inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph);
@@ -739,32 +1883,113 @@ function fdBuildFieldInput(f, opt) {
         }
     } else if (f.fieldType === 'قائمة اختيار الواحد') {
         let opts = props.options ? String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : [];
+        const marks = String(props.choiceOtherMarks || '').split(/[\r\n]+/);
         const def = (props.defaultOption || '').trim();
-        inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText || ph || 'اختر...').replace(/</g, '&lt;')}</option>`;
-        opts.forEach(o => { inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`; });
-        inp += '</select>';
+        const gname = `fd_sc_${String(f.id)}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`;
+        const fsdis = props.readOnly ? ' disabled' : '';
+        const roOt = props.readOnly ? ' disabled' : '';
+        const otherPh = fdEscAttr('اكتب خياراً آخراً');
+        const reqGrp = f.isRequired ? ' data-fd-required="1"' : '';
+        if (!opts.length) {
+            inp = `<span class="text-muted"${ttAttr}>—</span>`;
+        } else {
+            let body = '';
+            opts.forEach((o, i) => {
+                const isOther = !!(marks[i] === '1' || /^true$/i.test((marks[i] || '').trim()));
+                const rid = gname + '_' + i;
+                const sel = (def && def === o) ? ' checked' : '';
+                const reqOne = (f.isRequired && i === 0) ? ' required' : '';
+                const othBlk = isOther
+                    ? `<div class="fd-oc-other-wrap mt-1 ms-3" style="display:none;"><input type="text" class="form-control form-control-sm fd-oc-other-input" id="${rid}_oth" name="${gname}__other__${i}" data-fd-option-index="${i}" placeholder="${otherPh}"${roOt}></div>`
+                    : '';
+                body += `<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="radio" name="${gname}" id="${rid}" value="${fdEscAttr(o)}"${sel}${fsdis}${reqOne} data-fd-other="${isOther ? '1' : '0'}" onchange="fdOcChoiceChange(this)"><label class="form-check-label" for="${rid}">${o.replace(/</g, '&lt;')}</label></div>${othBlk}</div>`;
+            });
+            inp = `<fieldset class="fd-oc-group border-0 p-0 m-0" data-fd-field-id="${String(f.id ?? '')}" data-fd-oc-mode="single"${reqGrp} style="margin:0;padding:0;border:none;"${ttAttr}${mk()}>${body}</fieldset>`;
+        }
     } else if (f.fieldType==='قائمة اختيار متعدد') {
         const opts = props.options ? String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean) : [];
+        const marks = String(props.choiceOtherMarks || '').split(/[\r\n]+/);
         const defSet = {}; String(props.defaultOption||'').split(/,\s*/).forEach(d=>{if(d.trim())defSet[d.trim()]=true;});
-        inp = `<div class="d-flex flex-wrap gap-2"${ttAttr}>`;
-        opts.forEach(o => { inp += `<div class="form-check mb-0"><input class="form-check-input" type="checkbox"${defSet[o]?' checked':''}${props.readOnly?' disabled':''}><label class="form-check-label">${o.replace(/</g,'&lt;')}</label></div>`; });
-        if (!opts.length) inp += '<span class="text-muted">—</span>';
-        inp += '</div>';
+        const fsdis = props.readOnly ? ' disabled' : '';
+        const roOt = props.readOnly ? ' disabled' : '';
+        const otherPh = fdEscAttr('اكتب خياراً آخراً');
+        const gname = `fd_mc_${String(f.id)}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`;
+        const reqGrp = f.isRequired ? ' data-fd-required="1"' : '';
+        if (!opts.length) {
+            inp = `<span class="text-muted"${ttAttr}>—</span>`;
+        } else {
+            let body = '';
+            opts.forEach((o, i) => {
+                const isOther = !!(marks[i] === '1' || /^true$/i.test((marks[i] || '').trim()));
+                const cid = gname + '_' + i;
+                const checked = defSet[o] ? ' checked' : '';
+                const othBlk = isOther
+                    ? `<div class="fd-oc-other-wrap mt-1 ms-3" style="display:none;"><input type="text" class="form-control form-control-sm fd-oc-other-input" id="${cid}_oth" name="${gname}__other__${i}" data-fd-option-index="${i}" placeholder="${otherPh}"${roOt}></div>`
+                    : '';
+                body += `<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="${gname}[]" id="${cid}" value="${fdEscAttr(o)}" data-fd-other="${isOther ? '1' : '0'}"${checked}${fsdis} onchange="fdOcChoiceChange(this)"><label class="form-check-label" for="${cid}">${o.replace(/</g,'&lt;')}</label></div>${othBlk}</div>`;
+            });
+            inp = `<div class="fd-oc-group d-flex flex-column gap-1" data-fd-field-id="${String(f.id ?? '')}"${ttAttr}${mk()} data-fd-oc-mode="multi"${reqGrp}>${body}</div>`;
+        }
     } else if (f.fieldType==='تاريخ') {
         const cal = String(props.calendarType || 'ميلادي').trim();
         const mn = props.startDate ? ` min="${fdEscAttr(String(props.startDate))}"` : '';
         const mx = props.endDate ? ` max="${fdEscAttr(String(props.endDate))}"` : '';
-        if (cal === 'هجري') {
-            const hijPh = fdEscAttr(ph || 'مثال: 1447/06/15');
-            inp = `<input type="text" class="form-control" dir="rtl" placeholder="${hijPh} — هجري" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk('direction:rtl;')}>`;
+        const phDateA11y = fdEscAttr('اختر التاريخ');
+        const ttlOpenCal = fdEscAttr('فتح التقويم');
+        const ttlHijNA = fdEscAttr('التقويم التفاعلي غير مدعوم — أدخل التاريخ الهجري يدويًا');
+        const grpCls = 'input-group fd-date-input-group';
+        const btnCls = 'btn btn-outline-secondary fd-date-cal-btn';
+        if (cal === 'هجري' && fdHijriIntlSupported()) {
+            const uid = `fd_hij_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+            const minAttr = props.startDate ? ` data-fd-min="${fdEscAttr(String(props.startDate))}"` : '';
+            const maxAttr = props.endDate ? ` data-fd-max="${fdEscAttr(String(props.endDate))}"` : '';
+            const rawDv = props.defaultValue != null ? String(props.defaultValue).trim() : '';
+            let canon = '';
+            if (rawDv) {
+                const pj = fdCoerceFlexibleInputToHijriParts(rawDv.replace(/-/g, '/'));
+                if (pj) canon = fdFormatHijriStored(pj.hy, pj.hm, pj.hd);
+            }
+            const faceEsc = canon ? fdEscAttr(canon) : '';
+            const disBtn = props.readOnly ? ' disabled' : '';
+            const faceRo = props.readOnly ? ' readonly' : '';
+            const hidReq = f.isRequired ? ' required' : '';
+            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-hijri-date position-relative"${minAttr}${maxAttr}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" id="${fdEscAttr(uid)}_face" class="form-control fd-date-control fd-hijri-face" autocomplete="off" placeholder="${ph}" aria-label="${phDateA11y}" title="${phDateA11y}" dir="ltr" value="${faceEsc}"${faceRo}><button type="button" class="${btnCls} fd-hijri-btn"${disBtn} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div><input type="hidden" class="fd-hijri-store" id="${fdEscAttr(uid)}_hid" value="${faceEsc}"${hidReq}/></div>`;
+        } else if (cal === 'هجري') {
+            const hijPh = fdEscAttr(ph || '1447/06/15 — مثال');
+            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-date-hijri-fallback position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="${hijPh}" aria-label="${phDateA11y}" title="${phDateA11y}" value="${defVal}"${reqAttr}${roAttr}><button type="button" class="${btnCls}" disabled tabindex="-1" title="${ttlHijNA}" aria-label="${ttlHijNA}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
         } else {
-            inp = `<input type="date" class="form-control" value="${defVal}"${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk()}>`;
+            const uidG = `fd_gr_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+            const disBtnG = props.readOnly ? ' disabled' : '';
+            inp = `<div class="fd-date-field-wrap fd-date-miladi position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="date" class="form-control fd-date-control fd-greg-datepicker" id="${fdEscAttr(uidG)}" value="${defVal}"${mn}${mx}${reqAttr}${roAttr} aria-label="${phDateA11y}" title="${phDateA11y}"><button type="button" class="${btnCls} fd-greg-datepicker-btn"${disBtnG} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
         }
     } else if (f.fieldType==='وقت') {
         inp = `<input type="time" class="form-control" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk()}>`;
     } else if (f.fieldType==='رفع ملف') {
         const acc = (props.fileTypes||'').split(/[,\s;|]+/).filter(Boolean).map(s=>'.'+(s.trim().replace(/^\./,''))).join(',');
-        inp = `<input type="file" class="form-control"${acc?` accept="${acc}"`:''}${reqAttr}${ttAttr}>`;
+        const extsFlat = (props.fileTypes||'').split(/[,\s;|]+/).map(s => s.trim().replace(/^\./,'').toLowerCase()).filter(Boolean);
+        const extsAttr = extsFlat.length ? ` data-fd-accept-exts="${fdEscAttr(extsFlat.join('|'))}"` : '';
+
+        let maxFiles = fdResolvedMaxFilesFromProps(props);
+        const multi = maxFiles > 1 ? ' multiple="multiple"' : '';
+
+        let minMb = props.minFileSize != null && String(props.minFileSize).trim() !== '' ? parseFloat(props.minFileSize) : null;
+        let maxMb = props.maxFileSize != null && String(props.maxFileSize).trim() !== '' ? parseFloat(props.maxFileSize) : null;
+        if (minMb !== null && (isNaN(minMb) || minMb < 0)) minMb = null;
+        if (maxMb !== null && (isNaN(maxMb) || maxMb < 0)) maxMb = null;
+        const dMin = minMb != null ? ` data-fd-min-mb="${fdEscAttr(String(minMb))}"` : '';
+        const dMax = maxMb != null ? ` data-fd-max-mb="${fdEscAttr(String(maxMb))}"` : '';
+
+        const uidFu = `fd_fu_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+        const disFile = props.readOnly ? ' disabled' : '';
+
+        const hintPieces = [];
+        hintPieces.push(maxFiles > 1 ? `يمكن رفع حتى ${maxFiles} ملفات` : 'ملف واحد مسموح');
+        if (minMb != null) hintPieces.push(`الحد الأدنى للحجم: ${minMb} ميغابايت`);
+        if (maxMb != null) hintPieces.push(`الحد الأقصى للحجم: ${maxMb} ميغابايت`);
+        const hintData = fdEscAttr(hintPieces.join(' — '));
+
+        const accAttr = acc ? ` accept="${fdEscAttr(acc)}"` : '';
+        inp = `<div class="fd-file-upload-wrap"${extsAttr}${dMin}${dMax} data-fd-max-files="${maxFiles}"${ttAttr}${mk()}><input type="file" class="form-control fd-file-input" id="${fdEscAttr(uidFu)}"${accAttr}${multi}${reqAttr}${disFile}/><p class="fd-file-hint small text-muted mt-1 mb-0" style="display:none;" data-fd-placeholder="${hintData}"></p><p class="fd-file-err small text-danger mt-1 mb-0" style="display:none;"></p><ul class="fd-file-list list-unstyled small mt-2 mb-0 px-1" hidden></ul></div>`;
     } else if (f.fieldType==='التقييم بالنجوم') {
         const range = parseInt(props.ratingRange)||5;
         const icon  = props.ratingIcon||'نجمة';
@@ -774,32 +1999,44 @@ function fdBuildFieldInput(f, opt) {
         for (let i=1;i<=range;i++) inp += `<span onclick="fdStarClick(this,${i})" style="font-size:22px;cursor:pointer;color:${i<=sdef?'#f59e0b':'#d1d5db'}" data-i="${i}">${char}</span>`;
         inp += `<span class="ms-2 fw-bold" style="font-size:13px;">${sdef}/${range}</span></div>`;
     } else if (f.fieldType==='التقييم بالأرقام') {
-        const lo = parseInt(props.minRating)||0, hi = parseInt(props.maxRating)||10;
-        inp = `<div${ttAttr}><input type="range" class="form-range" min="${lo}" max="${hi}" value="${defVal||lo}" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold">${defVal||lo}</div></div>`;
+        const lo = parseInt(props.minRating, 10);
+        const hi = parseInt(props.maxRating, 10);
+        const arMin = (props.minRating != null && props.minRating !== '' && !isNaN(lo)) ? lo : 0;
+        const arMax = (props.maxRating != null && props.maxRating !== '' && !isNaN(hi)) ? hi : 10;
+        let cur = defVal !== '' ? parseInt(defVal, 10) : arMin;
+        if (isNaN(cur)) cur = arMin;
+        if (cur < arMin) cur = arMin;
+        if (cur > arMax) cur = arMax;
+        const lowLbl = props.lowRatingText ? `<span class="text-muted" style="font-size:11px;">${fdEscAttr(String(props.lowRatingText))}</span>` : '';
+        const highLbl = props.highRatingText ? `<span class="text-muted" style="font-size:11px;">${fdEscAttr(String(props.highRatingText))}</span>` : '';
+        let legendRow = '';
+        if (lowLbl || highLbl) {
+            legendRow = `<div class="d-flex justify-content-between align-items-start gap-2 mt-1 px-1">${lowLbl}${highLbl}</div>`;
+        }
+        const disR = props.readOnly ? ' disabled' : '';
+        const onInp = props.readOnly ? '' : ' oninput="this.nextElementSibling.textContent=this.value"';
+        inp = `<div${ttAttr}><input type="range" class="form-range" min="${arMin}" max="${arMax}" value="${cur}"${disR}${onInp}${reqAttr}><div class="text-center fw-bold" style="font-size:14px;">${cur}</div>${legendRow}</div>`;
     } else if (f.fieldType==='جدول بيانات') {
         let cols = [];
-        let rows = [];
+        let numRows = 1;
         if (props.readyTableId && fdReadyTableGridCache[props.readyTableId]) {
             const g = fdReadyTableGridCache[props.readyTableId];
             cols = (g.columns || []).slice();
             const maxR = (g.rowCountMode === 'مقيد' && g.maxRows) ? parseInt(g.maxRows, 10) : 3;
-            const n = Math.min(Math.max(maxR > 0 ? maxR : 3, 1), 50);
-            rows = Array.from({ length: n }, (_, i) => `صف ${i + 1}`);
+            numRows = Math.min(Math.max(maxR > 0 ? maxR : 3, 1), 50);
         } else {
             cols = fdParseLines(props.options);
-            rows = fdParseLines(props.rowLabels);
         }
         const c = cols.length ? cols : ['عمود'];
-        const r = rows.length ? rows : ['صف'];
         const ro = props.readOnly ? ' readonly' : '';
-        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>`;
+        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr>`;
         c.forEach(h => { t += `<th>${esc(h)}</th>`; });
         t += '</tr></thead><tbody>';
-        r.forEach((rn) => {
-            t += `<tr><th scope="row" style="white-space:nowrap;background:var(--gray-50);">${esc(rn)}</th>`;
+        for (let ri = 0; ri < numRows; ri++) {
+            t += '<tr>';
             c.forEach(() => { t += `<td><input type="text" class="form-control form-control-sm"${ro}${reqAttr}></td>`; });
             t += '</tr>';
-        });
+        }
         t += '</tbody></table></div>';
         inp = t;
     } else if (f.fieldType==='شبكة خيارات متعددة') {
@@ -866,12 +2103,147 @@ function fdBuildFieldInput(f, opt) {
     return inp;
 }
 
-function fdSpinInc(btn) { const i=btn.parentElement.querySelector('input[type="number"]'); if(!i) return; const s=parseFloat(i.step)||1,m=i.max!==''?parseFloat(i.max):Infinity,v=parseFloat(i.value)||0; if(v+s<=m) i.value=+(v+s).toFixed(4); }
-function fdSpinDec(btn) { const i=btn.parentElement.querySelector('input[type="number"]'); if(!i) return; const s=parseFloat(i.step)||1,m=i.min!==''?parseFloat(i.min):-Infinity,v=parseFloat(i.value)||0; if(v-s>=m) i.value=+(v-s).toFixed(4); }
+function fdSpinArabicDigitsToAscii(s) {
+    return String(s)
+        .replace(/[\u0660-\u0669]/g, ch => String(ch.charCodeAt(0) - 0x0660))
+        .replace(/[\u06F0-\u06F9]/g, ch => String(ch.charCodeAt(0) - 0x06F0));
+}
+
+/** لا كسور معالجة يدوياً إن كانت خطوة العد عدداً صحيحاً ≥ 1؛ عدا ذلك تُسمح بالكسر. */
+function fdSpinAllowsFraction(el) {
+    if (!el) return true;
+    const raw = String(el.getAttribute('step') || '').replace(/,/g, '.').trim();
+    if (!raw) return true;
+    const st = parseFloat(raw);
+    if (!Number.isFinite(st) || st <= 0) return true;
+    if (st > 0 && st < 1) return true;
+    return st !== Math.floor(st);
+}
+
+function fdSpinAllowsNegative(el) {
+    const lo = fdSpinGetMin(el);
+    return lo === -Infinity || lo < 0;
+}
+
+function fdSpinCleanRaw(s, allowFrac, allowNeg) {
+    let t = fdSpinArabicDigitsToAscii(String(s)).replace(/\s/g, '').replace(/,/g, '.').replace(/\u066B/g, '.');
+    let out = '';
+    let seenDot = false;
+    let i = 0;
+    if (allowNeg && i < t.length && t[i] === '-') {
+        out += '-';
+        i++;
+    }
+    while (i < t.length) {
+        const c = t[i++];
+        if (c >= '0' && c <= '9') {
+            out += c;
+            continue;
+        }
+        if ((c === '.' || c === ',') && allowFrac && !seenDot) {
+            seenDot = true;
+            out += '.';
+        }
+    }
+    return out;
+}
+
+function fdSpinGetMin(el) {
+    if (!el || !el.hasAttribute('min')) return -Infinity;
+    const x = parseFloat(String(el.getAttribute('min')).replace(/,/g, '.'));
+    return (isNaN(x)) ? -Infinity : x;
+}
+function fdSpinGetMax(el) {
+    if (!el || !el.hasAttribute('max')) return Infinity;
+    const x = parseFloat(String(el.getAttribute('max')).replace(/,/g, '.'));
+    return (isNaN(x)) ? Infinity : x;
+}
+function fdSpinFormatForInput(v, el) {
+    const stAttr = el.getAttribute('step');
+    const st = (stAttr != null && stAttr !== '') ? parseFloat(String(stAttr).replace(/,/g, '.')) : NaN;
+    if (!isNaN(st) && st > 0 && st < 1) {
+        const decPart = String(st).split('.')[1] || '';
+        const dec = Math.min(Math.max(decPart.length || 2, 1), 10);
+        return (+v).toFixed(dec);
+    }
+    const rounded = +(+(v).toFixed(4));
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+/** حقل دوار مراقَب كنص لتصفية أي غير أرقام وفرض النطاق min/max كلما كان الرقم مقبولاً. */
+function fdSpinClamp(el) {
+    if (!el || !el.classList.contains('fd-spin-input')) return;
+    if (el.readOnly || el.disabled) return;
+    const allowFrac = fdSpinAllowsFraction(el);
+    const allowNeg = fdSpinAllowsNegative(el);
+    const lo = fdSpinGetMin(el);
+    const hi = fdSpinGetMax(el);
+
+    let cleaned = fdSpinCleanRaw(el.value, allowFrac, allowNeg);
+    if (!allowFrac) {
+        const ixDot = cleaned.indexOf('.');
+        if (ixDot >= 0) cleaned = cleaned.slice(0, ixDot);
+    }
+    const t = cleaned.trim();
+    el.value = cleaned;
+
+    if (t === '' || t === '-' || !t) return;
+    if (allowFrac && (/^-?\d+\.$/).test(cleaned)) return;
+    if (allowFrac && (cleaned === '.' || cleaned === '-.')) return;
+
+    const v = parseFloat(cleaned.replace(/,/g, '.'));
+    if (!Number.isFinite(v)) {
+        if (Number.isFinite(lo)) el.value = fdSpinFormatForInput(lo, el);
+        else el.value = '';
+        return;
+    }
+    let x = v;
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    el.value = fdSpinFormatForInput(x, el);
+}
+function fdSpinInc(btn) {
+    const i = btn.parentElement && btn.parentElement.querySelector('input.fd-spin-input');
+    if (!i || i.readOnly || i.disabled) return;
+    const stAttr = i.getAttribute('step');
+    const s = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
+    const lo = fdSpinGetMin(i), hi = fdSpinGetMax(i);
+    let v = parseFloat(String(i.value).replace(/,/g, '.'));
+    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
+    let next = v + s;
+    if (next > hi) next = hi;
+    i.value = fdSpinFormatForInput(next, i);
+    fdSpinClamp(i);
+}
+function fdSpinDec(btn) {
+    const i = btn.parentElement && btn.parentElement.querySelector('input.fd-spin-input');
+    if (!i || i.readOnly || i.disabled) return;
+    const stAttr = i.getAttribute('step');
+    const s = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
+    const lo = fdSpinGetMin(i), hi = fdSpinGetMax(i);
+    let v = parseFloat(String(i.value).replace(/,/g, '.'));
+    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
+    let next = v - s;
+    if (next < lo) next = lo;
+    i.value = fdSpinFormatForInput(next, i);
+    fdSpinClamp(i);
+}
+if (typeof window !== 'undefined') {
+    window.fdSpinClamp = fdSpinClamp;
+    window.fdSpinInc = fdSpinInc;
+    window.fdSpinDec = fdSpinDec;
+}
 
 // ─── SIGNATURE / APPROVAL FIELD (mirrors Beneficiary endorsement/signature) ──
 /** في شاشة التعبئة: عيّن window.fdBeneficiarySignatureContext = { endorsementFile, signatureFile } بنفس صيغة بطاقة المستفيد، أو مرّر opt.beneficiaryProfile إلى fdBuildFieldInput */
 const FD_SIG_MODE_SYSTEM = 'التوقيع المعتمد في النظام';
+const FD_SIG_VALID_MODES = new Set(['مرفق', 'التوقيع بالقلم', FD_SIG_MODE_SYSTEM]);
+
+/** إذا وُجدت قيمة mode صالحة في propertiesJson يُثبَّت النمط ويُخفى Dropdown للمستخدم النهائي والمعاينة. */
+function fdSigModeIsFixed(props) {
+    if (!props || props.mode == null) return false;
+    const m = String(props.mode).trim();
+    return FD_SIG_VALID_MODES.has(m);
+}
 
 function fdResolveBeneficiarySignatureAssets(opt) {
     const fromOpt = opt && opt.beneficiaryProfile;
@@ -885,7 +2257,8 @@ function fdResolveBeneficiarySignatureAssets(opt) {
 function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt) {
     opt = opt || {};
     const isSig = f.fieldType === 'توقيع';
-    const currentMode = props.mode || 'مرفق';
+    const modeFixed = fdSigModeIsFixed(props);
+    const currentMode = modeFixed ? String(props.mode).trim() : (props.mode || 'مرفق');
     const widthCss = props.widthPx ? `${parseInt(props.widthPx, 10)}px` : '100%';
     const canvasH = props.heightPx ? parseInt(props.heightPx, 10) : 120;
     const uid = 'fdSig_' + (f.id || Math.random().toString(36).slice(2, 8));
@@ -927,6 +2300,26 @@ function fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt
             ${systemHeader}
             <div class="fd-sig-system-wrap border rounded-3 p-3" style="background:var(--gray-50);border-color:var(--gray-200) !important;">
                 ${systemInner}
+            </div>
+        </div>`;
+    }
+
+    if (modeFixed && currentMode === 'مرفق') {
+        return `<div class="fd-sig-field fd-sig-field-mode-fixed" style="max-width:${widthCss};" data-fd-sig-mode-fixed="مرفق"${ttAttr}>
+            <div id="${fileWrapId}" class="fd-sig-file-wrap" style="display:block;">
+                <label class="form-label small mb-1" style="color:var(--gray-600);font-weight:700;">${fileLbl}</label>
+                <input type="file" class="form-control form-control-sm" id="${fileInputId}" accept="image/*,.pdf" onchange="fdSigFileChange(this,'${previewId}')"${roAttr}${reqAttr}>
+                <div id="${previewId}" class="fd-sig-attach-preview-wrap mt-2" style="display:none;"></div>
+            </div>
+        </div>`;
+    }
+
+    if (modeFixed && currentMode === 'التوقيع بالقلم') {
+        return `<div class="fd-sig-field fd-sig-field-mode-fixed" style="max-width:${widthCss};" data-fd-sig-canvas="${canvasId}" data-fd-sig-mode-fixed="قلم"${ttAttr}>
+            <label class="form-label small mb-1" style="color:var(--gray-600);font-weight:700;">${canvasLbl}</label>
+            <div class="fd-sig-canvas-wrap">
+                <canvas class="fd-sig-canvas" id="${canvasId}" width="280" height="${canvasH}" data-fd-init-sig></canvas>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="fdSigClearCanvas('${canvasId}')"><i class="bi bi-eraser"></i> مسح</button>
             </div>
         </div>`;
     }
@@ -1030,7 +2423,14 @@ function fdSigClearCanvas(canvasId) {
 }
 
 function fdInitDynamicWidgets(root) {
+    fdEnsureDateFieldStyles();
+    fdDdlEnsureTreeExpandDelegation();
     (root || document).querySelectorAll('canvas[data-fd-init-sig]').forEach(fdSigBindCanvas);
+    (root || document).querySelectorAll('.fd-oc-group').forEach(fdOcInitGroup);
+    fdHijriBindInRoot(root);
+    fdGregorianDateBindInRoot(root);
+    fdFileUploadBindInRoot(root);
+    fdIvBindLive(root);
 }
 
 // ─── SECTIONS HELPERS ──────────────────────────────────────────────────────
@@ -1637,6 +3037,10 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         const inputHtml = interactive
             ? fdBuildFieldInput(f, f.isReadOnly ? { forceReadOnly: true } : undefined)
             : fdBuildFieldInput(f, { forceReadOnly: true });
+        let renderedInput = inputHtml;
+        if (!isStructural && interactive && !f.isReadOnly && fdIvUsesInlineValidation(f)) {
+            renderedInput = `<div class="fd-iv-wrap" data-fd-iv="1" data-fd-ft="${fdEscAttr(f.fieldType)}" data-fd-props="${fdEscAttr(f.propertiesJson || '{}')}"><div class="fd-iv-slot">${inputHtml}</div><p class="fd-iv-msg small text-danger mt-1 mb-0" style="display:none;" aria-live="polite"></p></div>`;
+        }
         if (isStructural) {
             return `<div class="${colClass}" style="font-style:normal;">${inputHtml}</div>`;
         }
@@ -1644,7 +3048,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
             <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
                 ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
             </label>
-            ${inputHtml}
+            ${renderedInput}
             ${subName}
         </div>`;
     };
@@ -1909,7 +3313,10 @@ async function fdOnFieldTypeChange() {
     if(cont) cont.innerHTML = html;
     fdApplyPropsSpecialEditors(type,'fdProp',null);
     if (needsBinding) fdWireBindingPropListeners(type);
-    if(type==='رقم الهاتف'){ const el=document.getElementById('fdProp_phoneFormat'); if(el&&!el.value) el.value='+966 (9 أرقام)'; }
+    if(type==='رقم الهاتف'){
+        const el=document.getElementById('fdProp_phoneFormat'); if(el&&!el.value) el.value='+966 (9 أرقام)';
+        const ipp=document.getElementById('fdProp_inputPattern'); if(ipp&&!ipp.value) ipp.value='أرقام فقط';
+    }
     if(type==='تاريخ'){ const cal=document.getElementById('fdProp_calendarType'); if(cal&&!cal.value) cal.value='ميلادي'; }
     const roCb = document.getElementById('fdProp_readOnly');
     if (roCb) roCb.onchange = fdSyncRequiredDisabledFromReadOnly;
@@ -1930,7 +3337,15 @@ function fdCollectFieldProps() {
         const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
         result[p.key] = (p.type==='checkbox') ? el.checked : el.value;
     });
+    fdNormalizeMaxFilesProp(result);
     return fdMergeSpecialProps(type,'fdProp',result);
+}
+
+function fdNormalizeMaxFilesProp(result) {
+    if (!result || result.maxFiles == null || result.maxFiles === '') return;
+    const n = fdParseMaxFilesRaw(result.maxFiles);
+    if (n != null) result.maxFiles = n;
+    else delete result.maxFiles;
 }
 
 function fdSetFieldProps(type, po) {
@@ -2131,6 +3546,11 @@ function fdCollect1() {
 async function fdSave(sendForApproval) {
     const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
+    if (fdStep === 4) {
+        const host = document.getElementById('fdWizardBody');
+        const vErr = host ? fdValidateInteractivePreview(host) : '';
+        if (vErr) return showToast(vErr, 'error');
+    }
     const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:fdSerializeFieldsJson(), sendForApproval };
     try {
         let res;

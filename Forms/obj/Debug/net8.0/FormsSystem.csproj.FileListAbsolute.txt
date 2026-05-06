@@ -98,3 +98,4 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net8.0/FormsSystem.genruntimeconfig.cache
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net8.0/ref/FormsSystem.dll
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/work_procedures.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/delegations.json

@@ -21,6 +21,7 @@
 .del-cancel-icon-wrap { width:52px;height:52px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(220,38,38,.12);color:var(--error-600);margin-bottom:12px; }
 .bnf-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; width:100%; max-width:100%; box-sizing:border-box; }
 .bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
 .bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
 .bnf-tbl .table { width:100%; margin-bottom:0; min-width:920px; font-size:13px; }
 .bnf-tbl .table > :not(caption) > * > * { padding-top:0.72rem; padding-bottom:0.72rem; vertical-align:middle; }
@@ -38,9 +39,13 @@
 .required-star { color:#ef4444; margin-right:4px; }
 /* منتقي الوحدة الشجري — مطابق لصفحة إضافة مستفيد (Beneficiaries.cshtml) */
 .bnf-ou-tree-wrap.del-delegator-ou-wrap,
-.bnf-ou-tree-wrap.del-delegatee-ou-wrap { position:relative; }
+.bnf-ou-tree-wrap.del-delegatee-ou-wrap,
+.bnf-ou-tree-wrap.del-filter-delegator-ou-wrap,
+.bnf-ou-tree-wrap.del-filter-delegatee-ou-wrap { position:relative; }
 .bnf-ou-tree-wrap.del-delegator-ou-wrap { z-index:3; }
 .bnf-ou-tree-wrap.del-delegatee-ou-wrap { z-index:4; }
+.bnf-ou-tree-wrap.del-filter-delegator-ou-wrap { z-index:5; }
+.bnf-ou-tree-wrap.del-filter-delegatee-ou-wrap { z-index:6; }
 .bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
 .bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
@@ -65,6 +70,38 @@
         </button>
     </div>
 
+    <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+        <div class="rt-search-box" style="min-width:200px;max-width:280px;">
+            <i class="bi bi-search rt-search-icon"></i>
+            <input type="text" class="form-control" id="delSearch" placeholder="بحث بالاسم..." autocomplete="off">
+        </div>
+        <input type="text" class="rt-filter-text rt-filter-fluid" id="delFilterReference" placeholder="بحث بالمرجع..." dir="ltr" inputmode="numeric" maxlength="18" autocomplete="off" title="مرجع التفويض (أرقام فقط)">
+        <div class="bnf-ou-tree-wrap del-filter-delegator-ou-wrap">
+            <input type="hidden" id="delFilterDelegatorOuId" value="">
+            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delFilterDelegatorOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                <span class="bnf-ou-tree-label text-truncate d-block" id="delFilterDelegatorOuLabel">كل الوحدات</span>
+            </button>
+            <div class="bnf-ou-tree-panel d-none" id="delFilterDelegatorOuPanel" role="listbox"></div>
+        </div>
+        <div class="bnf-ou-tree-wrap del-filter-delegatee-ou-wrap">
+            <input type="hidden" id="delFilterDelegateeOuId" value="">
+            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delFilterDelegateeOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                <span class="bnf-ou-tree-label text-truncate d-block" id="delFilterDelegateeOuLabel">كل الوحدات</span>
+            </button>
+            <div class="bnf-ou-tree-panel d-none" id="delFilterDelegateeOuPanel" role="listbox"></div>
+        </div>
+        <select class="form-select rt-filter-select" id="delFilterStatus" style="min-width:200px;">
+            <option value="">كل الحالات</option>
+            <option value="draft">مسودة</option>
+            <option value="scheduled">مجدول</option>
+            <option value="active">ساري</option>
+            <option value="expired">منتهي</option>
+            <option value="cancelled">ملغى</option>
+        </select>
+        <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateFrom" title="من تاريخ" aria-label="من تاريخ">
+        <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateTo" title="إلى تاريخ" aria-label="إلى تاريخ">
+    </div>
+
     <div class="card bnf-tbl">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -78,12 +115,13 @@
                             <th>وحدة المفوض له</th>
                             <th>البداية</th>
                             <th>النهاية</th>
+                            <th>المدة</th>
                             <th style="width:100px;">الحالة</th>
                             <th style="min-width:280px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="delBody">
-                        <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                        <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -99,6 +137,16 @@
                 <h5 class="bnf-modal-title" id="delModalTitle"><i class="bi bi-arrow-left-right" style="margin-left:8px;"></i><span id="delModalTitleText">إضافة تفويض</span></h5>
             </div>
             <div class="bnf-modal-body">
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delReferenceNumber">المرجع<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="delReferenceNumber" dir="ltr" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="أرقام صحيحة فقط">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegationReason">سبب التفويض<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="delDelegationReason" maxlength="500">
+                    </div>
+                </div>
                 <div class="row g-3 mb-2">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold" for="delDelegatorOuTrigger">وحدة المفوض<span class="required-star">*</span></label>
