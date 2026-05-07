@@ -194,6 +194,7 @@ public class FormDefinitionsController : BaseController
                 TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot) ? f.TemplateNameSnapshot : (tpl?.Name ?? ""),
                 OrgUnitName = units.FirstOrDefault(u => u.Id == f.OrganizationalUnitId)?.Name ?? "",
                 
+                // العلامة المائية تُؤخذ دائماً من القالب المرتبط الحي (مثل شاشة إدارة القوالب)، مع بقاء لقطة الرأس/التذييل كما هي
                 TemplateData = hasSnapshot ? new
                 {
                     Id = f.TemplateId,
@@ -209,14 +210,17 @@ public class FormDefinitionsController : BaseController
                     MarginLeft = f.TemplateMarginLeftSnapshot,
                     PageDirection = string.IsNullOrWhiteSpace(f.TemplatePageDirectionSnapshot) ? "RTL" : f.TemplatePageDirectionSnapshot,
                     ShowHeaderLine = f.TemplateShowHeaderLineSnapshot,
-                    ShowFooterLine = f.TemplateShowFooterLineSnapshot
+                    ShowFooterLine = f.TemplateShowFooterLineSnapshot,
+                    WatermarkUrl = tpl?.WatermarkUrl ?? "",
+                    WatermarkOpacity = tpl?.WatermarkOpacity ?? 15
                 } : (tpl == null ? null : new
                 {
                     tpl.Id, tpl.Name, tpl.Color,
                     tpl.HeaderJson, tpl.FooterJson,
                     tpl.HeaderSections, tpl.FooterSections,
                     tpl.MarginTop, tpl.MarginBottom, tpl.MarginRight, tpl.MarginLeft,
-                    tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine
+                    tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine,
+                    tpl.WatermarkUrl, tpl.WatermarkOpacity
                 })
             },
             workspaces = wsForSelect,
@@ -568,7 +572,8 @@ public class FormDefinitionsController : BaseController
                 t.HeaderJson, t.FooterJson,
                 t.HeaderSections, t.FooterSections,
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
-                t.PageDirection, t.ShowHeaderLine, t.ShowFooterLine
+                t.PageDirection, t.ShowHeaderLine, t.ShowFooterLine,
+                t.WatermarkUrl, t.WatermarkOpacity
             }
         });
     }

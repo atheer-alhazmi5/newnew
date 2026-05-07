@@ -168,5 +168,39 @@
     "CreatedAt": "2026-04-13T08:30:51.547104+03:00",
     "RoleLabel": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u062A\u0646\u0638\u064A\u0645\u064A\u0629",
     "RoleName": "Manager"
+  },
+  {
+    "Id": 11,
+    "NationalId": "1113636363",
+    "Username": "aaa123",
+    "Email": "adda@almadinah.gov.sa",
+    "Phone": "0505441924",
+    "PhotoUrl": "",
+    "FullName": "yy rr rr rr",
+    "PasswordHash": "AQAAAAIAAYagAAAAEDlLmp68WbDL6pQxoNCohj3qyCUuwppNBo7e79Kis46UYnGzpmNIOQirM8PBzznhwQ==",
+    "Role": "Employee",
+    "DepartmentId": 2,
+    "Department": null,
+    "Status": "Active",
+    "CreatedAt": "2026-05-05T13:40:33.637073+03:00",
+    "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "RoleName": "Employee"
+  },
+  {
+    "Id": 12,
+    "NationalId": "1117878883",
+    "Username": "aa82",
+    "Email": "fff@almadinah.gov.sa",
+    "Phone": "0505050544",
+    "PhotoUrl": "",
+    "FullName": "rr rr rr rr",
+    "PasswordHash": "AQAAAAIAAYagAAAAEEvGRxQ/eIkS\u002B4MG/aIhhF\u002BAZm6Zts\u002B8iCMZ7TrYYqRM2rEjeO\u002Bx\u002BqEAdVrF4yDqoQ==",
+    "Role": "Employee",
+    "DepartmentId": 6,
+    "Department": null,
+    "Status": "Active",
+    "CreatedAt": "2026-05-05T14:03:16.624956+03:00",
+    "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "RoleName": "Employee"
   }
 ]

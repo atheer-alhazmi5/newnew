@@ -102,13 +102,11 @@ const FD_FIELD_TYPES = {
     ]},
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true }
     ]},
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true }
     ]},
     "تاريخ": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -755,14 +753,85 @@ function fdParseLines(s) {
     return String(s).split(/[\r\n]+/).map(x => x.trim()).filter(Boolean);
 }
 
-/** يُكمِّل «صيغة الرقم» بفرض «نمط الإدخال» في حقول المعاينة. */
+/** يُكمِّل «صيغة الرقم» بفرض «نمط الإدخال» في حقول المعاينة. filter → تقييد مباشر أثناء الكتابة واللصق */
 function fdPhoneInputPatternExtras(inputPatternRaw) {
     const ip = String(inputPatternRaw || 'أرقام فقط').trim();
     if (ip === 'حروف فقط')
-        return { inpType: 'text', pt: ' pattern="^[A-Za-z\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف فقط')}"` };
+        return { inpType: 'text', pt: ' pattern="^[A-Za-z\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف فقط')}"`, filter: 'letters' };
     if (ip === 'حروف وأرقام')
-        return { inpType: 'text', pt: ' pattern="^[A-Za-z0-9\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف وأرقام')}"` };
-    return { inpType: 'tel', pt: ' pattern="^[0-9]+$"', inputmode: ' inputmode="numeric"', titleAttr: ` title="${fdEscAttr('أرقام فقط')}"` };
+        return { inpType: 'text', pt: ' pattern="^[A-Za-z0-9\\u0600-\\u06FF\\s\\.\\-]+$"', inputmode: '', titleAttr: ` title="${fdEscAttr('حروف وأرقام')}"`, filter: 'alnum' };
+    return { inpType: 'tel', pt: ' pattern="^[0-9]+$"', inputmode: ' inputmode="numeric"', titleAttr: ` title="${fdEscAttr('أرقام فقط')}"`, filter: 'digits' };
+}
+
+/** إزالة الأحرف غير المطابقة لنمط حقل الهاتف (كامل النص أو جزء اللصق). */
+function fdPhoneFilterStr(mode, s) {
+    const str = s == null ? '' : String(s);
+    if (mode === 'digits') return str.replace(/[^0-9]/g, '');
+    if (mode === 'letters') return str.replace(/[^A-Za-z\u0600-\u06FF\s\.\-]/g, '');
+    if (mode === 'alnum') return str.replace(/[^A-Za-z0-9\u0600-\u06FF\s\.\-]/g, '');
+    return str;
+}
+
+/** أقصى طول فقط عند وجود خاصية maxlength في الوسم (تجنّب قيم maxLength الافتراضية الضخمة في المتصفح). */
+function fdPhoneParsedMaxLength(inp) {
+    if (!inp || typeof inp.hasAttribute !== 'function' || !inp.hasAttribute('maxlength')) return null;
+    const n = parseInt(String(inp.getAttribute('maxlength')), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function fdClampPhonePatternValue(inp) {
+    const mode = inp.getAttribute('data-fd-phone-filter');
+    if (!mode || inp.readOnly || inp.disabled) return;
+    if (inp.dataset.fdCompose === '1') return;
+    const old = inp.value;
+    let caret = typeof inp.selectionStart === 'number' ? inp.selectionStart : old.length;
+    let next = fdPhoneFilterStr(mode, old);
+    const maxLen = fdPhoneParsedMaxLength(inp);
+    if (maxLen != null && next.length > maxLen) next = next.slice(0, maxLen);
+    if (next === old) return;
+    const caretBase = caret <= 0 ? '' : fdPhoneFilterStr(mode, old.slice(0, caret));
+    let newCaret = Math.min(caretBase.length, next.length);
+    inp.value = next;
+    inp.setSelectionRange(newCaret, newCaret);
+}
+
+function fdBindPhonePatternFilters(root) {
+    const scope = root || document;
+    scope.querySelectorAll('input[data-fd-phone-filter]').forEach(inp => {
+        if (inp.readOnly || inp.disabled) return;
+        if (inp.getAttribute('data-fd-phone-pat-bound') === '1') return;
+        inp.setAttribute('data-fd-phone-pat-bound', '1');
+        inp.addEventListener('input', () => fdClampPhonePatternValue(inp));
+        inp.addEventListener('compositionstart', () => { inp.dataset.fdCompose = '1'; }, false);
+        inp.addEventListener('compositionend', () => {
+            delete inp.dataset.fdCompose;
+            fdClampPhonePatternValue(inp);
+        }, false);
+        inp.addEventListener('paste', e => {
+            if (inp.readOnly || inp.disabled) return;
+            const mode = inp.getAttribute('data-fd-phone-filter');
+            if (!mode) return;
+            e.preventDefault();
+            let pasted = '';
+            try {
+                const cd = e.clipboardData || (typeof window !== 'undefined' ? window.clipboardData : null);
+                pasted = cd && typeof cd.getData === 'function' ? cd.getData('text') : '';
+            } catch (_) { pasted = ''; }
+            const insRaw = fdPhoneFilterStr(mode, pasted);
+            const start = inp.selectionStart || 0;
+            const end = inp.selectionEnd || 0;
+            const mergedRaw = inp.value.slice(0, start) + insRaw + inp.value.slice(end);
+            let merged = fdPhoneFilterStr(mode, mergedRaw);
+            const maxLen = fdPhoneParsedMaxLength(inp);
+            if (maxLen != null && merged.length > maxLen) merged = merged.slice(0, maxLen);
+            const caretAfterIns = fdPhoneFilterStr(mode, inp.value.slice(0, start) + insRaw).length;
+            const newCaret = Math.min(caretAfterIns, merged.length);
+            inp.value = merged;
+            inp.setSelectionRange(newCaret, newCaret);
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        }, true);
+        fdClampPhonePatternValue(inp);
+    });
 }
 
 /** معاينة قائمة واحد/متعدد: مربع نص لكل خيار «أخرى»، وإلزامه عند ظهوره إذا كان الحقل مطلوباً. */
@@ -990,20 +1059,20 @@ function fdHijriInRange(gUtc, minG, maxG) {
     return true;
 }
 
-/** آخر لوحة تقويم هجري مفتوحة (يُغلق عند النقر خارجها). */
-let fdHijriOpenPanel = null;
+/** آخر لوحة تقويم (هجري/ميلادي) مفتوحة — يُغلق بالنقر خارجها أو Escape. */
+let fdCalOpenPanel = null;
 
-const FD_HIJRI_POP_PANEL_WIDTH = 270;
+const FD_CAL_POP_PANEL_WIDTH = 256;
 
-/** تموضع اللوحة كـ «منتقي نظام صغير» بجانب المجموعة دون امتداد عرض عمود المعاينة. */
-function fdHijriPositionPanel(panel, wrap) {
+/** تموضع اللوحة بجانب المجموعة (نفس العرض الهجري/الميلادي). */
+function fdCalPositionPanel(panel, wrap) {
     if (!panel || !wrap) return;
     const anchor = wrap.querySelector('.fd-date-input-group') || wrap;
     const rr = anchor.getBoundingClientRect();
     const vw = typeof window.innerWidth === 'number' ? window.innerWidth : 480;
     const vh = typeof window.innerHeight === 'number' ? window.innerHeight : 600;
     const gutter = 5;
-    const pw = FD_HIJRI_POP_PANEL_WIDTH;
+    const pw = FD_CAL_POP_PANEL_WIDTH;
     panel.style.position = 'fixed';
     panel.style.zIndex = '1090';
     panel.style.margin = '0';
@@ -1025,47 +1094,148 @@ function fdHijriPositionPanel(panel, wrap) {
     panel.style.top = `${Math.round(top)}px`;
 }
 
-function fdHijriRepositionOpenPanel() {
-    const p = fdHijriOpenPanel;
+function fdCalRepositionOpenPanel() {
+    const p = fdCalOpenPanel;
     if (!p || !p._fdAttachedWrap) return;
-    fdHijriPositionPanel(p, p._fdAttachedWrap);
+    fdCalPositionPanel(p, p._fdAttachedWrap);
 }
 
 if (typeof document !== 'undefined') {
     document.addEventListener('click', e => {
         const t = e.target;
-        if (!fdHijriOpenPanel) return;
-        const host = fdHijriOpenPanel.closest && fdHijriOpenPanel.closest('.fd-hijri-date');
+        if (!fdCalOpenPanel) return;
+        const host = fdCalOpenPanel.closest && fdCalOpenPanel.closest('.fd-date-field-wrap');
         if (host && host.contains(t)) return;
-        fdHijriOpenPanel.style.display = 'none';
-        try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
-        fdHijriOpenPanel = null;
+        fdCalOpenPanel.style.display = 'none';
+        try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
+        fdCalOpenPanel = null;
     });
     document.addEventListener('keydown', e => {
-        if ((e.key === 'Escape' || e.code === 'Escape') && fdHijriOpenPanel) {
-            fdHijriOpenPanel.style.display = 'none';
-            try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
-            fdHijriOpenPanel = null;
+        if ((e.key === 'Escape' || e.code === 'Escape') && fdCalOpenPanel) {
+            fdCalOpenPanel.style.display = 'none';
+            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
+            fdCalOpenPanel = null;
         }
     });
 }
 
 if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', () => fdHijriRepositionOpenPanel(), { capture: true, passive: true });
-    window.addEventListener('resize', () => fdHijriRepositionOpenPanel(), { passive: true });
+    window.addEventListener('scroll', () => fdCalRepositionOpenPanel(), { capture: true, passive: true });
+    window.addEventListener('resize', () => fdCalRepositionOpenPanel(), { passive: true });
 }
 
-function fdHijriBuildPanelHtml() {
-    return `<div class="fd-hijri-pop fd-hijri-pop--floating" dir="rtl" role="dialog" aria-label="منتقي التاريخ الهجري" style="display:none;">
-<div class="fd-hijri-pop-inner rounded-3 border bg-white shadow">
-<div class="d-flex fd-h-nav-row justify-content-between align-items-center gap-1 px-2 pt-2 pb-1">
-<button type="button" tabindex="-1" class="btn btn-sm btn-outline-secondary fd-h-prev px-2" aria-label="الشهر السابق">‹</button>
-<span class="fd-h-cap fw-bold mx-1 flex-grow-1 text-center"></span>
-<button type="button" tabindex="-1" class="btn btn-sm btn-outline-secondary fd-h-next px-2" aria-label="الشهر التالي">›</button></div>
-<div class="fd-h-head d-grid text-center px-2 mb-0"></div>
-<div class="fd-h-grid d-grid px-2 pb-2"></div>
-<div class="text-center fd-h-footer border-top py-1"><button type="button" tabindex="-1" class="btn btn-link btn-sm py-1 lh-sm fd-h-clear">مسح التاريخ</button></div>
+/** هيكل واحد لمربع التقويم (هجري/ميلادي) — نفس الـ DOM والتنسيق. */
+function fdCalPopShellHtml(ariaLabel) {
+    const al = fdEscAttr(ariaLabel);
+    return `<div class="fd-cal-pop fd-cal-pop--floating" dir="rtl" role="dialog" aria-label="${al}" style="display:none;">
+<div class="fd-cal-pop-inner">
+<div class="fd-cal-nav-row d-flex justify-content-between align-items-stretch gap-2 px-3 pt-3 pb-2">
+<button type="button" tabindex="-1" class="btn btn-sm fd-cal-nav-btn fd-cal-prev" aria-label="الشهر السابق">‹</button>
+<span class="fd-cal-cap flex-grow-1 text-center align-self-center"></span>
+<button type="button" tabindex="-1" class="btn btn-sm fd-cal-nav-btn fd-cal-next" aria-label="الشهر التالي">›</button></div>
+<div class="fd-cal-head fd-cal-weekdays"></div>
+<div class="fd-cal-grid fd-cal-days"></div>
+<div class="fd-cal-footer"><button type="button" tabindex="-1" class="btn fd-cal-clear">مسح التاريخ</button></div>
 </div></div>`;
+}
+
+function fdGregorianParseIsoStored(raw) {
+    const s = String(raw || '').trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+    if (!Number.isFinite(y) || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    const dt = fdUtcDate(y, mo, d, 12);
+    if (isNaN(dt.getTime())) return null;
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() + 1 !== mo || dt.getUTCDate() !== d) return null;
+    return { y, m: mo, d };
+}
+
+/** تطبيع إدخال التاريخ yyyy-mm-dd دون المس بالمنطق الهجري. */
+function fdGregorianNormalizeFaceAndStore(wrap, opts) {
+    const face = wrap.querySelector('.fd-greg-face');
+    if (!face) return false;
+    const raw = String(face.value || '').trim();
+    if (!raw) return true;
+    const p = fdGregorianParseIsoStored(raw);
+    const minG = wrap._fdMinG || null;
+    const maxG = wrap._fdMaxG || null;
+    const clr = !!(opts && opts.clearOnInvalidRange);
+    if (!p) {
+        if (clr) face.value = '';
+        return false;
+    }
+    const g = fdUtcDate(p.y, p.m, p.d, 12);
+    if (!fdHijriInRange(g, minG, maxG)) {
+        if (clr) face.value = '';
+        return false;
+    }
+    face.value = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+    return true;
+}
+
+function fdGregorianRenderMonth(panel, wrap) {
+    let gy = parseInt(wrap.getAttribute('data-fd-gy') || '', 10);
+    let gm = parseInt(wrap.getAttribute('data-fd-gm') || '', 10);
+    const face = wrap.querySelector('.fd-greg-face');
+    const sel = fdGregorianParseIsoStored(face && face.value);
+    if (!(gy > 0 && gm >= 1 && gm <= 12)) {
+        if (sel) {
+            gy = sel.y;
+            gm = sel.m;
+        } else {
+            const n = new Date();
+            gy = n.getUTCFullYear();
+            gm = n.getUTCMonth() + 1;
+        }
+    }
+    wrap.setAttribute('data-fd-gy', String(gy));
+    wrap.setAttribute('data-fd-gm', String(gm));
+    const cap = panel.querySelector('.fd-cal-cap');
+    const head = panel.querySelector('.fd-cal-head');
+    const grid = panel.querySelector('.fd-cal-grid');
+    if (!head || !grid) return;
+    if (cap) {
+        try {
+            const capFmt = new Intl.DateTimeFormat('ar', { calendar: 'gregory', month: 'long', year: 'numeric', timeZone: 'UTC' });
+            cap.textContent = capFmt.format(new Date(Date.UTC(gy, gm - 1, 1)));
+        } catch (_) {
+            cap.textContent = `${gm} / ${gy}`;
+        }
+    }
+    const wk = ['أ', 'إ', 'ث', 'ر', 'خ', 'ج', 'س'];
+    head.innerHTML = wk.map(c => `<span class="fd-cal-wd">${c}</span>`).join('');
+    const dim = new Date(Date.UTC(gy, gm, 0)).getUTCDate();
+    const startCol = new Date(Date.UTC(gy, gm - 1, 1)).getUTCDay();
+    const minG = wrap._fdMinG || null;
+    const maxG = wrap._fdMaxG || null;
+    let cells = '';
+    let skip = startCol % 7;
+    for (let i = 0; i < skip; i++) cells += '<span class="fd-cal-slot" aria-hidden="true"></span>';
+    for (let day = 1; day <= dim; day++) {
+        const gd = fdUtcDate(gy, gm, day, 12);
+        const ok = fdHijriInRange(gd, minG, maxG);
+        let cls = 'fd-cal-day ';
+        cls += ok ? 'fd-cal-day--enabled' : 'fd-cal-day--disabled';
+        if (sel && sel.y === gy && sel.m === gm && sel.d === day) cls += ' fd-cal-day--selected';
+        cells += `<button type="button" tabindex="-1" class="${cls}" data-fd-d="${day}" ${ok ? '' : 'disabled aria-disabled="true"'}">${day}</button>`;
+    }
+    grid.innerHTML = cells;
+    grid.querySelectorAll('[data-fd-d]').forEach(btn => {
+        btn.addEventListener('mousedown', e => { e.preventDefault(); });
+        btn.onclick = e => {
+            e.stopPropagation();
+            const dd = parseInt(btn.getAttribute('data-fd-d') || '', 10);
+            if (!dd || btn.disabled) return;
+            const g = fdUtcDate(gy, gm, dd, 12);
+            if (!fdHijriInRange(g, minG, maxG)) return;
+            const iso = `${gy}-${String(gm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+            if (face) face.value = iso;
+            panel.style.display = 'none';
+            try { panel._fdAttachedWrap = null; } catch (_) {}
+            if (fdCalOpenPanel === panel) fdCalOpenPanel = null;
+        };
+    });
 }
 
 function fdHijriRenderMonth(panel, wrap) {
@@ -1078,17 +1248,13 @@ function fdHijriRenderMonth(panel, wrap) {
     }
     wrap.setAttribute('data-fd-hy', String(hy));
     wrap.setAttribute('data-fd-hm', String(hm));
-    const cap = panel.querySelector('.fd-h-cap');
+    const cap = panel.querySelector('.fd-cal-cap');
     if (cap) cap.textContent = `${FD_HIJRI_MONTH_NAMES[hm - 1] || ''} ${hy} هـ`;
-    const head = panel.querySelector('.fd-h-head');
-    const grid = panel.querySelector('.fd-h-grid');
+    const head = panel.querySelector('.fd-cal-head');
+    const grid = panel.querySelector('.fd-cal-grid');
     if (!head || !grid) return;
-    head.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
-    head.style.gap = '2px';
-    grid.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
-    grid.style.gap = '2px';
     const wk = ['أ', 'إ', 'ث', 'ر', 'خ', 'ج', 'س'];
-    head.innerHTML = wk.map(c => `<span>${c}</span>`).join('');
+    head.innerHTML = wk.map(c => `<span class="fd-cal-wd">${c}</span>`).join('');
     const first = fdFindFirstGregorianDayOfHijriMonth(hy, hm);
     const len = fdDaysInHijriMonth(hy, hm);
     const startCol = first.getUTCDay();
@@ -1096,13 +1262,13 @@ function fdHijriRenderMonth(panel, wrap) {
     const maxG = wrap._fdMaxG || null;
     let cells = '';
     let skip = startCol % 7;
-    for (let i = 0; i < skip; i++) cells += '<span></span>';
+    for (let i = 0; i < skip; i++) cells += '<span class="fd-cal-slot" aria-hidden="true"></span>';
     for (let day = 1; day <= len; day++) {
         const gd = fdAddDaysUtc(first, day - 1);
         const ok = fdHijriInRange(gd, minG, maxG);
-        let cls = 'btn btn-light border fd-h-day btn-sm p-0 rounded text-dark lh-sm ';
-        cls += ok ? '' : ' text-muted opacity-50';
-        if (hSel && hSel.hy === hy && hSel.hm === hm && hSel.hd === day) cls = 'btn btn-primary border fd-h-day btn-sm p-0 rounded text-white lh-sm ';
+        let cls = 'fd-cal-day ';
+        cls += ok ? 'fd-cal-day--enabled' : 'fd-cal-day--disabled';
+        if (hSel && hSel.hy === hy && hSel.hm === hm && hSel.hd === day) cls += ' fd-cal-day--selected';
         cells += `<button type="button" tabindex="-1" class="${cls}" data-fd-d="${day}" ${ok ? '' : 'disabled aria-disabled="true"'}">${day}</button>`;
     }
     grid.innerHTML = cells;
@@ -1121,7 +1287,7 @@ function fdHijriRenderMonth(panel, wrap) {
             if (face) face.value = stor;
             panel.style.display = 'none';
             try { panel._fdAttachedWrap = null; } catch (_) {}
-            if (fdHijriOpenPanel === panel) fdHijriOpenPanel = null;
+            if (fdCalOpenPanel === panel) fdCalOpenPanel = null;
         };
     });
 }
@@ -1135,10 +1301,10 @@ function fdHijriBindWrap(wrap) {
     wrap._fdMaxG = fdParseIsoMinMax(maxS);
     if (!wrap.style.position) wrap.style.position = 'relative';
 
-    let panel = wrap.querySelector(':scope > .fd-hijri-pop');
+    let panel = wrap.querySelector(':scope > .fd-cal-pop');
     if (!panel) {
-        wrap.insertAdjacentHTML('beforeend', fdHijriBuildPanelHtml());
-        panel = wrap.querySelector(':scope > .fd-hijri-pop');
+        wrap.insertAdjacentHTML('beforeend', fdCalPopShellHtml('منتقي التاريخ الهجري'));
+        panel = wrap.querySelector(':scope > .fd-cal-pop');
     }
     if (!panel) return;
 
@@ -1161,8 +1327,8 @@ function fdHijriBindWrap(wrap) {
 
     wrap.dataset.fdHijriBound = '1';
 
-    panel.querySelector('.fd-h-prev')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
-    panel.querySelector('.fd-h-prev')?.addEventListener('click', ev => {
+    panel.querySelector('.fd-cal-prev')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-prev')?.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
         let hy = parseInt(wrap.getAttribute('data-fd-hy'), 10), hm = parseInt(wrap.getAttribute('data-fd-hm'), 10);
@@ -1170,10 +1336,10 @@ function fdHijriBindWrap(wrap) {
         wrap.setAttribute('data-fd-hy', String(hy));
         wrap.setAttribute('data-fd-hm', String(hm));
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
     });
-    panel.querySelector('.fd-h-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
-    panel.querySelector('.fd-h-next')?.addEventListener('click', ev => {
+    panel.querySelector('.fd-cal-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-next')?.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
         let hy = parseInt(wrap.getAttribute('data-fd-hy'), 10), hm = parseInt(wrap.getAttribute('data-fd-hm'), 10);
@@ -1181,43 +1347,43 @@ function fdHijriBindWrap(wrap) {
         wrap.setAttribute('data-fd-hy', String(hy));
         wrap.setAttribute('data-fd-hm', String(hm));
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
     });
-    panel.querySelector('.fd-h-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
-    panel.querySelector('.fd-h-clear')?.addEventListener('click', ev => {
+    panel.querySelector('.fd-cal-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-clear')?.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
         if (store) store.value = '';
         if (face) face.value = '';
-        if (fdHijriOpenPanel === panel) {
+        if (fdCalOpenPanel === panel) {
             panel.style.display = 'none';
             panel._fdAttachedWrap = null;
-            fdHijriOpenPanel = null;
+            fdCalOpenPanel = null;
         }
     });
 
     function togglePop(e) {
         e.preventDefault();
         e.stopPropagation();
-        const wasOpen = (fdHijriOpenPanel === panel && panel.style.display !== 'none');
-        if (fdHijriOpenPanel && fdHijriOpenPanel !== panel) {
-            fdHijriOpenPanel.style.display = 'none';
-            try { fdHijriOpenPanel._fdAttachedWrap = null; } catch (_) {}
-            fdHijriOpenPanel = null;
+        const wasOpen = (fdCalOpenPanel === panel && panel.style.display !== 'none');
+        if (fdCalOpenPanel && fdCalOpenPanel !== panel) {
+            fdCalOpenPanel.style.display = 'none';
+            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
+            fdCalOpenPanel = null;
         }
         if (wasOpen) {
             panel.style.display = 'none';
-            fdHijriOpenPanel = null;
+            fdCalOpenPanel = null;
             panel._fdAttachedWrap = null;
             return;
         }
         if (btn?.disabled || face?.readOnly) return;
         fdHijriNormalizeFaceAndStore(wrap);
-        fdHijriOpenPanel = panel;
+        fdCalOpenPanel = panel;
         panel._fdAttachedWrap = wrap;
         panel.style.display = 'block';
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdHijriPositionPanel(panel, wrap));
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
     }
     btn?.addEventListener('click', togglePop);
     face?.addEventListener('click', togglePop);
@@ -1228,10 +1394,10 @@ function fdHijriBindInRoot(root) {
     (root || document).querySelectorAll('.fd-hijri-date').forEach(fdHijriBindWrap);
 }
 
-/** تنسيق موحَّد لمربّعات التاريخ الهجري/الميلادي (ارتفاع الزر وحقل الإدخال). */
+/** تنسيق موحَّد لمربّعات التاريخ الهجري/الميلادي + نافذة التقويم المشتركة. */
 function fdEnsureDateFieldStyles() {
     if (typeof document === 'undefined') return;
-    const id = 'fd-date-field-unified-styles-v3';
+    const id = 'fd-date-field-unified-styles-v5';
     if (document.getElementById(id)) return;
     document.querySelectorAll('style[id^="fd-date-field-unified-styles"]').forEach(s => s.remove());
     const el = document.createElement('style');
@@ -1253,10 +1419,8 @@ function fdEnsureDateFieldStyles() {
   direction: ltr;
   min-height: calc(1.5em + 0.75rem + 2px);
 }
-.fd-date-field-wrap .fd-date-input-group > input[type="date"].fd-date-control.form-control {
-  color-scheme: light;
-}
 .fd-date-field-wrap .fd-date-input-group > input.fd-date-control.fd-hijri-face.form-control,
+.fd-date-field-wrap .fd-date-input-group > input.fd-date-control.fd-greg-face.form-control,
 .fd-date-field-wrap.fd-date-hijri-fallback .fd-date-input-group > .fd-date-control.form-control {
   font-variant-numeric: tabular-nums;
 }
@@ -1277,8 +1441,8 @@ function fdEnsureDateFieldStyles() {
   cursor: not-allowed;
 }
 
-/* منتقي الهجري: نافذة عائمة صغيرة (مثل نمط منتقي النظام) */
-.fd-hijri-pop.fd-hijri-pop--floating {
+/* نافذة التقويم — هجري/ميلادي: حجم أوضح، شبكة منتظمة، بدون تلاصق */
+.fd-cal-pop.fd-cal-pop--floating {
   position: fixed !important;
   inset: unset !important;
   margin: 0 !important;
@@ -1287,75 +1451,283 @@ function fdEnsureDateFieldStyles() {
   top: auto;
   z-index: 1090 !important;
   isolation: isolate;
+  font-family: inherit;
 }
-.fd-hijri-pop-inner.shadow {
-  box-shadow: 0 0.4rem 1rem rgba(0,0,0,.12), 0 0.1rem 0.25rem rgba(0,0,0,.08) !important;
-}
-.fd-hijri-pop .fd-hijri-pop-inner {
-  width: ${FD_HIJRI_POP_PANEL_WIDTH}px;
-  max-width: calc(100vw - 16px);
+
+.fd-cal-pop .fd-cal-pop-inner {
+  width: ${FD_CAL_POP_PANEL_WIDTH}px;
+  max-width: calc(100vw - 14px);
   box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 10px;
+  box-shadow:
+    0 4px 18px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
 }
-.fd-hijri-pop .fd-h-cap {
-  font-size: 12.5px;
+
+.fd-cal-pop .fd-cal-nav-row {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(to bottom, #fafbfc, #fff);
+}
+
+.fd-cal-pop .fd-cal-cap {
+  font-size: 11.75px;
   font-weight: 700;
-  line-height: 1.25;
-  color: var(--bs-body-color, #1f2937);
+  line-height: 1.35;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+  padding: 4px 2px;
+  min-height: 2.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-.fd-hijri-pop .fd-h-prev,
-.fd-hijri-pop .fd-h-next {
-  min-height: calc(1.5em + 0.375rem + 2px);
-  padding-top: .2rem !important;
-  padding-bottom: .2rem !important;
+
+.fd-cal-pop .fd-cal-nav-btn {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px !important;
-  font-size: 1rem;
-}
-.fd-hijri-pop .fd-h-head span {
-  display: inline-block;
-  font-size: 10px !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  font-size: 1.1rem !important;
+  line-height: 1 !important;
   font-weight: 600;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.fd-cal-pop .fd-cal-nav-btn:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.2) !important;
+  color: #0f172a !important;
+}
+
+.fd-cal-pop .fd-cal-weekdays,
+.fd-cal-pop .fd-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: 5px;
+  row-gap: 5px;
+  padding-inline: 10px;
+}
+.fd-cal-pop .fd-cal-weekdays {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background: #f8fafc;
+}
+
+.fd-cal-pop .fd-cal-wd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
   color: #64748b;
-  line-height: 1;
-  padding-bottom: 2px;
+  line-height: 1.2;
+  min-height: 1.125rem;
+  text-transform: none;
 }
-.fd-hijri-pop .fd-h-grid .fd-h-day {
-  min-height: calc(2rem + 4px);
+
+.fd-cal-pop .fd-cal-days {
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+
+.fd-cal-pop .fd-cal-slot {
+  display: block;
   width: 100%;
-  max-width: 100%;
-  font-size: 12.5px !important;
-  font-weight: 500;
+  min-height: 0;
+  aspect-ratio: 1;
 }
-.fd-hijri-pop .fd-h-grid .btn-primary.fd-h-day {
+
+.fd-cal-pop .fd-cal-day {
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 2rem;
+  max-height: 2.375rem;
+  border-radius: 6px !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  font-size: 12px !important;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1 !important;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.fd-cal-pop .fd-cal-day--enabled {
+  background: #fff !important;
+  color: #0f172a !important;
+}
+.fd-cal-pop .fd-cal-day--enabled:not(:disabled):hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.fd-cal-pop .fd-cal-day--disabled {
+  background: #fafafa !important;
+  color: #94a3b8 !important;
+  opacity: 0.9;
+  cursor: not-allowed !important;
+  border-color: #f1f5f9 !important;
+}
+
+.fd-cal-pop .fd-cal-day--selected.fd-cal-day--enabled {
+  background: var(--bs-primary, #0d6efd) !important;
+  border-color: var(--bs-primary, #0d6efd) !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
 }
-.fd-hijri-pop .fd-h-footer .fd-h-clear {
-  font-size: 12px !important;
-  text-decoration: none;
-}`;
+.fd-cal-pop .fd-cal-day--selected.fd-cal-day--disabled {
+  opacity: 0.5;
+}
+
+.fd-cal-pop .fd-cal-footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 6px 10px 8px;
+  text-align: center;
+  background: #fafbfc;
+}
+
+.fd-cal-pop .fd-cal-footer .fd-cal-clear {
+  font-size: 11.75px !important;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--bs-primary, #0d6efd);
+  padding: 4px 10px !important;
+  margin: 0;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+.fd-cal-pop .fd-cal-footer .fd-cal-clear:hover {
+  background: rgba(13, 110, 253, 0.08) !important;
+  color: var(--bs-primary, #0a58ca);
+}
+`;
     document.head.appendChild(el);
 }
 
-/** نفس بنية الحقل الهجري: مجموعة إدخال + زر يفتح منتقي التاريخ الأصلي (showPicker أو focus). */
-function fdGregorianDateBindWrap(wrap) {
-    if (!wrap || wrap.dataset.fdDateGregBound === '1') return;
-    const inp = wrap.querySelector('input[type="date"].fd-greg-datepicker');
+/** منتقي تقويم ميلادي بنفس الواجهة والسلوك الهجري (بدون منتقي المتصفح الأصلي). */
+function fdGregorianCalBindWrap(wrap) {
+    if (!wrap || wrap.dataset.fdGregCalBound === '1') return;
+    const minS = wrap.getAttribute('data-fd-min') || '';
+    const maxS = wrap.getAttribute('data-fd-max') || '';
+    wrap._fdMinG = fdParseIsoMinMax(minS);
+    wrap._fdMaxG = fdParseIsoMinMax(maxS);
+    if (!wrap.style.position) wrap.style.position = 'relative';
+
+    let panel = wrap.querySelector(':scope > .fd-cal-pop');
+    if (!panel) {
+        wrap.insertAdjacentHTML('beforeend', fdCalPopShellHtml('منتقي التاريخ الميلادي'));
+        panel = wrap.querySelector(':scope > .fd-cal-pop');
+    }
+    if (!panel) return;
+
+    const face = wrap.querySelector('.fd-greg-face');
     const btn = wrap.querySelector('.fd-greg-datepicker-btn');
-    if (!inp || !btn) return;
-    wrap.dataset.fdDateGregBound = '1';
-    btn.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (btn.disabled || inp.disabled || inp.readOnly) return;
-        if (typeof inp.showPicker === 'function') {
-            try { inp.showPicker(); } catch (_) { inp.focus(); }
-        } else {
-            inp.focus();
+    if (!face || !btn) return;
+
+    if (String(face.value || '').trim()) fdGregorianNormalizeFaceAndStore(wrap, { clearOnInvalidRange: true });
+
+    const sv = fdGregorianParseIsoStored(face.value);
+    if (sv) {
+        wrap.setAttribute('data-fd-gy', String(sv.y));
+        wrap.setAttribute('data-fd-gm', String(sv.m));
+    } else {
+        const n = new Date();
+        wrap.setAttribute('data-fd-gy', String(n.getUTCFullYear()));
+        wrap.setAttribute('data-fd-gm', String(n.getUTCMonth() + 1));
+    }
+
+    wrap.dataset.fdGregCalBound = '1';
+
+    panel.querySelector('.fd-cal-prev')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-prev')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        let gy = parseInt(wrap.getAttribute('data-fd-gy'), 10), gm = parseInt(wrap.getAttribute('data-fd-gm'), 10);
+        if (gm <= 1) { gm = 12; gy -= 1; } else gm -= 1;
+        wrap.setAttribute('data-fd-gy', String(gy));
+        wrap.setAttribute('data-fd-gm', String(gm));
+        fdGregorianRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+    });
+    panel.querySelector('.fd-cal-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-next')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        let gy = parseInt(wrap.getAttribute('data-fd-gy'), 10), gm = parseInt(wrap.getAttribute('data-fd-gm'), 10);
+        if (gm >= 12) { gm = 1; gy += 1; } else gm += 1;
+        wrap.setAttribute('data-fd-gy', String(gy));
+        wrap.setAttribute('data-fd-gm', String(gm));
+        fdGregorianRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+    });
+    panel.querySelector('.fd-cal-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
+    panel.querySelector('.fd-cal-clear')?.addEventListener('click', ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        face.value = '';
+        if (fdCalOpenPanel === panel) {
+            panel.style.display = 'none';
+            panel._fdAttachedWrap = null;
+            fdCalOpenPanel = null;
         }
     });
+
+    function togglePop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const wasOpen = (fdCalOpenPanel === panel && panel.style.display !== 'none');
+        if (fdCalOpenPanel && fdCalOpenPanel !== panel) {
+            fdCalOpenPanel.style.display = 'none';
+            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
+            fdCalOpenPanel = null;
+        }
+        if (wasOpen) {
+            panel.style.display = 'none';
+            fdCalOpenPanel = null;
+            panel._fdAttachedWrap = null;
+            return;
+        }
+        if (btn.disabled || face.readOnly) return;
+        fdGregorianNormalizeFaceAndStore(wrap);
+        const p = fdGregorianParseIsoStored(face.value);
+        if (p) {
+            wrap.setAttribute('data-fd-gy', String(p.y));
+            wrap.setAttribute('data-fd-gm', String(p.m));
+        }
+        fdCalOpenPanel = panel;
+        panel._fdAttachedWrap = wrap;
+        panel.style.display = 'block';
+        fdGregorianRenderMonth(panel, wrap);
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+    }
+    btn.addEventListener('click', togglePop);
+    face.addEventListener('click', togglePop);
+    face.addEventListener('blur', () => { fdGregorianNormalizeFaceAndStore(wrap, { clearOnInvalidRange: true }); });
 }
 
 function fdGregorianDateBindInRoot(root) {
-    (root || document).querySelectorAll('.fd-date-miladi').forEach(fdGregorianDateBindWrap);
+    (root || document).querySelectorAll('.fd-greg-date.fd-date-miladi').forEach(fdGregorianCalBindWrap);
 }
 
 /** التحقق من رفع ملفات المعاينة: العدد، الحجم، الامتداد. */
@@ -1820,25 +2192,26 @@ function fdBuildFieldInput(f, opt) {
     } else if (f.fieldType==='رقم الهاتف') {
         const fmt = props.phoneFormat || '+966 (9 أرقام)';
         const ie = fdPhoneInputPatternExtras(props.inputPattern);
+        const dPf = ie.filter ? ` data-fd-phone-filter="${ie.filter}"` : '';
         const wrapStyle = wStyle ? ` style="${wStyle}"` : '';
         const maxLA = maxL || '';
         const ltrSt = mk('direction:ltr;');
         if (fmt === '+966 (9 أرقام)') {
             if (ie.inpType === 'tel') {
-                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ie.inputmode}${ltrSt}></div>`;
+                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ie.inputmode}${dPf}${ltrSt}></div>`;
             } else {
-                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="${ph}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ltrSt}></div>`;
+                inp = `<div class="input-group"${ttAttr}${wrapStyle}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+966</span><input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="${ph}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${dPf}${ltrSt}></div>`;
             }
         } else if (fmt === '05xxxxxxxx (10 أرقام)') {
             if (ie.inpType === 'tel') {
-                inp = `<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ttAttr}${ie.inputmode}${ltrSt}>`;
+                inp = `<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}"${ie.titleAttr} value="${defVal}"${reqAttr}${roAttr}${ttAttr}${ie.inputmode}${dPf}${ltrSt}>`;
             } else {
-                inp = `<input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="05XXXXXXXX" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${ltrSt}>`;
+                inp = `<input type="text" class="form-control"${ie.pt}${ie.titleAttr} placeholder="05XXXXXXXX" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${dPf}${ltrSt}>`;
             }
         } else if (fmt === 'تلفون') {
-            inp = `<input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}${ltrSt}>`;
+            inp = `<input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ttAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}${dPf}${ltrSt}>`;
         } else {
-            inp = `<div class="input-group"${ttAttr}${mk('direction:ltr;')}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+</span><input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXX XXXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}></div>`;
+            inp = `<div class="input-group"${ttAttr}${mk('direction:ltr;')}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+</span><input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXX XXXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}${dPf}></div>`;
         }
     } else if (f.fieldType==='البريد الإلكتروني') {
         const pat = props.emailFormat ? ` pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="${fdEscAttr('يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa')}"` : '';
@@ -1932,8 +2305,6 @@ function fdBuildFieldInput(f, opt) {
         }
     } else if (f.fieldType==='تاريخ') {
         const cal = String(props.calendarType || 'ميلادي').trim();
-        const mn = props.startDate ? ` min="${fdEscAttr(String(props.startDate))}"` : '';
-        const mx = props.endDate ? ` max="${fdEscAttr(String(props.endDate))}"` : '';
         const phDateA11y = fdEscAttr('اختر التاريخ');
         const ttlOpenCal = fdEscAttr('فتح التقويم');
         const ttlHijNA = fdEscAttr('التقويم التفاعلي غير مدعوم — أدخل التاريخ الهجري يدويًا');
@@ -1959,8 +2330,17 @@ function fdBuildFieldInput(f, opt) {
             inp = `<div class="fd-date-field-wrap fd-date-hijri fd-date-hijri-fallback position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="${hijPh}" aria-label="${phDateA11y}" title="${phDateA11y}" value="${defVal}"${reqAttr}${roAttr}><button type="button" class="${btnCls}" disabled tabindex="-1" title="${ttlHijNA}" aria-label="${ttlHijNA}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
         } else {
             const uidG = `fd_gr_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+            const minAttrG = props.startDate ? ` data-fd-min="${fdEscAttr(String(props.startDate))}"` : '';
+            const maxAttrG = props.endDate ? ` data-fd-max="${fdEscAttr(String(props.endDate))}"` : '';
             const disBtnG = props.readOnly ? ' disabled' : '';
-            inp = `<div class="fd-date-field-wrap fd-date-miladi position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="date" class="form-control fd-date-control fd-greg-datepicker" id="${fdEscAttr(uidG)}" value="${defVal}"${mn}${mx}${reqAttr}${roAttr} aria-label="${phDateA11y}" title="${phDateA11y}"><button type="button" class="${btnCls} fd-greg-datepicker-btn"${disBtnG} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
+            let gv = '';
+            if (props.defaultValue != null && String(props.defaultValue).trim() !== '') {
+                const iso = fdGregorianParseIsoStored(String(props.defaultValue).trim());
+                if (iso) gv = `${iso.y}-${String(iso.m).padStart(2, '0')}-${String(iso.d).padStart(2, '0')}`;
+            }
+            const gvEsc = gv ? fdEscAttr(gv) : '';
+            const patTip = fdEscAttr('التنسيق: yyyy-mm-dd');
+            inp = `<div class="fd-date-field-wrap fd-date-miladi fd-greg-date position-relative"${minAttrG}${maxAttrG}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" id="${fdEscAttr(uidG)}" autocomplete="off" inputmode="numeric" spellcheck="false" pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}$" placeholder="yyyy-mm-dd" class="form-control fd-date-control fd-greg-face fd-greg-datepicker" dir="ltr" value="${gvEsc}" aria-label="${phDateA11y}" title="${patTip}"${reqAttr}${roAttr}><button type="button" class="${btnCls} fd-greg-datepicker-btn"${disBtnG} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
         }
     } else if (f.fieldType==='وقت') {
         inp = `<input type="time" class="form-control" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk()}>`;
@@ -2430,6 +2810,7 @@ function fdInitDynamicWidgets(root) {
     fdHijriBindInRoot(root);
     fdGregorianDateBindInRoot(root);
     fdFileUploadBindInRoot(root);
+    fdBindPhonePatternFilters(root);
     fdIvBindLive(root);
 }
 
@@ -2437,13 +2818,13 @@ function fdInitDynamicWidgets(root) {
 function fdDefaultSections() { return [{ id: 1, title: 'القسم الأول' }]; }
 
 function fdParseFieldsJsonPayload(json) {
-    const def = { sections: fdDefaultSections(), fields: [], rules: [] };
+    const def = { sections: fdDefaultSections(), fields: [], rules: [], titleAppearance: fdDefaultTitleAppearance() };
     if (!json) return def;
     let p;
     try { p = JSON.parse(json); } catch { return def; }
     if (Array.isArray(p)) {
         p.forEach(f => { if (!f.sectionId) f.sectionId = 1; });
-        return { sections: def.sections, fields: p, rules: [] };
+        return { sections: def.sections, fields: p, rules: [], titleAppearance: fdDefaultTitleAppearance() };
     }
     if (p && typeof p === 'object') {
         const s = Array.isArray(p.sections) && p.sections.length
@@ -2454,13 +2835,22 @@ function fdParseFieldsJsonPayload(json) {
         const valid = new Set(s.map(x => x.id));
         fs.forEach(f => { if (!f.sectionId || !valid.has(f.sectionId)) f.sectionId = firstId; });
         const rs = Array.isArray(p.rules) ? p.rules : [];
-        return { sections: s, fields: fs, rules: rs };
+        const ta = fdNormalizeTitleAppearance(p.meta && p.meta.titleAppearance);
+        return { sections: s, fields: fs, rules: rs, titleAppearance: ta };
     }
     return def;
 }
 
 function fdSerializeFieldsJson() {
-    return JSON.stringify({ sections: fdSections, fields: fdFields, rules: fdConditionalRules });
+    const ta = fdStep1State && fdStep1State.titleAppearance
+        ? fdNormalizeTitleAppearance(fdStep1State.titleAppearance)
+        : fdDefaultTitleAppearance();
+    return JSON.stringify({
+        sections: fdSections,
+        fields: fdFields,
+        rules: fdConditionalRules,
+        meta: { titleAppearance: ta }
+    });
 }
 
 function fdResetSectionsState() {
@@ -2493,6 +2883,7 @@ function fdApplyParsedFieldsData(parsed) {
     }));
     const ruleIds = fdConditionalRules.map(r => r.id);
     fdRuleSeq = (ruleIds.length ? Math.max(...ruleIds) : 0) + 1;
+    if (fdStep1State) fdStep1State.titleAppearance = fdNormalizeTitleAppearance(parsed.titleAppearance);
 }
 
 function fdSyncSectionFieldSelect() {
@@ -2778,7 +3169,7 @@ function fdShowCreate() {
     fdDropdownItemsCache = {};
     fdReadyTableGridCache = {};
     fdResetSectionsState();
-    fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, wsId:0, tplId:0 };
+    fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, wsId:0, tplId:0, titleAppearance: fdDefaultTitleAppearance() };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
     document.getElementById('fdWizardHead').className = 'fd-modal-header create';
@@ -2805,10 +3196,11 @@ async function fdShowEdit(id) {
             formClassId: d.formClassId || 0,
             typeId: d.formTypeId || 0,
             wsId: d.workspaceId || 0,
-            tplId: d.templateId || 0
+            tplId: d.templateId || 0,
+            titleAppearance: fdDefaultTitleAppearance()
         };
-        // Pre-cache the template data so Step 3 renders immediately without extra fetch
-        fdCurrentTemplate = d.templateData || null;
+        // لقطة القالب من الخادم + مزامنة العلامة المائية مع القالب الحي (WatermarkUrl/Opacity/…)
+        fdCurrentTemplate = await fdEnrichTemplateDataWatermark(d.templateData || null, d.templateId);
         fdApplyParsedFieldsData(fdParseFieldsJsonPayload(d.fieldsJson || ''));
         document.getElementById('fdWizardTitle').textContent = 'تعديل النموذج';
         document.getElementById('fdWizardSub').textContent = d.name;
@@ -2869,12 +3261,21 @@ function fdStep1Html(d) {
     const typ = fdLookups.formTypes.map(t=>`<option value="${t.id}" ${t.id==typeIdVal?'selected':''}>${t.name}</option>`).join('');
     const ws  = fdLookups.workspaces.map(w=>`<option value="${w.id}" ${w.id==wsIdVal?'selected':''}>${w.name}</option>`).join('');
     const tpl = fdLookups.templates.map(t=>`<option value="${t.id}" ${t.id==tplIdVal?'selected':''}>${t.name}</option>`).join('');
+    const ta = fdNormalizeTitleAppearance((fdStep1State && fdStep1State.titleAppearance) ? fdStep1State.titleAppearance : (d.titleAppearance || {}));
+    const alR = ta.align === 'right' ? 'selected' : '';
+    const alC = ta.align === 'center' ? 'selected' : '';
+    const alL = ta.align === 'left' ? 'selected' : '';
     return `
     <div class="fd-section">
         <div class="fd-section-title"><i class="bi bi-info-circle-fill"></i> المعلومات الأساسية</div>
         <div class="fd-form-row">
             <div class="fd-form-group"><label><span class="required-star">*</span> اسم النموذج</label><input type="text" class="form-control" id="fdFName" value="${esc(d.name||'')}" placeholder="مثال: نموذج طلب إجازة"></div>
             <div class="fd-form-group"><label><span class="required-star">*</span> الملكية</label><select class="form-select" id="fdFOwnership"><option value="عام" ${ow==='عام'?'selected':''}>عام</option><option value="خاص" ${ow==='خاص'?'selected':''}>خاص</option></select></div>
+        </div>
+        <div class="fd-form-row">
+            <div class="fd-form-group"><label>محاذاة عنوان النموذج في المعاينة</label><select class="form-select" id="fdFTitleAlign"><option value="right" ${alR}>يمين</option><option value="center" ${alC}>وسط</option><option value="left" ${alL}>يسار</option></select></div>
+            <div class="fd-form-group"><label style="margin-bottom:6px;"></label><div class="form-check" style="padding-top:10px;"><input class="form-check-input" type="checkbox" id="fdFTitleBold" ${ta.bold?'checked':''}><label class="form-check-label small" for="fdFTitleBold">غامق</label></div></div>
+            <div class="fd-form-group"><label>حجم خط العنوان (بكسل)</label><input type="number" class="form-control" id="fdFTitleFontPx" min="10" max="48" step="1" value="${Number(ta.fontSizePx)}"></div>
         </div>
         <div class="fd-form-row cols-1"><div class="fd-form-group"><label>الوصف العام</label><textarea class="form-control" id="fdFDesc" rows="2" placeholder="وصف مختصر">${esc(d.description||'')}</textarea></div></div>
     </div>
@@ -3014,6 +3415,125 @@ function fdDisplayLayoutColClass(layout) {
     return map[L] || 'col-md-12';
 }
 
+/** مظهر عنوان النموذج داخل المعاينة / التعبئة / الطباعة (محفوظ في fieldsJson → meta.titleAppearance). */
+function fdDefaultTitleAppearance() {
+    return { align: 'right', bold: true, fontSizePx: 17 };
+}
+
+function fdNormalizeTitleAppearance(raw) {
+    const d = fdDefaultTitleAppearance();
+    if (!raw || typeof raw !== 'object') return d;
+    const al0 = raw.align != null ? String(raw.align).trim() : '';
+    if (al0 === 'يمين' || String(al0).toLowerCase() === 'right') d.align = 'right';
+    else if (al0 === 'وسط' || String(al0).toLowerCase() === 'center') d.align = 'center';
+    else if (al0 === 'يسار' || String(al0).toLowerCase() === 'left') d.align = 'left';
+    else if (['right', 'center', 'left'].includes(String(al0).toLowerCase())) d.align = String(al0).toLowerCase();
+    if (typeof raw.bold === 'boolean') d.bold = raw.bold;
+    else if (raw.bold === false || raw.bold === 'false' || raw.bold === '0' || raw.bold === 0) d.bold = false;
+    else if (raw.bold === true || raw.bold === 'true' || raw.bold === '1' || raw.bold === 1) d.bold = true;
+    let px = parseInt(raw.fontSizePx, 10);
+    if (!Number.isFinite(px)) px = d.fontSizePx;
+    d.fontSizePx = Math.min(48, Math.max(10, px));
+    return d;
+}
+
+/** عند عرض نموذج محفوظ: تُستمد إعدادات العلامة المائية من القالب المرتبط فقط (GetTemplateForPreview). إن لم يضع القالب علامة — يُرجَع tplBase دون تعديل. */
+async function fdEnrichTemplateDataWatermark(tplBase, templateId) {
+    const tid = parseInt(String(templateId || ''), 10) || 0;
+    if (tid <= 0) return tplBase || null;
+    if (!tplBase || typeof tplBase !== 'object') return tplBase || null;
+    try {
+        const res = await apiFetch(`/FormDefinitions/GetTemplateForPreview?id=${tid}`);
+        if (!res?.success || !res.data) return tplBase;
+        const full = res.data;
+        const u = fdTplWatermarkUrl(full);
+        if (!u) return tplBase;
+        const base = { ...tplBase };
+        const wmKeys = ['WatermarkUrl', 'WatermarkOpacity', 'WatermarkSize', 'WatermarkPosition', 'WatermarkRepeat',
+            'watermarkUrl', 'watermarkOpacity', 'watermarkSize', 'watermarkPosition', 'watermarkRepeat'];
+        wmKeys.forEach(k => {
+            if (full[k] != null && full[k] !== '') base[k] = full[k];
+        });
+        if (!fdTplWatermarkUrl(base)) {
+            base.WatermarkUrl = full.WatermarkUrl ?? full.watermarkUrl ?? u;
+        }
+        return base;
+    } catch (_) {
+        return tplBase;
+    }
+}
+
+/** عتامة العلامة المائية (0–1 أو 0–100) كما في إدارة القوالب */
+function fdTplWatermarkOpacity(raw) {
+    if (raw === null || raw === undefined || raw === '') return 0.14;
+    let n = Number(raw);
+    if (Number.isNaN(n)) return 0.14;
+    if (n > 1) n /= 100;
+    return Math.min(1, Math.max(0.02, n));
+}
+
+/** صفوف الرأس/التذييل من JSON أو من HeaderSections/FooterSections (تسلسل API) */
+function fdTplHeaderFooterArrays(tpl) {
+    if (!tpl) return { hd: [], fd: [] };
+    let hd = [], fd = [];
+    try { hd = JSON.parse(tpl.headerJson || tpl.HeaderJson || '[]'); } catch (e) { hd = []; }
+    try { fd = JSON.parse(tpl.footerJson || tpl.FooterJson || '[]'); } catch (e) { fd = []; }
+    const hs = tpl.headerSections || tpl.HeaderSections;
+    const fs = tpl.footerSections || tpl.FooterSections;
+    if ((!hd || !hd.length) && Array.isArray(hs)) hd = hs;
+    if ((!fd || !fd.length) && Array.isArray(fs)) fd = fs;
+    return { hd: hd || [], fd: fd || [] };
+}
+
+function fdTplWatermarkUrl(tpl) {
+    if (!tpl) return '';
+    const u = tpl.watermarkUrl ?? tpl.WatermarkUrl ?? '';
+    return String(u).trim();
+}
+
+function fdTplWatermarkSizeCss(tpl) {
+    const s = tpl?.watermarkSize ?? tpl?.WatermarkSize;
+    if (s == null || String(s).trim() === '') return '55% auto';
+    return String(s).trim();
+}
+
+function fdTplWatermarkPositionCss(tpl) {
+    const p = tpl?.watermarkPosition ?? tpl?.WatermarkPosition;
+    if (p == null || String(p).trim() === '') return 'center';
+    return String(p).trim();
+}
+
+function fdTplWatermarkRepeatCss(tpl) {
+    const r0 = tpl?.watermarkRepeat ?? tpl?.WatermarkRepeat ?? tpl?.WatermarkTile;
+    const r = r0 != null ? String(r0).trim().toLowerCase() : '';
+    const allowed = new Set(['no-repeat', 'repeat', 'repeat-x', 'repeat-y', 'space', 'round']);
+    if (allowed.has(r)) return r;
+    if (r === 'true' || r === '1' || r === 'yes' || r === 'تكرار') return 'repeat';
+    return 'no-repeat';
+}
+
+/** قيمة background-image (url(...)) آمنة داخل خاصية style="..." — لا نستخدم JSON.stringify على المسار لأن الاقتباسات المزدوجة تُقطع عند أول " وتُلغى الصورة. */
+function fdCssBgImageUrl(raw) {
+    const u = String(raw || '').trim();
+    if (!u) return '';
+    if (/^[a-zA-Z0-9_\-/.:?#=&+%]+$/.test(u)) return `url(${u})`;
+    const esc = u.replace(/\\/g, '/').replace(/'/g, '%27');
+    return `url('${esc}')`;
+}
+
+/** طبقة علامة مائية داخل جسم الصفحة — تُحترَم خصائص القالب ومطابقة الطباعة. */
+function fdBuildWatermarkLayerHtml(tpl) {
+    const wmUrl = fdTplWatermarkUrl(tpl);
+    if (!wmUrl) return '';
+    const wmOp = fdTplWatermarkOpacity(tpl?.watermarkOpacity ?? tpl?.WatermarkOpacity);
+    const wmSize = fdTplWatermarkSizeCss(tpl);
+    const wmPos = fdTplWatermarkPositionCss(tpl);
+    const wmRep = fdTplWatermarkRepeatCss(tpl);
+    const bgUrl = fdCssBgImageUrl(wmUrl);
+    if (!bgUrl) return '';
+    return `<div class="fd-form-wm-layer" aria-hidden="true" style="pointer-events:none;position:absolute;inset:0;background-image:${bgUrl};background-repeat:${wmRep};background-position:${wmPos};background-size:${wmSize};opacity:${wmOp};z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>`;
+}
+
 // ─── SHARED FORM PREVIEW BUILDER ─────────────────────────────────────────────
 // Renders Header + Body (fields) + Footer from a real saved template object.
 // tplData   – object with headerJson/footerJson/color/margins (or null = fallback)
@@ -3021,9 +3541,15 @@ function fdDisplayLayoutColClass(layout) {
 // formDesc  – string
 // fields    – array of field objects
 // interactive – true → render editable inputs (step-3), false → read-only display (details)
-function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, sectionsOverride) {
+// titleAppearanceOpt – { align:'right'|'center'|'left', bold:boolean, fontSizePx:number } من meta.titleAppearance
+function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, sectionsOverride, titleAppearanceOpt) {
 
     const sections = (sectionsOverride && sectionsOverride.length) ? sectionsOverride : fdDefaultSections();
+    const hasTpl = !!tplData;
+    const ta = fdNormalizeTitleAppearance(titleAppearanceOpt || fdDefaultTitleAppearance());
+    const tAlign = ta.align === 'center' ? 'center' : (ta.align === 'left' ? 'left' : 'right');
+    const tWeight = ta.bold ? '800' : '400';
+    const tSizePx = `${ta.fontSizePx}px`;
 
     // ── fields HTML ──────────────────────────────────────────────────────────
     const renderField = f => {
@@ -3032,7 +3558,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         let _tipPo = {}; try { _tipPo = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
         const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (_tipPo.tooltipText || '')).trim();
         const tipAttr   = tipMerged ? ` title="${fdEscAttr(tipMerged)}"` : '';
-        const infoIcon  = tipMerged ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:var(--sa-400);"${tipAttr}></i>` : '';
+        const infoIcon  = tipMerged ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:${hasTpl ? 'var(--gray-400)' : 'var(--sa-400)'};"${tipAttr}></i>` : '';
         const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:6px;font-style:normal;">${esc(f.subName)}</small>` : '';
         const inputHtml = interactive
             ? fdBuildFieldInput(f, f.isReadOnly ? { forceReadOnly: true } : undefined)
@@ -3064,56 +3590,78 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         fieldsHtml = sections.map(sec => {
             const items = fields.filter(f => (f.sectionId || sections[0].id) === sec.id);
             if (!items.length && !showSectionTitles) return '';
+            const secRibbon = hasTpl
+                ? 'margin:12px 0 8px;padding:8px 12px;background:var(--gray-50);border-inline-start:4px solid var(--gray-300);border-radius:8px;font-weight:800;font-size:14px;color:var(--gray-800);font-style:normal;'
+                : 'margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;';
             const head = showSectionTitles
-                ? `<div style="margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;">${esc(sec.title)}</div>`
+                ? `<div style="${secRibbon}">${esc(sec.title)}</div>`
                 : '';
             if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
             return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
         }).join('');
     }
 
-    // ── template layout ───────────────────────────────────────────────────────
+    // ── template layout (مطابقة إدارة القوالب: لا نفرض لون العلامة على الخط الفاصل، ولا خلفية للتذييل، ونُظهر العلامة المائية) ──
     const tpl      = tplData;
-    const tplColor = tpl ? (tpl.color || '#14573A') : 'var(--sa-800)';
-    const pageDir  = tpl ? (tpl.pageDirection || 'RTL').toLowerCase() : 'rtl';
-    const mt = tpl ? (tpl.marginTop    ?? 24) : 24;
-    const mb = tpl ? (tpl.marginBottom ?? 24) : 24;
-    const mr = tpl ? (tpl.marginRight  ?? 24) : 24;
-    const ml = tpl ? (tpl.marginLeft   ?? 24) : 24;
+    const pageDir  = tpl ? String(tpl.pageDirection || tpl.PageDirection || 'RTL').toLowerCase() : 'rtl';
+    const mt = tpl ? (tpl.marginTop    ?? tpl.MarginTop    ?? 24) : 24;
+    const mb = tpl ? (tpl.marginBottom ?? tpl.MarginBottom ?? 24) : 24;
+    const mr = tpl ? (tpl.marginRight  ?? tpl.MarginRight  ?? 24) : 24;
+    const ml = tpl ? (tpl.marginLeft   ?? tpl.MarginLeft   ?? 24) : 24;
+    /** لون خط الرأس/الفاصل كما في شاشة القوالب — رمادي محايد، وليس لون العلامة (color). */
+    const headerDividerCss = 'var(--gray-200)';
 
     let headerHtml = '', headerLineHtml = '', footerLineHtml = '', footerHtml = '';
+    let wmLayer = '';
+    let titleIntroHtml = '';
 
     if (tpl) {
-        let hd = [], fd = [];
-        try { hd = JSON.parse(tpl.headerJson || '[]'); } catch {}
-        try { fd = JSON.parse(tpl.footerJson || '[]'); } catch {}
+        const { hd, fd } = fdTplHeaderFooterArrays(tpl);
+        const tplName = tpl.name || tpl.Name || '';
+        const showHeadLine = !!(tpl.showHeaderLine ?? tpl.ShowHeaderLine);
+        const showFootLine = !!(tpl.showFooterLine ?? tpl.ShowFooterLine);
+        wmLayer = fdBuildWatermarkLayerHtml(tpl);
 
         headerHtml = hd.length
             ? `<div style="display:grid;grid-template-columns:repeat(${hd.length},1fr);min-height:52px;align-items:center;padding:10px ${mr}px;background:#fff;">${hd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-            : `<div style="padding:12px ${mr}px;background:#fff;color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tpl.name)}</div>`;
+            : `<div style="padding:12px ${mr}px;background:#fff;color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tplName)}</div>`;
 
-        headerLineHtml = tpl.showHeaderLine ? `<div style="height:2px;background:${tplColor};"></div>` : '';
-        footerLineHtml = tpl.showFooterLine ? `<div style="height:1px;background:var(--gray-200);"></div>` : '';
+        headerLineHtml = showHeadLine ? `<div style="height:2px;background:${headerDividerCss};"></div>` : '';
+        footerLineHtml = showFootLine ? `<div style="height:1px;background:${headerDividerCss};"></div>` : '';
 
         footerHtml = fd.length
-            ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:var(--gray-50);">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-            : `<div style="padding:10px ${mr}px;background:var(--gray-50);color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tpl.name)}</div>`;
+            ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:transparent;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
+            : `<div style="padding:10px ${mr}px;background:transparent;color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tplName)}</div>`;
+
+        titleIntroHtml =
+            `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
+                `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--gray-900);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
+                (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
+            `</div>`;
     } else {
         headerHtml = `<div style="background:var(--sa-800);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;">
             <span style="font-size:13px;font-weight:700;color:#fff;font-style:normal;"><i class="bi bi-file-earmark-richtext" style="margin-left:6px;"></i>${esc(formName)}</span>
             <span style="font-size:11px;color:rgba(255,255,255,.4);">لم يُحدَّد قالب</span>
         </div>`;
         footerHtml = `<div style="background:var(--gray-100);padding:10px 24px;border-top:1px solid var(--gray-200);font-size:11px;color:var(--gray-400);text-align:center;font-style:normal;">تذييل النموذج</div>`;
+
+        titleIntroHtml =
+            `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);text-align:${tAlign};">` +
+                `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--sa-800);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
+                (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
+            `</div>`;
     }
 
-    return `<div style="border:2px solid var(--gray-200);border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
+    const outerBorder = tpl ? '1px solid var(--gray-200)' : '2px solid var(--gray-200)';
+
+    return `<div style="border:${outerBorder};border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
         ${headerHtml}${headerLineHtml}
-        <div style="background:#fff;padding:${mt}px ${mr}px ${mb}px ${ml}px;direction:${pageDir};font-style:normal;">
-            <div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);">
-                <h5 style="font-size:17px;font-weight:800;color:var(--sa-800);margin:0 0 4px;font-style:normal;">${esc(formName)}</h5>
-                ${formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;">${esc(formDesc)}</p>` : ''}
-            </div>
+        <div style="background:#fff;padding:${mt}px ${mr}px ${mb}px ${ml}px;direction:${pageDir};font-style:normal;position:relative;overflow:hidden;">
+            ${wmLayer}
+            <div style="position:relative;z-index:1;font-style:normal;">
+            ${titleIntroHtml}
             ${fieldsHtml}
+            </div>
         </div>
         ${footerLineHtml}${footerHtml}
     </div>`;
@@ -3123,7 +3671,10 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
 function fdStep4Html() {
     const fName = (fdStep1State?.name || '').trim() || 'اسم النموذج';
     const fDesc = (fdStep1State?.desc || '').trim() || '';
-    return fdBuildFormPreview(fdCurrentTemplate, fName, fDesc, fdFields, true, fdSections);
+    const ta = fdStep1State && fdStep1State.titleAppearance
+        ? fdNormalizeTitleAppearance(fdStep1State.titleAppearance)
+        : fdDefaultTitleAppearance();
+    return fdBuildFormPreview(fdCurrentTemplate, fName, fDesc, fdFields, true, fdSections, ta);
 }
 
 // ─── STEP 3 — CONDITIONAL LOGIC ──────────────────────────────────────────────
@@ -3531,6 +4082,13 @@ function fdResetFieldForm() {
 
 // ─── COLLECT STEP 1 DATA ──────────────────────────────────────────────────────
 function fdCollect1() {
+    const align = document.getElementById('fdFTitleAlign')?.value || 'right';
+    const boldEl = document.getElementById('fdFTitleBold');
+    const bold = boldEl ? !!boldEl.checked : true;
+    let fontPx = parseInt(document.getElementById('fdFTitleFontPx')?.value || '17', 10);
+    if (!Number.isFinite(fontPx)) fontPx = 17;
+    fontPx = Math.min(48, Math.max(10, fontPx));
+    const titleAppearance = fdNormalizeTitleAppearance({ align, bold, fontSizePx: fontPx });
     return {
         name:     (document.getElementById('fdFName')?.value||'').trim(),
         desc:     (document.getElementById('fdFDesc')?.value||'').trim(),
@@ -3539,6 +4097,7 @@ function fdCollect1() {
         typeId:   parseInt(document.getElementById('fdFType')?.value||'0'),
         wsId:     parseInt(document.getElementById('fdFWs')?.value||'0'),
         tplId:    parseInt(document.getElementById('fdFTpl')?.value||'0'),
+        titleAppearance
     };
 }
 
@@ -3603,9 +4162,11 @@ async function fdShowDetails(id) {
         const parsed = fdParseFieldsJsonPayload(d.fieldsJson || '');
         const fields = parsed.fields;
         const sections = parsed.sections;
+        const titleApp = parsed.titleAppearance;
 
-        // Template data comes embedded in the response
-        const tplData = d.templateData || null;
+        // Template data comes embedded in the response — تكميل العلامة المائية من القالب المرتبط إن وُجدت في القالب فقط
+        let tplData = d.templateData || null;
+        tplData = await fdEnrichTemplateDataWatermark(tplData, d.templateId);
 
         // ── info section ────────────────────────────────────────────────────
         const activeBadge = d.isActive
@@ -3645,7 +4206,7 @@ async function fdShowDetails(id) {
         // ── full form preview (template header + body + footer) ──────────────
         html += `<div class="fd-section" style="padding:18px 20px;">
             <div class="fd-section-title"><i class="bi bi-eye-fill"></i> معاينة النموذج <span style="font-size:11px;font-weight:400;color:var(--gray-400);">(القالب + الحقول)</span></div>
-            ${fdBuildFormPreview(tplData, d.name, d.description, fields, false, sections)}
+            ${fdBuildFormPreview(tplData, d.name, d.description, fields, false, sections, titleApp)}
         </div>`;
 
         const detailsBody = document.getElementById('fdDetailsBody');

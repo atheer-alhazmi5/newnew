@@ -1628,8 +1628,10 @@ public class SettingsController : BaseController
     {
         var sr = (subRole ?? "").Trim();
         if (sr == "مدير النظام") return UserRole.Admin;
-        if (sr == "ممثل الوحدة التنظيمية" || sr == "مستفيد فعلي") return UserRole.Employee;
+        // مدير وحدة يُخزَّن مع SubRole=مستفيد فعلي؛ يُقيَّم قبل تعيين دور الموظف العادي
         if (isUnitManager) return UserRole.Manager;
+        if (sr == "ممثل الوحدة التنظيمية") return UserRole.Employee;
+        if (sr == "موظف ") return UserRole.Staff;
         return UserRole.Staff;
     }
 

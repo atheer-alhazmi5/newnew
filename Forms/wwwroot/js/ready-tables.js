@@ -148,7 +148,6 @@ var RT_FIELD_TYPES = {
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "نص قصير": { props: [
@@ -159,7 +158,6 @@ var RT_FIELD_TYPES = {
         { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "نص طويل": { props: [
@@ -172,7 +170,6 @@ var RT_FIELD_TYPES = {
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "فقرة": { props: [
@@ -184,7 +181,6 @@ var RT_FIELD_TYPES = {
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رقم": { props: [
@@ -194,8 +190,6 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "قائمة منسدلة": { props: [
@@ -204,22 +198,18 @@ var RT_FIELD_TYPES = {
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },
         { key:"optionsCount", label:"عدد الخيارات", type:"number" },
-        { key:"visibleOptions", label:"الخيارات المرئية", type:"number" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"visibleOptions", label:"الخيارات المرئية", type:"number" }
     ] },
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
     ] },
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "تاريخ": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -227,10 +217,6 @@ var RT_FIELD_TYPES = {
         { key:"calendarType", label:"نوع التقويم", type:"select", options:["ميلادي","هجري"] },
         { key:"startDate", label:"تاريخ البداية", type:"date" },
         { key:"endDate", label:"تاريخ النهاية", type:"date" },
-        { key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },
-        { key:"showCalendar", label:"ظهور التقويم", type:"checkbox" },
-        { key:"simpleMode", label:"الوضع البسيط", type:"checkbox" },
-        { key:"timeSlot", label:"خانة الوقت", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "وقت": { props: [
@@ -238,7 +224,6 @@ var RT_FIELD_TYPES = {
         { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
         { key:"timeRangeStart", label:"بداية النطاق", type:"time" },
         { key:"timeRangeEnd", label:"نهاية النطاق", type:"time" },
-        { key:"autoTime", label:"الوقت التلقائي", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رفع ملف": { props: [
@@ -246,9 +231,7 @@ var RT_FIELD_TYPES = {
         { key:"buttonText", label:"نص الزر", type:"text", placeholder:"رفع ملف" },
         { key:"maxFiles", label:"حد عدد الملفات", type:"number" },
         { type:"fileMbLimitsPair", label:"حد حجم الملف (ميغابايت)", col:"col-12 mb-2" },
-        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" },
-        { key:"fileSizeLimit", label:"حد حجم الملفات", type:"checkbox", col:"col-12 mb-3 rt-file-size-enable", checkboxLabel:"تفعيل" },
-        { key:"validateSize", label:"التحقق من الحجم", type:"checkbox" }
+        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" }
     ] },
     "دوار رقمي": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -256,10 +239,7 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"noDecimals", label:"بدون عشرية", type:"checkbox" },
-        { key:"negativeValue", label:"قيمة سلبية", type:"checkbox" }
+        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" }
     ] },
     "التقييم بالنجوم": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
