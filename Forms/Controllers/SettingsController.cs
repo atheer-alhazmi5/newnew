@@ -1372,6 +1372,7 @@ public class SettingsController : BaseController
                 b.Email,
                 b.Username,
                 b.IsActive,
+                DeactivateReason = b.DeactivateReason ?? "",
                 b.MainRole,
                 b.IsUnitManager,
                 b.SubRole,
@@ -1431,6 +1432,7 @@ public class SettingsController : BaseController
             Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim(),
             Username = req.Username!.Trim(),
             IsActive = req.IsActive,
+            DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim(),
             MainRole = "موظف",
             IsUnitManager = req.IsUnitManager,
             SubRole = req.SubRole ?? "",
@@ -1502,9 +1504,9 @@ public class SettingsController : BaseController
         b.PhotoUrl = req.PhotoUrl ?? b.PhotoUrl;
         b.NationalId = string.IsNullOrWhiteSpace(req.NationalId) ? null : req.NationalId.Trim();
         b.EndorsementType = req.EndorsementType ?? b.EndorsementType;
-        b.EndorsementFile = req.EndorsementFile ?? b.EndorsementFile;
+        b.EndorsementFile = string.IsNullOrWhiteSpace(req.EndorsementFile) ? b.EndorsementFile : req.EndorsementFile!;
         b.SignatureType = req.SignatureType ?? b.SignatureType;
-        b.SignatureFile = req.SignatureFile ?? b.SignatureFile;
+        b.SignatureFile = string.IsNullOrWhiteSpace(req.SignatureFile) ? b.SignatureFile : req.SignatureFile!;
         b.FirstName = req.FirstName!.Trim();
         b.SecondName = req.SecondName!.Trim();
         b.ThirdName = req.ThirdName!.Trim();
@@ -1514,6 +1516,7 @@ public class SettingsController : BaseController
         b.Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
         b.Username = req.Username!.Trim();
         b.IsActive = req.IsActive;
+        b.DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim();
         b.MainRole = "موظف";
         b.IsUnitManager = newIsUnitManager;
         b.SubRole = req.SubRole ?? "";
@@ -1554,36 +1557,9 @@ public class SettingsController : BaseController
         var b = await _ds.GetBeneficiaryByIdAsync(req.Id);
         if (b == null) return Json(new { success = false, message = "المستفيد غير موجود" });
 
-        var delegations = await _ds.ListDelegationsAsync();
-        var blockingDelegations = delegations
-            .Where(d => d.DelegateeBeneficiaryId == req.Id && IsDelegationBlockingBeneficiaryDeletionAsDelegatee(d, DateTime.Today))
-            .OrderByDescending(d => d.EndDate)
-            .ToList();
-        if (blockingDelegations.Count > 0)
-        {
-            var maxEnd = blockingDelegations.Max(d => d.EndDate.Date);
-            var bensForNames = await _ds.ListBeneficiariesAsync();
-            var nameById = bensForNames.ToDictionary(x => x.Id, x => x.FullName);
-            var delegatorNames = blockingDelegations
-                .Select(d => nameById.TryGetValue(d.DelegatorBeneficiaryId, out var fn) ? fn.Trim() : "")
-                .Where(s => s.Length > 0)
-                .Distinct()
-                .Take(5)
-                .ToList();
-            var delegatorsHint = delegatorNames.Count > 0
-                ? string.Join("، ", delegatorNames)
-                : "مستفيد آخر";
-            return Json(new
-            {
-                success = false,
-                message =
-                    $"لا يمكن حذف هذا المستفيد لوجود تفويض من ({delegatorsHint}) لم تنتهِ مدته بعد (آخر انتهاء: {maxEnd:yyyy-MM-dd}). يمكن إلغاء التفويض من قسم التفويضات أو الانتظار حتى انتهاء المدة."
-            });
-        }
-
-        var isLinked = await _ds.IsBeneficiaryLinkedByCreationAsync(req.Id);
-        if (isLinked)
-            return Json(new { success = false, message = "هذا العنصر المستفيد مرتبط بعناصر تم انشائها ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
+        var deleteBlock = await _ds.GetBeneficiaryDeletionBlockReasonAsync(req.Id);
+        if (!string.IsNullOrWhiteSpace(deleteBlock))
+            return Json(new { success = false, message = deleteBlock });
 
         await _ds.DeleteBeneficiaryAsync(req.Id);
         if (!string.IsNullOrEmpty(b.Username))
@@ -2348,17 +2324,6 @@ public class SettingsController : BaseController
         if (today > d.EndDate.Date) return "expired";
         return "active";
     }
-
-    /// <summary>
-    /// يمنع حذف المستفيد إذا كان المفوّض له ضمن تفويض لم يُلغَ وبقي ضمن مدة الانتهاء (اليوم ≤ نهاية التفويض).
-    /// </summary>
-    private static bool IsDelegationBlockingBeneficiaryDeletionAsDelegatee(Delegation d, DateTime today)
-    {
-        var status = (d.Status ?? "").Trim().ToLowerInvariant();
-        if (status == "cancelled") return false;
-        if (status == "draft") return false;
-        return today.Date <= d.EndDate.Date;
-    }
 }
 
 public class BeneficiaryRequest
@@ -2378,6 +2343,7 @@ public class BeneficiaryRequest
     public string? Email { get; set; }
     public string? Username { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? DeactivateReason { get; set; }
     public bool IsUnitManager { get; set; } = false;
     public string? SubRole { get; set; }
     public string? Password { get; set; }

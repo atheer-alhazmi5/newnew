@@ -109,6 +109,14 @@ function ouFillClassificationSelect(elId) {
     sel.value = keep;
 }
 
+async function ouClearFilters() {
+    var search = document.getElementById('ouSearch');
+    var cls = document.getElementById('ouFilterClassification');
+    if (search) search.value = '';
+    if (cls) cls.value = '';
+    await ouLoad();
+}
+
 function ouFilteredRows() {
     var q = (document.getElementById('ouSearch') && document.getElementById('ouSearch').value || '').trim().toLowerCase();
     var cf = document.getElementById('ouFilterClassification') ? document.getElementById('ouFilterClassification').value : '';

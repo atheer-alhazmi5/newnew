@@ -7,6 +7,34 @@ var erSelectedExecIdsC = [], erSelectedExecIdsE = [];
 
 function erEsc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+/** عرض رسالة تحقق/خطأ بنفس أسلوب مودالات النظام (بديل alert). المحتوى النصي يُمرَّر كما هو. */
+function erShowAlertMessage(msg) {
+    var textEl = document.getElementById('erAlertModalMessage');
+    if (textEl) textEl.textContent = msg != null ? String(msg) : '';
+    var modalEl = document.getElementById('erAlertModal');
+    if (!modalEl) return;
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (!inst) inst = new bootstrap.Modal(modalEl);
+    inst.show();
+}
+
+/** جدول تفاصيل المنفذين (ت / المنفذ / الوحدة التنظيمية) */
+function erBuildExecutorDetailsTableHtml(r) {
+    var rows = r.executorDetailRows || r.ExecutorDetailRows || [];
+    var body = '';
+    if (!rows.length) {
+        body = '<tr><td colspan="3" class="text-center text-muted" style="padding:14px;">—</td></tr>';
+    } else {
+        rows.forEach(function (row) {
+            var idx = row.index != null ? row.index : row.Index;
+            var en = row.executorName != null ? row.executorName : row.ExecutorName;
+            var ou = row.organizationalUnitName != null ? row.organizationalUnitName : row.OrganizationalUnitName;
+            body += '<tr><td style="text-align:center;font-weight:700;width:52px;">' + erEsc(String(idx)) + '</td><td>' + erEsc(en) + '</td><td>' + erEsc(ou) + '</td></tr>';
+        });
+    }
+    return '<div class="er-detail-exec-table-wrap"><table class="table table-bordered er-detail-exec-table mb-0" dir="rtl"><thead><tr><th scope="col">ت</th><th scope="col">المنفذ</th><th scope="col">الوحدة التنظيمية</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
 function erBenIsUnitManager(b) {
     if (!b) return false;
     if (b.isUnitManager === true || b.IsUnitManager === true) return true;
@@ -177,7 +205,7 @@ function erRenderFilterOuTreePanel() {
 async function erToggleActive(id) {
     var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id });
     if (res && res.success) { await erLoad(); erApplyFilters(); }
-    else alert((res && res.message) || 'خطأ');
+    else erShowAlertMessage((res && res.message) || 'خطأ');
 }
 
 /* ─── Org Unit Tree ─────────────────────────────────────────── */
@@ -425,8 +453,14 @@ function erShowCreateModal() {
 
 async function erSubmitCreate() {
     var name = document.getElementById('ercName').value.trim();
-    if (!name) { alert('اسم الدور مطلوب'); return; }
-    if (!erSelectedOuIdsC.length) { alert('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!name) { erShowAlertMessage('اسم الدور مطلوب'); return; }
+    if (!erSelectedOuIdsC.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!erSelectedExecIdsC.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
+
+    if (erRoles.some(function (role) { return (role.name || '').trim() === name; })) {
+        erShowAlertMessage('اسم الدور موجود مسبقاً');
+        return;
+    }
 
     var res = await apiFetch('/ExecutorRoles/AddExecutorRole', 'POST', {
         name: name,
@@ -443,14 +477,14 @@ async function erSubmitCreate() {
         await erLoad();
         erApplyFilters();
     } else {
-        alert((res && res.message) || 'خطأ في الحفظ');
+        erShowAlertMessage((res && res.message) || 'خطأ في الحفظ');
     }
 }
 
 /* ─── Edit Modal ────────────────────────────────────────────── */
 async function erShowEditModal(id) {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoleDetails?id=' + id);
-    if (!res || !res.success || !res.data) { alert('خطأ في تحميل بيانات الدور'); return; }
+    if (!res || !res.success || !res.data) { erShowAlertMessage('خطأ في تحميل بيانات الدور'); return; }
     var r = res.data;
 
     document.getElementById('ereId').value = r.id;
@@ -475,8 +509,14 @@ async function erShowEditModal(id) {
 async function erSubmitEdit() {
     var id = parseInt(document.getElementById('ereId').value);
     var name = document.getElementById('ereName').value.trim();
-    if (!name) { alert('اسم الدور مطلوب'); return; }
-    if (!erSelectedOuIdsE.length) { alert('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!name) { erShowAlertMessage('اسم الدور مطلوب'); return; }
+    if (!erSelectedOuIdsE.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!erSelectedExecIdsE.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
+
+    if (erRoles.some(function (role) { return role.id !== id && (role.name || '').trim() === name; })) {
+        erShowAlertMessage('اسم الدور موجود مسبقاً');
+        return;
+    }
 
     var res = await apiFetch('/ExecutorRoles/UpdateExecutorRole', 'POST', {
         id: id,
@@ -495,14 +535,14 @@ async function erSubmitEdit() {
         await erLoad();
         erApplyFilters();
     } else {
-        alert((res && res.message) || 'خطأ في التحديث');
+        erShowAlertMessage((res && res.message) || 'خطأ في التحديث');
     }
 }
 
 /* ─── Details Modal ─────────────────────────────────────────── */
 async function erShowDetails(id) {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoleDetails?id=' + id);
-    if (!res || !res.success || !res.data) { alert('خطأ في تحميل البيانات'); return; }
+    if (!res || !res.success || !res.data) { erShowAlertMessage('خطأ في تحميل البيانات'); return; }
     var r = res.data;
     var statusBadge = r.isActive
         ? '<span style="color:#16a34a;font-weight:700;"><i class="bi bi-check-circle-fill"></i> مفعل</span>'
@@ -517,8 +557,7 @@ async function erShowDetails(id) {
         + '<div class="er-detail-label">اسم الدور</div><div class="er-detail-value" style="font-weight:700;">' + erEsc(r.name) + '</div>'
         + '<div class="er-detail-label">الملكية</div><div class="er-detail-value">' + ownerBadge + '</div>'
         + '<div class="er-detail-label">الوصف</div><div class="er-detail-value">' + (erEsc(r.description) || '—') + '</div>'
-        + '<div class="er-detail-label">الوحدات التنظيمية</div><div class="er-detail-value">' + (erEsc(r.orgUnitNames) || '—') + '</div>'
-        + '<div class="er-detail-label">المنفذين</div><div class="er-detail-value">' + (erEsc(r.executorNames) || '—') + '</div>'
+        + erBuildExecutorDetailsTableHtml(r)
         + '<div class="er-detail-label">الترتيب</div><div class="er-detail-value">' + r.sortOrder + '</div>'
         + '<div class="er-detail-label">اللون</div><div class="er-detail-value"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span> ' + erEsc(r.color) + '</div>'
         + '<div class="er-detail-label">الحالة</div><div class="er-detail-value">' + statusBadge + '</div>'
@@ -553,7 +592,7 @@ async function erSubmitDelete() {
     } else {
         var msg = (res && res.message) || 'خطأ في الحذف';
         if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); }
-        else alert(msg);
+        else erShowAlertMessage(msg);
     }
 }
 

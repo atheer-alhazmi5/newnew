@@ -1,0 +1,305 @@
+@{
+    ViewBag.Title = "إصدارات نسخ النموذج";
+    ViewBag.PageName = "إصدارات نسخ النموذج";
+    var formId = ViewBag.FormDefinitionId as int? ?? 0;
+    var formName = ViewBag.FormName as string ?? "";
+    var formPublicId = ViewBag.FormPublicId as string ?? "";
+}
+
+<style>
+.fdv-page-wrap { width:100%; }
+.fdv-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.fdv-title-pub { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border-radius:8px; font-size:13px; font-weight:700; background:var(--gray-100); color:var(--gray-700); font-family:'Cairo',sans-serif; }
+.fdv-form-name { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
+.fdv-back-btn { background:var(--gray-100); border:2px solid var(--gray-200); color:var(--gray-700); border-radius:12px; padding:8px 18px; font-weight:700; font-size:13px; }
+.fdv-back-btn:hover { background:var(--gray-200); }
+.fdv-create-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+
+/* Reuse fd-* table action button styles defined inline */
+.fdv-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.fdv-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fdv-action-btn-detail:hover { background:var(--info-50); }
+.fdv-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fdv-action-btn-edit:hover { background:var(--sa-50); }
+.fdv-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fdv-action-btn-delete:hover { background:var(--error-50); }
+
+.fdv-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; }
+.fdv-badge-draft { background:var(--gray-100); color:var(--gray-600); }
+.fdv-badge-approved { background:var(--success-100); color:var(--success-700); }
+.fdv-badge-active { background:#dcf5e8; color:#0f9f5c; }
+.fdv-badge-inactive { background:#fde8e8; color:#ef4444; }
+.fdv-version-name { display:inline-flex; align-items:center; padding:3px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--sa-50); color:var(--sa-700); }
+
+#fdvTable thead th { background:var(--gray-50); color:var(--gray-700); font-size:13px; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+#fdvTable tbody td { vertical-align:middle; font-size:13px; }
+#fdvTable tbody tr:hover { background:var(--sa-25); }
+.fdv-empty-state { text-align:center; padding:56px 16px; color:var(--gray-400); }
+.fdv-empty-state i { font-size:48px; display:block; margin-bottom:12px; color:var(--gray-300); }
+.fdv-empty-state p { font-size:14px; font-weight:600; margin:0; }
+
+/* Reuse fd-modal styles (kept in sync with FormDefinitions/Index.cshtml) */
+.fd-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.fd-modal-header { padding:24px 28px; position:relative; }
+.fd-modal-header.create { background:var(--sa-800); }
+.fd-modal-header.edit { background:var(--sa-800); }
+.fd-modal-header.details { background:var(--info-700); }
+.fd-modal-header.danger { background:var(--error-600); }
+.fd-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.fd-modal-header .btn-close-x:hover { color:#fff; }
+.fd-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.fd-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.fd-section { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.fd-section-title i { font-size:15px; color:var(--sa-600); }
+.fd-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.fd-form-row.cols-3 { grid-template-columns:repeat(3,1fr); }
+.fd-form-row.cols-1 { grid-template-columns:1fr; }
+.fd-form-group { display:flex; flex-direction:column; gap:4px; }
+.fd-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.fd-form-group .form-control, .fd-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.fd-form-group .form-control:focus, .fd-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.fd-form-group textarea.form-control { min-height:70px; resize:vertical; }
+.required-star { color:#ef4444; margin-right:4px; }
+
+.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fd-action-btn-detail:hover { background:var(--info-50); }
+.fd-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fd-action-btn-edit:hover { background:var(--sa-50); }
+.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-action-btn-delete:hover { background:var(--error-50); }
+
+.fd-steps { display:flex; border-bottom:1px solid var(--gray-200); background:#fff; }
+.fd-step { flex:1; padding:14px 12px; text-align:center; font-size:13px; font-weight:600; color:var(--gray-400); border-bottom:3px solid transparent; display:flex; align-items:center; justify-content:center; gap:7px; transition:all .2s; }
+.fd-step.active { color:var(--sa-700); border-bottom-color:var(--sa-500); }
+.fd-step.done { color:var(--sa-500); }
+.fd-step-num { width:22px; height:22px; border-radius:50%; background:var(--gray-200); color:var(--gray-500); font-size:11px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.fd-step.active .fd-step-num { background:var(--sa-600); color:#fff; }
+.fd-step.done .fd-step-num { background:var(--sa-100); color:var(--sa-600); }
+
+.fd-fields-list { border:2px solid var(--gray-200); border-radius:10px; overflow:hidden; }
+.fd-field-head { background:var(--gray-50); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--gray-200); }
+.fd-field-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--gray-100); background:#fff; transition:background .12s; }
+.fd-field-row:last-child { border-bottom:none; }
+.fd-field-row:hover { background:var(--sa-25); }
+.fd-field-name { flex:1; font-size:13px; font-weight:600; color:var(--gray-800); }
+.fd-field-type { font-size:11px; color:var(--sa-600); background:var(--sa-50); padding:2px 8px; border-radius:10px; font-weight:600; }
+.fd-sec-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.fd-sec-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:2px solid var(--gray-200); border-radius:999px; cursor:pointer; background:#fff; font-size:12.5px; font-weight:700; color:var(--gray-700); transition:all .15s; }
+.fd-sec-chip:hover { border-color:var(--sa-300); color:var(--sa-700); }
+.fd-sec-chip.active { background:var(--sa-600); border-color:var(--sa-600); color:#fff; }
+.fd-sec-chip-title { line-height:1; }
+.fd-sec-chip-count { background:rgba(0,0,0,.08); color:inherit; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:800; }
+.fd-sec-chip.active .fd-sec-chip-count { background:rgba(255,255,255,.25); }
+.fd-sec-chip-btn { background:transparent; border:none; color:inherit; padding:2px 4px; font-size:11px; cursor:pointer; opacity:.6; display:inline-flex; align-items:center; justify-content:center; }
+.fd-sec-chip-btn:hover { opacity:1; }
+.fd-sec-chip-btn-del:hover { color:#ef4444; }
+.fd-sec-chip.active .fd-sec-chip-btn { color:#fff; opacity:.8; }
+.fd-sec-add-btn { padding:6px 14px; border:2px dashed var(--sa-300); border-radius:999px; background:transparent; color:var(--sa-700); font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .15s; font-family:'Cairo',sans-serif; }
+.fd-sec-add-btn:hover { background:var(--sa-50); border-color:var(--sa-500); }
+.fd-sig-field { width:100%; }
+.fd-sig-canvas-wrap { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.fd-sig-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; display:block; width:100%; max-width:320px; }
+.fd-sig-canvas-wrap .btn-sm { padding:5px 14px; font-size:12px; }
+.fd-sig-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); background:#fff; padding:4px; }
+.fd-sig-attach-preview-wrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.fd-field-req { font-size:10px; color:var(--error-700); background:var(--error-100); padding:2px 7px; border-radius:8px; font-weight:700; }
+.fd-empty-fields { text-align:center; padding:28px 16px; color:var(--gray-400) !important; font-style:normal !important; }
+.fd-empty-fields i { font-size:32px; display:block; margin-bottom:8px; color:var(--gray-300) !important; font-style:normal !important; }
+.fd-empty-fields p { font-size:13px; font-weight:600; margin:0; font-style:normal !important; }
+.fd-add-panel { background:var(--gray-50); border:2px dashed var(--gray-200); border-radius:10px; padding:16px; margin-top:12px; }
+.fd-add-panel-title { font-size:13px; font-weight:700; color:var(--sa-700); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.fd-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
+.fd-detail-lbl { font-weight:700; color:var(--gray-500); }
+.fd-detail-val { color:var(--gray-800); font-weight:500; }
+.fd-save-btn { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
+.fd-save-btn:hover { transform:translateY(-1px); }
+.fd-save-btn.draft { background:var(--gray-500); }
+.fd-save-btn.draft:hover { background:var(--gray-600); }
+.fd-save-btn.send { background:var(--sa-600); }
+.fd-save-btn.send:hover { background:var(--sa-700); }
+.fd-cancel-btn { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
+.fd-cancel-btn:hover { background:var(--gray-300); }
+
+@@media (max-width:768px) {
+    .fd-form-row { grid-template-columns:1fr; }
+    .fd-form-row.cols-3 { grid-template-columns:1fr; }
+    .fd-detail-grid { grid-template-columns:1fr; }
+    .fd-steps { overflow-x:auto; }
+}
+</style>
+
+<input type="hidden" id="fdvFormId" value="@formId">
+
+<div class="fdv-page-wrap">
+    <div class="fdv-page-header">
+        <div>
+            <h2 class="page-title mb-0">إصدارات نسخ النموذج</h2>
+            <p class="fdv-form-name">
+                <span class="fdv-title-pub"><i class="bi bi-hash"></i> @formPublicId</span>
+                <span style="margin-inline-start:10px;">@formName</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/FormDefinitions/Index" class="fdv-back-btn"><i class="bi bi-arrow-right-short"></i> رجوع للنماذج</a>
+            <button type="button" class="btn btn-primary fdv-create-btn" onclick="fdvCreateNewVersion()">
+                <i class="bi bi-plus-lg"></i> إنشاء نسخة إصدار جديدة
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0" id="fdvTable">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;text-align:center;">#</th>
+                            <th>اسم الإصدار</th>
+                            <th style="text-align:center;">عدد الحقول</th>
+                            <th style="text-align:center;">عدد الأقسام</th>
+                            <th style="text-align:center;">عدد قواعد المنطق</th>
+                            <th>أنشئ بواسطة</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>التحديث بواسطة</th>
+                            <th>تاريخ التحديث</th>
+                            <th style="text-align:center;">الحالة</th>
+                            <th style="text-align:center;">التفعيل</th>
+                            <th style="text-align:center;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fdvBody">
+                        <tr><td colspan="12" class="text-center py-4">
+                            <div class="spinner-border" style="color:var(--sa-600);"></div>
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =================== WIZARD MODAL (reused by form-definitions.js in version mode) =================== -->
+<div class="modal fade" id="fdWizardModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="fdWizardHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="fdWizardTitle">إنشاء نسخة إصدار جديدة</h5>
+                <div class="fd-modal-subtitle" id="fdWizardSub"></div>
+            </div>
+            <div class="fd-steps" id="fdStepBar">
+                <div class="fd-step" id="fdStep1El" style="display:none;">
+                    <span class="fd-step-num">1</span> البيانات الأساسية
+                </div>
+                <div class="fd-step active" id="fdStep2El">
+                    <span class="fd-step-num">1</span> بناء الحقول
+                </div>
+                <div class="fd-step" id="fdStep3El">
+                    <span class="fd-step-num">2</span> المنطق الشرطي
+                </div>
+                <div class="fd-step" id="fdStep4El">
+                    <span class="fd-step-num">3</span> معاينة النموذج
+                </div>
+            </div>
+            <div class="fd-modal-body" id="fdWizardBody"></div>
+            <div class="fd-modal-footer" id="fdWizardFoot"></div>
+        </div>
+    </div>
+</div>
+
+<!-- =================== DETAILS MODAL =================== -->
+<div class="modal fade" id="fdvDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تفاصيل الإصدار</h5>
+                <div class="fd-modal-subtitle" id="fdvDetailsSub"></div>
+            </div>
+            <div class="fd-modal-body" id="fdvDetailsBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =================== DELETE MODAL =================== -->
+<div class="modal fade" id="fdvDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تأكيد حذف الإصدار</h5>
+                <div class="fd-modal-subtitle">هذا الإجراء لا يمكن التراجع عنه</div>
+            </div>
+            <div class="fd-modal-body">
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">
+                    هل أنت متأكد من حذف الإصدار <strong id="fdvDeleteName"></strong>؟
+                </p>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="fdvSubmitDelete()">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Re-use the same section prompt/delete modals from FormDefinitions wizard -->
+<div class="modal fade" id="fdSectionPromptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="fdSectionPromptHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="fdSectionPromptTitle">قسم جديد</h5>
+                <div class="fd-modal-subtitle" id="fdSectionPromptSub">حدّد اسم القسم</div>
+            </div>
+            <div class="fd-modal-body">
+                <div class="fd-form-group">
+                    <label><span class="required-star">*</span> اسم القسم</label>
+                    <input type="text" class="form-control" id="fdSectionPromptInput" placeholder="مثال: بيانات الموظف" autocomplete="off" maxlength="80">
+                </div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn send" id="fdSectionPromptOk"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fdSectionDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">حذف القسم</h5>
+                <div class="fd-modal-subtitle" id="fdSectionDeleteSub">لا يمكن التراجع عن هذا الإجراء</div>
+            </div>
+            <div class="fd-modal-body text-center">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:44px;color:var(--error-500);"></i>
+                <p style="margin-top:10px;font-size:14px;font-weight:600;color:var(--gray-700);">
+                    هل أنت متأكد من حذف القسم <strong id="fdSectionDeleteName"></strong>؟
+                </p>
+                <div id="fdSectionDeleteNote" style="font-size:12px;color:var(--gray-500);margin-top:6px;"></div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:center;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" id="fdSectionDeleteOk"><i class="bi bi-trash3"></i> حذف</button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/form-definitions.js" asp-append-version="true"></script>
+    <script src="~/js/form-versions.js" asp-append-version="true"></script>
+    <script>fdvInit();</script>
+}

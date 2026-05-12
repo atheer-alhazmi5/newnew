@@ -48,6 +48,13 @@
 .fd-action-btn-reject:hover { background:var(--error-50); }
 .fd-action-btn-send   { border-color:var(--warning-600); color:var(--warning-600); background:#fff; }
 .fd-action-btn-send:hover { background:var(--warning-50); }
+.fd-action-btn-version { border-color:var(--info-600); color:var(--info-600); background:#fff; }
+.fd-action-btn-version:hover { background:var(--info-50); }
+
+/* PublicId & active-version badges */
+.fd-publicid-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--gray-100); color:var(--gray-700); font-family:'Cairo',sans-serif; letter-spacing:.3px; }
+.fd-activever-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--sa-50); color:var(--sa-700); font-family:'Cairo',sans-serif; }
+.fd-activever-empty { color:var(--gray-400); font-size:12px; }
 
 /* Status badges */
 .fd-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; }
@@ -201,6 +208,7 @@
                 <thead>
                     <tr>
                         <th style="width:50px;text-align:center;">رقم</th>
+                        <th style="text-align:center;">المعرف</th>
                         <th>اسم النموذج</th>
                         <th>مساحة العمل</th>
                         <th>التصنيف</th>
@@ -208,13 +216,14 @@
                         <th>القالب</th>
                         <th style="text-align:center;">الملكية</th>
                         <th>الوحدة التنظيمية</th>
+                        <th style="text-align:center;">الإصدار النشط</th>
                         <th style="text-align:center;">الحالة</th>
                         <th style="text-align:center;display:none;" id="fdThActive">التفعيل</th>
                         <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="fdBody">
-                    <tr><td colspan="11" class="text-center py-4">
+                    <tr><td colspan="13" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>

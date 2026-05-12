@@ -72,6 +72,18 @@
 .ddl-level-tab:hover { background:var(--sa-25); color:var(--sa-700); border-color:var(--sa-200); }
 .ddl-level-tab.active { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-500); }
 .ddl-level-tab.disabled { opacity:0.6; cursor:not-allowed; pointer-events:none; }
+/* شجرة الوحدة التنظيمية (فلتر) — نفس أسلوب المستفيدين */
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
+.bnf-ou-tree-row:hover { background:var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background:var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none !important; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
+.bnf-ou-tree-exp:active { transform:scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.bnf-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
 @@media (max-width:768px) { .ddl-form-row { grid-template-columns:1fr; } }
 </style>
 
@@ -108,9 +120,13 @@
         <option value="عام">عام</option>
         <option value="خاص">خاص</option>
     </select>
-    <select class="ddl-filter-select form-select" id="ddlFilterOrgUnit" onchange="ddlApplyFilters()">
-        <option value="">قائمة بالوحدات التنظيمية</option>
-    </select>
+    <div class="ddl-filter-ou-wrap" style="min-width:200px;max-width:280px;position:relative;">
+        <input type="hidden" id="ddlFilterOrgUnit" value="">
+        <button type="button" class="ddl-filter-select form-select bnf-ou-tree-trigger text-end w-100" id="ddlFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="ddlFilterOuLabel">قائمة بالوحدات التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="ddlFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+    </div>
     <button class="ddl-clear-btn" onclick="ddlClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 

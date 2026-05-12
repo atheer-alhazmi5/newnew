@@ -178,13 +178,13 @@
     "PhotoUrl": "",
     "FullName": "yy rr rr rr",
     "PasswordHash": "AQAAAAIAAYagAAAAEDlLmp68WbDL6pQxoNCohj3qyCUuwppNBo7e79Kis46UYnGzpmNIOQirM8PBzznhwQ==",
-    "Role": "Employee",
+    "Role": "Manager",
     "DepartmentId": 2,
     "Department": null,
     "Status": "Active",
     "CreatedAt": "2026-05-05T13:40:33.637073+03:00",
-    "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
-    "RoleName": "Employee"
+    "RoleLabel": "\u0645\u062F\u064A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u062A\u0646\u0638\u064A\u0645\u064A\u0629",
+    "RoleName": "Manager"
   },
   {
     "Id": 12,
@@ -202,5 +202,22 @@
     "CreatedAt": "2026-05-05T14:03:16.624956+03:00",
     "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
     "RoleName": "Employee"
+  },
+  {
+    "Id": 13,
+    "NationalId": "1101010101",
+    "Username": "aaaa1",
+    "Email": "dd@almadinah.gov.sa",
+    "Phone": "0505050500",
+    "PhotoUrl": "",
+    "FullName": "gh gg gg g",
+    "PasswordHash": "AQAAAAIAAYagAAAAEOSJcTMPKNskUr0dCG53aDrHFqr3x0//0AD7GxACSR7zjiPfe33\u002BF2wh3RVkVtVVIQ==",
+    "Role": "Staff",
+    "DepartmentId": 2,
+    "Department": null,
+    "Status": "Active",
+    "CreatedAt": "2026-05-07T12:38:06.529795+03:00",
+    "RoleLabel": "\u0645\u0648\u0638\u0641",
+    "RoleName": "Staff"
   }
 ]

@@ -1,6 +1,12 @@
 /* ===== Ready Tables JS (Index Page) ===== */
 var rtAllData = [], rtFilteredData = [], rtOrgUnits = [], rtCurrentUser = '', rtIsAdmin = false;
 var rtcFields = [], rtcEditingIndex = -1;
+var rtFilterOuExpanded = {};
+
+function rtEscHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function rtNormalizeHeaderHex(val) {
     if (!val || typeof val !== 'string') return '#d1d5db';
@@ -121,10 +127,8 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب (Placeholder)", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"مثال: 300" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"fieldCount", label:"عدد الحقول", type:"number", placeholder:"مثال: 3" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "البريد الإلكتروني": { props: [
@@ -132,7 +136,6 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" },
@@ -144,7 +147,6 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },
@@ -155,7 +157,6 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
@@ -166,10 +167,8 @@ var RT_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"heightPx", label:"الارتفاع", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "فقرة": { props: [
@@ -177,10 +176,8 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رقم": { props: [
@@ -197,18 +194,17 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },
-        { key:"optionsCount", label:"عدد الخيارات", type:"number" },
         { key:"visibleOptions", label:"الخيارات المرئية", type:"number" }
     ] },
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" }
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] }
     ] },
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "تاريخ": { props: [
@@ -245,15 +241,13 @@ var RT_FIELD_TYPES = {
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },
         { key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },
-        { key:"defaultValue", label:"القيمة التلقائية", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"defaultValue", label:"القيمة التلقائية", type:"number" }
     ] },
     "التقييم بالأرقام": { props: [
         { key:"lowRatingText", label:"نص أقل تقييم", type:"text" },
         { key:"highRatingText", label:"نص أعلى تقييم", type:"text" },
         { key:"minRating", label:"أقل قيمة", type:"number" },
-        { key:"maxRating", label:"أعلى قيمة", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"maxRating", label:"أعلى قيمة", type:"number" }
     ] },
     "جدول بيانات": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -505,7 +499,60 @@ function rtBuildSinglePropHtml(p, idPrefix) {
 }
 
 /* ===== Page Load ===== */
-document.addEventListener('DOMContentLoaded', rtLoad);
+document.addEventListener('DOMContentLoaded', function () {
+    rtLoad();
+    rtBindFilterOuTree();
+});
+
+function rtBindFilterOuTree() {
+    var trigger = document.getElementById('rtFilterOuTrigger');
+    var panel = document.getElementById('rtFilterOuPanel');
+    if (!trigger || !panel) return;
+
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        rtFilterOuTogglePanel();
+    });
+
+    panel.addEventListener('click', function (e) {
+        var expBtn = e.target.closest('.bnf-ou-tree-exp');
+        if (expBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var eid = expBtn.getAttribute('data-exp');
+            if (eid) {
+                rtFilterOuExpanded[eid] = !rtFilterOuExpanded[eid];
+                rtRenderFilterOrgUnitTreePanel();
+            }
+            return;
+        }
+        var row = e.target.closest('.bnf-ou-tree-row');
+        if (!row || !row.hasAttribute('data-id')) return;
+        var idAttr = row.getAttribute('data-id');
+        var hid = document.getElementById('rtFilterOrgUnit');
+        var lab = document.getElementById('rtFilterOuLabel');
+        if (hid) hid.value = idAttr === null ? '' : String(idAttr);
+        if (lab) {
+            if (!idAttr) {
+                lab.textContent = 'قائمة بالوحدات التنظيمية';
+            } else {
+                var uid = parseInt(idAttr, 10);
+                var u = rtOrgUnits.find(function (x) { return x.id === uid; });
+                lab.textContent = u ? u.name : 'قائمة بالوحدات التنظيمية';
+            }
+        }
+        rtFilterOuClosePanel();
+        rtRenderFilterOrgUnitTreePanel();
+        rtApplyFilters();
+    });
+
+    document.addEventListener('click', function (e) {
+        var wrap = document.querySelector('.bnf-ou-tree-wrap');
+        var pnl = document.getElementById('rtFilterOuPanel');
+        if (!wrap || !pnl || pnl.classList.contains('d-none')) return;
+        if (!wrap.contains(e.target)) rtFilterOuClosePanel();
+    });
+}
 
 async function rtLoad() {
     try {
@@ -516,16 +563,121 @@ async function rtLoad() {
         rtOrgUnits = r.organizationalUnits || [];
         rtCurrentUser = r.currentUser || '';
         rtIsAdmin = r.isAdmin || false;
-        rtRenderOrgFilter();
+        rtSyncFilterOuTreeLabel();
         rtRenderTable();
         rtApplyAdminOwnershipLock();
     } catch(e) { console.error('rtLoad error:', e); }
 }
 
-function rtRenderOrgFilter() {
-    var sel = document.getElementById('rtFilterOrgUnit');
-    sel.innerHTML = '<option value="">قائمة بالوحدات التنظيمية</option>';
-    rtOrgUnits.forEach(function(u) { sel.innerHTML += '<option value="' + u.id + '">' + u.name + '</option>'; });
+function rtOuBuildTreeMap() {
+    var ids = {};
+    rtOrgUnits.forEach(function (u) { ids[u.id] = true; });
+    var byParent = {};
+    rtOrgUnits.forEach(function (u) {
+        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
+        });
+    });
+    return byParent;
+}
+
+function rtRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + rtEscHtml(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += rtRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function rtFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    rtOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        rtFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function rtRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    if (!panel) return;
+    if (!rtOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = rtOuBuildTreeMap();
+    var hid = document.getElementById('rtFilterOrgUnit');
+    var selectedId = hid ? hid.value : '';
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += rtRenderOuFilterTreeRows(byParent, '', 0, selectedId, rtFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function rtFilterOuTogglePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    var trig = document.getElementById('rtFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var hid = document.getElementById('rtFilterOrgUnit');
+        var cur = hid ? hid.value : '';
+        if (cur) rtFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        rtRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function rtFilterOuClosePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    var trig = document.getElementById('rtFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function rtSyncFilterOuTreeLabel() {
+    var hid = document.getElementById('rtFilterOrgUnit');
+    var lab = document.getElementById('rtFilterOuLabel');
+    if (!hid || !lab) return;
+    var defLabel = 'قائمة بالوحدات التنظيمية';
+    if (hid.value) {
+        var u = rtOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
+        lab.textContent = u ? u.name : defLabel;
+    } else {
+        lab.textContent = defLabel;
+    }
+    rtRenderFilterOrgUnitTreePanel();
 }
 
 function rtApplyFilters() {
@@ -547,7 +699,13 @@ function rtClearFilters() {
     document.getElementById('rtSearchInput').value = '';
     document.getElementById('rtFilterRowCount').value = '';
     document.getElementById('rtFilterOwnership').value = '';
-    document.getElementById('rtFilterOrgUnit').value = '';
+    var hid = document.getElementById('rtFilterOrgUnit');
+    if (hid) hid.value = '';
+    var lab = document.getElementById('rtFilterOuLabel');
+    if (lab) lab.textContent = 'قائمة بالوحدات التنظيمية';
+    rtFilterOuExpanded = {};
+    rtFilterOuClosePanel();
+    rtRenderFilterOrgUnitTreePanel();
     rtFilteredData = rtAllData.slice();
     rtRenderTable();
 }
@@ -917,7 +1075,9 @@ function rtpBuildFieldInput(f, opt) {
         if (hiSpin != null && !isNaN(hiSpin) && spinNum > hiSpin) spinNum = hiSpin;
         var spinValStr = String(spinNum);
         var spinRtEv = props.readOnly ? '' : ' oninput="rtSpinClamp(this)" onblur="rtSpinClamp(this)"';
-        inp = '<div class="input-group rt-spinner-group" style="' + wStyle + '"' + ttAttr + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="border-radius:8px 0 0 8px;padding:4px 10px;font-size:16px;font-weight:700;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center rt-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + (props.readOnly ? ' readonly style="text-align:center;direction:ltr;background:#f3f4f6;"' : ' style="text-align:center;direction:ltr;"') + spinRtEv + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="border-radius:0 8px 8px 0;padding:4px 10px;font-size:16px;font-weight:700;">+</button></div>';
+        var spinWrap = wStyle ? ' style="' + wStyle + '"' : '';
+        var spinInpStyle = props.readOnly ? ' readonly style="text-align:center;direction:ltr;background:#f3f4f6;"' : ' style="text-align:center;direction:ltr;"';
+        inp = '<div class="input-group fd-spinner-group rt-spinner-group"' + ttAttr + spinWrap + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input rt-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + spinInpStyle + spinRtEv + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="padding:4px 10px;">+</button></div>';
     } else if (f.fieldType === 'التقييم بالأرقام') {
         var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
         var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
@@ -926,7 +1086,7 @@ function rtpBuildFieldInput(f, opt) {
         var hi = props.highRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.highRatingText) + '</span>' : '';
         if (lo || hi) inp += '<div class="d-flex justify-content-between">' + lo + hi + '</div>';
         inp += '</div>';
-    } else if (f.fieldType === 'قائمة منسدلة' || f.fieldType === 'قائمة اختيار الواحد') {
+    } else if (f.fieldType === 'قائمة منسدلة') {
         var opts = [];
         if (props.options) opts = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         var emptyText = (props.emptyText || '').trim();
@@ -939,6 +1099,26 @@ function rtpBuildFieldInput(f, opt) {
             inp += '<option value="' + String(o).replace(/"/g, '&quot;') + '"' + sel + '>' + String(o).replace(/</g, '&lt;') + '</option>';
         });
         inp += '</select>';
+    } else if (f.fieldType === 'قائمة اختيار الواحد') {
+        var optsS = [];
+        if (props.options) optsS = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+        var defaultOptS = (props.defaultOption || '').trim();
+        var isHorizS = String(props.optionsOrientation || '').trim() === 'أفقي';
+        var grpClsS = isHorizS ? 'fd-oc-group fd-oc-horiz' : 'fd-oc-group fd-oc-vert';
+        var disAttrS = props.readOnly ? ' disabled' : '';
+        var gnameS = 'rt_sc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
+        if (optsS.length === 0) {
+            inp = '<span class="text-muted"' + ttAttr + '>—</span>';
+        } else {
+            var bodyS = '';
+            optsS.forEach(function (o, i) {
+                var ridS = gnameS + '_' + i;
+                var selS = (defaultOptS && defaultOptS === o) ? ' checked' : '';
+                var reqOneS = (f.isRequired && i === 0) ? ' required' : '';
+                bodyS += '<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="radio" name="' + gnameS + '" id="' + ridS + '" value="' + rtEscAttr(o) + '"' + selS + disAttrS + reqOneS + '><label class="form-check-label" for="' + ridS + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
+            });
+            inp = '<div class="' + grpClsS + '"' + ttAttr + mkStyle() + '>' + bodyS + '</div>';
+        }
     } else if (f.fieldType === 'قائمة اختيار متعدد') {
         var opts2 = [];
         if (props.options) opts2 = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
@@ -947,23 +1127,34 @@ function rtpBuildFieldInput(f, opt) {
             var t = d.trim();
             if (t) defaultSet[t] = true;
         });
-        inp = '<div class="d-flex flex-wrap gap-2"' + ttAttr + '>';
-        opts2.forEach(function (o) {
-            var chk = defaultSet[o] ? ' checked' : '';
-            var dis = props.readOnly ? ' disabled' : '';
-            inp += '<div class="form-check mb-0"><input class="form-check-input" type="checkbox"' + chk + dis + '><label class="form-check-label">' + String(o).replace(/</g, '&lt;') + '</label></div>';
-        });
-        if (opts2.length === 0) inp += '<span class="text-muted">—</span>';
-        inp += '</div>';
+        var isHorizM = String(props.optionsOrientation || '').trim() === 'أفقي';
+        var grpClsM = isHorizM ? 'fd-oc-group fd-oc-horiz' : 'fd-oc-group fd-oc-vert';
+        var disAttrM = props.readOnly ? ' disabled' : '';
+        var gnameM = 'rt_mc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
+        if (opts2.length === 0) {
+            inp = '<span class="text-muted"' + ttAttr + '>—</span>';
+        } else {
+            var bodyM = '';
+            opts2.forEach(function (o, i) {
+                var cidM = gnameM + '_' + i;
+                var chkM = defaultSet[o] ? ' checked' : '';
+                bodyM += '<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="' + gnameM + '[]" id="' + cidM + '" value="' + rtEscAttr(o) + '"' + chkM + disAttrM + '><label class="form-check-label" for="' + cidM + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
+            });
+            inp = '<div class="' + grpClsM + '"' + ttAttr + mkStyle() + '>' + bodyM + '</div>';
+        }
     } else if (f.fieldType === 'تاريخ') {
         var calT = String(props.calendarType || 'ميلادي').trim();
         var dtMin = props.startDate ? ' min="' + rtEscAttr(String(props.startDate)) + '"' : '';
         var dtMax = props.endDate ? ' max="' + rtEscAttr(String(props.endDate)) + '"' : '';
+        var ttlOpenCal = rtEscAttr('فتح التقويم');
+        var ttlHijNA = rtEscAttr('التقويم التفاعلي غير مدعوم — أدخل التاريخ الهجري يدوياً');
+        var dateWrapStyle = (wStyle || 'direction:ltr;') !== 'direction:ltr;' ? mkStyle('direction:ltr;') : ' style="direction:ltr;"';
         if (calT === 'هجري') {
-            var hijPh = rtEscAttr(ph || 'مثال: 1447/06/15');
-            inp = '<input type="text" class="form-control" dir="rtl" placeholder="' + hijPh + ' — هجري" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle('direction:rtl;') + '>';
+            var hijPh = rtEscAttr(ph || '1447/06/15 — مثال');
+            inp = '<div class="fd-date-field-wrap fd-date-hijri position-relative"' + ttAttr + dateWrapStyle + '><div class="input-group fd-date-input-group fd-date-cal-left"><button type="button" class="btn btn-outline-secondary fd-date-cal-btn" disabled tabindex="-1" title="' + ttlHijNA + '" aria-label="' + ttlHijNA + '"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="' + hijPh + '" value="' + defVal + '"' + reqAttr + roAttr + '></div></div>';
         } else {
-            inp = '<input type="date" class="form-control" value="' + defVal + '"' + dtMin + dtMax + reqAttr + roAttr + ttAttr + mkStyle() + '>';
+            var dtRoBtn = props.readOnly ? ' disabled' : '';
+            inp = '<div class="fd-date-field-wrap fd-date-miladi position-relative"' + ttAttr + dateWrapStyle + '><div class="input-group fd-date-input-group fd-date-cal-left"><button type="button" class="btn btn-outline-secondary fd-date-cal-btn" onclick="rtDateOpenPicker(this)"' + dtRoBtn + ' title="' + ttlOpenCal + '" aria-label="' + ttlOpenCal + '"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="date" class="form-control fd-date-control" value="' + defVal + '"' + dtMin + dtMax + reqAttr + roAttr + '></div></div>';
         }
     } else if (f.fieldType === 'وقت') {
         var tfmt = props.timeFormat || '';
@@ -1176,6 +1367,25 @@ if (typeof window !== 'undefined') {
     window.rtSpinClamp = rtSpinClamp;
     window.rtSpinInc = rtSpinInc;
     window.rtSpinDec = rtSpinDec;
+}
+
+/** فتح منتقي التاريخ الافتراضي للمتصفّح من زر التقويم على يسار حقل التاريخ. */
+function rtDateOpenPicker(btn) {
+    if (!btn) return;
+    var grp = btn.closest('.fd-date-input-group');
+    if (!grp) return;
+    var inp = grp.querySelector('input.fd-date-control');
+    if (!inp || inp.disabled || inp.readOnly) return;
+    try {
+        if (typeof inp.showPicker === 'function') {
+            inp.showPicker();
+            return;
+        }
+    } catch (e) {}
+    try { inp.focus(); inp.click(); } catch (e) {}
+}
+if (typeof window !== 'undefined') {
+    window.rtDateOpenPicker = rtDateOpenPicker;
 }
 function rtStarClick(el, idx) {
     var wrap = el.closest('.rt-star-rating');

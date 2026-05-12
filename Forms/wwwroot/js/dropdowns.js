@@ -6,6 +6,7 @@ var ddlParentListItemsCache = [];
 var ddlCurrentUser = '';
 var ddlIsAdmin = false;
 var ddlCurrentOrgUnitId = 0;
+var ddlFilterOuExpanded = {};
 
 var ddlHierItems = [];
 var ddlHierLevelNames = [];
@@ -47,6 +48,51 @@ document.addEventListener('DOMContentLoaded', function () {
     ddlLoad();
     var em = document.getElementById('ddlEditModal');
     if (em) em.addEventListener('hidden.bs.modal', function () { ddlSetEditListTypeLocked(false); });
+
+    var ddlFilterOuTrigger = document.getElementById('ddlFilterOuTrigger');
+    var ddlFilterOuPanel = document.getElementById('ddlFilterOuPanel');
+    if (ddlFilterOuTrigger && ddlFilterOuPanel) {
+        ddlFilterOuTrigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            ddlFilterOuTogglePanel();
+        });
+        ddlFilterOuPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    ddlFilterOuExpanded[eid] = !ddlFilterOuExpanded[eid];
+                    ddlRenderFilterOrgUnitTreePanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (!row || !row.hasAttribute('data-id')) return;
+            var idAttr = row.getAttribute('data-id');
+            var hid = document.getElementById('ddlFilterOrgUnit');
+            var lab = document.getElementById('ddlFilterOuLabel');
+            if (hid) hid.value = idAttr === null ? '' : String(idAttr);
+            if (lab) {
+                if (!idAttr) lab.textContent = 'قائمة بالوحدات التنظيمية';
+                else {
+                    var uid = parseInt(idAttr, 10);
+                    var u = ddlOrgUnits.find(function (x) { return x.id === uid; });
+                    lab.textContent = u ? u.name : 'قائمة بالوحدات التنظيمية';
+                }
+            }
+            ddlFilterOuClosePanel();
+            ddlRenderFilterOrgUnitTreePanel();
+            ddlApplyFilters();
+        });
+        document.addEventListener('click', function (e) {
+            var wrap = document.querySelector('.ddl-filter-ou-wrap');
+            var panel = document.getElementById('ddlFilterOuPanel');
+            if (!wrap || !panel || panel.classList.contains('d-none')) return;
+            if (!wrap.contains(e.target)) ddlFilterOuClosePanel();
+        });
+    }
 });
 
 async function ddlLoad() {
@@ -59,7 +105,7 @@ async function ddlLoad() {
             ddlIsAdmin = r.isAdmin === true;
             ddlCurrentOrgUnitId = r.currentOrgUnitId || 0;
             ddlApplyFilters();
-            ddlFillOrgUnitFilter();
+            ddlSyncFilterOuTreeLabel();
             ddlApplyOwnershipUi();
         } else {
             document.getElementById('ddlBody').innerHTML =
@@ -71,14 +117,113 @@ async function ddlLoad() {
     }
 }
 
-function ddlFillOrgUnitFilter() {
-    var sel = document.getElementById('ddlFilterOrgUnit');
-    if (!sel) return;
-    var html = '<option value="">قائمة بالوحدات التنظيمية</option>';
+function ddlOuBuildTreeMap() {
+    var ids = {};
+    ddlOrgUnits.forEach(function (u) { ids[u.id] = true; });
+    var byParent = {};
     ddlOrgUnits.forEach(function (u) {
-        html += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
     });
-    sel.innerHTML = html;
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
+        });
+    });
+    return byParent;
+}
+
+function ddlRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += ddlRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function ddlFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    ddlOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        ddlFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function ddlRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    if (!panel) return;
+    if (!ddlOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = ddlOuBuildTreeMap();
+    var selectedId = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += ddlRenderOuFilterTreeRows(byParent, '', 0, selectedId, ddlFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function ddlFilterOuTogglePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    var trig = document.getElementById('ddlFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
+        if (cur) ddlFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        ddlRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function ddlFilterOuClosePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    var trig = document.getElementById('ddlFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function ddlSyncFilterOuTreeLabel() {
+    var hid = document.getElementById('ddlFilterOrgUnit');
+    var lab = document.getElementById('ddlFilterOuLabel');
+    if (!hid || !lab) return;
+    var defLabel = 'قائمة بالوحدات التنظيمية';
+    if (hid.value) {
+        var u = ddlOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
+        lab.textContent = u ? u.name : defLabel;
+    } else {
+        lab.textContent = defLabel;
+    }
+    ddlRenderFilterOrgUnitTreePanel();
 }
 
 function ddlApplyFilters() {
@@ -105,7 +250,12 @@ function ddlClearFilters() {
     document.getElementById('ddlFilterListType').value = '';
     document.getElementById('ddlFilterSelectionType').value = '';
     document.getElementById('ddlFilterOwnership').value = '';
-    document.getElementById('ddlFilterOrgUnit').value = '';
+    var ouHid = document.getElementById('ddlFilterOrgUnit');
+    if (ouHid) ouHid.value = '';
+    var flab = document.getElementById('ddlFilterOuLabel');
+    if (flab) flab.textContent = 'قائمة بالوحدات التنظيمية';
+    ddlFilterOuExpanded = {};
+    ddlFilterOuClosePanel();
     ddlApplyFilters();
 }
 

@@ -1,6 +1,12 @@
 'use strict';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
+// وضع إصدار النسخة: عند true يُستخدم نفس المعالج لكن دون خطوة "البيانات الأساسية"
+let fdVersionMode   = false;
+let fdVersionFormId = 0;     // معرف النموذج الذي ننشئ/نُحدّث له نسخة
+let fdVersionEditId = null;  // معرف الإصدار عند التحديث، null عند الإنشاء
+let fdVersionName   = '';    // اسم الإصدار للعرض في عنوان المعالج
+
 let fdData          = [];
 let fdLookups       = { formClasses:[], formTypes:[], workspaces:[], templates:[], templateFilters:[], orgUnitFilters:[] };
 let fdIsAdmin       = false;
@@ -27,7 +33,15 @@ let fdConditionalRules = [];
 let fdRuleSeq = 1;
 const FD_RULE_OPERATORS = ['يساوي','لا يساوي','أكبر من','أصغر من','يحتوي على','فارغ','غير فارغ'];
 const FD_RULE_NO_VALUE  = new Set(['فارغ','غير فارغ']);
-const FD_RULE_ACTIONS   = ['إظهار الحقل','إخفاء الحقل','جعل الحقل مطلوبا','تعطيل الحقل'];
+const FD_RULE_ACTIONS   = ['إظهار','إخفاء','جعل العنصر مطلوباً','تعطيل'];
+/** ترميغ القيم القديمة لإجراءات الحقل إلى المسميات الموحَّدة (حقل/قسم). */
+const FD_RULE_ACTION_LEGACY = {
+    'إظهار الحقل': 'إظهار',
+    'إخفاء الحقل': 'إخفاء',
+    'جعل الحقل مطلوبا': 'جعل العنصر مطلوباً',
+    'جعل الحقل مطلوباً': 'جعل العنصر مطلوباً',
+    'تعطيل الحقل': 'تعطيل'
+};
 
 // ─── FIELD TYPE DEFINITIONS (mirrors ready-tables) ───────────────────────────
 const FD_FIELD_TYPES = {
@@ -41,12 +55,11 @@ const FD_FIELD_TYPES = {
     ]},
     "البريد الإلكتروني": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
-        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text", placeholder:"name@almadinah.gov.sa" },
+        { key:"placeholder", label:"العنصر النائب", type:"text", placeholder:"name@almadinah.gov.sa" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"minLength", label:"الحد الأدنى", type:"number" },
-        { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" }
+        { key:"minLength", label:"الحد الأدنى للأحرف", type:"number" },
+        { key:"maxLength", label:"الحد الأقصى للأحرف", type:"number" }
     ]},
     "رقم الهاتف": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -102,10 +115,12 @@ const FD_FIELD_TYPES = {
     ]},
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true }
     ]},
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true }
     ]},
     "تاريخ": { props: [
@@ -190,12 +205,44 @@ const FD_FIELD_TYPES = {
         { key:"mode", label:"النمط الافتراضي", type:"select", options:["مرفق","التوقيع بالقلم","التوقيع المعتمد في النظام"] },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"360" },
         { key:"heightPx", label:"ارتفاع لوحة التوقيع (px)", type:"number", placeholder:"120" }
+    ]},
+    "تاريخ ووقت": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text", placeholder:"YYYY-MM-DDTHH:mm" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"startDate", label:"أقل تاريخ مسموح", type:"date" },
+        { key:"endDate", label:"أقصى تاريخ مسموح", type:"date" },
+        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] }
+    ]},
+    "تبديل": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"onText", label:"نص الحالة المفعلة", type:"text", placeholder:"نعم" },
+        { key:"offText", label:"نص الحالة غير المفعلة", type:"text", placeholder:"لا" },
+        { key:"defaultOn", label:"الحالة الافتراضية مفعلة", type:"checkbox", checkboxLabel:"يبدأ مفعلاً" }
+    ]},
+    "رابط": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"الرابط الافتراضي", type:"text", placeholder:"https://example.com" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"linkLabel", label:"نص الزر", type:"text", placeholder:"فتح الرابط" }
+    ]},
+    "فاصل صفحات": { props: [
+        { key:"pageLabel", label:"اسم الصفحة التالية (اختياري)", type:"text", placeholder:"الصفحة 2" }
+    ]},
+    "صورة عرض": { props: [
+        { key:"imageUrl", label:"رابط الصورة (URL)", type:"text", placeholder:"https://..." },
+        { key:"altText", label:"نص بديل", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"320" },
+        { key:"heightPx", label:"الارتفاع بالبيكسل", type:"number", placeholder:"200" },
+        { key:"imageAlign", label:"محاذاة الصورة", type:"select", options:["يمين","وسط","يسار"] }
     ]}
 };
 
 (function fdAugmentFieldTypesReadOnly() {
     const roProp = { key:'readOnly', label:'للقراءة فقط', type:'checkbox', checkboxLabel:'حقل للقراءة فقط', col:'col-md-6 col-sm-6 mb-3' };
-    Object.keys(FD_FIELD_TYPES).forEach(k => { FD_FIELD_TYPES[k].props.push({ ...roProp }); });
+    const skip = new Set(['عنوان', 'خط فاصل', 'فاصل صفحات', 'صورة عرض']);
+    Object.keys(FD_FIELD_TYPES).forEach(k => { if (!skip.has(k)) FD_FIELD_TYPES[k].props.push({ ...roProp }); });
 })();
 
 const FD_FILE_TYPE_CHOICES = [
@@ -1428,18 +1475,64 @@ function fdEnsureDateFieldStyles() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.75rem;
-  padding-inline: 0.65rem;
-  border-radius: 8px;
+  min-width: 2.6rem;
+  padding-inline: 0.6rem;
+  background: var(--sa-50, #ecfdf5);
+  color: var(--sa-700, #047857);
+  border-color: var(--gray-200, #e5e7eb);
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn:hover:not([disabled]) {
+  background: var(--sa-100, #d1fae5);
+  color: var(--sa-800, #065f46);
+  border-color: var(--sa-300, #6ee7b7);
 }
 .fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn .bi-calendar3 {
-  font-size: 1.125rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 .fd-date-field-wrap.fd-date-hijri-fallback .fd-date-cal-btn[disabled] {
   opacity: 0.55;
   cursor: not-allowed;
 }
+/* أيقونة التقويم على يسار الحقل: حواف يسرى مدوّرة على الزرّ، ويمنى على المدخل */
+.fd-date-field-wrap .fd-date-cal-left.fd-date-input-group > .fd-date-cal-btn {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-inline-end: 0;
+}
+.fd-date-field-wrap .fd-date-cal-left.fd-date-input-group > .fd-date-control.form-control {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* قوائم الاختيار الأفقية */
+.fd-oc-group.fd-oc-horiz { align-items: center; }
+.fd-oc-group.fd-oc-horiz .fd-oc-item { flex: 0 0 auto; }
+.fd-oc-group.fd-oc-horiz .form-check { display: inline-flex; align-items: center; padding-inline-start: 0; margin: 0; gap: 6px; }
+.fd-oc-group.fd-oc-horiz .form-check-input { margin: 0; }
+.fd-oc-group.fd-oc-horiz .form-check-label { margin: 0; cursor: pointer; }
+
+/* تبديل (Switch) */
+.fd-switch-field .fd-switch-input { width: 2.4rem; height: 1.3rem; cursor: pointer; }
+.fd-switch-field .fd-switch-label { transition: color .15s ease; }
+
+/* حقل الرابط */
+.fd-url-input-group .fd-url-input { direction: ltr; }
+.fd-url-input-group .fd-url-open-btn { white-space: nowrap; font-weight: 600; }
+.fd-url-input-group .fd-url-open-btn .bi { font-size: 0.95rem; }
+
+/* فاصل الصفحات داخل بانية الحقول */
+.fd-page-break { user-select: none; }
+
+/* مرقّم الصفحات للنماذج متعددة الصفحات */
+.fd-form-pager { display: block; }
+.fd-page-dot { transition: transform .15s ease; }
+.fd-page-nav button[disabled] { opacity: 0.55; cursor: not-allowed; }
 
 /* نافذة التقويم — هجري/ميلادي: حجم أوضح، شبكة منتظمة، بدون تلاصق */
 .fd-cal-pop.fd-cal-pop--floating {
@@ -1965,6 +2058,32 @@ function fdIvValidateWrap(wrap) {
         const mn = fdIvParseOptionalInt(props.minLength);
         let mx = fdIvParseOptionalInt(props.maxLength);
         if (mx === null && props.charLimit != null && props.charLimit !== '') mx = fdIvParseOptionalInt(props.charLimit);
+
+        // ── البريد الإلكتروني: صيغة معتمَدة xxx@almadinah.gov.sa ──────────────
+        if (ft === 'البريد الإلكتروني' && raw.trim() !== '') {
+            const ok = /^[A-Za-z0-9._%+\-]+@almadinah\.gov\.sa$/i.test(raw.trim());
+            if (!ok) return 'يجب أن يكون البريد الإلكتروني بصيغة xxx@almadinah.gov.sa';
+        }
+
+        // ── رقم الهاتف: تحقق من الصيغة + النمط + عدد الأرقام المسموح به ──────
+        if (ft === 'رقم الهاتف' && raw.trim() !== '') {
+            const fmt = String(props.phoneFormat || '+966 (9 أرقام)').trim();
+            const ip = String(props.inputPattern || 'أرقام فقط').trim();
+            const v = raw.trim();
+            if (fmt === '+966 (9 أرقام)') {
+                if (!/^[0-9]{9}$/.test(v)) return 'رقم الهاتف بعد +966 يجب أن يكون 9 أرقام بالضبط';
+            } else if (fmt === '05xxxxxxxx (10 أرقام)') {
+                if (!/^05[0-9]{8}$/.test(v)) return 'رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام بالضبط';
+            } else if (fmt === 'دولي') {
+                if (!/^[0-9]{7,15}$/.test(v)) return 'رقم الهاتف الدولي يجب أن يحتوي على 7 إلى 15 رقماً';
+            } else if (fmt === 'تلفون') {
+                if (ip === 'أرقام فقط' && !/^[0-9]+$/.test(v)) return 'يجب أن يحتوي الرقم على أرقام فقط';
+            }
+            if (ip === 'أرقام فقط' && !/^[0-9]+$/.test(v)) return 'يُسمح بإدخال أرقام فقط';
+            if (ip === 'حروف فقط' && !/^[A-Za-z\u0600-\u06FF\s\.\-]+$/.test(v)) return 'يُسمح بإدخال حروف فقط';
+            if (ip === 'حروف وأرقام' && !/^[A-Za-z0-9\u0600-\u06FF\s\.\-]+$/.test(v)) return 'يُسمح بإدخال حروف وأرقام فقط';
+        }
+
         if (mn === null && mx === null) return '';
         if (mn !== null && len < mn) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
         if (mx !== null && len > mx) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
@@ -2214,8 +2333,10 @@ function fdBuildFieldInput(f, opt) {
             inp = `<div class="input-group"${ttAttr}${mk('direction:ltr;')}><span class="input-group-text fw-bold" style="background:var(--sa-50);">+</span><input type="${ie.inpType}" class="form-control" placeholder="${ph || 'XXX XXXXXXXXX'}" value="${defVal}"${reqAttr}${maxLA}${roAttr}${ie.pt}${ie.titleAttr}${ie.inputmode}${dPf}></div>`;
         }
     } else if (f.fieldType==='البريد الإلكتروني') {
-        const pat = props.emailFormat ? ` pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="${fdEscAttr('يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa')}"` : '';
-        inp = `<input type="email" class="form-control" placeholder="${ph}" value="${defVal}"${pat}${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
+        // الصيغة المعتمَدة دائماً: xxx@almadinah.gov.sa — يُفرض على مستوى pattern وعلى مستوى fdIvValidateWrap.
+        const pat = ` pattern="[A-Za-z0-9._%+\\-]+@almadinah\\.gov\\.sa" title="${fdEscAttr('يجب أن يكون البريد الإلكتروني بصيغة xxx@almadinah.gov.sa')}"`;
+        const phEmail = ph || 'name@almadinah.gov.sa';
+        inp = `<input type="email" class="form-control" placeholder="${phEmail}" value="${defVal}"${pat}${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     } else if (f.fieldType==='نص طويل'||f.fieldType==='فقرة') {
         const hPx = props.heightPx ? `height:${props.heightPx}px;` : '';
         inp = `<textarea class="form-control" rows="3" placeholder="${ph}"${reqAttr}${maxL}${minL}${roAttr}${ttAttr}${mk(hPx)}>${(props.defaultValue||'').replace(/</g,'&lt;')}</textarea>`;
@@ -2263,6 +2384,8 @@ function fdBuildFieldInput(f, opt) {
         const roOt = props.readOnly ? ' disabled' : '';
         const otherPh = fdEscAttr('اكتب خياراً آخراً');
         const reqGrp = f.isRequired ? ' data-fd-required="1"' : '';
+        const isHoriz = String(props.optionsOrientation || '').trim() === 'أفقي';
+        const groupCls = isHoriz ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3' : 'fd-oc-group d-flex flex-column gap-1';
         if (!opts.length) {
             inp = `<span class="text-muted"${ttAttr}>—</span>`;
         } else {
@@ -2277,7 +2400,7 @@ function fdBuildFieldInput(f, opt) {
                     : '';
                 body += `<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="radio" name="${gname}" id="${rid}" value="${fdEscAttr(o)}"${sel}${fsdis}${reqOne} data-fd-other="${isOther ? '1' : '0'}" onchange="fdOcChoiceChange(this)"><label class="form-check-label" for="${rid}">${o.replace(/</g, '&lt;')}</label></div>${othBlk}</div>`;
             });
-            inp = `<fieldset class="fd-oc-group border-0 p-0 m-0" data-fd-field-id="${String(f.id ?? '')}" data-fd-oc-mode="single"${reqGrp} style="margin:0;padding:0;border:none;"${ttAttr}${mk()}>${body}</fieldset>`;
+            inp = `<div class="${groupCls}" data-fd-field-id="${String(f.id ?? '')}" data-fd-oc-mode="single"${reqGrp}${ttAttr}${mk()}>${body}</div>`;
         }
     } else if (f.fieldType==='قائمة اختيار متعدد') {
         const opts = props.options ? String(props.options).split(/[\r\n]+/).map(s=>s.trim()).filter(Boolean) : [];
@@ -2288,6 +2411,8 @@ function fdBuildFieldInput(f, opt) {
         const otherPh = fdEscAttr('اكتب خياراً آخراً');
         const gname = `fd_mc_${String(f.id)}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`;
         const reqGrp = f.isRequired ? ' data-fd-required="1"' : '';
+        const isHorizM = String(props.optionsOrientation || '').trim() === 'أفقي';
+        const groupClsM = isHorizM ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3' : 'fd-oc-group d-flex flex-column gap-1';
         if (!opts.length) {
             inp = `<span class="text-muted"${ttAttr}>—</span>`;
         } else {
@@ -2301,14 +2426,14 @@ function fdBuildFieldInput(f, opt) {
                     : '';
                 body += `<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="${gname}[]" id="${cid}" value="${fdEscAttr(o)}" data-fd-other="${isOther ? '1' : '0'}"${checked}${fsdis} onchange="fdOcChoiceChange(this)"><label class="form-check-label" for="${cid}">${o.replace(/</g,'&lt;')}</label></div>${othBlk}</div>`;
             });
-            inp = `<div class="fd-oc-group d-flex flex-column gap-1" data-fd-field-id="${String(f.id ?? '')}"${ttAttr}${mk()} data-fd-oc-mode="multi"${reqGrp}>${body}</div>`;
+            inp = `<div class="${groupClsM}" data-fd-field-id="${String(f.id ?? '')}"${ttAttr}${mk()} data-fd-oc-mode="multi"${reqGrp}>${body}</div>`;
         }
     } else if (f.fieldType==='تاريخ') {
         const cal = String(props.calendarType || 'ميلادي').trim();
         const phDateA11y = fdEscAttr('اختر التاريخ');
         const ttlOpenCal = fdEscAttr('فتح التقويم');
         const ttlHijNA = fdEscAttr('التقويم التفاعلي غير مدعوم — أدخل التاريخ الهجري يدويًا');
-        const grpCls = 'input-group fd-date-input-group';
+        const grpCls = 'input-group fd-date-input-group fd-date-cal-left';
         const btnCls = 'btn btn-outline-secondary fd-date-cal-btn';
         if (cal === 'هجري' && fdHijriIntlSupported()) {
             const uid = `fd_hij_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
@@ -2324,10 +2449,10 @@ function fdBuildFieldInput(f, opt) {
             const disBtn = props.readOnly ? ' disabled' : '';
             const faceRo = props.readOnly ? ' readonly' : '';
             const hidReq = f.isRequired ? ' required' : '';
-            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-hijri-date position-relative"${minAttr}${maxAttr}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" id="${fdEscAttr(uid)}_face" class="form-control fd-date-control fd-hijri-face" autocomplete="off" placeholder="${ph}" aria-label="${phDateA11y}" title="${phDateA11y}" dir="ltr" value="${faceEsc}"${faceRo}><button type="button" class="${btnCls} fd-hijri-btn"${disBtn} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div><input type="hidden" class="fd-hijri-store" id="${fdEscAttr(uid)}_hid" value="${faceEsc}"${hidReq}/></div>`;
+            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-hijri-date position-relative"${minAttr}${maxAttr}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><button type="button" class="${btnCls} fd-hijri-btn"${disBtn} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="text" id="${fdEscAttr(uid)}_face" class="form-control fd-date-control fd-hijri-face" autocomplete="off" placeholder="${ph}" aria-label="${phDateA11y}" title="${phDateA11y}" dir="ltr" value="${faceEsc}"${faceRo}></div><input type="hidden" class="fd-hijri-store" id="${fdEscAttr(uid)}_hid" value="${faceEsc}"${hidReq}/></div>`;
         } else if (cal === 'هجري') {
             const hijPh = fdEscAttr(ph || '1447/06/15 — مثال');
-            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-date-hijri-fallback position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="${hijPh}" aria-label="${phDateA11y}" title="${phDateA11y}" value="${defVal}"${reqAttr}${roAttr}><button type="button" class="${btnCls}" disabled tabindex="-1" title="${ttlHijNA}" aria-label="${ttlHijNA}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
+            inp = `<div class="fd-date-field-wrap fd-date-hijri fd-date-hijri-fallback position-relative"${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><button type="button" class="${btnCls}" disabled tabindex="-1" title="${ttlHijNA}" aria-label="${ttlHijNA}"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="${hijPh}" aria-label="${phDateA11y}" title="${phDateA11y}" value="${defVal}"${reqAttr}${roAttr}></div></div>`;
         } else {
             const uidG = `fd_gr_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
             const minAttrG = props.startDate ? ` data-fd-min="${fdEscAttr(String(props.startDate))}"` : '';
@@ -2340,7 +2465,7 @@ function fdBuildFieldInput(f, opt) {
             }
             const gvEsc = gv ? fdEscAttr(gv) : '';
             const patTip = fdEscAttr('التنسيق: yyyy-mm-dd');
-            inp = `<div class="fd-date-field-wrap fd-date-miladi fd-greg-date position-relative"${minAttrG}${maxAttrG}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><input type="text" id="${fdEscAttr(uidG)}" autocomplete="off" inputmode="numeric" spellcheck="false" pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}$" placeholder="yyyy-mm-dd" class="form-control fd-date-control fd-greg-face fd-greg-datepicker" dir="ltr" value="${gvEsc}" aria-label="${phDateA11y}" title="${patTip}"${reqAttr}${roAttr}><button type="button" class="${btnCls} fd-greg-datepicker-btn"${disBtnG} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div></div>`;
+            inp = `<div class="fd-date-field-wrap fd-date-miladi fd-greg-date position-relative"${minAttrG}${maxAttrG}${ttAttr}${mk('direction:ltr;')}><div class="${grpCls}"><button type="button" class="${btnCls} fd-greg-datepicker-btn"${disBtnG} title="${ttlOpenCal}" aria-label="${ttlOpenCal}"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="text" id="${fdEscAttr(uidG)}" autocomplete="off" inputmode="numeric" spellcheck="false" pattern="^[0-9]{4}-[0-9]{2}-[0-9]{2}$" placeholder="yyyy-mm-dd" class="form-control fd-date-control fd-greg-face fd-greg-datepicker" dir="ltr" value="${gvEsc}" aria-label="${phDateA11y}" title="${patTip}"${reqAttr}${roAttr}></div></div>`;
         }
     } else if (f.fieldType==='وقت') {
         inp = `<input type="time" class="form-control" value="${defVal}"${reqAttr}${roAttr}${ttAttr}${mk()}>`;
@@ -2476,11 +2601,86 @@ function fdBuildFieldInput(f, opt) {
         inp = `<div class="input-group"${ttAttr}${wStyle?` style="${wStyle}"`:''}><input type="number" class="form-control" placeholder="${ph||'0'}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr} style="text-align:left;direction:ltr;${roStyle}"><span class="input-group-text fw-bold" style="background:var(--sa-50);color:var(--sa-700);">${esc(cur)}</span></div>`;
     } else if (f.fieldType === 'تأشير' || f.fieldType === 'توقيع') {
         inp = fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt || {});
+    } else if (f.fieldType === 'تاريخ ووقت') {
+        const minA = props.startDate ? ` min="${fdEscAttr(String(props.startDate))}T00:00"` : '';
+        const maxA = props.endDate   ? ` max="${fdEscAttr(String(props.endDate))}T23:59"` : '';
+        const stepA = String(props.timeFormat || '').trim() === '12 ساعة' ? ' step="60"' : '';
+        inp = `<input type="datetime-local" class="form-control fd-datetime-control" value="${defVal}"${reqAttr}${roAttr}${minA}${maxA}${stepA}${ttAttr}${mk('direction:ltr;')}>`;
+    } else if (f.fieldType === 'تبديل') {
+        const onText = props.onText || 'نعم';
+        const offText = props.offText || 'لا';
+        const checked = props.defaultOn ? ' checked' : '';
+        const dis = props.readOnly ? ' disabled' : '';
+        const uidSw = `fd_sw_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+        inp = `<div class="fd-switch-field d-flex align-items-center gap-2"${ttAttr}${mk()}>` +
+            `<div class="form-check form-switch m-0" style="min-width:48px;">` +
+            `<input class="form-check-input fd-switch-input" type="checkbox" role="switch" id="${fdEscAttr(uidSw)}"${checked}${dis} data-fd-on-text="${fdEscAttr(onText)}" data-fd-off-text="${fdEscAttr(offText)}" onchange="fdSwitchSync(this)">` +
+            `</div>` +
+            `<label for="${fdEscAttr(uidSw)}" class="fd-switch-label mb-0" style="font-size:13px;font-weight:600;color:var(--gray-700);cursor:pointer;">${esc(checked ? onText : offText)}</label>` +
+            `</div>`;
+    } else if (f.fieldType === 'رابط') {
+        const lbl = (props.linkLabel || 'فتح الرابط').trim();
+        const phUrl = ph || 'https://example.com';
+        const uidUrl = `fd_url_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+        const dStyle = wStyle ? ` style="${wStyle}"` : '';
+        inp = `<div class="input-group fd-url-input-group"${ttAttr}${dStyle}>` +
+            `<input type="url" id="${fdEscAttr(uidUrl)}" class="form-control fd-url-input" placeholder="${phUrl}" value="${defVal}"${reqAttr}${roAttr} pattern="https?://.+" title="${fdEscAttr('أدخل رابطاً يبدأ بـ http:// أو https://')}" dir="ltr" style="direction:ltr;${roStyle}">` +
+            `<button type="button" class="btn btn-outline-secondary fd-url-open-btn" onclick="fdUrlOpen('${fdEscAttr(uidUrl)}')" title="${fdEscAttr('فتح الرابط في صفحة جديدة')}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> ${esc(lbl)}</button>` +
+            `</div>`;
+    } else if (f.fieldType === 'فاصل صفحات') {
+        const lbl = (props.pageLabel || '').trim();
+        inp = `<div class="fd-page-break" data-fd-pagebreak="1" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1.5px dashed var(--info-300,#93c5fd);background:var(--info-50,#eff6ff);color:var(--info-700,#1d4ed8);border-radius:10px;font-weight:700;font-size:12.5px;"${ttAttr}>` +
+            `<i class="bi bi-file-earmark-break" aria-hidden="true"></i>` +
+            `<span>فاصل صفحات</span>` +
+            (lbl ? `<span style="margin-inline-start:auto;font-weight:600;color:var(--info-600);">→ ${esc(lbl)}</span>` : '') +
+            `</div>`;
+    } else if (f.fieldType === 'صورة عرض') {
+        const imgUrl = String(props.imageUrl || '').trim();
+        const alt = fdEscAttr(props.altText || f.fieldName || '');
+        const w = props.widthPx ? `${parseInt(props.widthPx,10) || 320}px` : 'auto';
+        const h = props.heightPx ? `${parseInt(props.heightPx,10) || 0}px` : 'auto';
+        const alignMap2 = { 'يمين':'flex-end', 'يسار':'flex-start', 'وسط':'center' };
+        const justify = alignMap2[props.imageAlign] || 'flex-start';
+        if (imgUrl) {
+            inp = `<div class="fd-image-display" style="display:flex;justify-content:${justify};"${ttAttr}><img src="${fdEscAttr(imgUrl)}" alt="${alt}" style="max-width:100%;width:${w};${h !== 'auto' ? 'height:'+h+';' : ''}border-radius:8px;object-fit:contain;border:1px solid var(--gray-200);background:#fff;padding:4px;"></div>`;
+        } else {
+            inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border:2px dashed var(--gray-300);border-radius:10px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف رابط الصورة من خصائص الحقل</div></div>`;
+        }
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     }
 
     return inp;
+}
+
+/** تزامن تسمية زر التبديل (نعم/لا أو المعرّف من خصائص الحقل) مع حالة المربع. */
+function fdSwitchSync(el) {
+    if (!el || !el.classList) return;
+    const wrap = el.closest('.fd-switch-field');
+    if (!wrap) return;
+    const lab = wrap.querySelector('.fd-switch-label');
+    const onTxt = el.getAttribute('data-fd-on-text') || 'نعم';
+    const offTxt = el.getAttribute('data-fd-off-text') || 'لا';
+    if (lab) lab.textContent = el.checked ? onTxt : offTxt;
+}
+
+/** فتح رابط حقل URL في نافذة جديدة (مع حماية noopener). */
+function fdUrlOpen(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    let v = String(el.value || '').trim();
+    if (!v) { el.focus(); return; }
+    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    try {
+        window.open(v, '_blank', 'noopener,noreferrer');
+    } catch (_) {
+        window.location.href = v;
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.fdSwitchSync = fdSwitchSync;
+    window.fdUrlOpen = fdUrlOpen;
 }
 
 function fdSpinArabicDigitsToAscii(s) {
@@ -2807,11 +3007,41 @@ function fdInitDynamicWidgets(root) {
     fdDdlEnsureTreeExpandDelegation();
     (root || document).querySelectorAll('canvas[data-fd-init-sig]').forEach(fdSigBindCanvas);
     (root || document).querySelectorAll('.fd-oc-group').forEach(fdOcInitGroup);
+    (root || document).querySelectorAll('.fd-switch-input').forEach(el => fdSwitchSync(el));
     fdHijriBindInRoot(root);
     fdGregorianDateBindInRoot(root);
     fdFileUploadBindInRoot(root);
     fdBindPhonePatternFilters(root);
     fdIvBindLive(root);
+}
+
+/** التنقل بين صفحات النموذج (التالي/السابق) — يُحدِّث حالة الأزرار والمؤشرات. */
+function fdPagerNav(btn, direction) {
+    const pager = btn && btn.closest ? btn.closest('[data-fd-pager="1"]') : null;
+    if (!pager) return;
+    const total = parseInt(pager.getAttribute('data-fd-page-count') || '1', 10);
+    let cur = parseInt(pager.getAttribute('data-fd-page-current') || '0', 10);
+    cur = Math.max(0, Math.min(total - 1, cur + (direction || 0)));
+    pager.setAttribute('data-fd-page-current', String(cur));
+    pager.querySelectorAll('.fd-form-page').forEach(p => {
+        const idx = parseInt(p.getAttribute('data-fd-page-idx') || '0', 10);
+        p.style.display = idx === cur ? '' : 'none';
+    });
+    pager.querySelectorAll('.fd-page-dot').forEach(d => {
+        const i = parseInt(d.getAttribute('data-fd-page-dot') || '0', 10);
+        d.style.background = i === cur ? 'var(--sa-600,#047857)' : 'var(--gray-300,#d1d5db)';
+    });
+    const numEl = pager.querySelector('.fd-page-num');
+    if (numEl) numEl.textContent = String(cur + 1);
+    const prev = pager.querySelector('.fd-page-prev');
+    const next = pager.querySelector('.fd-page-next');
+    if (prev) prev.disabled = cur === 0;
+    if (next) next.disabled = cur === total - 1;
+    pager.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+if (typeof window !== 'undefined') {
+    window.fdPagerNav = fdPagerNav;
 }
 
 // ─── SECTIONS HELPERS ──────────────────────────────────────────────────────
@@ -2870,20 +3100,77 @@ function fdApplyParsedFieldsData(parsed) {
     fdFields.forEach((f, i) => { if (!f.id) f.id = i + 1; });
     const validFieldIds = new Set(fdFields.map(f => f.id));
     const validSecIds = new Set(fdSections.map(s => s.id));
-    const firstFieldId = fdFields[0]?.id || 0;
-    const firstSecId = fdSections[0]?.id || 1;
-    fdConditionalRules = (parsed.rules || []).map((r, i) => ({
-        id: r.id || (i + 1),
-        isEnabled: r.isEnabled !== false,
-        fieldId: validFieldIds.has(r.fieldId) ? r.fieldId : firstFieldId,
-        operator: FD_RULE_OPERATORS.includes(r.operator) ? r.operator : FD_RULE_OPERATORS[0],
-        value: r.value || '',
-        action: FD_RULE_ACTIONS.includes(r.action) ? r.action : FD_RULE_ACTIONS[0],
-        sectionId: validSecIds.has(r.sectionId) ? r.sectionId : firstSecId
-    }));
+    const firstFieldRef = fdFields[0] ? `field:${fdFields[0].id}` : (fdSections[0] ? `section:${fdSections[0].id}` : '');
+    const firstAltRef = (fdSections[0] ? `section:${fdSections[0].id}` : (fdFields[0] ? `field:${fdFields[0].id}` : ''));
+    fdConditionalRules = (parsed.rules || []).map((r, i) => {
+        // قراءة sourceRef/targetRef الموحَّدَين، مع توافق رجعي مع fieldId/sectionId القديمة
+        let src = fdParseRuleRef(r.sourceRef);
+        if (!src && r.fieldId != null) src = { kind: 'field', id: r.fieldId };
+        if (!src || !fdRuleRefIsValid(src, validFieldIds, validSecIds)) src = fdParseRuleRef(firstFieldRef) || { kind: 'field', id: 0 };
+
+        let tgt = fdParseRuleRef(r.targetRef);
+        if (!tgt && r.sectionId != null) tgt = { kind: 'section', id: r.sectionId };
+        if (!tgt || !fdRuleRefIsValid(tgt, validFieldIds, validSecIds)) tgt = fdParseRuleRef(firstAltRef) || { kind: 'section', id: 1 };
+        // تجنّب تطابق الهدف مع المصدر
+        if (fdRuleRefEqual(src, tgt)) {
+            const alt = fdRuleFirstRefExcluding(src, fdFields, fdSections);
+            if (alt) tgt = alt;
+        }
+
+        const rawAction = r.action || FD_RULE_ACTIONS[0];
+        const migratedAction = FD_RULE_ACTION_LEGACY[rawAction] || rawAction;
+        return {
+            id: r.id || (i + 1),
+            isEnabled: r.isEnabled !== false,
+            sourceRef: fdSerializeRuleRef(src),
+            operator: FD_RULE_OPERATORS.includes(r.operator) ? r.operator : FD_RULE_OPERATORS[0],
+            value: r.value || '',
+            action: FD_RULE_ACTIONS.includes(migratedAction) ? migratedAction : FD_RULE_ACTIONS[0],
+            targetRef: fdSerializeRuleRef(tgt)
+        };
+    });
     const ruleIds = fdConditionalRules.map(r => r.id);
     fdRuleSeq = (ruleIds.length ? Math.max(...ruleIds) : 0) + 1;
     if (fdStep1State) fdStep1State.titleAppearance = fdNormalizeTitleAppearance(parsed.titleAppearance);
+}
+
+/** "field:123" → { kind:'field', id:123 } ;  "section:1" → { kind:'section', id:1 }. */
+function fdParseRuleRef(ref) {
+    if (ref == null) return null;
+    const s = String(ref).trim();
+    if (!s) return null;
+    const m = s.match(/^(field|section)\s*:\s*(\d+)$/i);
+    if (!m) return null;
+    return { kind: m[1].toLowerCase(), id: parseInt(m[2], 10) };
+}
+
+function fdSerializeRuleRef(ref) {
+    if (!ref || !ref.kind || ref.id == null) return '';
+    return `${ref.kind}:${ref.id}`;
+}
+
+function fdRuleRefIsValid(ref, fieldIds, secIds) {
+    if (!ref) return false;
+    if (ref.kind === 'field') return fieldIds.has(ref.id);
+    if (ref.kind === 'section') return secIds.has(ref.id);
+    return false;
+}
+
+function fdRuleRefEqual(a, b) {
+    return !!(a && b && a.kind === b.kind && a.id === b.id);
+}
+
+/** أول مرجع متاح يختلف عن المرجع الممرَّر (يُفضّل القسم ثم الحقل). */
+function fdRuleFirstRefExcluding(excludeRef, fields, sections) {
+    for (const s of sections) {
+        const ref = { kind: 'section', id: s.id };
+        if (!fdRuleRefEqual(ref, excludeRef)) return ref;
+    }
+    for (const f of fields) {
+        const ref = { kind: 'field', id: f.id };
+        if (!fdRuleRefEqual(ref, excludeRef)) return ref;
+    }
+    return null;
 }
 
 function fdSyncSectionFieldSelect() {
@@ -3097,7 +3384,7 @@ function fdRenderTable() {
     const tbody = document.getElementById('fdBody');
     if (!tbody) return;
     if (!fdData.length) {
-        tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-file-earmark-x"></i><p>لا توجد نماذج بعد</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13"><div class="fd-empty-state"><i class="bi bi-file-earmark-x"></i><p>لا توجد نماذج بعد</p></div></td></tr>`;
         return;
     }
     tbody.innerHTML = fdData.map((f,i) => {
@@ -3108,8 +3395,15 @@ function fdRenderTable() {
         } else {
             toggle = `<label class="fd-toggle fd-toggle-readonly" title="عرض فقط"><input type="checkbox" ${f.isActive?'checked':''} disabled onclick="event.preventDefault();return false;"><span class="fd-slider"></span></label>`;
         }
+        const publicIdCell = f.publicId
+            ? `<span class="fd-publicid-badge">${esc(f.publicId)}</span>`
+            : `<span class="fd-activever-empty">—</span>`;
+        const activeVerCell = f.activeVersionLabel
+            ? `<span class="fd-activever-badge">${esc(f.activeVersionLabel)}</span>`
+            : `<span class="fd-activever-empty">—</span>`;
         return `<tr>
             <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i+1}</td>
+            <td style="text-align:center;">${publicIdCell}</td>
             <td style="font-weight:600;">${esc(f.name)}</td>
             <td>${esc(f.workspaceName)}</td>
             <td>${esc(f.formClassName)}</td>
@@ -3117,6 +3411,7 @@ function fdRenderTable() {
             <td>${esc(f.templateName)}</td>
             <td style="text-align:center;">${fdOwnershipBadge(f.ownership)}</td>
             <td style="font-size:13px;">${esc(f.orgUnitName)}</td>
+            <td style="text-align:center;">${activeVerCell}</td>
             <td style="text-align:center;">${fdStatusBadge(f.status)}</td>
             <td style="text-align:center;${disp}">${toggle}</td>
             <td style="text-align:center;">${fdActions(f)}</td>
@@ -3148,9 +3443,15 @@ function fdActions(f) {
         h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`;
         h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
     }
+    h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
     if (fdIsAdmin||f.status==='draft'||f.status==='rejected')
         h += `<button class="fd-action-btn fd-action-btn-delete" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`;
     return h + '</div>';
+}
+
+function fdGoToVersions(formId) {
+    if (!formId) return;
+    window.location.href = `/FormDefinitionVersions/Index?id=${encodeURIComponent(formId)}`;
 }
 
 // ─── TOGGLE ACTIVE ────────────────────────────────────────────────────────────
@@ -3164,6 +3465,7 @@ async function fdToggle(id, el) {
 
 // ─── WIZARD SHOW ──────────────────────────────────────────────────────────────
 function fdShowCreate() {
+    fdVersionMode = false; fdVersionFormId = 0; fdVersionEditId = null; fdVersionName = '';
     fdEditId = null; fdStep = 1; fdFields = []; fdEditingIdx = -1; fdCurrentTemplate = null;
     fdBindingLookupsLoaded = false;
     fdDropdownItemsCache = {};
@@ -3178,6 +3480,7 @@ function fdShowCreate() {
 
 async function fdShowEdit(id) {
     try {
+        fdVersionMode = false; fdVersionFormId = 0; fdVersionEditId = null; fdVersionName = '';
         const res = await apiFetch(`/FormDefinitions/GetFormDefinition?id=${id}`);
         if (!res.success) return showToast(res.message, 'error');
         fdBindingLookupsLoaded = false;
@@ -3214,6 +3517,8 @@ function fdRenderStep(data) {
     ['fdStep1El','fdStep2El','fdStep3El','fdStep4El'].forEach((id,idx) => {
         const el=document.getElementById(id); if(!el) return;
         el.className='fd-step'+(idx+1===fdStep?' active':idx+1<fdStep?' done':'');
+        // إخفاء خطوة "البيانات الأساسية" عند وضع الإصدار
+        if (idx === 0) el.style.display = fdVersionMode ? 'none' : '';
     });
     const body = document.getElementById('fdWizardBody');
     const foot = document.getElementById('fdWizardFoot');
@@ -3225,7 +3530,11 @@ function fdRenderStep(data) {
         body.innerHTML = fdStep2Html();
         fdRenderFieldsTable();
         fdResetFieldForm();
-        foot.innerHTML = `<button class="fd-cancel-btn" onclick="fdGoStepBack(2)"><i class="bi bi-arrow-right-short"></i> السابق</button>
+        // في وضع الإصدار: لا يوجد "السابق" لأن خطوة 1 محذوفة
+        const backBtn2 = fdVersionMode
+            ? `<div></div>`
+            : `<button class="fd-cancel-btn" onclick="fdGoStepBack(2)"><i class="bi bi-arrow-right-short"></i> السابق</button>`;
+        foot.innerHTML = `${backBtn2}
         <button class="fd-save-btn send" onclick="fdGoStep3()"><i class="bi bi-arrow-left-short"></i> التالي</button>`;
     } else if (fdStep===3) {
         body.innerHTML = fdStep3Html();
@@ -3235,8 +3544,14 @@ function fdRenderStep(data) {
     } else {
         body.innerHTML = fdStep4Html();
         fdInitDynamicWidgets(body);
-        const primaryActionLabel = fdIsAdmin ? 'نشر النموذج' : 'إرسال للاعتماد';
-        const primaryActionIcon  = fdIsAdmin ? 'bi-upload' : 'bi-send-fill';
+        let primaryActionLabel, primaryActionIcon;
+        if (fdVersionMode) {
+            primaryActionLabel = fdIsAdmin ? 'اعتماد وتفعيل الإصدار' : 'اعتماد الإصدار';
+            primaryActionIcon  = 'bi-check-circle-fill';
+        } else {
+            primaryActionLabel = fdIsAdmin ? 'نشر النموذج' : 'إرسال للاعتماد';
+            primaryActionIcon  = fdIsAdmin ? 'bi-upload' : 'bi-send-fill';
+        }
         foot.innerHTML = `<button class="fd-cancel-btn" onclick="fdGoStepBack(4)"><i class="bi bi-arrow-right-short"></i> السابق</button>
         <div class="d-flex gap-2">
             <button class="fd-save-btn draft" onclick="fdSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
@@ -3287,7 +3602,7 @@ function fdStep1Html(d) {
         </div>
         <div class="fd-form-row">
             <div class="fd-form-group"><label><span class="required-star">*</span> مساحة العمل</label><select class="form-select" id="fdFWs"><option value="">-- اختر --</option>${ws}</select></div>
-            <div class="fd-form-group"><label><span class="required-star">*</span> القالب المستخدم</label><select class="form-select" id="fdFTpl"><option value="">-- اختر --</option>${tpl}</select></div>
+            <div class="fd-form-group"><label>القالب المستخدم <span style="font-weight:400;color:var(--gray-500);font-size:12px;"></span></label><select class="form-select" id="fdFTpl"><option value="">— بدون قالب —</option>${tpl}</select></div>
         </div>
     </div>`;
 }
@@ -3553,7 +3868,8 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
 
     // ── fields HTML ──────────────────────────────────────────────────────────
     const renderField = f => {
-        const isStructural = f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل';
+        const isStructural = f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل'
+            || f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض';
         const colClass = fdDisplayLayoutColClass(f.displayLayout);
         let _tipPo = {}; try { _tipPo = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
         const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (_tipPo.tooltipText || '')).trim();
@@ -3579,6 +3895,55 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         </div>`;
     };
 
+    /** يُقسّم تسلسل الأقسام/الحقول إلى صفحات بناءً على حقول «فاصل صفحات». */
+    function fdBuildPages(allFields, allSections) {
+        const pages = [];
+        let cur = { label: '', sectionsMap: new Map() };
+        const orderedSections = allSections.slice();
+        // اقرأ الحقول ضمن ترتيب الأقسام
+        const fieldsBySection = new Map();
+        orderedSections.forEach(sec => fieldsBySection.set(sec.id, []));
+        allFields.forEach(f => {
+            const sid = f.sectionId || (orderedSections[0] ? orderedSections[0].id : 1);
+            if (!fieldsBySection.has(sid)) fieldsBySection.set(sid, []);
+            fieldsBySection.get(sid).push(f);
+        });
+        for (const sec of orderedSections) {
+            const items = fieldsBySection.get(sec.id) || [];
+            for (const f of items) {
+                if (f.fieldType === 'فاصل صفحات') {
+                    pages.push(cur);
+                    let nextLabel = '';
+                    try { const _p = JSON.parse(f.propertiesJson || '{}'); nextLabel = String(_p.pageLabel || '').trim(); } catch (_) {}
+                    cur = { label: nextLabel, sectionsMap: new Map() };
+                    continue;
+                }
+                if (!cur.sectionsMap.has(sec.id)) cur.sectionsMap.set(sec.id, []);
+                cur.sectionsMap.get(sec.id).push(f);
+            }
+        }
+        pages.push(cur);
+        return pages;
+    }
+
+    function fdRenderPageContent(pageObj, idx, totalPages) {
+        const showSectionTitles = sections.length > 1;
+        const sectionsHtml = sections.map(sec => {
+            const items = pageObj.sectionsMap.get(sec.id) || [];
+            if (!items.length && !showSectionTitles) return '';
+            const secRibbon = hasTpl
+                ? 'margin:12px 0 8px;padding:8px 12px;background:var(--gray-50);border-inline-start:4px solid var(--gray-300);border-radius:8px;font-weight:800;font-size:14px;color:var(--gray-800);font-style:normal;'
+                : 'margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;';
+            const head = showSectionTitles ? `<div style="${secRibbon}">${esc(sec.title)}</div>` : '';
+            if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
+            return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
+        }).join('');
+        const labelHtml = pageObj.label
+            ? `<div style="font-size:12.5px;font-weight:700;color:var(--info-700);background:var(--info-50);padding:4px 12px;border-radius:999px;display:inline-block;margin-bottom:8px;">${esc(pageObj.label)}</div>`
+            : '';
+        return `<div class="fd-form-page" data-fd-page-idx="${idx}" data-fd-page-total="${totalPages}" style="${idx === 0 ? '' : 'display:none;'}">${labelHtml}${sectionsHtml}</div>`;
+    }
+
     let fieldsHtml = '';
     if (!fields.length) {
         fieldsHtml = `<div class="text-center py-4" style="color:var(--gray-400);font-style:normal;">
@@ -3586,19 +3951,39 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
             لم تُضف حقول بعد
         </div>`;
     } else {
-        const showSectionTitles = sections.length > 1;
-        fieldsHtml = sections.map(sec => {
-            const items = fields.filter(f => (f.sectionId || sections[0].id) === sec.id);
-            if (!items.length && !showSectionTitles) return '';
-            const secRibbon = hasTpl
-                ? 'margin:12px 0 8px;padding:8px 12px;background:var(--gray-50);border-inline-start:4px solid var(--gray-300);border-radius:8px;font-weight:800;font-size:14px;color:var(--gray-800);font-style:normal;'
-                : 'margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;';
-            const head = showSectionTitles
-                ? `<div style="${secRibbon}">${esc(sec.title)}</div>`
-                : '';
-            if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
-            return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
-        }).join('');
+        const pages = fdBuildPages(fields, sections);
+        if (pages.length <= 1) {
+            // مسار غير مُجزَّأ — يحافظ على السلوك القديم
+            const showSectionTitles = sections.length > 1;
+            fieldsHtml = sections.map(sec => {
+                const items = fields.filter(f => (f.sectionId || sections[0].id) === sec.id);
+                if (!items.length && !showSectionTitles) return '';
+                const secRibbon = hasTpl
+                    ? 'margin:12px 0 8px;padding:8px 12px;background:var(--gray-50);border-inline-start:4px solid var(--gray-300);border-radius:8px;font-weight:800;font-size:14px;color:var(--gray-800);font-style:normal;'
+                    : 'margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;';
+                const head = showSectionTitles
+                    ? `<div style="${secRibbon}">${esc(sec.title)}</div>`
+                    : '';
+                if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
+                return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
+            }).join('');
+        } else {
+            const pagesHtml = pages.map((p, i) => fdRenderPageContent(p, i, pages.length)).join('');
+            const indicatorHtml = pages.map((_, i) =>
+                `<span class="fd-page-dot" data-fd-page-dot="${i}" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:${i === 0 ? 'var(--sa-600,#047857)' : 'var(--gray-300,#d1d5db)'};transition:background-color .15s ease;"></span>`
+            ).join('');
+            fieldsHtml = `<div class="fd-form-pager" data-fd-pager="1" data-fd-page-current="0" data-fd-page-count="${pages.length}">
+                <div class="fd-form-pages">${pagesHtml}</div>
+                <div class="fd-page-nav" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px dashed var(--gray-200);">
+                    <button type="button" class="btn btn-outline-secondary btn-sm fd-page-prev" onclick="fdPagerNav(this,-1)" disabled><i class="bi bi-chevron-right" aria-hidden="true"></i> السابق</button>
+                    <div class="fd-page-info d-flex align-items-center gap-2" style="font-size:12px;color:var(--gray-500);font-weight:600;">
+                        <span class="fd-page-dots d-flex align-items-center gap-1">${indicatorHtml}</span>
+                        <span class="fd-page-label">صفحة <span class="fd-page-num">1</span> من ${pages.length}</span>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm fd-page-next" onclick="fdPagerNav(this,1)">التالي <i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                </div>
+            </div>`;
+        }
     }
 
     // ── template layout (مطابقة إدارة القوالب: لا نفرض لون العلامة على الخط الفاصل، ولا خلفية للتذييل، ونُظهر العلامة المائية) ──
@@ -3692,18 +4077,22 @@ function fdStep3Html() {
 }
 
 function fdAddRule() {
-    if (!fdFields.length) {
-        showToast('أضف حقولاً أولاً قبل إضافة قواعد المنطق الشرطي', 'error');
+    if (!fdFields.length && !fdSections.length) {
+        showToast('أضف حقولاً أو أقساماً أولاً قبل إضافة قواعد المنطق الشرطي', 'error');
         return;
     }
+    const sourceRef = fdFields[0] ? `field:${fdFields[0].id}` : (fdSections[0] ? `section:${fdSections[0].id}` : '');
+    const sourceParsed = fdParseRuleRef(sourceRef);
+    const targetParsedFallback = fdRuleFirstRefExcluding(sourceParsed, fdFields, fdSections);
+    const targetRef = fdSerializeRuleRef(targetParsedFallback) || sourceRef;
     const rule = {
         id: fdRuleSeq++,
         isEnabled: true,
-        fieldId: fdFields[0]?.id || 0,
+        sourceRef,
         operator: FD_RULE_OPERATORS[0],
         value: '',
         action: FD_RULE_ACTIONS[0],
-        sectionId: fdSections[0]?.id || 1
+        targetRef
     };
     fdConditionalRules.push(rule);
     fdRenderRules();
@@ -3724,6 +4113,15 @@ function fdUpdateRule(id, patch) {
     if (!r) return;
     Object.assign(r, patch);
     if (FD_RULE_NO_VALUE.has(r.operator)) r.value = '';
+    // عند تغيير المصدر: إذا تطابق مع الهدف نختار أول مرجع مختلف للهدف
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'sourceRef')) {
+        const src = fdParseRuleRef(r.sourceRef);
+        const tgt = fdParseRuleRef(r.targetRef);
+        if (src && tgt && fdRuleRefEqual(src, tgt)) {
+            const alt = fdRuleFirstRefExcluding(src, fdFields, fdSections);
+            if (alt) r.targetRef = fdSerializeRuleRef(alt);
+        }
+    }
     fdRenderRules();
 }
 
@@ -3737,11 +4135,40 @@ function fdRenderRules() {
     host.innerHTML = fdConditionalRules.map((r, idx) => fdRuleCardHtml(r, idx + 1)).join('');
 }
 
+/** خيارات موحَّدة: الأقسام أولاً ثم الحقول، مع إمكانية استبعاد مرجع معيّن (لتفادي اختيار نفس العنصر في الجهتين). */
+function fdRuleBuildUnifiedOptions(selectedRef, excludeRef) {
+    let html = '';
+    if (fdSections.length) {
+        html += '<optgroup label="الأقسام">';
+        fdSections.forEach(s => {
+            const ref = `section:${s.id}`;
+            if (excludeRef && ref === excludeRef) return;
+            const sel = ref === selectedRef ? ' selected' : '';
+            html += `<option value="${ref}"${sel}> ${esc(s.title || ('القسم ' + s.id))}</option>`;
+        });
+        html += '</optgroup>';
+    }
+    if (fdFields.length) {
+        html += '<optgroup label="الحقول">';
+        fdFields.forEach(f => {
+            // فاصل الصفحات وصورة العرض هياكل عرض فقط — لا تظهر في المنطق الشرطي
+            if (f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض' || f.fieldType === 'خط فاصل' || f.fieldType === 'عنوان') return;
+            const ref = `field:${f.id}`;
+            if (excludeRef && ref === excludeRef) return;
+            const sel = ref === selectedRef ? ' selected' : '';
+            const typeBadge = f.fieldType ? ` [${f.fieldType}]` : '';
+            html += `<option value="${ref}"${sel}>${esc(f.fieldName || ('حقل ' + f.id))}${esc(typeBadge)}</option>`;
+        });
+        html += '</optgroup>';
+    }
+    return html || '<option value="">— لا توجد عناصر —</option>';
+}
+
 function fdRuleCardHtml(r, n) {
-    const fieldOpts = fdFields.map(f => `<option value="${f.id}" ${f.id === r.fieldId ? 'selected' : ''}>${esc(f.fieldName || ('حقل ' + f.id))}</option>`).join('');
     const opOpts = FD_RULE_OPERATORS.map(op => `<option value="${esc(op)}" ${op === r.operator ? 'selected' : ''}>${esc(op)}</option>`).join('');
     const actOpts = FD_RULE_ACTIONS.map(a => `<option value="${esc(a)}" ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('');
-    const secOpts = fdSections.map(s => `<option value="${s.id}" ${s.id === r.sectionId ? 'selected' : ''}>${esc(s.title)}</option>`).join('');
+    const sourceOpts = fdRuleBuildUnifiedOptions(r.sourceRef || '', null);
+    const targetOpts = fdRuleBuildUnifiedOptions(r.targetRef || '', r.sourceRef || '');
     const valDisabled = FD_RULE_NO_VALUE.has(r.operator);
     return `<div class="fd-rule-card" style="background:#fff;border:1.5px solid var(--gray-200);border-radius:12px;padding:16px 18px 14px;margin-top:14px;position:relative;">
         <div class="d-flex align-items-center justify-content-between" style="margin-bottom:14px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;">
@@ -3761,8 +4188,8 @@ function fdRuleCardHtml(r, n) {
         </div>
         <div class="row g-2">
             <div class="col-md-4">
-                <label class="small fw-bold text-muted">الحقل <span class="required-star">*</span></label>
-                <select class="form-select form-select-sm" onchange="fdUpdateRule(${r.id}, { fieldId: parseInt(this.value, 10) })">${fieldOpts}</select>
+                <label class="small fw-bold text-muted">الحقل / القسم <span class="required-star">*</span></label>
+                <select class="form-select form-select-sm" onchange="fdUpdateRule(${r.id}, { sourceRef: this.value })">${sourceOpts}</select>
             </div>
             <div class="col-md-4">
                 <label class="small fw-bold text-muted">الشرط <span class="required-star">*</span></label>
@@ -3777,8 +4204,8 @@ function fdRuleCardHtml(r, n) {
                 <select class="form-select form-select-sm" onchange="fdUpdateRule(${r.id}, { action: this.value })">${actOpts}</select>
             </div>
             <div class="col-md-6">
-                <label class="small fw-bold text-muted">القسم <span class="required-star">*</span></label>
-                <select class="form-select form-select-sm" onchange="fdUpdateRule(${r.id}, { sectionId: parseInt(this.value, 10) })">${secOpts}</select>
+                <label class="small fw-bold text-muted">الحقل / القسم <span class="required-star">*</span></label>
+                <select class="form-select form-select-sm" onchange="fdUpdateRule(${r.id}, { targetRef: this.value })">${targetOpts}</select>
             </div>
         </div>
     </div>`;
@@ -3797,7 +4224,6 @@ async function fdGoStep2() {
     if (!s.formClassId) return showToast('أصناف النماذج مطلوبة','error');
     if (!s.typeId) return showToast('نوع النموذج مطلوب','error');
     if (!s.wsId) return showToast('مساحة العمل مطلوبة','error');
-    if (!s.tplId) return showToast('القالب مطلوب','error');
     fdStep1State = s;
     await fdEnsureFieldBindingLookups();
     fdStep=2; fdRenderStep();
@@ -3822,20 +4248,34 @@ function fdSyncRulesAfterFieldChanges() {
     const fieldIds = new Set(fdFields.map(f => f.id));
     const sectionIds = new Set(fdSections.map(s => s.id));
     fdConditionalRules.forEach(r => {
-        if (!fieldIds.has(r.fieldId)) r.fieldId = fdFields[0]?.id || 0;
-        if (!sectionIds.has(r.sectionId)) r.sectionId = fdSections[0]?.id || 1;
+        // التحقق من صلاحية المرجع المصدر؛ إذا أُزيل العنصر نختار أول حقل ثم أول قسم
+        let src = fdParseRuleRef(r.sourceRef);
+        if (!src || !fdRuleRefIsValid(src, fieldIds, sectionIds)) {
+            const fb = fdFields[0]
+                ? { kind: 'field', id: fdFields[0].id }
+                : (fdSections[0] ? { kind: 'section', id: fdSections[0].id } : null);
+            r.sourceRef = fdSerializeRuleRef(fb);
+            src = fb;
+        }
+        let tgt = fdParseRuleRef(r.targetRef);
+        if (!tgt || !fdRuleRefIsValid(tgt, fieldIds, sectionIds) || (src && fdRuleRefEqual(src, tgt))) {
+            const alt = fdRuleFirstRefExcluding(src, fdFields, fdSections);
+            r.targetRef = fdSerializeRuleRef(alt);
+        }
     });
 }
 
 async function fdGoStep4() {
     const tplId = parseInt(fdStep1State?.tplId || '0');
-    fdCurrentTemplate = null;
     if (tplId > 0) {
         try {
             const res = await apiFetch(`/FormDefinitions/GetTemplateForPreview?id=${tplId}`);
             if (res && res.success) fdCurrentTemplate = res.data;
         } catch {}
+    } else {
+        if (!fdEditId && !fdVersionMode) fdCurrentTemplate = null;
     }
+    // ملاحظة: في وضع الإصدار يكون القالب محمّلاً مسبقاً قبل فتح المعالج، فلا يُمسح إن لم نعِد جلبه.
     await fdPrefetchBindingCachesForFields();
     fdStep = 4;
     fdRenderStep();
@@ -3956,7 +4396,9 @@ function fdAddField() {
     const secSel = document.getElementById('fdFieldSection');
     const secId = secSel ? (parseInt(secSel.value, 10) || fdActiveSectionId) : fdActiveSectionId;
     const isReadOnly = !!props.readOnly;
-    const isRequired = !isReadOnly && document.getElementById('fdFieldRequired')?.value === '1';
+    const structuralTypes = new Set(['عنوان', 'خط فاصل', 'فاصل صفحات', 'صورة عرض']);
+    const isStructural = structuralTypes.has(type);
+    const isRequired = !isReadOnly && !isStructural && document.getElementById('fdFieldRequired')?.value === '1';
     const tooltipText = document.getElementById('fdFieldTooltip')?.value?.trim() || '';
     const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, sectionId: secId, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
@@ -4103,13 +4545,39 @@ function fdCollect1() {
 
 // ─── SAVE ─────────────────────────────────────────────────────────────────────
 async function fdSave(sendForApproval) {
-    const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
-    if (!s.name) return showToast('اسم النموذج مطلوب','error');
     if (fdStep === 4) {
         const host = document.getElementById('fdWizardBody');
         const vErr = host ? fdValidateInteractivePreview(host) : '';
         if (vErr) return showToast(vErr, 'error');
     }
+
+    // ── وضع إنشاء/تحديث إصدار نسخة ───────────────────────────────────────────
+    if (fdVersionMode) {
+        if (!fdVersionFormId) return showToast('النموذج المرتبط غير محدد', 'error');
+        const versionPayload = { fieldsJson: fdSerializeFieldsJson(), sendForApproval };
+        try {
+            let res;
+            if (fdVersionEditId) {
+                versionPayload.id = fdVersionEditId;
+                res = await apiFetch('/FormDefinitionVersions/UpdateVersion', 'POST', versionPayload);
+            } else {
+                versionPayload.formDefinitionId = fdVersionFormId;
+                res = await apiFetch('/FormDefinitionVersions/AddVersion', 'POST', versionPayload);
+            }
+            if (res && res.success) {
+                const okMsg = sendForApproval
+                    ? (fdIsAdmin ? 'تم اعتماد الإصدار وتفعيله' : 'تم حفظ الإصدار')
+                    : 'تم حفظ الإصدار كمسودة';
+                showToast(okMsg, 'success');
+                fdWizModal().hide();
+                if (typeof fdvLoad === 'function') fdvLoad();
+            } else showToast((res && res.message) || 'خطأ في الحفظ', 'error');
+        } catch { showToast('خطأ في الاتصال بالخادم', 'error'); }
+        return;
+    }
+
+    const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
+    if (!s.name) return showToast('اسم النموذج مطلوب','error');
     const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, workspaceId:s.wsId, templateId:s.tplId, fieldsJson:fdSerializeFieldsJson(), sendForApproval };
     try {
         let res;

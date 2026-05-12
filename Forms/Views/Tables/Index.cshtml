@@ -95,6 +95,48 @@
 .rt-spinner-group .rt-spin-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .rt-star-rating .rt-star-icon { transition:color .15s; user-select:none; }
 .rt-star-rating .rt-star-icon:hover { transform:scale(1.2); }
+/* شجرة الوحدة التنظيمية (فلتر) — نفس أسلوب اضافه مستفيد / القوائم المنسدلة */
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
+.bnf-ou-tree-row:hover { background:var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background:var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none !important; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
+.bnf-ou-tree-exp:active { transform:scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.bnf-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
+
+/* تنسيق حقل التاريخ — مطابق للنماذج المستخدمة (أيقونة على اليسار، بطاقة موحَّدة) */
+.rt-preview-form-table .fd-date-field-wrap,
+.rt-modal-body .fd-date-field-wrap { display:block; }
+.fd-date-field-wrap .fd-date-input-group { display:flex; align-items:stretch; direction:ltr; flex-direction:row; }
+.fd-date-field-wrap .fd-date-input-group > .fd-date-control.form-control { flex:1 1 auto; min-width:0; text-align:left; direction:ltr; min-height:calc(1.5em + 0.75rem + 2px); font-variant-numeric:tabular-nums; }
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn { display:inline-flex; align-items:center; justify-content:center; min-width:2.6rem; padding-inline:0.6rem; background:var(--sa-50, #ecfdf5); color:var(--sa-700, #047857); border:1px solid var(--gray-200, #e5e7eb); transition:background-color .15s ease, color .15s ease, border-color .15s ease; cursor:pointer; }
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn:hover:not([disabled]) { background:var(--sa-100, #d1fae5); color:var(--sa-800, #065f46); border-color:var(--sa-300, #6ee7b7); }
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn .bi-calendar3 { font-size:1.1rem; line-height:1; }
+.fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn[disabled] { opacity:0.55; cursor:not-allowed; }
+.fd-date-field-wrap .fd-date-cal-left.fd-date-input-group > .fd-date-cal-btn { border-top-left-radius:8px; border-bottom-left-radius:8px; border-top-right-radius:0; border-bottom-right-radius:0; border-inline-end:0; }
+.fd-date-field-wrap .fd-date-cal-left.fd-date-input-group > .fd-date-control.form-control { border-top-right-radius:8px; border-bottom-right-radius:8px; border-top-left-radius:0; border-bottom-left-radius:0; }
+/* إخفاء أيقونة المتصفح الافتراضية لحقل type=date حتى نُظهِر زر التقويم لدينا فقط */
+.fd-date-field-wrap input.fd-date-control[type="date"]::-webkit-calendar-picker-indicator { opacity:0; display:none; }
+.fd-date-field-wrap input.fd-date-control[type="date"]::-webkit-inner-spin-button { display:none; }
+
+/* الدوار الرقمي — مطابق لشكل النماذج المستخدمة */
+.rt-spinner-group.fd-spinner-group .btn-outline-secondary { padding:4px 10px; }
+.rt-spinner-group.fd-spinner-group .fd-spin-input { text-align:center; direction:ltr; font-weight:700; }
+
+/* مجموعات الاختيارات (واحد/متعدد) — أفقي/عمودي مطابق للنماذج المستخدمة */
+.fd-oc-group { width:100%; }
+.fd-oc-group.fd-oc-vert { display:flex; flex-direction:column; gap:6px; }
+.fd-oc-group.fd-oc-horiz { display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+.fd-oc-group.fd-oc-horiz .fd-oc-item { flex:0 0 auto; }
+.fd-oc-group.fd-oc-horiz .form-check { display:inline-flex; align-items:center; padding-inline-start:0; margin:0; gap:6px; }
+.fd-oc-group.fd-oc-horiz .form-check-input { margin:0; }
+.fd-oc-group.fd-oc-horiz .form-check-label { margin:0; cursor:pointer; }
+.fd-oc-group .form-check { margin-bottom:0; }
+
 @@media (max-width:768px) { .rt-form-row { grid-template-columns:1fr; } }
 </style>
 
@@ -125,9 +167,13 @@
         <option value="عام">عام</option>
         <option value="خاص">خاص</option>
     </select>
-    <select class="rt-filter-select form-select" id="rtFilterOrgUnit" onchange="rtApplyFilters()">
-        <option value="">قائمة بالوحدات التنظيمية</option>
-    </select>
+    <div class="bnf-ou-tree-wrap" style="min-width:200px;max-width:280px;position:relative;">
+        <input type="hidden" id="rtFilterOrgUnit" value="">
+        <button type="button" class="rt-filter-select form-select bnf-ou-tree-trigger text-end w-100" id="rtFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="rtFilterOuLabel">قائمة بالوحدات التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="rtFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+    </div>
     <button class="rt-clear-btn" onclick="rtClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 

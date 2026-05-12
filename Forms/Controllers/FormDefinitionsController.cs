@@ -35,6 +35,9 @@ public class FormDefinitionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
 
         var all = await _ds.ListFormDefinitionsAsync();
+        // ملء تلقائي: المعرف العام FRM-#### + الإصدار الافتراضي V:1.0 للنماذج القديمة
+        await BackfillPublicIdsAndDefaultVersionsAsync(all);
+        all = await _ds.ListFormDefinitionsAsync();
         var isAdmin = CurrentUserRole == "Admin";
 
         // Role filter
@@ -90,21 +93,38 @@ public class FormDefinitionsController : BaseController
             workspacesForSelect = activeWorkspaces.Where(w => w.OrganizationalUnitId == myUnitId).ToList();
         }
 
-        var data = all.Select(f => new
+        var allVersions = await _ds.ListFormDefinitionVersionsAsync(0); // returns empty (formId=0)
+        // load full list of versions in one shot via per-form lookup is heavy; instead build map by iterating
+        var versionsByForm = new Dictionary<int, List<FormDefinitionVersion>>();
+        foreach (var f in all)
         {
-            f.Id, f.Name, f.Description, f.Ownership, f.Status,
-            f.IsActive, f.TemplateId, f.OrganizationalUnitId,
-            f.CreatedBy, f.ApprovedBy,
-            CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd"),
-            ApprovedAt = f.ApprovedAt?.ToString("yyyy-MM-dd"),
-            f.RejectionReason,
-            FormClassName = formClassesAll.FirstOrDefault(c => c.Id == f.FormClassId)?.Name ?? "",
-            FormTypeName = formTypesAll.FirstOrDefault(t => t.Id == f.FormTypeId)?.Name ?? "",
-            WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == f.WorkspaceId)?.Name ?? "",
-            TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot)
-                ? f.TemplateNameSnapshot
-                : (templates.FirstOrDefault(t => t.Id == f.TemplateId)?.Name ?? ""),
-            OrgUnitName = units.FirstOrDefault(u => u.Id == f.OrganizationalUnitId)?.Name ?? "",
+            versionsByForm[f.Id] = await _ds.ListFormDefinitionVersionsAsync(f.Id);
+        }
+
+        var data = all.Select(f =>
+        {
+            var versions = versionsByForm.TryGetValue(f.Id, out var vl) ? vl : new List<FormDefinitionVersion>();
+            var active = versions.FirstOrDefault(v => v.IsActive);
+            var latest = versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
+            return new
+            {
+                f.Id,
+                PublicId = string.IsNullOrWhiteSpace(f.PublicId) ? "" : f.PublicId,
+                ActiveVersionLabel = active?.VersionName ?? latest?.VersionName ?? "",
+                f.Name, f.Description, f.Ownership, f.Status,
+                f.IsActive, f.TemplateId, f.OrganizationalUnitId,
+                f.CreatedBy, f.ApprovedBy,
+                CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd"),
+                ApprovedAt = f.ApprovedAt?.ToString("yyyy-MM-dd"),
+                f.RejectionReason,
+                FormClassName = formClassesAll.FirstOrDefault(c => c.Id == f.FormClassId)?.Name ?? "",
+                FormTypeName = formTypesAll.FirstOrDefault(t => t.Id == f.FormTypeId)?.Name ?? "",
+                WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == f.WorkspaceId)?.Name ?? "",
+                TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot)
+                    ? f.TemplateNameSnapshot
+                    : (templates.FirstOrDefault(t => t.Id == f.TemplateId)?.Name ?? ""),
+                OrgUnitName = units.FirstOrDefault(u => u.Id == f.OrganizationalUnitId)?.Name ?? "",
+            };
         }).ToList();
 
         var templateFilters = templates
@@ -240,11 +260,14 @@ public class FormDefinitionsController : BaseController
         if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.WorkspaceId <= 0) return Json(new { success = false, message = "مساحة العمل مطلوبة" });
-        if (req.TemplateId <= 0) return Json(new { success = false, message = "القالب المستخدم مطلوب" });
 
-        var selectedTemplate = await _ds.GetFormTemplateByIdAsync(req.TemplateId);
-        if (selectedTemplate == null || !selectedTemplate.IsActive)
-            return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
+        FormTemplate? selectedTemplate = null;
+        if (req.TemplateId > 0)
+        {
+            selectedTemplate = await _ds.GetFormTemplateByIdAsync(req.TemplateId);
+            if (selectedTemplate == null || !selectedTemplate.IsActive)
+                return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
+        }
 
         var selFc = await _ds.GetFormClassByIdAsync(req.FormClassId);
         if (selFc == null || !selFc.IsActive)
@@ -271,7 +294,7 @@ public class FormDefinitionsController : BaseController
             FormClassId = req.FormClassId,
             FormTypeId = req.FormTypeId,
             WorkspaceId = req.WorkspaceId,
-            TemplateId = req.TemplateId,
+            TemplateId = Math.Max(0, req.TemplateId),
             OrganizationalUnitId = selWs.OrganizationalUnitId,
             Status = req.SendForApproval ? (isAdmin ? "approved" : "pending") : "draft",
             IsActive = req.SendForApproval && isAdmin,
@@ -283,10 +306,30 @@ public class FormDefinitionsController : BaseController
             f.ApprovedBy = CurrentUserFullName;
             f.ApprovedAt = DateTime.Now;
         }
-        ApplyTemplateSnapshot(f, selectedTemplate);
+        if (selectedTemplate != null)
+            ApplyTemplateSnapshot(f, selectedTemplate);
+        else
+            ApplyNoTemplateSnapshot(f);
+        // توليد المعرف العام FRM-####
+        f.PublicId = await _ds.NextFormDefinitionPublicIdAsync();
         var created = await _ds.AddFormDefinitionAsync(f);
+
+        // إنشاء الإصدار الأول V:1.0 تلقائياً ويعتبر هو الإصدار النشط
+        var firstVersion = new FormDefinitionVersion
+        {
+            FormDefinitionId = created.Id,
+            VersionNumber = 1,
+            VersionName = "V:1.0",
+            FieldsJson = created.FieldsJson,
+            // الحالة الأولية مرتبطة بحالة النموذج: مسودة افتراضياً، معتمد عند النشر من قِبل الأدمن
+            Status = (created.Status == "approved") ? "approved" : "draft",
+            IsActive = true,
+            CreatedBy = CurrentUserFullName
+        };
+        await _ds.AddFormDefinitionVersionAsync(firstVersion);
+
         await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة نموذج", "FormDefinition", created.Id.ToString(), req.Name));
-        return Json(new { success = true, id = created.Id });
+        return Json(new { success = true, id = created.Id, publicId = created.PublicId });
     }
 
     // ── UPDATE ───────────────────────────────────────────────────────────────
@@ -301,11 +344,14 @@ public class FormDefinitionsController : BaseController
         if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.WorkspaceId <= 0) return Json(new { success = false, message = "مساحة العمل مطلوبة" });
-        if (req.TemplateId <= 0) return Json(new { success = false, message = "القالب المستخدم مطلوب" });
 
-        var selectedTemplate = await _ds.GetFormTemplateByIdAsync(req.TemplateId);
-        if (selectedTemplate == null || !selectedTemplate.IsActive)
-            return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
+        FormTemplate? selectedTemplate = null;
+        if (req.TemplateId > 0)
+        {
+            selectedTemplate = await _ds.GetFormTemplateByIdAsync(req.TemplateId);
+            if (selectedTemplate == null || !selectedTemplate.IsActive)
+                return Json(new { success = false, message = "القالب غير متاح أو غير مفعل" });
+        }
 
         var selFc = await _ds.GetFormClassByIdAsync(req.FormClassId);
         if (selFc == null || !selFc.IsActive)
@@ -334,12 +380,15 @@ public class FormDefinitionsController : BaseController
         f.FormClassId = req.FormClassId;
         f.FormTypeId = req.FormTypeId;
         f.WorkspaceId = req.WorkspaceId;
-        f.TemplateId = req.TemplateId;
+        f.TemplateId = Math.Max(0, req.TemplateId);
         f.OrganizationalUnitId = selWs.OrganizationalUnitId;
         f.FieldsJson = req.FieldsJson ?? f.FieldsJson;
         f.UpdatedBy = CurrentUserFullName;
         f.UpdatedAt = DateTime.Now;
-        ApplyTemplateSnapshot(f, selectedTemplate);
+        if (selectedTemplate != null)
+            ApplyTemplateSnapshot(f, selectedTemplate);
+        else
+            ApplyNoTemplateSnapshot(f);
         if (req.SendForApproval)
         {
             if (isAdmin)
@@ -358,6 +407,18 @@ public class FormDefinitionsController : BaseController
         }
 
         await _ds.UpdateFormDefinitionAsync(f);
+
+        // مزامنة محتوى الإصدار النشط مع التعديل الذي تم على النموذج نفسه
+        var activeVer = await _ds.GetActiveFormDefinitionVersionAsync(f.Id);
+        if (activeVer != null)
+        {
+            activeVer.FieldsJson = f.FieldsJson;
+            activeVer.UpdatedBy = CurrentUserFullName;
+            activeVer.UpdatedAt = DateTime.Now;
+            if (req.SendForApproval && isAdmin) activeVer.Status = "approved";
+            await _ds.UpdateFormDefinitionVersionAsync(activeVer);
+        }
+
         await _ds.AddAuditLogAsync(BuildAuditEntry("تعديل نموذج", "FormDefinition", f.Id.ToString(), f.Name));
         return Json(new { success = true });
     }
@@ -455,12 +516,60 @@ public class FormDefinitionsController : BaseController
         return Json(new { success = true, isActive = f.IsActive });
     }
 
+    /// <summary>يملأ المعرف العام (FRM-####) ويضيف الإصدار الافتراضي V:1.0 للنماذج القديمة عند الحاجة.</summary>
+    private async Task BackfillPublicIdsAndDefaultVersionsAsync(List<FormDefinition> all)
+    {
+        var changed = false;
+        foreach (var f in all.OrderBy(x => x.Id))
+        {
+            if (string.IsNullOrWhiteSpace(f.PublicId))
+            {
+                f.PublicId = await _ds.NextFormDefinitionPublicIdAsync();
+                await _ds.UpdateFormDefinitionAsync(f);
+                changed = true;
+            }
+            var versions = await _ds.ListFormDefinitionVersionsAsync(f.Id);
+            if (versions.Count == 0)
+            {
+                var first = new FormDefinitionVersion
+                {
+                    FormDefinitionId = f.Id,
+                    VersionNumber = 1,
+                    VersionName = "V:1.0",
+                    FieldsJson = f.FieldsJson ?? "[]",
+                    Status = (f.Status == "approved") ? "approved" : "draft",
+                    IsActive = true,
+                    CreatedBy = string.IsNullOrWhiteSpace(f.CreatedBy) ? CurrentUserFullName : f.CreatedBy,
+                    CreatedAt = f.CreatedAt
+                };
+                await _ds.AddFormDefinitionVersionAsync(first);
+                changed = true;
+            }
+        }
+        _ = changed;
+    }
+
     // ── HELPER ───────────────────────────────────────────────────────────────
     private async Task<int> GetCreatorOrgUnitIdAsync()
     {
         var units = await _ds.ListOrganizationalUnitsAsync();
         var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
         return unit?.Id ?? CurrentDeptId;
+    }
+
+    private static void ApplyNoTemplateSnapshot(FormDefinition f)
+    {
+        f.TemplateNameSnapshot = "";
+        f.TemplateColorSnapshot = "#14573A";
+        f.TemplateHeaderJsonSnapshot = "[]";
+        f.TemplateFooterJsonSnapshot = "[]";
+        f.TemplateMarginTopSnapshot = 20;
+        f.TemplateMarginBottomSnapshot = 20;
+        f.TemplateMarginRightSnapshot = 20;
+        f.TemplateMarginLeftSnapshot = 20;
+        f.TemplatePageDirectionSnapshot = "RTL";
+        f.TemplateShowHeaderLineSnapshot = true;
+        f.TemplateShowFooterLineSnapshot = true;
     }
 
     private static void ApplyTemplateSnapshot(FormDefinition f, FormTemplate t)

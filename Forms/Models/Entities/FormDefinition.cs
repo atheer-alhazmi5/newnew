@@ -3,6 +3,8 @@ namespace FormsSystem.Models.Entities;
 public class FormDefinition
 {
     public int Id { get; set; }
+    /// <summary>المعرف المعروض للنموذج (FRM-0001 .. FRM-9999) — يُولّد تلقائياً عند الإنشاء.</summary>
+    public string PublicId { get; set; } = "";
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string Ownership { get; set; } = "عام"; // عام | خاص

@@ -28,6 +28,14 @@ function bnfApplyRoleVisibility() {
     });
 }
 
+function bnfSyncDeactivateReasonVisibility() {
+    var active = document.getElementById('bnfIsActive');
+    var wrap = document.getElementById('bnfDeactivateReasonWrap');
+    if (!active || !wrap) return;
+    if (active.checked) wrap.classList.add('d-none');
+    else wrap.classList.remove('d-none');
+}
+
 function bnfBindDigitsOnly(inputId, maxLen) {
     var el = document.getElementById(inputId);
     if (!el) return;
@@ -89,9 +97,29 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) {
         r.addEventListener('change', function () { bnfApplyRoleVisibility(); });
     });
+    (function bnfBindSubRoleRadioUncheckToggle() {
+        var radios = document.querySelectorAll('input[name="bnfSubRole"]');
+        if (!radios.length) return;
+        var prevRadio = null;
+        Array.prototype.forEach.call(radios, function (r) {
+            r.addEventListener('mousedown', function () {
+                prevRadio = document.querySelector('input[name="bnfSubRole"]:checked');
+            });
+            r.addEventListener('click', function () {
+                if (prevRadio === r) {
+                    r.checked = false;
+                    prevRadio = null;
+                    bnfApplyRoleVisibility();
+                }
+            });
+        });
+    })();
     var bnfFormModal = document.getElementById('bnfFormModal');
     if (bnfFormModal) {
-        bnfFormModal.addEventListener('shown.bs.modal', function () { bnfApplyRoleVisibility(); });
+        bnfFormModal.addEventListener('shown.bs.modal', function () {
+            bnfApplyRoleVisibility();
+            bnfSyncDeactivateReasonVisibility();
+        });
     }
 
     document.getElementById('bnfPhoto').addEventListener('change', function (e) {
@@ -126,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('bnfIsActive').addEventListener('change', function () {
         document.getElementById('bnfActivationStatus').textContent = this.checked ? 'مفعل' : 'معطل';
+        bnfSyncDeactivateReasonVisibility();
     });
 
     document.getElementById('bnfPassword').addEventListener('input', bnfCheckPasswordLive);
@@ -723,24 +752,6 @@ function bnfValidate(isAdd) {
     if (username.length < 3) return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
     if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط';
 
-    var endorsementType = document.getElementById('bnfEndorsementType').value;
-    if (endorsementType === 'مرفق') {
-        var endorsementFile = document.getElementById('bnfEndorsementFile').dataset.base64 || '';
-        if (!endorsementFile) return 'يجب رفع ملف التأشير (صورة أو PDF)';
-    } else {
-        if (bnfIsCanvasEmpty('bnfEndorsementCanvas'))
-            return 'يجب التوقيع في مربع التأشير الإلكتروني';
-    }
-
-    var signatureType = document.getElementById('bnfSignatureType').value;
-    if (signatureType === 'مرفق') {
-        var signatureFile = document.getElementById('bnfSignatureFile').dataset.base64 || '';
-        if (!signatureFile) return 'يجب رفع ملف التوقيع (صورة أو PDF)';
-    } else {
-        if (bnfIsCanvasEmpty('bnfSignatureCanvas'))
-            return 'يجب التوقيع في مربع التوقيع الإلكتروني';
-    }
-
     var pwd = document.getElementById('bnfPassword').value;
     var confirm = document.getElementById('bnfConfirmPassword').value;
     if (isAdd && !pwd) return 'كلمة المرور مطلوبة عند إضافة مستفيد جديد';
@@ -806,6 +817,8 @@ function bnfShowAddModal() {
     document.getElementById('bnfEmail').value = '';
     document.getElementById('bnfIsActive').checked = true;
     document.getElementById('bnfActivationStatus').textContent = 'مفعل';
+    document.getElementById('bnfDeactivateReason').value = '';
+    bnfSyncDeactivateReasonVisibility();
     var bnfAct = document.getElementById('bnfSubRoleActual');
     var bnfAdm = document.getElementById('bnfSubRoleAdmin');
     if (bnfAct) bnfAct.checked = true;
@@ -847,7 +860,7 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfModalSubtitle').textContent = 'تعديل بيانات المستفيد';
     document.getElementById('bnfSubmitBtn').textContent = 'حفظ التعديلات';
     document.getElementById('bnfNationalId').value = b.nationalId;
-    document.getElementById('bnfNationalId').readOnly = true;
+    document.getElementById('bnfNationalId').readOnly = false;
     document.getElementById('bnfEndorsementType').value = b.endorsementType || 'مرفق';
     document.getElementById('bnfSignatureType').value = b.signatureType || 'مرفق';
     bnfToggleEndorsement();
@@ -889,6 +902,8 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfEmail').value = b.email || '';
     document.getElementById('bnfIsActive').checked = b.isActive !== false;
     document.getElementById('bnfActivationStatus').textContent = b.isActive !== false ? 'مفعل' : 'معطل';
+    document.getElementById('bnfDeactivateReason').value = String(b.deactivateReason || '').trim();
+    bnfSyncDeactivateReasonVisibility();
     var subRole = (b.subRole || '').trim();
     var isSys = subRole === 'مدير النظام';
     var act = document.getElementById('bnfSubRoleActual');
@@ -952,13 +967,23 @@ function bnfSubmit() {
     var subRoleSaved = bnfResolveSubRoleForSubmit();
     var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
     var sysAdd = isSys && isAdd;
+
+    var existingBen = (!isAdd && id) ? bnfAll.find(function (x) { return String(x.id) === String(id); }) : null;
+    var endorsementFileVal = sysAdd ? '' : bnfGetEndorsementData();
+    var signatureFileVal = sysAdd ? '' : bnfGetSignatureData();
+    if (existingBen) {
+        if (!String(endorsementFileVal || '').trim()) endorsementFileVal = existingBen.endorsementFile || '';
+        if (!String(signatureFileVal || '').trim()) signatureFileVal = existingBen.signatureFile || '';
+    }
+
+    var activeChecked = document.getElementById('bnfIsActive').checked;
     var body = {
         photoUrl: photoData || undefined,
         nationalId: sysAdd ? '' : document.getElementById('bnfNationalId').value.trim(),
         endorsementType: sysAdd ? 'مرفق' : document.getElementById('bnfEndorsementType').value,
-        endorsementFile: sysAdd ? '' : bnfGetEndorsementData(),
+        endorsementFile: sysAdd ? '' : endorsementFileVal,
         signatureType: sysAdd ? 'مرفق' : document.getElementById('bnfSignatureType').value,
-        signatureFile: sysAdd ? '' : bnfGetSignatureData(),
+        signatureFile: sysAdd ? '' : signatureFileVal,
         firstName: document.getElementById('bnfFirstName').value.trim(),
         secondName: document.getElementById('bnfSecondName').value.trim(),
         thirdName: document.getElementById('bnfThirdName').value.trim(),
@@ -967,7 +992,8 @@ function bnfSubmit() {
         phone: sysAdd ? '' : document.getElementById('bnfPhone').value.trim(),
         email: sysAdd ? '' : document.getElementById('bnfEmail').value.trim(),
         username: document.getElementById('bnfUsername').value.trim(),
-        isActive: document.getElementById('bnfIsActive').checked,
+        isActive: activeChecked,
+        deactivateReason: activeChecked ? '' : document.getElementById('bnfDeactivateReason').value.trim(),
         isUnitManager: isSys ? false : isUnitMgr,
         subRole: subRoleSaved,
         password: document.getElementById('bnfPassword').value || undefined,
@@ -1026,7 +1052,9 @@ function bnfShowDetails(id) {
         '<div class="row mb-3"><div class="col-md-2"><strong>الوحدة التنظيمية:</strong></div><div class="col-md-10">' + esc(b.organizationalUnitName || '—') + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الجوال:</strong></div><div class="col-md-10">' + esc(b.phone) + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>البريد الإلكتروني:</strong></div><div class="col-md-10">' + esc(b.email) + '</div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div>' +
+        (b.isActive === false && String(b.deactivateReason || '').trim() ? '<div class="row mb-3"><div class="col-md-2"><strong>سبب التعطيل:</strong></div><div class="col-md-10">' + esc(String(b.deactivateReason).trim()) + '</div></div>' : '') +
+        '</div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-person-badge"></i>الأدوار وبيانات الدخول</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المستخدم:</strong></div><div class="col-md-10"><span dir="ltr">' + esc(b.username || '—') + '</span></div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + esc(b.roleDisplay || '—') + '</div></div>' +

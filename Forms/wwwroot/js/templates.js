@@ -50,6 +50,16 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
+/** إشعار تحقق الحقول الإلزامية في معالج الإضافة/التعديل (بديل alert) — النص يُمرَّر كما هو. */
+function tpShowValidationMessage(msg) {
+    const textEl = document.getElementById('tpValidationMessageText');
+    if (textEl) textEl.textContent = msg != null ? String(msg) : '';
+    const modalEl = document.getElementById('tpValidationModal');
+    if (!modalEl) return;
+    const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    inst.show();
+}
+
 /* ── Load & Render ───────────────────────────────────────────── */
 async function tpLoad() {
     const r = await tpApiFetch('/Templates/GetTemplates');
@@ -211,7 +221,7 @@ function tpGoToStep(step) {
 function tpNextStep() {
     if (tpCurrentStep === 0) {
         const name = document.getElementById('tpwName').value.trim();
-        if (!name) { alert('اسم القالب مطلوب'); return; }
+        if (!name) { tpShowValidationMessage('اسم القالب مطلوب'); return; }
     }
     if (tpCurrentStep < TP_TOTAL_STEPS - 1) {
         tpCollectCurrentSections();
@@ -446,13 +456,24 @@ function tpUpdatePreview(zone) {
     const data = zone === 'header' ? tpHeaderData : tpFooterData;
     const previewEl = document.getElementById(zone === 'header' ? 'tpHeaderPreview' : 'tpFooterPreview');
     previewEl.style.gridTemplateColumns = `repeat(${data.length}, 1fr)`;
-    previewEl.innerHTML = data.map(sec => tpRenderPreviewSection(sec)).join('');
+    const dir = document.getElementById('tpwPageDirection')?.value || 'RTL';
+    previewEl.innerHTML = data.map(sec => tpRenderPreviewSection(sec, dir)).join('');
 }
 
-function tpRenderPreviewSection(sec) {
+/** محاذاة الشعار أفقيًا داخل خلية عمودية flex: في RTL يعكس flex-start/flex-end عن LTR فيزيائيًا */
+function tpLogoAlignItemsForDirection(logoAlign, pageDirection) {
+    const dir = (pageDirection || document.getElementById('tpwPageDirection')?.value || 'RTL').toUpperCase();
+    const isRtl = dir === 'RTL';
+    if (logoAlign === 'center') return 'center';
+    if (logoAlign === 'right') return isRtl ? 'flex-start' : 'flex-end';
+    if (logoAlign === 'left') return isRtl ? 'flex-end' : 'flex-start';
+    return 'center';
+}
+
+function tpRenderPreviewSection(sec, pageDirection) {
     if (sec.type === 'logo') {
         const logoAlign = sec.imageAlign || 'center';
-        const justify = logoAlign === 'right' ? 'flex-end' : (logoAlign === 'left' ? 'flex-start' : 'center');
+        const justify = tpLogoAlignItemsForDirection(logoAlign, pageDirection);
         const w = (sec.logoWidth || 4) * 37.8;
         const h = (sec.logoHeight || 2) * 37.8;
         if (!sec.imageUrl) return `<div class="tp-preview-sec" style="text-align:${logoAlign};align-items:${justify};color:var(--gray-300);font-size:12px;"><i class="bi bi-image" style="font-size:24px;"></i><div style="font-size:11px;">شعار</div></div>`;
@@ -485,7 +506,7 @@ function tpBuildFullPreview() {
 
     // Header
     html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;">`;
-    tpHeaderData.forEach(sec => { html += tpRenderPreviewSection(sec); });
+    tpHeaderData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
     if (showHL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
 
@@ -497,7 +518,7 @@ function tpBuildFullPreview() {
     if (showFL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
     // Footer
     html += `<div style="display:grid;grid-template-columns:repeat(${tpFooterData.length},1fr);min-height:40px;align-items:center;">`;
-    tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec); });
+    tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
 
     html += '</div></div>';
@@ -647,7 +668,7 @@ async function tpShowDetails(id) {
                 ${wmUrlDet ? `<div class="tp-wm-bg"><img src="${escHtml(wmUrlDet)}" alt="watermark" style="opacity:${wmOpDet.toFixed(2)};"></div>` : ''}
                 <div style="position:relative;">
                     <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;">
-                        ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s)).join('')}
+                        ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
                     </div>
                     ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
                     <div style="min-height:180px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:14px;padding:30px;">
@@ -655,7 +676,7 @@ async function tpShowDetails(id) {
                     </div>
                     ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
                     <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;">
-                        ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s)).join('')}
+                        ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
                     </div>
                 </div>
             </div>

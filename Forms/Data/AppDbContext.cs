@@ -64,6 +64,7 @@ public class AppDbContext
     public List<ExecutorRole> ExecutorRoles => Load<ExecutorRole>("executor_roles");
     public List<FormTemplate> FormTemplates => Load<FormTemplate>("form_templates");
     public List<FormDefinition> FormDefinitions => Load<FormDefinition>("form_definitions");
+    public List<FormDefinitionVersion> FormDefinitionVersions => Load<FormDefinitionVersion>("form_definition_versions");
     public List<WorkProcedure> WorkProcedures => Load<WorkProcedure>("work_procedures");
     public List<Delegation> Delegations => Load<Delegation>("delegations");
 
@@ -94,6 +95,7 @@ public class AppDbContext
     public void SaveExecutorRoles(List<ExecutorRole> d) => Save("executor_roles", d);
     public void SaveFormTemplates(List<FormTemplate> d) => Save("form_templates", d);
     public void SaveFormDefinitions(List<FormDefinition> d) => Save("form_definitions", d);
+    public void SaveFormDefinitionVersions(List<FormDefinitionVersion> d) => Save("form_definition_versions", d);
     public void SaveWorkProcedures(List<WorkProcedure> d) => Save("work_procedures", d);
     public void SaveDelegations(List<Delegation> d) => Save("delegations", d);
 

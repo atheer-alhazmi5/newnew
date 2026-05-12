@@ -1186,6 +1186,82 @@ public class DataService
         return Task.FromResult(linked);
     }
 
+    /// <summary>
+    /// سبب منع حذف المستفيد بسبب ارتباطات بيانات (تفويضات، أدوار منفذين، إجراءات عمل، آخر مدير نظام، أو إنشاء عناصر باسمه).
+    /// </summary>
+    public async Task<string?> GetBeneficiaryDeletionBlockReasonAsync(int id)
+    {
+        var beneficiary = _db.Beneficiaries.FirstOrDefault(x => x.Id == id);
+        if (beneficiary == null)
+            return null;
+
+        if (_db.Delegations.Any(d =>
+                !DelegationStatusIsCancelled(d.Status) &&
+                (d.DelegatorBeneficiaryId == id || d.DelegateeBeneficiaryId == id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لوجود تفويض مرتبط به في قسم التفويضات. يمكنك إلغاء التفويض أو تعديل السجل قبل الحذف.";
+        }
+
+        if (_db.ExecutorRoles.Any(r => IdListCsvContainsId(r.ExecutorIds, id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه مسجّل كمنفّذ ضمن أدوار المنفذين. أزل الربط من الدور أو عيِّن منفذًا آخر قبل الحذف.";
+        }
+
+        if (_db.WorkProcedures.Any(w => JsonIntArrayContainsId(w.ExecutorBeneficiaryIdsJson, id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه مستخدم ضمن قائمة المنفّذين في إجراءات العمل.";
+        }
+
+        var isSysAdmin = string.Equals((beneficiary.SubRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal);
+        if (isSysAdmin &&
+            !_db.Beneficiaries.Any(x => x.Id != id &&
+                string.Equals((x.SubRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه آخر حساب مدير نظام مسجَّل للمستفيدين.";
+        }
+
+        if (await IsBeneficiaryLinkedByCreationAsync(id).ConfigureAwait(false))
+            return "هذا العنصر المستفيد مرتبط بعناصر تم انشائها ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف";
+
+        return null;
+    }
+
+    private static bool DelegationStatusIsCancelled(string? status) =>
+        string.Equals((status ?? "").Trim(), "cancelled", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IdListCsvContainsId(string? csv, int id)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return false;
+        foreach (var part in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) && n == id)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool JsonIntArrayContainsId(string? json, int id)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                return false;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.TryGetInt32(out var n) && n == id)
+                    return true;
+                if (el.ValueKind == JsonValueKind.String
+                    && int.TryParse(el.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sn)
+                    && sn == id)
+                    return true;
+            }
+        }
+        catch { /* تجاهل تنسيق JSON غير متوقع */ }
+        return false;
+    }
+
     public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
             b.Email != null && b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
@@ -1680,7 +1756,93 @@ public class DataService
         if (f == null) return Task.FromResult(false);
         list.Remove(f);
         _db.SaveFormDefinitions(list);
+        // Delete all related versions
+        var vlist = _db.FormDefinitionVersions;
+        var deletedVersions = vlist.RemoveAll(v => v.FormDefinitionId == id);
+        if (deletedVersions > 0) _db.SaveFormDefinitionVersions(vlist);
         return Task.FromResult(true);
+    }
+
+    /// <summary>توليد المعرف العام التالي بصيغة FRM-0001 .. FRM-9999.</summary>
+    public Task<string> NextFormDefinitionPublicIdAsync()
+    {
+        var list = _db.FormDefinitions;
+        var max = 0;
+        foreach (var f in list)
+        {
+            if (string.IsNullOrWhiteSpace(f.PublicId)) continue;
+            var pid = f.PublicId.Trim().ToUpperInvariant();
+            if (!pid.StartsWith("FRM")) continue;
+            var digits = new string(pid.Where(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var n) && n > max) max = n;
+        }
+        var next = max + 1;
+        if (next > 9999) next = 9999;
+        return Task.FromResult($"FRM-{next:0000}");
+    }
+
+    // ─── FORM DEFINITION VERSIONS ─────────────────────────────────────────────
+    public Task<List<FormDefinitionVersion>> ListFormDefinitionVersionsAsync(int formDefinitionId)
+        => Task.FromResult(_db.FormDefinitionVersions
+            .Where(v => v.FormDefinitionId == formDefinitionId)
+            .OrderBy(v => v.VersionNumber)
+            .ToList());
+
+    public Task<FormDefinitionVersion?> GetFormDefinitionVersionByIdAsync(int id)
+        => Task.FromResult(_db.FormDefinitionVersions.FirstOrDefault(v => v.Id == id));
+
+    public Task<FormDefinitionVersion?> GetActiveFormDefinitionVersionAsync(int formDefinitionId)
+        => Task.FromResult(_db.FormDefinitionVersions
+            .Where(v => v.FormDefinitionId == formDefinitionId && v.IsActive)
+            .OrderByDescending(v => v.VersionNumber)
+            .FirstOrDefault());
+
+    public Task<FormDefinitionVersion> AddFormDefinitionVersionAsync(FormDefinitionVersion v)
+    {
+        var list = _db.FormDefinitionVersions;
+        v.Id = NextId(list, x => x.Id);
+        v.CreatedAt = DateTime.Now;
+        // If new version is active, deactivate other versions of the same form
+        if (v.IsActive)
+        {
+            foreach (var other in list.Where(x => x.FormDefinitionId == v.FormDefinitionId))
+                other.IsActive = false;
+        }
+        list.Add(v);
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(v);
+    }
+
+    public Task<bool> UpdateFormDefinitionVersionAsync(FormDefinitionVersion v)
+    {
+        var list = _db.FormDefinitionVersions;
+        var idx = list.FindIndex(x => x.Id == v.Id);
+        if (idx < 0) return Task.FromResult(false);
+        if (v.IsActive)
+        {
+            foreach (var other in list.Where(x => x.FormDefinitionId == v.FormDefinitionId && x.Id != v.Id))
+                other.IsActive = false;
+        }
+        list[idx] = v;
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormDefinitionVersionAsync(int id)
+    {
+        var list = _db.FormDefinitionVersions;
+        var v = list.FirstOrDefault(x => x.Id == id);
+        if (v == null) return Task.FromResult(false);
+        list.Remove(v);
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<int> NextFormDefinitionVersionNumberAsync(int formDefinitionId)
+    {
+        var list = _db.FormDefinitionVersions.Where(v => v.FormDefinitionId == formDefinitionId).ToList();
+        var max = list.Count == 0 ? 0 : list.Max(v => v.VersionNumber);
+        return Task.FromResult(max + 1);
     }
 
     // ─── WORK PROCEDURES ───────────────────────────────────────────────────────

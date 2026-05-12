@@ -70,7 +70,7 @@ public class TablesController : BaseController
         return Json(new
         {
             success = true, data = result,
-            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name }).ToList(),
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
             currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin"
         });
     }

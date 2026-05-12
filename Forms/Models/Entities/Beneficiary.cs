@@ -17,6 +17,8 @@ public class Beneficiary
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>سبب التعطيل عندما يكون <see cref="IsActive"/> false.</summary>
+    public string DeactivateReason { get; set; } = "";
     public string Username { get; set; } = "";
     public string MainRole { get; set; } = "";              // موظف | مدير
     public bool IsUnitManager { get; set; } = false;        // مدير وحدة تنظيمية
