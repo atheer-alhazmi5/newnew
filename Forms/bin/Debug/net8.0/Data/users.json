@@ -103,20 +103,20 @@
   },
   {
     "Id": 7,
-    "NationalId": "1100000000",
+    "NationalId": "1111145567",
     "Username": "rawan1",
     "Email": "aa@almadinah.gov.sa",
     "Phone": "0505050550",
     "PhotoUrl": "",
     "FullName": "\u0631\u0648\u0627\u0646 \u062E\u0627\u0644\u062F \u0627\u0644\u062A\u0645\u064A\u0645\u064A \u0627\u0644\u062A\u0645\u064A\u0645\u064A",
     "PasswordHash": "AQAAAAIAAYagAAAAEADPlZmazlUC3YBRxOknS/\u002BsIIIrLJ3thOp125Z7qzUBZ2SlspPTIc3wLPHAQtDMRw==",
-    "Role": "Employee",
+    "Role": "Staff",
     "DepartmentId": 5,
     "Department": null,
     "Status": "Active",
     "CreatedAt": "2026-04-02T09:58:42.157326+03:00",
-    "RoleLabel": "\u0645\u0645\u062B\u0644 \u0648\u062D\u062F\u0629 \u062A\u0646\u0638\u064A\u0645\u064A\u0629",
-    "RoleName": "Employee"
+    "RoleLabel": "\u0645\u0648\u0638\u0641",
+    "RoleName": "Staff"
   },
   {
     "Id": 8,

@@ -11098,5 +11098,35 @@
     "Browser": "Safari",
     "OperatingSystem": "macOS",
     "CreatedAt": "2026-05-17T10:05:36.066302+03:00"
+  },
+  {
+    "Id": 741,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "NationalId": "1111111111",
+    "OrganizationalUnit": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": null,
+    "IpAddress": "127.0.0.1",
+    "Browser": "Safari",
+    "OperatingSystem": "macOS",
+    "CreatedAt": "2026-05-17T11:21:25.242497+03:00"
+  },
+  {
+    "Id": 742,
+    "UserId": 1,
+    "UserName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "NationalId": "1111111111",
+    "OrganizationalUnit": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "Action": "\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644",
+    "EntityType": "User",
+    "EntityId": "1",
+    "Details": null,
+    "IpAddress": "127.0.0.1",
+    "Browser": "Safari",
+    "OperatingSystem": "macOS",
+    "CreatedAt": "2026-05-17T11:34:02.167294+03:00"
   }
 ]

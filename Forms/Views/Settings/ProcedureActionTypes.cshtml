@@ -4,98 +4,104 @@
 }
 
 <style>
-/* مطابقة تصميم صفحات الإعدادات (نفس أسلوب القوائم المنسدلة / أنواع النماذج) */
-.ddl-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
-.ddl-modal-header { padding:24px 28px; position:relative; }
-.ddl-modal-header.create { background:var(--sa-800); }
-.ddl-modal-header.details { background:var(--info-700); }
-.ddl-modal-header.edit { background:var(--sa-800); }
-.ddl-modal-header.delete { background:var(--error-600); }
-.ddl-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
-.ddl-modal-header .btn-close-x:hover { color:#fff; }
-.ddl-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
-.ddl-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
-.ddl-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
-.ddl-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
-.ddl-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; }
-.ddl-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
-.ddl-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
-.ddl-cancel-btn:hover { background:#4b5563; }
-.ddl-section { background:#fff; border-radius:14px; padding:20px 24px; margin-bottom:20px; border:1px solid var(--gray-200); }
-.ddl-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
-.required-star { color:#ef4444; margin-right:4px; }
-.ddl-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.ddl-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
-.ddl-action-btn-detail:hover { background:var(--info-50); }
-.ddl-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
-.ddl-action-btn-edit:hover { background:var(--sa-50); }
-.ddl-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
-.ddl-action-btn-delete:hover { background:var(--error-50); }
-.ddl-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-.ddl-search-box { position:relative; min-width:180px; max-width:280px; }
-.ddl-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; height:40px; width:100%; }
-.ddl-search-box input:focus { border-color:var(--sa-400); }
-.ddl-search-box .ddl-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; }
-.ddl-page-wrap { width:100%; max-width:100%; }
-.ddl-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-.ddl-filter-select { min-width:140px; width:auto; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-size:13px; font-family:'Cairo',sans-serif; }
-.ddl-clear-btn { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--gray-100); color:var(--gray-700); border:2px solid var(--gray-200); cursor:pointer; white-space:nowrap; font-family:'Cairo',sans-serif; }
-.ddl-clear-btn:hover { background:var(--gray-200); }
-.ddl-badge-active { background:#dcf5e8; color:#0f9f5c; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
-.ddl-badge-inactive { background:#fde8e8; color:#ef4444; padding:6px 12px; border-radius:999px; font-weight:700; font-size:12px; }
-#patTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-#patTable tbody td { vertical-align:middle; font-size:13px; }
-#patTable tbody tr:hover { background:var(--sa-25); }
-.pat-toggle { position:relative; display:inline-block; width:42px; height:22px; }
-.pat-toggle input { opacity:0; width:0; height:0; }
-.pat-toggle .pat-slider { position:absolute; cursor:pointer; inset:0; background:var(--gray-300); border-radius:22px; transition:.25s; }
-.pat-toggle .pat-slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; }
-.pat-toggle input:checked + .pat-slider { background:var(--sa-600); }
-.pat-toggle input:checked + .pat-slider::before { transform:translateX(20px); }
-.pat-toggle input:disabled + .pat-slider { opacity:.45; cursor:not-allowed; }
-@@media (max-width:768px) { .pat-form-row { grid-template-columns:1fr !important; } }
-.pat-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+.pat-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.pat-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
+.pat-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; padding:4px; line-height:1; transition:color .2s; }
+.pat-modal-header .btn-close-x:hover { color:#fff; }
+.pat-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.pat-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
+.pat-modal-body { padding:28px; }
+.pat-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; justify-content:flex-start; }
+.pat-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+.pat-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
+.pat-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
+.pat-cancel-btn:hover { background:#4b5563; }
+.pat-section-title { font-weight:700; font-size:15px; color:var(--sa-800); margin-bottom:20px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:2px solid var(--sa-100); }
+.pat-section-title i { font-size:18px; }
+.required-star { color:#ef4444; margin-right:4px; font-weight:700; }
+.pat-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; line-height:1.3; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
+.pat-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.pat-action-btn-detail:hover { background:var(--info-50); }
+.pat-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.pat-action-btn-edit:hover { background:var(--sa-50); }
+.pat-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.pat-action-btn-delete:hover { background:var(--error-50); }
+.pat-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+.pat-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
+.pat-status-pill.inactive { background:#fde8e8; color:#ef4444; }
+.pat-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
+.pat-status-pill.active .pat-status-dot { background:#0f9f5c; }
+.pat-status-pill.inactive .pat-status-dot { background:#ef4444; }
+.pat-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
+.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
+.table tbody tr { transition:background .15s; }
+.table tbody tr:hover { background:var(--sa-25); }
+.table tbody td { border-bottom:1px solid var(--gray-100); }
+.pat-color-picker-wrap { position:relative; display:inline-block; }
+.pat-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.pat-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
+.pat-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
+.pat-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
+.pat-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
+.pat-detail-row { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--gray-100); }
+.pat-detail-row:last-child { border-bottom:none; }
+.pat-detail-label { font-weight:700; font-size:14px; color:var(--gray-600); min-width:120px; }
+.pat-detail-value { font-size:14px; color:var(--gray-900); flex:1; }
+.pat-search-box { position:relative; max-width:320px; }
+.pat-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
+.pat-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
+.pat-search-box .pat-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); font-size:16px; pointer-events:none; }
+.pat-modal-body .form-control,
+.pat-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; transition:border-color .2s, box-shadow .2s; }
+.pat-modal-body .form-control:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
+.pat-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
+.pat-modal-body .form-check-input:checked { background-color:var(--sa-600); border-color:var(--sa-600); }
+.pat-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.pat-page-header .pat-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.pat-icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.pat-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:#fff; }
+.pat-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
+.pat-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
+.pat-icon-display { width:32px; height:32px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
+.pat-table-card { border-radius:16px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); overflow:hidden; }
 </style>
 
-<div class="ddl-page-wrap">
-<div class="ddl-page-header">
+<div class="pat-page-header">
     <div>
         <h2 class="page-title" style="margin:0;">أنواع الإجراءات</h2>
-        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة أنواع الإجراءات المستخدمة في النظام</p>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">تنظيم الإجراءات حسب الأنواع في النظام</p>
     </div>
-    <button type="button" class="btn btn-primary" onclick="patShowCreateModal()" style="border-radius:12px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
-        <i class="bi bi-plus-lg"></i> إضافة نوع إجراء
+    <button class="btn btn-primary pat-add-btn" onclick="patShowAddModal()">
+        <i class="bi bi-plus-lg"></i>إضافة نوع
     </button>
 </div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center ddl-filters" id="patFiltersWrap">
-    <div class="ddl-search-box">
-        <i class="bi bi-search ddl-search-icon"></i>
-        <input type="text" class="form-control" id="patSearchInput" placeholder="بحث بالاسم أو الوصف..." autocomplete="off">
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="pat-search-box flex-grow-1" style="max-width:400px;">
+        <i class="bi bi-search pat-search-icon"></i>
+        <input type="text" class="form-control" id="patSearchInput" placeholder="البحث عن نوع بالاسم..." oninput="patFilter()">
     </div>
-    <select class="ddl-filter-select form-select" id="patFilterStatus">
-        <option value="">الحالة</option>
-        <option value="1">مفعل</option>
-        <option value="0">غير مفعل</option>
-    </select>
-    <button type="button" class="ddl-clear-btn" id="patFilterClear" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
+    <button type="button" class="rt-clear-btn" onclick="patClear()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card pat-table-card">
     <div class="card-body p-0">
-        <div class="table-responsive" style="overflow-x:auto;">
-            <table class="table mb-0" id="patTable">
+        <div class="table-responsive">
+            <table class="table mb-0">
                 <thead>
                     <tr>
-                        <th style="width:56px;text-align:center;">الترتيب</th>
-                        <th>اسم نوع الإجراء</th>
-                        <th>الوصف</th>
-                        <th style="width:120px;text-align:center;">التفعيل</th>
-                        <th style="width:220px;text-align:center;">الإجراءات</th>
+                        <th style="width:70px;">رقم</th>
+                        <th style="width:90px;">الأيقونة</th>
+                        <th style="text-align:right;">اسم النوع</th>
+                        <th style="text-align:right;">الوصف</th>
+                        <th style="width:130px;">اللون</th>
+                        <th style="width:110px;">التفعيل</th>
+                        <th style="width:260px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="patBody">
-                    <tr><td colspan="5" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="7" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -103,130 +109,165 @@
 </div>
 
 <div id="patPaginationContainer" class="d-flex justify-content-center mt-4"></div>
-</div>
 
-<!-- إنشاء -->
-<div class="modal fade" id="patCreateModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content ddl-modal">
-            <div class="ddl-modal-header create">
+<!-- Add Modal -->
+<div class="modal fade" id="patAddModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pat-modal">
+            <div class="pat-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ddl-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i> إضافة نوع إجراء</h5>
-                <div class="ddl-modal-subtitle">أدخل بيانات نوع الإجراء الجديد</div>
+                <h5 class="pat-modal-title"><i class="bi bi-plus-circle" style="margin-left:8px;"></i>إضافة نوع جديد</h5>
+                <div class="pat-modal-subtitle">أدخل بيانات النوع الجديد</div>
             </div>
-            <div class="ddl-modal-body">
-                <div class="ddl-section">
-                    <div class="ddl-section-title"><i class="bi bi-diagram-3"></i> البيانات الأساسية</div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">اسم نوع الإجراء<span class="required-star">*</span></label>
-                        <input type="text" class="form-control" id="patCreateName" maxlength="200" autocomplete="off" style="border-radius:10px;border:2px solid var(--gray-200);">
+            <div class="pat-modal-body">
+                <div class="pat-section-title"><i class="bi bi-info-circle-fill"></i>معلومات النوع</div>
+
+                <div class="mb-3">
+                    <label class="form-label">اسم النوع<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="patAddName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="pat-icon-picker" id="patAddIconPicker"></div>
+                    <input type="hidden" id="patAddIcon" value="">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الوصف</label>
+                    <textarea class="form-control" id="patAddDescription" rows="3" placeholder="وصف مختصر لهذا النوع"></textarea>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">اللون</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pat-color-picker-wrap">
+                                <input type="color" id="patAddColor" value="#25935F" oninput="document.getElementById('patAddColorHex').textContent=this.value">
+                            </div>
+                            <div class="pat-color-hex" id="patAddColorHex" style="margin-top:0;">#25935F</div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الوصف</label>
-                        <textarea class="form-control" id="patCreateDescription" rows="3" placeholder="وصف اختياري" style="border-radius:10px;border:2px solid var(--gray-200);"></textarea>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-bold">التفعيل</label>
-                        <div class="d-flex gap-3 mt-2">
-                            <div class="form-check"><input class="form-check-input" type="radio" name="patCreateIsActive" id="patCreateIsActiveOn" value="1" checked><label class="form-check-label" for="patCreateIsActiveOn">مفعل</label></div>
-                            <div class="form-check"><input class="form-check-input" type="radio" name="patCreateIsActive" id="patCreateIsActiveOff" value="0"><label class="form-check-label" for="patCreateIsActiveOff">معطل</label></div>
+                    <div class="col-6">
+                        <label class="form-label">التفعيل</label>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="patAddIsActive" checked style="width:48px;height:24px;">
+                            </div>
+                            <label class="form-check-label" for="patAddIsActive" id="patAddIsActiveLabel" style="font-weight:600;">مفعل</label>
                         </div>
                     </div>
                 </div>
-                <div id="patCreateError" class="alert alert-danger d-none" style="font-size:14px;"></div>
+
+                <div id="patAddError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>
-            <div class="ddl-modal-footer" style="justify-content:flex-end;">
-                <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="ddl-save-btn" onclick="patSubmitCreate()">حفظ</button>
-                    <button type="button" class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
-                </div>
+            <div class="pat-modal-footer">
+                <button class="pat-save-btn" onclick="patSubmitAdd()">
+                    <i class="bi bi-plus-lg"></i>إضافة النوع
+                </button>
+                <button class="pat-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- تعديل -->
+<!-- Update Modal -->
 <div class="modal fade" id="patEditModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content ddl-modal">
-            <div class="ddl-modal-header edit">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pat-modal">
+            <div class="pat-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ddl-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i> تعديل نوع الإجراء</h5>
-                <div class="ddl-modal-subtitle">تحديث بيانات نوع الإجراء</div>
+                <h5 class="pat-modal-title"><i class="bi bi-pencil-square" style="margin-left:8px;"></i>تحديث النوع</h5>
+                <div class="pat-modal-subtitle">تعديل بيانات النوع</div>
             </div>
-            <div class="ddl-modal-body">
+            <div class="pat-modal-body">
                 <input type="hidden" id="patEditId">
-                <input type="hidden" id="patEditSortOriginal">
-                <div class="ddl-section">
-                    <div class="ddl-section-title"><i class="bi bi-diagram-3"></i> البيانات الأساسية</div>
-                    <div class="pat-form-row mb-3">
-                        <div>
-                            <label class="form-label fw-bold">اسم نوع الإجراء<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="patEditName" maxlength="200" autocomplete="off" style="border-radius:10px;border:2px solid var(--gray-200);">
-                        </div>
-                        <div>
-                            <label class="form-label fw-bold">الترتيب</label>
-                            <input type="number" class="form-control" id="patEditSortOrder" min="1" step="1" style="border-radius:10px;border:2px solid var(--gray-200);">
+                <div class="pat-section-title"><i class="bi bi-info-circle-fill"></i>معلومات النوع</div>
+
+                <div class="mb-3">
+                    <label class="form-label">اسم النوع<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="patEditName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <div class="pat-icon-picker" id="patEditIconPicker"></div>
+                    <input type="hidden" id="patEditIcon" value="">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الوصف</label>
+                    <textarea class="form-control" id="patEditDescription" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الترتيب</label>
+                    <input type="number" class="form-control" id="patEditSortOrder" min="1">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">اللون</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pat-color-picker-wrap">
+                                <input type="color" id="patEditColor" value="#25935F" oninput="document.getElementById('patEditColorHex').textContent=this.value">
+                            </div>
+                            <div class="pat-color-hex" id="patEditColorHex" style="margin-top:0;">#25935F</div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">الوصف</label>
-                        <textarea class="form-control" id="patEditDescription" rows="3" style="border-radius:10px;border:2px solid var(--gray-200);"></textarea>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-bold">التفعيل</label>
-                        <div class="d-flex gap-3 mt-2">
-                            <div class="form-check"><input class="form-check-input" type="radio" name="patEditIsActive" id="patEditIsActiveOn" value="1"><label class="form-check-label" for="patEditIsActiveOn">مفعل</label></div>
-                            <div class="form-check"><input class="form-check-input" type="radio" name="patEditIsActive" id="patEditIsActiveOff" value="0"><label class="form-check-label" for="patEditIsActiveOff">معطل</label></div>
+                    <div class="col-6">
+                        <label class="form-label">التفعيل</label>
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="patEditIsActive" style="width:48px;height:24px;">
+                            </div>
+                            <label class="form-check-label" for="patEditIsActive" id="patEditIsActiveLabel" style="font-weight:600;">مفعل</label>
                         </div>
                     </div>
                 </div>
+
                 <div id="patEditError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>
-            <div class="ddl-modal-footer" style="justify-content:flex-end;">
-                <div class="d-flex gap-2 flex-wrap">
-                    <button type="button" class="ddl-save-btn" onclick="patSubmitEdit()">حفظ التعديلات</button>
-                    <button type="button" class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
-                </div>
+            <div class="pat-modal-footer">
+                <button class="pat-save-btn" onclick="patSubmitEdit()">
+                    <i class="bi bi-check-lg"></i>حفظ التعديلات
+                </button>
+                <button class="pat-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- تفاصيل -->
-<div class="modal fade" id="patDetailModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content ddl-modal">
-            <div class="ddl-modal-header details">
-                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ddl-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i> تفاصيل نوع الإجراء</h5>
-                <div class="ddl-modal-subtitle">عرض بيانات السجل</div>
-            </div>
-            <div class="ddl-modal-body" id="patDetailBody"></div>
-            <div class="ddl-modal-footer" style="justify-content:flex-end;">
-                <button type="button" class="ddl-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- حذف -->
-<div class="modal fade" id="patDeleteModal" tabindex="-1">
+<!-- Details Modal -->
+<div class="modal fade" id="patDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content ddl-modal">
-            <div class="ddl-modal-header delete">
+        <div class="modal-content pat-modal">
+            <div class="pat-modal-header" style="background:var(--info-700);">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ddl-modal-title">حذف نوع الإجراء</h5>
+                <h5 class="pat-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل النوع</h5>
+                <div class="pat-modal-subtitle">عرض بيانات النوع</div>
             </div>
-            <div class="ddl-modal-body text-center">
+            <div class="pat-modal-body" id="patDetailsBody">
+            </div>
+            <div class="pat-modal-footer" style="justify-content:flex-end;">
+                <button class="pat-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="patDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content pat-modal">
+            <div class="pat-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="pat-modal-title"><i class="bi bi-trash3" style="margin-left:8px;"></i>حذف النوع</h5>
+            </div>
+            <div class="pat-modal-body text-center">
                 <input type="hidden" id="patDeleteId">
-                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف نوع الإجراء؟</p>
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا النوع؟</p>
                 <p style="font-size:14px;color:var(--gray-500);" id="patDeleteNameLabel"></p>
                 <div id="patDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
             </div>
-            <div class="ddl-modal-footer" style="justify-content:center;">
-                <button class="ddl-save-btn" style="background:var(--error-600);" onclick="patSubmitDelete()">نعم، حذف</button>
-                <button class="ddl-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            <div class="pat-modal-footer" style="justify-content:center;">
+                <button class="pat-save-btn" style="background:var(--error-600);" onclick="patSubmitDelete()">
+                    نعم، حذف
+                </button>
+                <button class="pat-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
     </div>
