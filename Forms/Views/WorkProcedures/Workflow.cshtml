@@ -158,9 +158,75 @@
 .fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
 .fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
 .fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-inline-end:4px; }
+
+/* ═══ Radio buttons أفقية لـ «المكلف بالخطوة» ═══ */
+.wp-wf-radio-row { display:flex; gap:0; align-items:stretch; flex-wrap:wrap; padding:0; border:1px solid var(--gray-200); border-radius:10px; overflow:hidden; }
+.wp-wf-radio-row .wp-wf-radio { flex:1 1 50%; min-width:160px; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--gray-700); user-select:none; padding:10px 14px; transition:all .15s; border-inline-start:1px solid var(--gray-200); }
+.wp-wf-radio-row .wp-wf-radio:first-child { border-inline-start:none; }
+.wp-wf-radio-row .wp-wf-radio input[type="radio"] { width:16px; height:16px; cursor:pointer; margin:0; }
+/* لونان دائمان للخيارين قبل الاختيار: «محدد» وردي ، «ثابت» أخضر */
+.wp-wf-radio-row .wp-wf-radio[data-mode="specific"] { background:#fde8e8; color:#b91c1c; }
+.wp-wf-radio-row .wp-wf-radio[data-mode="specific"] input[type="radio"] { accent-color:#dc2626; }
+.wp-wf-radio-row .wp-wf-radio[data-mode="fixed"] { background:#dcf5e8; color:#0f9f5c; }
+.wp-wf-radio-row .wp-wf-radio[data-mode="fixed"] input[type="radio"] { accent-color:#16a34a; }
+.wp-wf-radio-row .wp-wf-radio:has(input:checked) { box-shadow:inset 0 0 0 2px currentColor; font-weight:800; }
+.wp-wf-radio-row.wp-wf-yesno { border:1px solid var(--gray-200); }
+.wp-wf-radio-row.wp-wf-yesno .wp-wf-radio { flex:1 1 50%; min-width:80px; background:#fff; color:var(--gray-700); padding:8px 12px; }
+.wp-wf-radio-row.wp-wf-yesno .wp-wf-radio input[type="radio"] { accent-color:var(--sa-600); }
+.wp-wf-radio-row.wp-wf-yesno .wp-wf-radio:has(input:checked) { background:var(--sa-50); color:var(--sa-700); }
+
+/* ═══ قنوات الإشعار (Multi Select Chips) ═══ */
+.wp-wf-channel-list { display:flex; gap:8px; flex-wrap:wrap; padding:6px 0; }
+.wp-wf-channel-chip { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:2px solid var(--gray-200); border-radius:10px; background:#fff; cursor:pointer; font-size:13px; font-weight:600; color:var(--gray-700); transition:all .15s; user-select:none; }
+.wp-wf-channel-chip:hover { border-color:var(--sa-300); background:var(--sa-25); }
+.wp-wf-channel-chip.is-on { border-color:var(--sa-600); background:var(--sa-50); color:var(--sa-800); }
+.wp-wf-channel-chip input[type="checkbox"] { width:16px; height:16px; accent-color:var(--sa-600); cursor:pointer; margin:0; }
+.wp-wf-channel-soon { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:var(--warning-100); color:var(--warning-700); margin-inline-start:6px; }
+
+/* ═══ الإجراءات المسموحة (Checkbox List — اللون على اسم الإجراء فقط) ═══ */
+.wp-wf-actions-list { display:flex; flex-direction:column; gap:6px; padding:6px 0; }
+.wp-wf-action-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.wp-wf-action-chip {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:7px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    background:#fff; cursor:pointer; font-size:13px; font-weight:700; user-select:none;
+    transition:all .15s; box-sizing:border-box;
+    width:auto; min-width:170px; max-width:240px;
+}
+.wp-wf-action-chip:hover { border-color:var(--wf-act-color); background:#fafafa; }
+.wp-wf-action-chip input[type="checkbox"] {
+    width:16px; height:16px; cursor:pointer; margin:0;
+    accent-color:var(--wf-act-color);
+}
+.wp-wf-action-chip > span { flex:1; color:var(--wf-act-color); font-weight:700; }
+.wp-wf-action-chip.is-on {
+    border-color:var(--wf-act-color);
+    background:color-mix(in srgb, var(--wf-act-color) 8%, #fff);
+    box-shadow:inset 0 0 0 1px var(--wf-act-color);
+}
+
+/* ═══ صفوف فرعية: «خطوة الرجوع» / «خطوة التزامن» — تظهر بجانب الزر وليس تحته ═══ */
+.wp-wf-sub-row {
+    display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:6px 10px; margin:0; background:var(--gray-50);
+    border:1px dashed var(--gray-300); border-radius:8px;
+    flex:1 1 auto; min-width:280px;
+}
+.wp-wf-sub-row-left { display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.wp-wf-sub-label { font-weight:700; font-size:12.5px; color:var(--gray-700); white-space:nowrap; }
+.wp-wf-sub-select { font-size:13px; border-radius:8px; border:1px solid var(--gray-200); padding:6px 10px; font-family:'Cairo',sans-serif; background:#fff; min-width:160px; flex:1 1 160px; }
+.wp-wf-sub-row .wp-wf-radio-row.wp-wf-yesno { border-radius:8px; }
+
+/* وضع المكلف الثابت — تنسيق المنفذ + الوحدة التنظيمية */
+.wp-wf-step-form[data-mode="fixed"] #wpWfAssigneeBlock { grid-template-columns:repeat(2, 1fr); }
+
 @@media (max-width:768px) {
     .fd-form-row { grid-template-columns:1fr; }
     .fd-detail-grid { grid-template-columns:1fr; }
+    .wp-wf-sub-row { width:100%; }
+    .wp-wf-action-row { flex-direction:column; align-items:stretch; }
+    .wp-wf-action-chip { max-width:none; }
 }
 </style>
 }
@@ -186,11 +252,12 @@
                     <tr>
                         <th style="text-align:center;white-space:nowrap;min-width:4.5rem;">الترتيب</th>
                         <th>الخطوة</th>
+                        <th style="text-align:center;">المكلف</th>
                         <th>المنفذ</th>
-                        <th>المدة المتوقعة</th>
-                        <th style="text-align:center;">خطوة متزامنة</th>
+                        <th>مدة الانجاز</th>
+                        <th style="text-align:center;">الإرجاع</th>
                         <th>خطوة الرجوع</th>
-                        <th>خطوة التقدم</th>
+                        <th style="text-align:center;">موافقات متزامنة</th>
                         <th>النموذج المستخدم</th>
                         <th>الحالة</th>
                         <th>قناة الإشعار</th>
@@ -198,7 +265,7 @@
                     </tr>
                 </thead>
                 <tbody id="wpWfBody">
-                    <tr><td colspan="11" class="text-center py-4">
+                    <tr><td colspan="12" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>

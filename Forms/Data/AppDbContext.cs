@@ -67,6 +67,7 @@ public class AppDbContext
     public List<FormDefinitionVersion> FormDefinitionVersions => Load<FormDefinitionVersion>("form_definition_versions");
     public List<WorkProcedure> WorkProcedures => Load<WorkProcedure>("work_procedures");
     public List<Delegation> Delegations => Load<Delegation>("delegations");
+    public List<ProcedureActionType> ProcedureActionTypes => Load<ProcedureActionType>("procedure_action_types");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -98,6 +99,7 @@ public class AppDbContext
     public void SaveFormDefinitionVersions(List<FormDefinitionVersion> d) => Save("form_definition_versions", d);
     public void SaveWorkProcedures(List<WorkProcedure> d) => Save("work_procedures", d);
     public void SaveDelegations(List<Delegation> d) => Save("delegations", d);
+    public void SaveProcedureActionTypes(List<ProcedureActionType> d) => Save("procedure_action_types", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

@@ -100,6 +100,7 @@
         </select>
         <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateFrom" title="من تاريخ" aria-label="من تاريخ">
         <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateTo" title="إلى تاريخ" aria-label="إلى تاريخ">
+        <button type="button" class="rt-clear-btn" id="delFilterClear" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
     </div>
 
     <div class="card bnf-tbl">
@@ -234,6 +235,10 @@
                 <div class="del-cancel-icon-wrap"><i class="bi bi-exclamation-lg fs-4"></i></div>
                 <p class="mb-2 fw-semibold" style="font-size:15px;line-height:1.65;color:var(--gray-800);">هل تريد إلغاء هذا التفويض؟</p>
                 <p class="mb-0 small text-danger fw-semibold"><i class="bi bi-info-circle" style="margin-left:6px;"></i>لا يمكن التراجع عن هذه العملية.</p>
+                <div class="text-start mt-3 w-100">
+                    <label class="form-label fw-semibold mb-1" for="delCancelReason">سبب إلغاء التفويض<span class="required-star">*</span></label>
+                    <textarea class="form-control" id="delCancelReason" rows="3" maxlength="1000" placeholder="سبب الإلغاء (إلزامي)"></textarea>
+                </div>
                 <div id="delCancelDelegationErr" class="alert alert-danger d-none mt-3 mb-0 text-start" style="font-size:13px;"></div>
             </div>
             <div class="bnf-modal-footer" style="justify-content:center;">

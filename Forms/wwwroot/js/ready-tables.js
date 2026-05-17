@@ -288,6 +288,22 @@ function rtEscAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+/**
+ * مفاتيح قديمة يجب حذفها تلقائياً من الخصائص الإضافية لأي نوع حقل
+ * (لا تظهر ضمن أي تعريف نوع في RT_FIELD_TYPES حالياً، لكن قد تكون موجودة في
+ * بيانات قديمة محفوظة، أو ضمن قوائم بناء قديمة).
+ */
+var RT_LEGACY_PROP_KEYS = ['charLimit', 'fieldCount', 'editMode', 'tooltipText', 'optionsActivationLabel'];
+
+/** يحذف المفاتيح القديمة من كائن الخصائص (in-place + إرجاع الكائن نفسه). */
+function rtStripLegacyProps(props) {
+    if (!props || typeof props !== 'object') return props;
+    RT_LEGACY_PROP_KEYS.forEach(function (k) {
+        if (k in props) delete props[k];
+    });
+    return props;
+}
+
 function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey) {
     propKey = propKey || 'options';
     var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
@@ -761,7 +777,7 @@ function rtShowCreateModal() {
     rtcResetColumnHeaderColorUI();
     rtcResetFieldForm();
     document.getElementById('rtcFieldsSection').style.display = 'none';
-    document.getElementById('rtcFieldsBody').innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>';
+    document.getElementById('rtcFieldsBody').innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>';
     document.getElementById('rtcFieldsCount').textContent = '0';
     document.getElementById('rtcCreateError').classList.add('d-none');
     var pi = document.getElementById('rtcPreviewInline');
@@ -803,12 +819,9 @@ function rtcOnFieldTypeChange() {
     area.style.display = 'block';
     cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    var cbStarted = false;
     def.props.forEach(function (p) {
-        if (p.type === 'checkbox' && !cbStarted) {
-            cbStarted = true;
-            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
-        }
+        // تجاهل المفاتيح القديمة دفاعياً (لا تظهر بالحقول الجديدة)
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         html += rtBuildSinglePropHtml(p, 'rtcProp');
     });
     html += '</div>';
@@ -822,11 +835,6 @@ function rtcOnFieldTypeChange() {
         var calRtc = document.getElementById('rtcProp_calendarType');
         if (calRtc && !calRtc.value) calRtc.value = 'ميلادي';
     }
-    var tooltip = document.getElementById('rtcFieldTooltip');
-    if (!tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم","جدول بيانات":"عبّئ الجدول","شبكة خيارات متعددة":"اختر خياراً لكل صف","شبكة مربعات اختيار":"حدد الخانات المطلوبة" };
-        tooltip.value = defaults[type] || "أدخل قيمة الحقل";
-    }
 }
 
 function rtcCollectProps() {
@@ -835,6 +843,7 @@ function rtcCollectProps() {
     var def = RT_FIELD_TYPES[type], result = {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtcProp_minFileSize');
             var mx = document.getElementById('rtcProp_maxFileSize');
@@ -846,15 +855,17 @@ function rtcCollectProps() {
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
     });
-    return rtMergeSpecialPropsIntoResult(type, 'rtcProp', result);
+    rtMergeSpecialPropsIntoResult(type, 'rtcProp', result);
+    return rtStripLegacyProps(result);
 }
 
 function rtcSetProps(type, propsObj) {
     if (!type || !RT_FIELD_TYPES[type]) return;
     var def = RT_FIELD_TYPES[type];
-    var po = propsObj || {};
+    var po = rtStripLegacyProps(Object.assign({}, propsObj || {}));
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtcProp_minFileSize');
             var mx = document.getElementById('rtcProp_maxFileSize');
@@ -885,7 +896,7 @@ function rtcAddField() {
         if (!rl || !String(rl.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtcCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtcFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:'', propertiesJson:JSON.stringify(props) };
     if (rtcEditingIndex >= 0) { rtcFields[rtcEditingIndex] = field; rtcEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtcFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtcResetFieldForm();
     rtcRenderFieldsTable();
@@ -900,8 +911,6 @@ function rtcResetFieldForm() {
     if (fname) fname.value = '';
     var req = document.getElementById('rtcFieldRequired');
     if (req) req.value = '1';
-    var tip = document.getElementById('rtcFieldTooltip');
-    if (tip) tip.value = '';
     var area = document.getElementById('rtcPropsArea');
     if (area) area.style.display = 'none';
     var fields = document.getElementById('rtcPropsFields');
@@ -918,7 +927,6 @@ function rtcEditField(idx) {
     document.getElementById('rtcFieldType').value = f.fieldType;
     document.getElementById('rtcFieldName').value = f.fieldName;
     document.getElementById('rtcFieldRequired').value = f.isRequired ? '1' : '0';
-    document.getElementById('rtcFieldTooltip').value = f.tooltipText || '';
     document.getElementById('rtcFieldNum').textContent = (idx + 1).toString();
     rtcOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtcSetProps(f.fieldType, p); } catch(e) {}
@@ -939,12 +947,12 @@ function rtcRenderFieldsTable() {
     var fn = document.getElementById('rtcFieldNum');
     if (fn) fn.textContent = (rtcEditingIndex >= 0 ? rtcEditingIndex + 1 : rtcFields.length + 1).toString();
     if (!body) return;
-    if (rtcFields.length === 0) { body.innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
+    if (rtcFields.length === 0) { body.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
     var html = '';
     rtcFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td>' + (f.tooltipText||'-') + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1077,7 +1085,8 @@ function rtpBuildFieldInput(f, opt) {
         var spinRtEv = props.readOnly ? '' : ' oninput="rtSpinClamp(this)" onblur="rtSpinClamp(this)"';
         var spinWrap = wStyle ? ' style="' + wStyle + '"' : '';
         var spinInpStyle = props.readOnly ? ' readonly style="text-align:center;direction:ltr;background:#f3f4f6;"' : ' style="text-align:center;direction:ltr;"';
-        inp = '<div class="input-group fd-spinner-group rt-spinner-group"' + ttAttr + spinWrap + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input rt-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + spinInpStyle + spinRtEv + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="padding:4px 10px;">+</button></div>';
+        // مطابقة شكل النماذج المستخدمة (fd-spinner-group + fd-spin-input بدون كلاسات إضافية)
+        inp = '<div class="input-group fd-spinner-group"' + ttAttr + spinWrap + '><button type="button" class="btn btn-outline-secondary" onclick="rtSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + spinInpStyle + spinRtEv + '><button type="button" class="btn btn-outline-secondary" onclick="rtSpinInc(this)" style="padding:4px 10px;">+</button></div>';
     } else if (f.fieldType === 'التقييم بالأرقام') {
         var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
         var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
@@ -1087,6 +1096,7 @@ function rtpBuildFieldInput(f, opt) {
         if (lo || hi) inp += '<div class="d-flex justify-content-between">' + lo + hi + '</div>';
         inp += '</div>';
     } else if (f.fieldType === 'قائمة منسدلة') {
+        // تطابق هيكل النماذج المستخدمة: select بسيط مع خيار فارغ + خيارات + قيمة افتراضية
         var opts = [];
         if (props.options) opts = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         var emptyText = (props.emptyText || '').trim();
@@ -1096,15 +1106,18 @@ function rtpBuildFieldInput(f, opt) {
         inp += '<option value="">' + String(firstLabel).replace(/</g, '&lt;') + '</option>';
         opts.forEach(function (o) {
             var sel = (defaultOpt && o === defaultOpt) ? ' selected' : '';
-            inp += '<option value="' + String(o).replace(/"/g, '&quot;') + '"' + sel + '>' + String(o).replace(/</g, '&lt;') + '</option>';
+            inp += '<option value="' + rtEscAttr(o) + '"' + sel + '>' + String(o).replace(/</g, '&lt;') + '</option>';
         });
         inp += '</select>';
     } else if (f.fieldType === 'قائمة اختيار الواحد') {
+        // تطابق شكل النماذج المستخدمة (fd-oc-group + form-check بدون mb-0)
         var optsS = [];
         if (props.options) optsS = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         var defaultOptS = (props.defaultOption || '').trim();
         var isHorizS = String(props.optionsOrientation || '').trim() === 'أفقي';
-        var grpClsS = isHorizS ? 'fd-oc-group fd-oc-horiz' : 'fd-oc-group fd-oc-vert';
+        var grpClsS = isHorizS
+            ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3'
+            : 'fd-oc-group d-flex flex-column gap-1';
         var disAttrS = props.readOnly ? ' disabled' : '';
         var gnameS = 'rt_sc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
         if (optsS.length === 0) {
@@ -1115,11 +1128,12 @@ function rtpBuildFieldInput(f, opt) {
                 var ridS = gnameS + '_' + i;
                 var selS = (defaultOptS && defaultOptS === o) ? ' checked' : '';
                 var reqOneS = (f.isRequired && i === 0) ? ' required' : '';
-                bodyS += '<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="radio" name="' + gnameS + '" id="' + ridS + '" value="' + rtEscAttr(o) + '"' + selS + disAttrS + reqOneS + '><label class="form-check-label" for="' + ridS + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
+                bodyS += '<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="radio" name="' + gnameS + '" id="' + ridS + '" value="' + rtEscAttr(o) + '"' + selS + disAttrS + reqOneS + '><label class="form-check-label" for="' + ridS + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
             });
             inp = '<div class="' + grpClsS + '"' + ttAttr + mkStyle() + '>' + bodyS + '</div>';
         }
     } else if (f.fieldType === 'قائمة اختيار متعدد') {
+        // تطابق شكل النماذج المستخدمة
         var opts2 = [];
         if (props.options) opts2 = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         var defaultSet = {};
@@ -1128,7 +1142,9 @@ function rtpBuildFieldInput(f, opt) {
             if (t) defaultSet[t] = true;
         });
         var isHorizM = String(props.optionsOrientation || '').trim() === 'أفقي';
-        var grpClsM = isHorizM ? 'fd-oc-group fd-oc-horiz' : 'fd-oc-group fd-oc-vert';
+        var grpClsM = isHorizM
+            ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3'
+            : 'fd-oc-group d-flex flex-column gap-1';
         var disAttrM = props.readOnly ? ' disabled' : '';
         var gnameM = 'rt_mc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
         if (opts2.length === 0) {
@@ -1138,7 +1154,7 @@ function rtpBuildFieldInput(f, opt) {
             opts2.forEach(function (o, i) {
                 var cidM = gnameM + '_' + i;
                 var chkM = defaultSet[o] ? ' checked' : '';
-                bodyM += '<div class="fd-oc-item"><div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="' + gnameM + '[]" id="' + cidM + '" value="' + rtEscAttr(o) + '"' + chkM + disAttrM + '><label class="form-check-label" for="' + cidM + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
+                bodyM += '<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="checkbox" name="' + gnameM + '[]" id="' + cidM + '" value="' + rtEscAttr(o) + '"' + chkM + disAttrM + '><label class="form-check-label" for="' + cidM + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
             });
             inp = '<div class="' + grpClsM + '"' + ttAttr + mkStyle() + '>' + bodyM + '</div>';
         }
@@ -1307,7 +1323,7 @@ function rtSpinFormatForInput(v, el) {
     return rounded === Math.floor(rounded) ? String(Math.floor(rounded)) : String(rounded);
 }
 function rtSpinClamp(el) {
-    if (!el || !el.classList.contains('rt-spin-input')) return;
+    if (!el || !el.classList.contains('fd-spin-input')) return;
     if (el.readOnly || el.disabled) return;
     var allowFrac = rtSpinAllowsFraction(el);
     var allowNeg = rtSpinAllowsNegative(el);
@@ -1338,7 +1354,7 @@ function rtSpinClamp(el) {
     el.value = rtSpinFormatForInput(x, el);
 }
 function rtSpinInc(btn) {
-    var inp = btn.parentElement && btn.parentElement.querySelector('.rt-spin-input');
+    var inp = btn.parentElement && btn.parentElement.querySelector('.fd-spin-input');
     if (!inp || inp.readOnly || inp.disabled) return;
     var stAttr = inp.getAttribute('step');
     var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
@@ -1351,7 +1367,7 @@ function rtSpinInc(btn) {
     rtSpinClamp(inp);
 }
 function rtSpinDec(btn) {
-    var inp = btn.parentElement && btn.parentElement.querySelector('.rt-spin-input');
+    var inp = btn.parentElement && btn.parentElement.querySelector('.fd-spin-input');
     if (!inp || inp.readOnly || inp.disabled) return;
     var stAttr = inp.getAttribute('step');
     var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
@@ -1543,12 +1559,12 @@ async function rtShowDetails(id) {
         if (d.fields && d.fields.length > 0) {
             html += '<div class="rt-section"><div class="rt-section-title">حقول الجدول (' + d.fields.length + ')</div>';
             html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr>';
-            html += '<th>رقم</th><th>نوع الحقل</th><th>اسم الحقل</th><th>إلزامي</th><th>التلميح</th><th>الخصائص</th>';
+            html += '<th>رقم</th><th>نوع الحقل</th><th>اسم الحقل</th><th>إلزامي</th><th>الخصائص</th>';
             html += '</tr></thead><tbody>';
             d.fields.forEach(function(f) {
                 var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
                 var propsSummary = rtGetPropsSummary(f);
-                html += '<tr><td>' + f.sortOrder + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td>' + (f.tooltipText || '-') + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
+                html += '<tr><td>' + f.sortOrder + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
             });
             html += '</tbody></table></div></div>';
         }
@@ -1668,12 +1684,8 @@ function rtEditOnFieldTypeChange() {
     area.style.display = 'block';
     cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    var cbStarted2 = false;
     def.props.forEach(function (p) {
-        if (p.type === 'checkbox' && !cbStarted2) {
-            cbStarted2 = true;
-            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
-        }
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         html += rtBuildSinglePropHtml(p, 'rtEditProp');
     });
     html += '</div>';
@@ -1687,11 +1699,6 @@ function rtEditOnFieldTypeChange() {
         var calEdit = document.getElementById('rtEditProp_calendarType');
         if (calEdit && !calEdit.value) calEdit.value = 'ميلادي';
     }
-    var tooltip = document.getElementById('rtEditFieldTooltip');
-    if (tooltip && !tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم","جدول بيانات":"عبّئ الجدول","شبكة خيارات متعددة":"اختر خياراً لكل صف","شبكة مربعات اختيار":"حدد الخانات المطلوبة" };
-        tooltip.value = defaults[type] || "أدخل قيمة الحقل";
-    }
 }
 
 function rtEditCollectProps() {
@@ -1700,6 +1707,7 @@ function rtEditCollectProps() {
     var def = RT_FIELD_TYPES[type], result = {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtEditProp_minFileSize');
             var mx = document.getElementById('rtEditProp_maxFileSize');
@@ -1711,15 +1719,17 @@ function rtEditCollectProps() {
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
     });
-    return rtMergeSpecialPropsIntoResult(type, 'rtEditProp', result);
+    rtMergeSpecialPropsIntoResult(type, 'rtEditProp', result);
+    return rtStripLegacyProps(result);
 }
 
 function rtEditSetProps(type, propsObj) {
     if (!type || !RT_FIELD_TYPES[type]) return;
     var def = RT_FIELD_TYPES[type];
-    var po = propsObj || {};
+    var po = rtStripLegacyProps(Object.assign({}, propsObj || {}));
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtEditProp_minFileSize');
             var mx = document.getElementById('rtEditProp_maxFileSize');
@@ -1750,7 +1760,7 @@ function rtEditAddField() {
         if (!rl2 || !String(rl2.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtEditCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtEditFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:'', propertiesJson:JSON.stringify(props) };
     if (rtEditEditingIndex >= 0) { rtEditFields[rtEditEditingIndex] = field; rtEditEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtEditFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtEditResetFieldForm();
     rtEditRenderFieldsTable();
@@ -1765,8 +1775,6 @@ function rtEditResetFieldForm() {
     if (fname) fname.value = '';
     var req = document.getElementById('rtEditFieldRequired');
     if (req) req.value = '1';
-    var tip = document.getElementById('rtEditFieldTooltip');
-    if (tip) tip.value = '';
     var area = document.getElementById('rtEditPropsArea');
     if (area) area.style.display = 'none';
     var fields = document.getElementById('rtEditPropsFields');
@@ -1783,7 +1791,6 @@ function rtEditEditField(idx) {
     document.getElementById('rtEditFieldType').value = f.fieldType;
     document.getElementById('rtEditFieldName').value = f.fieldName;
     document.getElementById('rtEditFieldRequired').value = f.isRequired ? '1' : '0';
-    document.getElementById('rtEditFieldTooltip').value = f.tooltipText || '';
     document.getElementById('rtEditFieldNum').textContent = (idx + 1).toString();
     rtEditOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtEditSetProps(f.fieldType, p); } catch(e) {}
@@ -1804,12 +1811,12 @@ function rtEditRenderFieldsTable() {
     var fn = document.getElementById('rtEditFieldNum');
     if (fn) fn.textContent = (rtEditEditingIndex >= 0 ? rtEditEditingIndex + 1 : rtEditFields.length + 1).toString();
     if (!body) { console.warn('rtEditFieldsBody not found'); return; }
-    if (rtEditFields.length === 0) { body.innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
+    if (rtEditFields.length === 0) { body.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
     var html = '';
     rtEditFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td>' + (f.tooltipText||'-') + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }

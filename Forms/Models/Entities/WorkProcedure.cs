@@ -6,9 +6,22 @@ public class WorkProcedure
 
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
+
+    /// <summary>مثال: V1.0 — يُحدَّد عند الإنشاء ويترقى مع إصدارات لاحقة من نفس سلسلة الإجراء.</summary>
+    public string VersionLabel { get; set; } = "V1.0";
+
+    /// <summary>معرّف أول إصدار في السلسلة (يُساوي معرّف هذا السجل للإصدار الأول).</summary>
+    public int VersionRootProcedureId { get; set; }
+
     public string Objectives { get; set; } = "";
 
     public string RegulationsAttachmentsJson { get; set; } = "[]";
+
+    /// <summary>مرجع نوع الإجراء (إعدادات «أنواع الإجراءات»).</summary>
+    public int ProcedureActionTypeId { get; set; }
+
+    /// <summary>القالب البصري المستخدم مع الإجراء (قوالب النماذج).</summary>
+    public int FormTemplateId { get; set; }
 
     public int WorkspaceId { get; set; }
 

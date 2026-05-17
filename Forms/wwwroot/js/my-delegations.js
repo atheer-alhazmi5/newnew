@@ -78,7 +78,18 @@ async function myDelShowDetails(id) {
         }
         var x = r.data;
         var statusHtml = myDelStatusLabel(x.statusCode || x.StatusCode);
+        var sc = String(x.statusCode || x.StatusCode || '').toLowerCase();
+        var refRaw = x.referenceNumber != null ? x.referenceNumber : x.ReferenceNumber;
+        var cancelRow = '';
+        if (sc === 'cancelled') {
+            var cr = (x.cancellationReason != null ? x.cancellationReason : x.CancellationReason || '').trim();
+            cancelRow = myDelDetailRow('سبب إلغاء التفويض', myDelEsc(cr || '—'));
+        }
+        var updatedByVal = (x.updatedBy != null ? x.updatedBy : x.UpdatedBy || '').trim();
         var bodyHtml =
+            (refRaw != null && parseInt(refRaw, 10) > 0
+                ? myDelDetailRow('المرجع', '<span dir="ltr">' + myDelEsc(String(refRaw)) + '</span>')
+                : '') +
             myDelDetailRow('المفوض', myDelNameRoleCell(x.delegatorName || x.DelegatorName, x.delegatorRoleDisplay || x.DelegatorRoleDisplay)) +
             myDelDetailRow('وحدة المفوض', myDelEsc(x.delegatorOrgUnitName || x.DelegatorOrgUnitName || '—')) +
             myDelDetailRow('المفوض له', myDelNameRoleCell(x.delegateeName || x.DelegateeName, x.delegateeRoleDisplay || x.DelegateeRoleDisplay)) +
@@ -86,8 +97,12 @@ async function myDelShowDetails(id) {
             myDelDetailRow('تاريخ البداية', '<span dir="ltr">' + myDelEsc(x.startDate || x.StartDate || '') + '</span>') +
             myDelDetailRow('تاريخ النهاية', '<span dir="ltr">' + myDelEsc(x.endDate || x.EndDate || '') + '</span>') +
             myDelDetailRow('الحالة', statusHtml) +
+            cancelRow +
+            myDelDetailRow('سبب التفويض', myDelEsc((x.delegationReason || x.DelegationReason || '').trim() || '—')) +
             myDelDetailRow('أنشئ بواسطة', myDelEsc(x.createdBy || x.CreatedBy || '—')) +
-            myDelDetailRow('تاريخ الإنشاء', myDelEsc(x.createdAt || x.CreatedAt || '—'));
+            myDelDetailRow('تاريخ الإنشاء', myDelEsc(x.createdAt || x.CreatedAt || '—')) +
+            myDelDetailRow('التحديث بواسطة', myDelEsc(updatedByVal || '—')) +
+            myDelDetailRow('آخر تحديث', myDelEsc(x.updatedAt || x.UpdatedAt || '—'));
 
         document.getElementById('myDelDetailsBody').innerHTML = bodyHtml;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('myDelDetailsModal')).show();

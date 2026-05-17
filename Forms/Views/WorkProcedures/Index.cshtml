@@ -109,6 +109,18 @@
     overflow-y:auto;
     background:#fff;
 }
+.wp-dd-menu .wp-dd-search {
+    position:sticky;
+    top:0;
+    z-index:2;
+    padding:8px 10px;
+    background:#fff;
+    border-bottom:1px solid var(--gray-200);
+}
+.wp-dd-menu .wp-dd-search .form-control-sm {
+    border-radius:8px;
+    font-size:13px;
+}
 /* توحيد مظهر زر القائمة واللوحة داخل مودال الإجراء (نماذج / منفذين / وحدات / علاقات) */
 #wpEditBody .dropdown.wp-dd .dropdown-toggle.wp-dd-toggle,
 #wpEditBody .dropdown.wp-dd .dropdown-menu.wp-dd-menu {
@@ -217,9 +229,14 @@
         <h2 class="page-title mb-0">إجراءات العمل</h2>
         <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إنشاء وإدارة إجراءات العمل في النظام</p>
     </div>
-    <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius:12px;padding:10px 28px;">
-        <i class="bi bi-plus-lg"></i> إنشاء إجراء عمل جديد
-    </button>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-primary" onclick="wpShowVersionMode()" style="border-radius:12px;padding:10px 24px;font-weight:700;">
+            <i class="bi bi-layers"></i> إصدار نسخة
+        </button>
+        <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius:12px;padding:10px 28px;">
+            <i class="bi bi-plus-lg"></i> إنشاء إجراء عمل جديد
+        </button>
+    </div>
 </div>
 
 <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters wp-procedure-filters">
@@ -272,17 +289,20 @@
                         <th style="width:50px;text-align:center;">رقم</th>
                         <th>ترميز الإجراء</th>
                         <th>اسم الإجراء</th>
+                        <th>نوع الإجراء</th>
                         <th>مساحة العمل</th>
                         <th>التصنيف</th>
                         <th>الوحدة التنظيمية المالكة</th>
                         <th style="text-align:center;">صلاحية الإجراء</th>
+                        <th>القالب المستخدم</th>
+                        <th style="text-align:center;">رقم الإصدار</th>
                         <th style="text-align:center;">الحالة</th>
                         <th style="text-align:center;display:none;" id="wpThActive">التفعيل</th>
                         <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="wpBody">
-                    <tr><td colspan="10" class="text-center py-4">
+                    <tr><td colspan="13" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>

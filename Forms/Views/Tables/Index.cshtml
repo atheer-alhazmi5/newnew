@@ -88,11 +88,12 @@
 .rt-field-badge-opt { background:var(--gray-100); color:var(--gray-500); padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-page-wrap { width:100%; max-width:100%; }
 .rt-field-subname { font-size:11px; color:var(--gray-400); font-weight:600; margin-top:4px; line-height:1.4; }
-.rt-spinner-group { max-width:200px; }
-.rt-spinner-group .rt-spin-btn { z-index:0; }
-.rt-spinner-group .rt-spin-input { text-align:center; font-weight:700; font-size:15px; -moz-appearance:textfield; }
-.rt-spinner-group .rt-spin-input::-webkit-inner-spin-button,
-.rt-spinner-group .rt-spin-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+/* الدوار الرقمي — مطابق لشكله داخل النماذج المستخدمة (fd-spinner-group) */
+.rt-preview-form-table .input-group.fd-spinner-group { max-width:220px; }
+.rt-preview-form-table .input-group.fd-spinner-group .btn-outline-secondary { padding:4px 10px; }
+.rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input { text-align:center; direction:ltr; font-weight:700; -moz-appearance:textfield; }
+.rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input::-webkit-inner-spin-button,
+.rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .rt-star-rating .rt-star-icon { transition:color .15s; user-select:none; }
 .rt-star-rating .rt-star-icon:hover { transform:scale(1.2); }
 /* شجرة الوحدة التنظيمية (فلتر) — نفس أسلوب اضافه مستفيد / القوائم المنسدلة */
@@ -123,19 +124,18 @@
 .fd-date-field-wrap input.fd-date-control[type="date"]::-webkit-calendar-picker-indicator { opacity:0; display:none; }
 .fd-date-field-wrap input.fd-date-control[type="date"]::-webkit-inner-spin-button { display:none; }
 
-/* الدوار الرقمي — مطابق لشكل النماذج المستخدمة */
-.rt-spinner-group.fd-spinner-group .btn-outline-secondary { padding:4px 10px; }
-.rt-spinner-group.fd-spinner-group .fd-spin-input { text-align:center; direction:ltr; font-weight:700; }
-
 /* مجموعات الاختيارات (واحد/متعدد) — أفقي/عمودي مطابق للنماذج المستخدمة */
 .fd-oc-group { width:100%; }
-.fd-oc-group.fd-oc-vert { display:flex; flex-direction:column; gap:6px; }
-.fd-oc-group.fd-oc-horiz { display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+.fd-oc-group.fd-oc-vert,
+.rt-preview-form-table .fd-oc-group:not(.fd-oc-horiz) { display:flex; flex-direction:column; gap:0.25rem; }
+.fd-oc-group.fd-oc-horiz { display:flex; flex-wrap:wrap; gap:1rem; align-items:center; }
 .fd-oc-group.fd-oc-horiz .fd-oc-item { flex:0 0 auto; }
 .fd-oc-group.fd-oc-horiz .form-check { display:inline-flex; align-items:center; padding-inline-start:0; margin:0; gap:6px; }
 .fd-oc-group.fd-oc-horiz .form-check-input { margin:0; }
 .fd-oc-group.fd-oc-horiz .form-check-label { margin:0; cursor:pointer; }
 .fd-oc-group .form-check { margin-bottom:0; }
+/* القائمة المنسدلة في المعاينة — نفس عرض/ارتفاع النماذج المستخدمة */
+.rt-preview-form-table .form-select { min-height:calc(1.5em + 0.75rem + 2px); }
 
 @@media (max-width:768px) { .rt-form-row { grid-template-columns:1fr; } }
 </style>
@@ -293,7 +293,6 @@
                                         <th>نوع الحقل<span class="required-star">*</span></th>
                                         <th>اسم الحقل<span class="required-star">*</span></th>
                                         <th>الحقل إلزامي</th>
-                                        <th>نص التلميح</th>
                                         <th>الخصائص الإضافية</th>
                                         <th>الإجراء</th>
                                     </tr>
@@ -329,7 +328,6 @@
                                                 <option value="0">لا</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm" id="rtcFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
                                         <td id="rtcPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
                                         <td><button class="rt-add-field-btn" onclick="rtcAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
                                     </tr>
@@ -350,12 +348,11 @@
                                         <th>اسم الحقل</th>
                                         <th>إلزامي</th>
                                         <th>الخصائص</th>
-                                        <th>التلميح</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rtcFieldsBody">
-                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                    <tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -485,7 +482,6 @@
                                         <th>نوع الحقل<span class="required-star">*</span></th>
                                         <th>اسم الحقل<span class="required-star">*</span></th>
                                         <th>الحقل إلزامي</th>
-                                        <th>نص التلميح</th>
                                         <th>الخصائص الإضافية</th>
                                         <th>الإجراء</th>
                                     </tr>
@@ -521,7 +517,6 @@
                                                 <option value="0">لا</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm" id="rtEditFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
                                         <td id="rtEditPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
                                         <td><button class="rt-add-field-btn" onclick="rtEditAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
                                     </tr>
@@ -542,12 +537,11 @@
                                         <th>اسم الحقل</th>
                                         <th>إلزامي</th>
                                         <th>الخصائص</th>
-                                        <th>التلميح</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rtEditFieldsBody">
-                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                    <tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
                                 </tbody>
                             </table>
                         </div>

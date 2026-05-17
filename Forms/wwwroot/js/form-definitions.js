@@ -231,7 +231,7 @@ const FD_FIELD_TYPES = {
         { key:"pageLabel", label:"اسم الصفحة التالية (اختياري)", type:"text", placeholder:"الصفحة 2" }
     ]},
     "صورة عرض": { props: [
-        { key:"imageUrl", label:"رابط الصورة (URL)", type:"text", placeholder:"https://..." },
+        { key:"imageUrl", label:"إرفاق صورة", type:"displayImageUpload" },
         { key:"altText", label:"نص بديل", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"320" },
         { key:"heightPx", label:"الارتفاع بالبيكسل", type:"number", placeholder:"200" },
@@ -726,6 +726,7 @@ function fdApplyPropsSpecialEditors(type, pfx, po) {
     const def = FD_FIELD_TYPES[type]; if (!def) return;
     def.props.forEach(p => { if (p.type === 'optionList') fdInitOptionListEditor(pfx, p.choiceMode||'single', po||{}, p.key); });
     fdApplyFileTypesFromProps(pfx, po||{});
+    if (type === 'صورة عرض') fdWireDisplayImageProp(pfx, 'imageUrl');
 }
 
 function fdBuildSinglePropHtml(p, pfx) {
@@ -779,6 +780,20 @@ function fdBuildSinglePropHtml(p, pfx) {
         });
         return h + '</div></div>';
     }
+    if (p.type === 'displayImageUpload') {
+        const fid = `${pfx}_${p.key}`;
+        return `<div class="col-12 mb-3 fd-display-image-prop">
+        <label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
+        <input type="file" class="form-control form-control-sm" id="${fid}_file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+        <p class="text-muted small mb-0 mt-1" style="font-size:11px;">اختر ملف صورة من الجهاز (PNG، JPEG، GIF، WebP). تُخزَّن ضمن النموذج كمرفق.</p>
+        <textarea class="form-control form-control-sm visually-hidden" id="${fid}" rows="1" autocomplete="off" style="position:absolute;left:-9999px;height:1px;width:1px;opacity:0;" aria-hidden="true"></textarea>
+        <div class="mt-2 p-2 rounded-3" style="border:1px dashed var(--gray-300);background:var(--gray-50);min-height:72px;">
+            <img id="${fid}_preview" alt="" class="rounded" style="max-width:100%;max-height:180px;display:none;object-fit:contain;">
+            <span id="${fid}_empty" class="text-muted small">لم تُرفع صورة بعد</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="${fid}_clear" style="display:none;">إزالة الصورة</button>
+        </div>`;
+    }
     const fid = `${pfx}_${p.key}`;
     const col = p.col || 'col-md-4 col-sm-6 mb-3';
     const hints = { subName:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص صغير يظهر أسفل الحقل</div>', defaultValue:'<div class="text-muted" style="font-size:10px;margin-top:2px;">قيمة تُعبأ تلقائياً في الحقل</div>', placeholder:'<div class="text-muted" style="font-size:10px;margin-top:2px;">نص إرشادي يختفي عند الكتابة</div>' };
@@ -793,6 +808,44 @@ function fdBuildSinglePropHtml(p, pfx) {
         html += `<input type="${p.type||'text'}" class="form-control form-control-sm" id="${fid}" placeholder="${fdEscAttr(p.placeholder||'')}" style="border-radius:8px;font-size:12.5px;">`;
     }
     return html + (hints[p.key]||'') + '</div>';
+}
+
+/** ربط حقل إرفاق صورة «صورة عرض»: قراءة الملف إلى data URL في الحقل الخفي + معاينة. */
+function fdWireDisplayImageProp(pfx, key) {
+    const tid = `${pfx}_${key}`;
+    const fileInp = document.getElementById(`${tid}_file`);
+    const ta = document.getElementById(tid);
+    const prev = document.getElementById(`${tid}_preview`);
+    const empty = document.getElementById(`${tid}_empty`);
+    const clr = document.getElementById(`${tid}_clear`);
+    if (!fileInp || !ta) return;
+    function sync() {
+        const v = String(ta.value || '').trim();
+        if (v) {
+            if (prev) { prev.src = v; prev.style.display = ''; }
+            if (empty) empty.style.display = 'none';
+            if (clr) clr.style.display = '';
+        } else {
+            if (prev) { prev.removeAttribute('src'); prev.style.display = 'none'; }
+            if (empty) empty.style.display = '';
+            if (clr) clr.style.display = 'none';
+        }
+    }
+    fileInp.onchange = function () {
+        const f = fileInp.files && fileInp.files[0];
+        if (!f) return;
+        if (!/^image\//i.test(f.type)) {
+            if (typeof showToast === 'function') showToast('يرجى اختيار ملف صورة', 'error');
+            fileInp.value = '';
+            return;
+        }
+        const r = new FileReader();
+        r.onload = () => { ta.value = r.result || ''; sync(); };
+        r.readAsDataURL(f);
+        fileInp.value = '';
+    };
+    if (clr) clr.onclick = () => { ta.value = ''; sync(); };
+    sync();
 }
 
 function fdParseLines(s) {
@@ -2644,7 +2697,7 @@ function fdBuildFieldInput(f, opt) {
         if (imgUrl) {
             inp = `<div class="fd-image-display" style="display:flex;justify-content:${justify};"${ttAttr}><img src="${fdEscAttr(imgUrl)}" alt="${alt}" style="max-width:100%;width:${w};${h !== 'auto' ? 'height:'+h+';' : ''}border-radius:8px;object-fit:contain;border:1px solid var(--gray-200);background:#fff;padding:4px;"></div>`;
         } else {
-            inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border:2px dashed var(--gray-300);border-radius:10px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف رابط الصورة من خصائص الحقل</div></div>`;
+            inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border:2px dashed var(--gray-300);border-radius:10px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف صورة من خصائص الحقل (إرفاق من الجهاز)</div></div>`;
         }
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
@@ -3435,16 +3488,18 @@ function fdOwnershipBadge(ownership) {
 function fdActions(f) {
     let h = '<div class="d-flex gap-1 justify-content-center flex-wrap">';
     h += `<button class="fd-action-btn fd-action-btn-detail" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`;
-    if (fdIsAdmin||f.status==='draft'||f.status==='rejected')
+    const isApproved = f.status === 'approved';
+    // النموذج المعتمد: لا تعديل ولا حذف — تفاصيل + إصدار نسخة فقط (إضافةً لأزرار اعتماد/رفض عند الانتظار)
+    if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-edit" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`;
-    if (!fdIsAdmin&&(f.status==='draft'||f.status==='rejected'))
+    if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-send" onclick="fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`;
-    if (fdIsAdmin&&f.status==='pending') {
+    if (fdIsAdmin && f.status === 'pending') {
         h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`;
         h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
     }
     h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
-    if (fdIsAdmin||f.status==='draft'||f.status==='rejected')
+    if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-delete" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`;
     return h + '</div>';
 }
@@ -4387,6 +4442,10 @@ function fdAddField() {
     if (def?.props.some(p => p.type === 'optionList')) {
         const o = fdCollectOptionListFromEditor('fdProp', 'options');
         if (!o || !String(o.options || '').trim()) return showToast('يرجى إدخال خيار واحد على الأقل', 'error');
+    }
+    if (type === 'صورة عرض') {
+        const draft = fdCollectFieldProps();
+        if (!String(draft.imageUrl || '').trim()) return showToast('يرجى إرفاق صورة لحقل صورة العرض', 'error');
     }
     if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
         const rl = document.getElementById('fdProp_rowLabels');

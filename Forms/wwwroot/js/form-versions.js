@@ -190,6 +190,149 @@ async function fdvOpenWizardForVersion(opts) {
 }
 
 // ─── تفاصيل الإصدار ─────────────────────────────────────────────────────────
+/** استخراج الحقول من JSON بشكل آمن (يدعم الصياغة القديمة كمصفوفة، والجديدة ككائن). */
+function fdvExtractFieldsForDiff(json) {
+    if (!json || typeof json !== 'string') return { fields: [], hasIds: false, parseOk: false };
+    let parsed;
+    try { parsed = JSON.parse(json); } catch (e) { return { fields: [], hasIds: false, parseOk: false }; }
+    let arr = [];
+    if (Array.isArray(parsed)) arr = parsed;
+    else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.fields)) arr = parsed.fields;
+    const fields = arr.map(function (f) {
+        const idVal = (f && f.id != null) ? f.id : null;
+        const nameVal = f ? (f.fieldName != null ? f.fieldName : (f.name != null ? f.name : '')) : '';
+        return { id: idVal, name: String(nameVal || '').trim() };
+    });
+    const hasIds = fields.length > 0 && fields.every(function (x) { return x.id != null && String(x.id) !== ''; });
+    return { fields: fields, hasIds: hasIds, parseOk: true };
+}
+
+/**
+ * فروقات الحقول بين الإصدار السابق والإصدار الحالي.
+ * - تعديل تسمية: نفس المعرف مع اختلاف الاسم.
+ * - مضاف: معرف جديد لم يكن موجوداً في الإصدار السابق.
+ * - محذوف: معرف موجود في السابق وغير موجود في الحالي.
+ *
+ * إذا كان أحد الإصدارين يفتقد المعرفات (بيانات قديمة) نسقط لمطابقة بالاسم لتجنّب
+ * إظهار جميع الحقول كمضافة/محذوفة.
+ */
+function fdvComputeFieldDiff(prevFields, curFields, prevHasIds, curHasIds) {
+    const added = [], removed = [], renamed = [];
+
+    if (prevHasIds && curHasIds) {
+        const prevById = new Map();
+        prevFields.forEach(function (f) { prevById.set(String(f.id), f); });
+        const curIds = new Set(curFields.map(function (f) { return String(f.id); }));
+
+        curFields.forEach(function (f) {
+            const key = String(f.id);
+            if (prevById.has(key)) {
+                const p = prevById.get(key);
+                if ((p.name || '') !== (f.name || '')) {
+                    renamed.push({ oldName: p.name || '', newName: f.name || '' });
+                }
+            } else {
+                added.push({ name: f.name || '' });
+            }
+        });
+        prevFields.forEach(function (f) {
+            if (!curIds.has(String(f.id))) removed.push({ name: f.name || '' });
+        });
+    } else {
+        const prevNames = new Set(prevFields.map(function (f) { return f.name || ''; }));
+        const curNames = new Set(curFields.map(function (f) { return f.name || ''; }));
+        curFields.forEach(function (f) { if (!prevNames.has(f.name || '')) added.push({ name: f.name || '' }); });
+        prevFields.forEach(function (f) { if (!curNames.has(f.name || '')) removed.push({ name: f.name || '' }); });
+    }
+
+    return { added: added, removed: removed, renamed: renamed };
+}
+
+function fdvFindPreviousVersionMeta(curMeta) {
+    if (!curMeta || !Array.isArray(fdvData)) return null;
+    const lower = fdvData.filter(function (x) {
+        return typeof x.versionNumber === 'number' && x.versionNumber < curMeta.versionNumber;
+    });
+    if (!lower.length) return null;
+    lower.sort(function (a, b) { return b.versionNumber - a.versionNumber; });
+    return lower[0];
+}
+
+function fdvRenderDiffItems(items, kind) {
+    if (!items || !items.length) {
+        const msgs = {
+            added: 'لا توجد حقول مضافة',
+            removed: 'لا توجد حقول محذوفة',
+            renamed: 'لا توجد تغييرات في التسميات'
+        };
+        return '<div class="fdv-diff-empty">' + esc(msgs[kind] || 'لا توجد عناصر') + '</div>';
+    }
+    return items.map(function (it) {
+        if (kind === 'renamed') {
+            return '<div class="fdv-diff-item fdv-diff-rename">'
+                + '<span class="fdv-rn-old">' + esc(it.oldName || '—') + '</span>'
+                + '<i class="bi bi-arrow-left-short fdv-rn-arrow"></i>'
+                + '<span class="fdv-rn-new">' + esc(it.newName || '—') + '</span>'
+                + '</div>';
+        }
+        return '<div class="fdv-diff-item">' + esc(it.name || '—') + '</div>';
+    }).join('');
+}
+
+/**
+ * مقطع «الفروقات بين الإصدارين» في تفاصيل الإصدار.
+ * يعرض ثلاث مربعات (مضاف / محذوف / تعديل تسمية) كل واحد مع عداده، ويتعامل
+ * بسلاسة مع البيانات القديمة الناقصة دون كسر الصفحة.
+ */
+async function fdvBuildDiffSection(curVersion) {
+    const curMeta = (Array.isArray(fdvData) ? fdvData : []).find(function (x) { return x.id === curVersion.id; });
+    const prevMeta = fdvFindPreviousVersionMeta(curMeta);
+
+    if (!prevMeta) {
+        return '<div class="fd-section">'
+            + '<div class="fd-section-title"><i class="bi bi-shuffle"></i> الفروقات مقارنةً بالإصدار السابق</div>'
+            + '<p class="fdv-diff-note">هذا أول إصدار، لا توجد إصدارات سابقة لمقارنته بها.</p>'
+            + '</div>';
+    }
+
+    let prevJson = '';
+    try {
+        const prevRes = await apiFetch(`/FormDefinitionVersions/GetVersion?id=${prevMeta.id}`);
+        if (prevRes && prevRes.success && prevRes.data) prevJson = prevRes.data.fieldsJson || '';
+    } catch (e) { prevJson = ''; }
+
+    const curParsed = fdvExtractFieldsForDiff(curVersion.fieldsJson || '');
+    const prevParsed = fdvExtractFieldsForDiff(prevJson);
+
+    const note = (!prevParsed.parseOk || !curParsed.parseOk)
+        ? `مقارنة مع الإصدار <strong>${esc(prevMeta.versionName || '')}</strong> — بعض البيانات لا يمكن قراءتها بالكامل، يتم عرض ما يمكن مقارنته فقط.`
+        : (!prevParsed.hasIds || !curParsed.hasIds)
+            ? `مقارنة مع الإصدار <strong>${esc(prevMeta.versionName || '')}</strong> — البيانات القديمة لا تحتوي معرفات حقول، تتم المقارنة بالأسماء وقد لا يظهر «تعديل التسمية».`
+            : `مقارنة مع الإصدار <strong>${esc(prevMeta.versionName || '')}</strong>.`;
+
+    const diff = fdvComputeFieldDiff(prevParsed.fields, curParsed.fields, prevParsed.hasIds, curParsed.hasIds);
+
+    const card = function (cls, icon, title, items, kind) {
+        return '<div class="fdv-diff-card ' + cls + '">'
+            + '<div class="fdv-diff-head"><i class="bi ' + icon + '"></i>'
+            + '<span>' + esc(title) + '</span>'
+            + '<span class="fdv-diff-count">' + items.length + '</span>'
+            + '</div>'
+            + '<div class="fdv-diff-body">' + fdvRenderDiffItems(items, kind) + '</div>'
+            + '</div>';
+    };
+
+    return '<div class="fd-section">'
+        + '<div class="fd-section-title"><i class="bi bi-shuffle"></i> الفروقات مقارنةً بالإصدار السابق</div>'
+        + '<p class="fdv-diff-note">' + note + '</p>'
+        + '<div class="fdv-diff-grid">'
+        + card('fdv-diff-added', 'bi-plus-circle', 'حقول مضافة', diff.added, 'added')
+        + card('fdv-diff-removed', 'bi-dash-circle', 'حقول محذوفة', diff.removed, 'removed')
+        + card('fdv-diff-renamed', 'bi-pencil-square', 'تسميات تم تغييرها', diff.renamed, 'renamed')
+        + '</div>'
+        + '</div>';
+}
+
 async function fdvShowDetails(versionId) {
     try {
         const res = await apiFetch(`/FormDefinitionVersions/GetVersion?id=${versionId}`);
@@ -207,6 +350,11 @@ async function fdvShowDetails(versionId) {
         } catch (e) { }
         const status = v.status === 'approved' ? 'معتمد' : 'مسودة';
         const active = v.isActive ? 'مفعل' : 'غير مفعل';
+
+        let diffHtml = '';
+        try { diffHtml = await fdvBuildDiffSection(v); }
+        catch (e) { diffHtml = ''; }
+
         const html = `<div class="fd-section"><div class="fd-section-title"><i class="bi bi-layers"></i> معلومات الإصدار</div>
             <div class="fd-detail-grid">
                 <div class="fd-detail-lbl">اسم الإصدار</div><div class="fd-detail-val">${esc(v.versionName)}</div>
@@ -221,7 +369,7 @@ async function fdvShowDetails(versionId) {
                 <div class="fd-detail-lbl">تاريخ الإنشاء</div><div class="fd-detail-val">${esc(v.createdAt || '—')}</div>
                 <div class="fd-detail-lbl">التحديث بواسطة</div><div class="fd-detail-val">${esc(v.updatedBy || '—')}</div>
                 <div class="fd-detail-lbl">تاريخ التحديث</div><div class="fd-detail-val">${esc(v.updatedAt || '—')}</div>
-            </div></div>`;
+            </div></div>${diffHtml}`;
         const body = document.getElementById('fdvDetailsBody');
         const sub = document.getElementById('fdvDetailsSub');
         if (body) body.innerHTML = html;

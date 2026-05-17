@@ -23,6 +23,9 @@ public class Delegation
 
     public string Status { get; set; } = "draft";
 
+    /// <summary>سبب الإلغاء عندما تكون الحالة «ملغى». اختياري للسجلات القديمة.</summary>
+    public string CancellationReason { get; set; } = "";
+
     public string CreatedBy { get; set; } = "";
     public string? UpdatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;

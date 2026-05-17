@@ -712,6 +712,76 @@ public class DataService
     public Task<bool> IsFormSectionLinkedAsync(int sectionId)
         => Task.FromResult(_db.FormDefinitions.Any(f => f.FormTypeId == sectionId));
 
+    // ─── PROCEDURE ACTION TYPES (أنواع الإجراءات) ──────────────────────────────
+    public Task<List<ProcedureActionType>> ListProcedureActionTypesAsync()
+        => Task.FromResult(_db.ProcedureActionTypes.OrderBy(c => c.SortOrder).ToList());
+
+    public Task<ProcedureActionType?> GetProcedureActionTypeByIdAsync(int id)
+        => Task.FromResult(_db.ProcedureActionTypes.FirstOrDefault(c => c.Id == id));
+
+    public Task<ProcedureActionType> AddProcedureActionTypeAsync(ProcedureActionType row)
+    {
+        var list = _db.ProcedureActionTypes;
+        row.Id = NextId(list, c => c.Id);
+        row.CreatedAt = DateTime.Now;
+        list.Add(row);
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(row);
+    }
+
+    public Task<bool> UpdateProcedureActionTypeAsync(ProcedureActionType row)
+    {
+        var list = _db.ProcedureActionTypes;
+        var idx = list.FindIndex(c => c.Id == row.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = row;
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteProcedureActionTypeAsync(int id)
+    {
+        var list = _db.ProcedureActionTypes;
+        var row = list.FirstOrDefault(c => c.Id == id);
+        if (row == null) return Task.FromResult(false);
+        list.Remove(row);
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsProcedureActionTypeNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.ProcedureActionTypes;
+        var n = name.Trim();
+        var duplicate = list.Any(c =>
+            string.Equals((c.Name ?? "").Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || c.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderProcedureActionTypesAsync(int id, int newOrder)
+    {
+        var list = _db.ProcedureActionTypes.OrderBy(c => c.SortOrder).ToList();
+        var target = list.FirstOrDefault(c => c.Id == id);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveProcedureActionTypes(list);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>مرتبط بإجراءات العمل عند اختيار نوع الإجراء لها.</summary>
+    public Task<bool> IsProcedureActionTypeLinkedAsync(int id)
+        => Task.FromResult(_db.WorkProcedures.Any(p => p.ProcedureActionTypeId == id));
+
     public Task<bool> IsFormClassLinkedAsync(int formClassId)
         => Task.FromResult(_db.FormDefinitions.Any(f => f.FormClassId == formClassId));
 
@@ -1683,7 +1753,9 @@ public class DataService
     }
 
     public Task<bool> IsFormTemplateLinkedAsync(int templateId)
-        => Task.FromResult(_db.FormDefinitions.Any(f => f.TemplateId == templateId));
+        => Task.FromResult(
+            _db.FormDefinitions.Any(f => f.TemplateId == templateId)
+            || _db.WorkProcedures.Any(p => p.FormTemplateId == templateId));
 
     // ─── FORM TEMPLATES ─────────────────────────────────────────────────────
     public Task<List<FormTemplate>> ListFormTemplatesAsync()
@@ -1856,6 +1928,8 @@ public class DataService
     {
         var list = _db.WorkProcedures;
         w.Id = NextId(list, x => x.Id);
+        if (w.VersionRootProcedureId <= 0)
+            w.VersionRootProcedureId = w.Id;
         w.CreatedAt = DateTime.Now;
         list.Add(w);
         _db.SaveWorkProcedures(list);

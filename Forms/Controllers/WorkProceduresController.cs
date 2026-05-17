@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FormsSystem.Models.Entities;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -121,17 +122,21 @@ public class WorkProceduresController : BaseController
         }
 
         var workspacesAll = await _ds.ListWorkspacesAsync();
-        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var procTypesAll = await _ds.ListProcedureActionTypesAsync();
+        var templatesAll = await _ds.ListFormTemplatesAsync();
 
         var data = all.Select(p => new
         {
             p.Id,
             p.Code,
             p.Name,
+            ProcedureActionTypeName = procTypesAll.FirstOrDefault(t => t.Id == p.ProcedureActionTypeId)?.Name ?? "",
             WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == p.WorkspaceId)?.Name ?? "",
             ProcedureClassification = p.ProcedureClassification,
             OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? "",
             ValidityType = p.ValidityType,
+            FormTemplateName = templatesAll.FirstOrDefault(t => t.Id == p.FormTemplateId)?.Name ?? "",
+            VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel.Trim(),
             p.Status,
             p.IsActive,
             p.CreatedBy,
@@ -206,7 +211,52 @@ public class WorkProceduresController : BaseController
         var myUnit = unitsAll.FirstOrDefault(u => u.Id == myOrgUnitId);
         var myOrgUnitName = myUnit?.Name ?? "";
 
-        return Json(new { success = true, workspaces, formDefinitions = formDefs, executorBeneficiaries, executorRoles, organizationalUnits = orgUnits, isAdmin, myOrgUnitId, myOrgUnitName });
+        var procedureActionTypes = (await _ds.ListProcedureActionTypesAsync())
+            .Where(t => t.IsActive)
+            .OrderBy(t => t.SortOrder)
+            .Select(t => new { id = t.Id, name = t.Name })
+            .ToList();
+        var formTemplates = (await _ds.ListFormTemplatesAsync())
+            .Where(t => t.IsActive)
+            .OrderByDescending(t => t.CreatedAt)
+            .Select(t => new { id = t.Id, name = t.Name })
+            .ToList();
+
+        return Json(new
+        {
+            success = true,
+            workspaces,
+            formDefinitions = formDefs,
+            executorBeneficiaries,
+            executorRoles,
+            organizationalUnits = orgUnits,
+            isAdmin,
+            myOrgUnitId,
+            myOrgUnitName,
+            procedureActionTypes,
+            formTemplates
+        });
+    }
+
+    /// <summary>يُستخدم عند «إصدار جديد» لعرض رقم الإصدار التالي قبل الحفظ.</summary>
+    [HttpGet]
+    public async Task<IActionResult> PeekNextVersionLabel(int sourceId)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        if (sourceId <= 0) return Json(new { success = false, message = "معرّف غير صالح" });
+        var src = await _ds.GetWorkProcedureByIdAsync(sourceId);
+        if (src == null) return Json(new { success = false, message = "غير موجود" });
+
+        var isAdmin = CurrentUserRole == "Admin";
+        var unitsAll = await _ds.ListOrganizationalUnitsAsync();
+        var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
+        var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
+        if (!isAdmin && !allowedOrgIds.Contains(src.OrganizationalUnitId))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var rootId = src.VersionRootProcedureId > 0 ? src.VersionRootProcedureId : src.Id;
+        var next = await ComputeNextWorkProcedureVersionLabelAsync(rootId);
+        return Json(new { success = true, nextVersionLabel = next });
     }
 
     [HttpGet]
@@ -232,6 +282,13 @@ public class WorkProceduresController : BaseController
 
         var usedFormPickerExtras = await BuildUsedFormPickerExtrasAsync(p, isAdmin, myOrgUnitId);
 
+        var pat = p.ProcedureActionTypeId > 0
+            ? await _ds.GetProcedureActionTypeByIdAsync(p.ProcedureActionTypeId)
+            : null;
+        var tpl = p.FormTemplateId > 0
+            ? await _ds.GetFormTemplateByIdAsync(p.FormTemplateId)
+            : null;
+
         return Json(new
         {
             success = true,
@@ -242,6 +299,12 @@ public class WorkProceduresController : BaseController
                 p.Name,
                 p.Objectives,
                 p.RegulationsAttachmentsJson,
+                p.ProcedureActionTypeId,
+                p.FormTemplateId,
+                ProcedureActionTypeName = pat?.Name ?? "",
+                FormTemplateName = tpl?.Name ?? "",
+                VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel.Trim(),
+                p.VersionRootProcedureId,
                 p.WorkspaceId,
                 p.UsedFormDefinitionsJson,
                 p.ExecutorBeneficiaryIdsJson,
@@ -341,6 +404,31 @@ public class WorkProceduresController : BaseController
 
         steps = steps.OrderBy(s => s.SortOrder).ToList();
 
+        var orgUnits = unitsAll
+            .Where(u => u.IsActive)
+            .OrderBy(u => u.SortOrder)
+            .Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId })
+            .ToList();
+
+        var fixedAssigneeTypes = new[]
+        {
+            new { code = "employee", name = "الموظف", needsOrgUnit = false },
+            new { code = "direct_manager", name = "المدير المباشر", needsOrgUnit = false },
+            new { code = "managers_chain", name = "سلسلة المدراء المباشرين", needsOrgUnit = false },
+            new { code = "unit_manager", name = "مدير الوحدة التنظيمية", needsOrgUnit = true },
+            new { code = "unit_representative", name = "ممثل الوحدة التنظيمية", needsOrgUnit = true }
+        };
+
+        var allowedStepActions = new[]
+        {
+            new { code = "approve", name = "موافقة", color = "#16a34a" },
+            new { code = "reject", name = "رفض", color = "#dc2626" },
+            new { code = "return", name = "إرجاع", color = "#1d4ed8" },
+            new { code = "concurrent_approvals", name = "موافقات متزامنة", color = "#3b82f6" },
+            new { code = "reassign", name = "إعادة تعيين", color = "#111827" },
+            new { code = "request_clarification", name = "طلب توضيح", color = "#ca8a04" }
+        };
+
         return Json(new
         {
             success = true,
@@ -351,7 +439,10 @@ public class WorkProceduresController : BaseController
             allowedExecutorRoles,
             formDefinitions,
             formStatuses = statuses,
-            procBeneficiaries
+            procBeneficiaries,
+            organizationalUnits = orgUnits,
+            fixedAssigneeTypes,
+            allowedStepActions
         });
     }
 
@@ -372,7 +463,7 @@ public class WorkProceduresController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var beneficiariesAll = await _ds.ListBeneficiariesAsync();
-        var err = ValidateWorkflowStepsPayload(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), await _ds.ListFormDefinitionsAsync(), await _ds.ListFormStatusesAsync());
+        var err = ValidateWorkflowStepsPayload(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), await _ds.ListFormDefinitionsAsync(), await _ds.ListFormStatusesAsync(), unitsAll);
         if (err != null) return Json(new { success = false, message = err });
 
         var normalized = NormalizeWorkflowStepsForSave(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync());
@@ -412,13 +503,29 @@ public class WorkProceduresController : BaseController
         return result;
     }
 
+    private static readonly HashSet<string> AllowedFixedAssigneeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "employee", "direct_manager", "managers_chain", "unit_manager", "unit_representative"
+    };
+
+    private static readonly HashSet<string> AllowedStepActionCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "approve", "reject", "return", "concurrent_approvals", "reassign", "request_clarification"
+    };
+
+    private static readonly HashSet<string> AllowedNotificationChannels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "in_app", "email", "sms"
+    };
+
     private string? ValidateWorkflowStepsPayload(
         WorkProcedure p,
         List<WorkflowStepSaveDto> steps,
         List<Beneficiary> beneficiariesAll,
         List<ExecutorRole> allRoles,
         List<FormDefinition> fdAll,
-        List<FormStatus> fsAll)
+        List<FormStatus> fsAll,
+        List<OrganizationalUnit> unitsAll)
     {
         var procBenIds = ParseProcedureBeneficiaryIds(p);
         var allowedRoleIds = allRoles
@@ -427,6 +534,7 @@ public class WorkProceduresController : BaseController
             .ToHashSet();
         var usedFdIds = ParseUsedFormDefinitionIds(p).ToHashSet();
         var fsIds = fsAll.Where(s => s.IsActive).Select(s => s.Id).ToHashSet();
+        var orgUnitIds = unitsAll.Where(u => u.IsActive).Select(u => u.Id).ToHashSet();
         var ids = steps.Select(s => s.Id).ToList();
         if (ids.Any(x => x <= 0)) return "معرّف كل خطوة يجب أن يكون أكبر من صفر";
         if (ids.Count != ids.Distinct().Count()) return "معرّفات الخطوات يجب أن تكون فريدة";
@@ -434,6 +542,7 @@ public class WorkProceduresController : BaseController
         var idSet = ids.ToHashSet();
         foreach (var st in steps)
         {
+            var assigneeMode = string.IsNullOrWhiteSpace(st.AssigneeMode) ? "specific" : st.AssigneeMode.Trim().ToLowerInvariant();
             if (st.IsDecision)
             {
                 if (st.ExecutorRoleId <= 0 || !allowedRoleIds.Contains(st.ExecutorRoleId))
@@ -445,8 +554,29 @@ public class WorkProceduresController : BaseController
             {
                 if (string.IsNullOrWhiteSpace(st.StepLabel))
                     return "اسم الخطوة مطلوب";
-                if (st.ExecutorRoleId <= 0 || !allowedRoleIds.Contains(st.ExecutorRoleId))
-                    return "المنفذ غير مسموح لهذا الإجراء";
+
+                if (assigneeMode == "specific")
+                {
+                    if (st.ExecutorRoleId <= 0 || !allowedRoleIds.Contains(st.ExecutorRoleId))
+                        return "المنفذ غير مسموح لهذا الإجراء";
+                }
+                else if (assigneeMode == "fixed")
+                {
+                    var ft = (st.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
+                    if (string.IsNullOrEmpty(ft) || !AllowedFixedAssigneeTypes.Contains(ft))
+                        return "نوع المنفذ الثابت غير صالح";
+                    if (ft is "unit_manager" or "unit_representative")
+                    {
+                        if (!st.AssigneeOrgUnitId.HasValue || st.AssigneeOrgUnitId.Value <= 0
+                            || !orgUnitIds.Contains(st.AssigneeOrgUnitId.Value))
+                            return "الوحدة التنظيمية للمنفذ مطلوبة";
+                    }
+                }
+                else
+                {
+                    return "نوع المكلّف بالخطوة غير صالح";
+                }
+
                 if (!string.IsNullOrWhiteSpace(st.ExpectedDurationHours))
                 {
                     if (int.TryParse(st.ExpectedDurationHours.Trim(), out var h) && (h < 0 || h > 24))
@@ -458,6 +588,8 @@ public class WorkProceduresController : BaseController
                 return "خطوة التقدم غير موجودة";
             if (st.ReturnStepId.HasValue && st.ReturnStepId.Value > 0 && !idSet.Contains(st.ReturnStepId.Value))
                 return "خطوة الرجوع غير موجودة";
+            if (st.ConcurrentStepId.HasValue && st.ConcurrentStepId.Value > 0 && !idSet.Contains(st.ConcurrentStepId.Value))
+                return "خطوة التزامن غير موجودة";
 
             if (!st.IsDecision)
             {
@@ -465,12 +597,46 @@ public class WorkProceduresController : BaseController
                     return "النموذج المختار غير ضمن النماذج المستخدمة للإجراء";
                 if (st.FormStatusId.HasValue && st.FormStatusId.Value > 0 && !fsIds.Contains(st.FormStatusId.Value))
                     return "الحالة غير صالحة";
+
+                if (assigneeMode == "specific" || assigneeMode == "fixed")
+                {
+                    // الإجراءات المسموحة إلزامية
+                    if (st.AllowedActions == null || st.AllowedActions.Count == 0)
+                        return "الإجراءات المسموحة مطلوبة";
+                    foreach (var a in st.AllowedActions)
+                    {
+                        if (!string.IsNullOrWhiteSpace(a) && !AllowedStepActionCodes.Contains(a.Trim()))
+                            return "إجراء غير صالح ضمن الإجراءات المسموحة";
+                    }
+                    var hasReturn = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "return", StringComparison.OrdinalIgnoreCase));
+                    if (hasReturn && (!st.ReturnStepId.HasValue || st.ReturnStepId.Value <= 0))
+                        return "خطوة الرجوع مطلوبة عند تفعيل إجراء «إرجاع»";
+                    var hasConcurrent = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "concurrent_approvals", StringComparison.OrdinalIgnoreCase));
+                    if (hasConcurrent && (!st.ConcurrentStepId.HasValue || st.ConcurrentStepId.Value <= 0))
+                        return "خطوة التزامن مطلوبة عند تفعيل «موافقات متزامنة»";
+                    // الحالة إلزامية للخطوات غير القرارية
+                    if (!st.FormStatusId.HasValue || st.FormStatusId.Value <= 0)
+                        return "الحالة مطلوبة";
+                    // قناة إشعار واحدة على الأقل
+                    var hasChannels = (st.NotificationChannels != null && st.NotificationChannels.Any(c => !string.IsNullOrWhiteSpace(c)))
+                        || !string.IsNullOrWhiteSpace(st.NotificationChannel);
+                    if (!hasChannels)
+                        return "قناة الإشعار مطلوبة";
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(st.NotificationChannel))
+            if (st.NotificationChannels != null && st.NotificationChannels.Count > 0)
+            {
+                foreach (var ch in st.NotificationChannels)
+                {
+                    if (!string.IsNullOrWhiteSpace(ch) && !AllowedNotificationChannels.Contains(ch.Trim()))
+                        return "قناة الإشعار غير صالحة";
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(st.NotificationChannel))
             {
                 var ch = st.NotificationChannel.Trim().ToLowerInvariant();
-                if (ch is not ("in_app" or "email" or "sms"))
+                if (!AllowedNotificationChannels.Contains(ch))
                     return "قناة الإشعار غير صالحة";
             }
         }
@@ -489,13 +655,45 @@ public class WorkProceduresController : BaseController
         var result = new List<WorkflowStepSaveDto>();
         foreach (var st in ordered)
         {
+            var assigneeMode = string.IsNullOrWhiteSpace(st.AssigneeMode) ? "specific" : st.AssigneeMode.Trim().ToLowerInvariant();
+            if (assigneeMode != "fixed") assigneeMode = "specific";
+            var fixedType = (st.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
+
+            // Channels: list takes priority. If list empty, fall back to single channel.
+            List<string>? normalizedChannels = null;
+            if (st.NotificationChannels != null && st.NotificationChannels.Count > 0)
+            {
+                normalizedChannels = st.NotificationChannels
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x.Trim().ToLowerInvariant())
+                    .Where(AllowedNotificationChannels.Contains)
+                    .Distinct()
+                    .ToList();
+                if (normalizedChannels.Count == 0) normalizedChannels = null;
+            }
+            var primaryChannel = normalizedChannels != null && normalizedChannels.Count > 0
+                ? normalizedChannels.First()
+                : (string.IsNullOrWhiteSpace(st.NotificationChannel) ? "in_app" : st.NotificationChannel.Trim().ToLowerInvariant());
+
+            List<string>? normalizedActions = null;
+            if (st.AllowedActions != null && st.AllowedActions.Count > 0)
+            {
+                normalizedActions = st.AllowedActions
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x.Trim().ToLowerInvariant())
+                    .Where(AllowedStepActionCodes.Contains)
+                    .Distinct()
+                    .ToList();
+                if (normalizedActions.Count == 0) normalizedActions = null;
+            }
+
             var copy = new WorkflowStepSaveDto
             {
                 Id = st.Id,
                 SortOrder = st.SortOrder,
                 IsDecision = st.IsDecision,
                 StepLabel = st.IsDecision ? "قرار" : (st.StepLabel ?? "").Trim(),
-                ExecutorRoleId = st.ExecutorRoleId,
+                ExecutorRoleId = assigneeMode == "specific" ? st.ExecutorRoleId : 0,
                 ExpectedDurationDays = st.ExpectedDurationDays?.Trim() ?? "",
                 ExpectedDurationHours = st.ExpectedDurationHours?.Trim() ?? "",
                 IsConcurrentStep = st.IsConcurrentStep,
@@ -504,10 +702,20 @@ public class WorkProceduresController : BaseController
                 ProgressStepId = st.ProgressStepId,
                 FormDefinitionId = st.FormDefinitionId,
                 FormStatusId = st.FormStatusId,
-                NotificationChannel = string.IsNullOrWhiteSpace(st.NotificationChannel) ? "in_app" : st.NotificationChannel.Trim(),
+                NotificationChannel = primaryChannel,
+                NotificationChannels = normalizedChannels,
                 OverdueNotificationText = st.OverdueNotificationText?.Trim() ?? "",
                 ExecutionNotificationText = st.ExecutionNotificationText?.Trim() ?? "",
-                Notes = st.Notes?.Trim()
+                Notes = st.Notes?.Trim(),
+                AssigneeMode = assigneeMode,
+                AssigneeFixedType = assigneeMode == "fixed" ? fixedType : "",
+                AssigneeOrgUnitId = (assigneeMode == "fixed" && (fixedType is "unit_manager" or "unit_representative"))
+                    ? st.AssigneeOrgUnitId
+                    : null,
+                AllowedActions = normalizedActions,
+                ConcurrentStepId = (normalizedActions != null && normalizedActions.Contains("concurrent_approvals"))
+                    ? st.ConcurrentStepId
+                    : null
             };
             if (copy.IsDecision)
             {
@@ -518,10 +726,11 @@ public class WorkProceduresController : BaseController
                 copy.FormDefinitionId = null;
                 copy.FormStatusId = null;
                 copy.NotificationChannel = "in_app";
+                copy.NotificationChannels = null;
                 copy.OverdueNotificationText = "";
                 copy.ExecutionNotificationText = "";
             }
-            else
+            else if (copy.AssigneeMode == "specific")
             {
                 var role = allRoles.FirstOrDefault(r => r.Id == copy.ExecutorRoleId);
                 if (role == null || !IsExecutorRoleManagerLike(role, procBenIds, beneficiariesAll))
@@ -529,6 +738,12 @@ public class WorkProceduresController : BaseController
                     copy.IsConcurrentStep = false;
                     copy.EscalationSyncFlags = null;
                 }
+            }
+            // إذا لم تحتوِ AllowedActions على «إرجاع» نفرّغ ReturnStepId المرتبط بهذا الإجراء
+            if (!copy.IsDecision)
+            {
+                var hasReturn = copy.AllowedActions?.Contains("return") == true;
+                if (!hasReturn) copy.ReturnStepId = null;
             }
             result.Add(copy);
         }
@@ -545,8 +760,15 @@ public class WorkProceduresController : BaseController
         var err = ValidateWorkProcedureRequest(req, true);
         if (err != null) return Json(new { success = false, message = err });
 
-        var uniqErrAdd = await ValidateCodeNameUniqueAsync(req.Code, req.Name, null);
-        if (uniqErrAdd != null) return Json(new { success = false, message = uniqErrAdd });
+        var patTplErr = await ValidateProcedureActionTypeAndTemplateAsync(req.ProcedureActionTypeId, req.FormTemplateId);
+        if (patTplErr != null) return Json(new { success = false, message = patTplErr });
+
+        var isVersionMode = req.BaseProcedureId.HasValue && req.BaseProcedureId.Value > 0;
+        if (!isVersionMode)
+        {
+            var uniqErrAdd = await ValidateCodeNameUniqueAsync(req.Code, req.Name, null);
+            if (uniqErrAdd != null) return Json(new { success = false, message = uniqErrAdd });
+        }
 
         var isAdmin = CurrentUserRole == "Admin";
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
@@ -575,13 +797,64 @@ public class WorkProceduresController : BaseController
         if (!ValidateTargetOrganizationalUnitsActive(req.TargetOrganizationalUnitIds ?? new List<int>(), unitsAll))
             return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير موجودة أو غير مفعّلة" });
 
+        WorkProcedure? versionSource = null;
+        if (isVersionMode)
+        {
+            versionSource = await _ds.GetWorkProcedureByIdAsync(req.BaseProcedureId!.Value);
+            if (versionSource == null)
+                return Json(new { success = false, message = "الإجراء المرجعي للإصدار غير موجود" });
+            if (!isAdmin && !allowedOrgIds.Contains(versionSource.OrganizationalUnitId))
+                return Json(new { success = false, message = "غير مصرح بإنشاء إصدار من هذا الإجراء" });
+        }
+
         var send = req.SendForApproval;
         var w = BuildEntityFromRequest(req, new WorkProcedure(), isAdmin, send);
         w.CreatedBy = CurrentUserFullName;
 
+        if (versionSource != null)
+        {
+            var rootId = versionSource.VersionRootProcedureId > 0 ? versionSource.VersionRootProcedureId : versionSource.Id;
+            w.VersionRootProcedureId = rootId;
+            w.VersionLabel = await ComputeNextWorkProcedureVersionLabelAsync(rootId);
+            // ترميز ثابت: نلتزم بترميز الإجراء المصدر لتسلسل الإصدارات
+            w.Code = versionSource.Code;
+        }
+
         var created = await _ds.AddWorkProcedureAsync(w);
-        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة إجراء عمل", "WorkProcedure", created.Id.ToString(), req.Name));
+        if (versionSource != null && created.Status == "approved" && created.IsActive)
+        {
+            await DeactivateOtherVersionsAsync(created);
+        }
+        await _ds.AddAuditLogAsync(BuildAuditEntry(
+            isVersionMode ? "إضافة إصدار جديد لإجراء عمل" : "إضافة إجراء عمل",
+            "WorkProcedure",
+            created.Id.ToString(),
+            req.Name));
         return Json(new { success = true, id = created.Id });
+    }
+
+    /// <summary>عند تفعيل إصدار جديد ضمن سلسلة Root، يُعطَّل بقية الإصدارات تلقائياً.</summary>
+    private async Task DeactivateOtherVersionsAsync(WorkProcedure activated)
+    {
+        var rootId = activated.VersionRootProcedureId > 0 ? activated.VersionRootProcedureId : activated.Id;
+        if (rootId <= 0) return;
+        var all = await _ds.ListWorkProceduresAsync();
+        foreach (var p in all)
+        {
+            if (p.Id == activated.Id) continue;
+            var pRoot = p.VersionRootProcedureId > 0 ? p.VersionRootProcedureId : p.Id;
+            if (pRoot != rootId) continue;
+            if (!p.IsActive) continue;
+            p.IsActive = false;
+            p.UpdatedBy = CurrentUserFullName;
+            p.UpdatedAt = DateTime.Now;
+            await _ds.UpdateWorkProcedureAsync(p);
+            await _ds.AddAuditLogAsync(BuildAuditEntry(
+                "تعطيل تلقائي لإصدار سابق",
+                "WorkProcedure",
+                p.Id.ToString(),
+                p.Name));
+        }
     }
 
     [HttpPost]
@@ -596,7 +869,10 @@ public class WorkProceduresController : BaseController
         var err = ValidateWorkProcedureRequest(req, true);
         if (err != null) return Json(new { success = false, message = err });
 
-        var uniqErr = await ValidateCodeNameUniqueAsync(req.Code, req.Name, req.Id);
+        var patTplErr = await ValidateProcedureActionTypeAndTemplateAsync(req.ProcedureActionTypeId, req.FormTemplateId);
+        if (patTplErr != null) return Json(new { success = false, message = patTplErr });
+
+        var uniqErr = await ValidateCodeNameUniqueIgnoringVersionFamilyAsync(req.Code, req.Name, p);
         if (uniqErr != null) return Json(new { success = false, message = uniqErr });
 
         var isAdmin = CurrentUserRole == "Admin";
@@ -651,6 +927,10 @@ public class WorkProceduresController : BaseController
         }
 
         await _ds.UpdateWorkProcedureAsync(p);
+        if (p.Status == "approved" && p.IsActive && p.VersionRootProcedureId > 0)
+        {
+            await DeactivateOtherVersionsAsync(p);
+        }
         await _ds.AddAuditLogAsync(BuildAuditEntry("تعديل إجراء عمل", "WorkProcedure", p.Id.ToString(), p.Name));
         return Json(new { success = true });
     }
@@ -748,6 +1028,10 @@ public class WorkProceduresController : BaseController
         p.UpdatedBy = CurrentUserFullName;
         p.UpdatedAt = DateTime.Now;
         await _ds.UpdateWorkProcedureAsync(p);
+        if (p.IsActive)
+        {
+            await DeactivateOtherVersionsAsync(p);
+        }
         return Json(new { success = true, isActive = p.IsActive });
     }
 
@@ -914,12 +1198,49 @@ public class WorkProceduresController : BaseController
         return null;
     }
 
+    private async Task<string?> ValidateProcedureActionTypeAndTemplateAsync(int procedureActionTypeId, int formTemplateId)
+    {
+        var pat = await _ds.GetProcedureActionTypeByIdAsync(procedureActionTypeId);
+        if (pat == null || !pat.IsActive)
+            return "نوع الإجراء غير صالح أو غير مفعّل";
+        var tpl = await _ds.GetFormTemplateByIdAsync(formTemplateId);
+        if (tpl == null || !tpl.IsActive)
+            return "القالب المستخدم غير صالح أو غير مفعّل";
+        return null;
+    }
+
+    private async Task<string> ComputeNextWorkProcedureVersionLabelAsync(int rootProcedureId)
+    {
+        var all = await _ds.ListWorkProceduresAsync();
+        var family = all.Where(p =>
+            p.Id == rootProcedureId ||
+            (p.VersionRootProcedureId > 0 && p.VersionRootProcedureId == rootProcedureId)).ToList();
+        var maxMajor = 1;
+        foreach (var p in family)
+        {
+            var maj = ParseWorkProcedureVersionMajor(p.VersionLabel);
+            if (maj > maxMajor) maxMajor = maj;
+        }
+        return $"V{maxMajor + 1}.0";
+    }
+
+    private static int ParseWorkProcedureVersionMajor(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label)) return 1;
+        var m = Regex.Match(label.Trim(), "^[vV](\\d+)", RegexOptions.CultureInvariant);
+        if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n > 0)
+            return n;
+        return 1;
+    }
+
     private WorkProcedure BuildEntityFromRequest(WorkProcedureRequest req, WorkProcedure w, bool isAdmin, bool sendForApproval)
     {
         w.Code = req.Code.Trim();
         w.Name = req.Name.Trim();
         w.Objectives = req.Objectives?.Trim() ?? "";
         w.RegulationsAttachmentsJson = string.IsNullOrWhiteSpace(req.RegulationsAttachmentsJson) ? "[]" : req.RegulationsAttachmentsJson!;
+        w.ProcedureActionTypeId = req.ProcedureActionTypeId;
+        w.FormTemplateId = req.FormTemplateId;
         w.WorkspaceId = req.WorkspaceId;
         w.UsedFormDefinitionsJson = SerializeUsedForms(req.UsedForms);
         w.ExecutorBeneficiaryIdsJson = JsonSerializer.Serialize(req.ExecutorBeneficiaryIds ?? new List<int>(), JsonOpts);
@@ -939,6 +1260,8 @@ public class WorkProceduresController : BaseController
 
         if (w.Id == 0)
         {
+            w.VersionLabel = "V1.0";
+            w.VersionRootProcedureId = 0;
             w.Status = sendForApproval ? (isAdmin ? "approved" : "pending") : "draft";
             w.IsActive = sendForApproval && isAdmin;
             if (isAdmin && sendForApproval)
@@ -979,10 +1302,32 @@ public class WorkProceduresController : BaseController
         return null;
     }
 
+    /// <summary>تحقق من تفرّد الترميز/الاسم عند التعديل مع تجاهل أعضاء سلسلة الإصدارات لنفس الإجراء.</summary>
+    private async Task<string?> ValidateCodeNameUniqueIgnoringVersionFamilyAsync(string? code, string? name, WorkProcedure current)
+    {
+        var all = await _ds.ListWorkProceduresAsync();
+        var codeT = (code ?? "").Trim();
+        var nameT = (name ?? "").Trim();
+        var rootId = current.VersionRootProcedureId > 0 ? current.VersionRootProcedureId : current.Id;
+        foreach (var x in all)
+        {
+            if (x.Id == current.Id) continue;
+            var xRoot = x.VersionRootProcedureId > 0 ? x.VersionRootProcedureId : x.Id;
+            if (xRoot == rootId) continue;
+            if (string.Equals((x.Code ?? "").Trim(), codeT, StringComparison.OrdinalIgnoreCase))
+                return "ترميز الإجراء مستخدم مسبقاً — لا يُسمح بالتكرار";
+            if (string.Equals((x.Name ?? "").Trim(), nameT, StringComparison.OrdinalIgnoreCase))
+                return "اسم الإجراء مستخدم مسبقاً — لا يُسمح بالتكرار";
+        }
+        return null;
+    }
+
     private string? ValidateWorkProcedureRequest(WorkProcedureRequest req, bool isCreate)
     {
         if (string.IsNullOrWhiteSpace(req.Code)) return "ترميز الإجراء مطلوب";
         if (string.IsNullOrWhiteSpace(req.Name)) return "اسم الإجراء مطلوب";
+        if (req.ProcedureActionTypeId <= 0) return "نوع الإجراء مطلوب";
+        if (req.FormTemplateId <= 0) return "القالب المستخدم مطلوب";
         if (req.WorkspaceId <= 0) return "مساحة العمل مطلوبة";
         if (string.IsNullOrWhiteSpace(req.UsageFrequency)) return "معدل الاستخدام مطلوب";
         if (string.IsNullOrWhiteSpace(req.ProcedureClassification)) return "التصنيف مطلوب";
@@ -1163,6 +1508,8 @@ public class WorkProceduresController : BaseController
         public string Name { get; set; } = "";
         public string? Objectives { get; set; }
         public string? RegulationsAttachmentsJson { get; set; }
+        public int ProcedureActionTypeId { get; set; }
+        public int FormTemplateId { get; set; }
         public int WorkspaceId { get; set; }
         public List<UsedFormDefItem>? UsedForms { get; set; }
         public List<int>? ExecutorBeneficiaryIds { get; set; }
@@ -1179,6 +1526,8 @@ public class WorkProceduresController : BaseController
         public List<int>? ImplicitProcedureIds { get; set; }
         public string? AdditionalInputs { get; set; }
         public string? AdditionalOutputs { get; set; }
+        /// <summary>عند الإنشاء من «إصدار جديد»: معرّف الإجراء المُستمد منه.</summary>
+        public int? BaseProcedureId { get; set; }
         public bool SendForApproval { get; set; }
     }
 
@@ -1217,6 +1566,19 @@ public class WorkProceduresController : BaseController
         public string OverdueNotificationText { get; set; } = "";
         public string ExecutionNotificationText { get; set; } = "";
         public string? Notes { get; set; }
+
+        /// <summary>"specific" (دور من «أدوار المنفذين») أو "fixed" (نوع ثابت كالموظف/المدير...).</summary>
+        public string AssigneeMode { get; set; } = "specific";
+        /// <summary>عند AssigneeMode = "fixed": employee | direct_manager | managers_chain | unit_manager | unit_representative</summary>
+        public string AssigneeFixedType { get; set; } = "";
+        /// <summary>الوحدة التنظيمية المصاحبة عند fixed-type = unit_manager / unit_representative.</summary>
+        public int? AssigneeOrgUnitId { get; set; }
+        /// <summary>الإجراءات المسموحة للخطوة: approve|reject|return|concurrent_approvals|reassign|request_clarification</summary>
+        public List<string>? AllowedActions { get; set; }
+        /// <summary>خطوة التزامن — تظهر فقط إذا AllowedActions تحتوي concurrent_approvals.</summary>
+        public int? ConcurrentStepId { get; set; }
+        /// <summary>قنوات الإشعار المختارة (in_app|email|sms). تأخذ الأولوية على NotificationChannel المفرد.</summary>
+        public List<string>? NotificationChannels { get; set; }
     }
 
     public class SaveWorkflowStepsRequest

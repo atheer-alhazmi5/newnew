@@ -34,6 +34,34 @@ var delBeneficiaries = [];
 var delOrgUnits = [];
 var delRows = [];
 var delEditingId = null;
+/** فعّال عند فتح التعديل: كان التفويض «سارٍ» (active) قبل التعديل — لفرض قاعدة تاريخ البداية. */
+var delEditingWasActive = false;
+
+function delTodayIso() {
+    var n = new Date();
+    var y = n.getFullYear();
+    var m = String(n.getMonth() + 1).padStart(2, '0');
+    var da = String(n.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + da;
+}
+
+function delClearFilters() {
+    var s = document.getElementById('delSearch');
+    if (s) s.value = '';
+    var r = document.getElementById('delFilterReference');
+    if (r) r.value = '';
+    var st = document.getElementById('delFilterStatus');
+    if (st) st.value = '';
+    var df = document.getElementById('delFilterDateFrom');
+    var dto = document.getElementById('delFilterDateTo');
+    if (df) df.value = '';
+    if (dto) dto.value = '';
+    delFilterDelegatorOuSetSelection(null);
+    delFilterDelegateeOuSetSelection(null);
+    delFilterDelegatorOuClose();
+    delFilterDelegateeOuClose();
+    delRenderTable();
+}
 
 function delBenId(b) {
     return b.id != null ? b.id : b.Id;
@@ -712,6 +740,13 @@ async function delShowDetails(id) {
         var statusHtml = delStatusLabel(x.statusCode);
         var refRaw = x.referenceNumber != null ? x.referenceNumber : x.ReferenceNumber;
         var reasonTxt = (x.delegationReason != null ? x.delegationReason : x.DelegationReason || '').trim();
+        var sc = String(x.statusCode != null ? x.statusCode : x.StatusCode || '').toLowerCase();
+        var cancelReasonRow = '';
+        if (sc === 'cancelled') {
+            var cr = (x.cancellationReason != null ? x.cancellationReason : x.CancellationReason || '').trim();
+            cancelReasonRow = delDetailRow('سبب إلغاء التفويض', delEsc(cr || '—'));
+        }
+        var updatedByVal = (x.updatedBy != null ? x.updatedBy : x.UpdatedBy || '').trim();
         document.getElementById('delDetailsBody').innerHTML =
             delDetailRow('المرجع', '<span dir="ltr">' + delEsc(delDelegationReferenceDisplay(refRaw)) + '</span>') +
             delDetailRow('سبب التفويض', delEsc(reasonTxt || '—')) +
@@ -722,8 +757,10 @@ async function delShowDetails(id) {
             delDetailRow('تاريخ البداية', '<span dir="ltr">' + delEsc(x.startDate || '') + '</span>') +
             delDetailRow('تاريخ النهاية', '<span dir="ltr">' + delEsc(x.endDate || '') + '</span>') +
             delDetailRow('الحالة', statusHtml) +
+            cancelReasonRow +
             delDetailRow('أنشئ بواسطة', delEsc(x.createdBy || '—')) +
             delDetailRow('تاريخ الإنشاء', delEsc(x.createdAt || '—')) +
+            delDetailRow('التحديث بواسطة', delEsc(updatedByVal || '—')) +
             delDetailRow('آخر تحديث', delEsc(x.updatedAt || '—'));
         bootstrap.Modal.getOrCreateInstance(document.getElementById('delDetailsModal')).show();
     } catch (e) {
@@ -733,6 +770,7 @@ async function delShowDetails(id) {
 
 function delShowAddModal() {
     delEditingId = null;
+    delEditingWasActive = false;
     var titleText = document.getElementById('delModalTitleText');
     if (titleText) titleText.textContent = 'إضافة تفويض';
     delOuExpandedDelegator = {};
@@ -783,6 +821,7 @@ async function delEdit(id) {
             return;
         }
         delEditingId = id;
+        delEditingWasActive = String(d.statusCode || '').toLowerCase() === 'active';
         var mt = document.getElementById('delModalTitleText');
         if (mt) mt.textContent = 'تعديل تفويض';
         var dorId = parseInt(d.delegatorOrgUnitId, 10) || 0;
@@ -859,6 +898,12 @@ async function delSave() {
         return;
     }
 
+    if (delEditingId && delEditingWasActive && startDate && startDate < delTodayIso()) {
+        errEl.textContent = 'تفويض سارٍ لا يمكن جعل تاريخ بدايته قبل تاريخ اليوم. إذا احتجت تعديلاً يخص فترة سابقة، أنشئ تفويضاً جديداً أو انتهِ من الإصدار الحالي أولاً.';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
     try {
         if (delEditingId) {
             var r = await apiFetch('/Settings/UpdateDelegation', 'POST', {
@@ -913,6 +958,8 @@ function delOpenCancelDelegationConfirm() {
     if (!delEditingId) return;
     var err = document.getElementById('delCancelDelegationErr');
     if (err) err.classList.add('d-none');
+    var ta = document.getElementById('delCancelReason');
+    if (ta) ta.value = '';
     bootstrap.Modal.getOrCreateInstance(document.getElementById('delCancelDelegationModal')).show();
 }
 
@@ -920,10 +967,19 @@ async function delSubmitCancelDelegation() {
     if (!delEditingId) return;
     var err = document.getElementById('delCancelDelegationErr');
     if (err) err.classList.add('d-none');
+    var cancelReason = (document.getElementById('delCancelReason') && document.getElementById('delCancelReason').value || '').trim();
+    if (!cancelReason) {
+        if (err) {
+            err.textContent = 'سبب إلغاء التفويض مطلوب';
+            err.classList.remove('d-none');
+        }
+        return;
+    }
     try {
         var r = await apiFetch('/Settings/UpdateDelegation', 'POST', {
             id: delEditingId,
             cancel: true,
+            cancellationReason: cancelReason,
             delegatorBeneficiaryId: parseInt(document.getElementById('delDelegatorBen').value, 10) || 0,
             delegatorOrgUnitId: parseInt(document.getElementById('delDelegatorOuId').value, 10) || 0,
             delegateeBeneficiaryId: parseInt(document.getElementById('delDelegateeBen').value, 10) || 0,
@@ -936,6 +992,7 @@ async function delSubmitCancelDelegation() {
             bootstrap.Modal.getInstance(document.getElementById('delCancelDelegationModal')).hide();
             bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
             delEditingId = null;
+            delEditingWasActive = false;
             var btnCancelDel = document.getElementById('delBtnCancelDelegation');
             if (btnCancelDel) btnCancelDel.classList.add('d-none');
             showToast(r.message || 'تم إلغاء التفويض', 'success');
@@ -1002,6 +1059,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var dto = document.getElementById('delFilterDateTo');
     if (df) df.addEventListener('change', function () { delRenderTable(); });
     if (dto) dto.addEventListener('change', function () { delRenderTable(); });
+    var clr = document.getElementById('delFilterClear');
+    if (clr) clr.addEventListener('click', delClearFilters);
     var refInpInit = document.getElementById('delReferenceNumber');
     if (refInpInit) {
         refInpInit.addEventListener('input', delSanitizeReferenceInput);
@@ -1023,6 +1082,8 @@ document.addEventListener('DOMContentLoaded', function () {
         cancelModalEl.addEventListener('hidden.bs.modal', function () {
             var er = document.getElementById('delCancelDelegationErr');
             if (er) er.classList.add('d-none');
+            var ta = document.getElementById('delCancelReason');
+            if (ta) ta.value = '';
         });
     }
     delLoad();

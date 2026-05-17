@@ -115,6 +115,40 @@
 .fd-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
 .fd-detail-lbl { font-weight:700; color:var(--gray-500); }
 .fd-detail-val { color:var(--gray-800); font-weight:500; }
+
+/* مربعات «الفروقات بين الإصدارين» داخل تفاصيل الإصدار */
+.fdv-diff-note { font-size:12.5px; color:var(--gray-500); margin:0 0 12px; line-height:1.6; }
+.fdv-diff-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.fdv-diff-card { border:2px solid var(--gray-200); border-radius:12px; background:#fff; display:flex; flex-direction:column; min-height:160px; overflow:hidden; }
+.fdv-diff-card .fdv-diff-head { padding:10px 14px; font-size:13px; font-weight:800; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--gray-200); background:var(--gray-50); color:var(--gray-700); }
+.fdv-diff-card .fdv-diff-head i { font-size:14px; }
+.fdv-diff-card .fdv-diff-count { margin-inline-start:auto; min-width:26px; padding:1px 9px; border-radius:999px; background:rgba(0,0,0,.08); color:inherit; font-size:11px; font-weight:800; text-align:center; }
+.fdv-diff-card .fdv-diff-body { padding:10px 12px; display:flex; flex-direction:column; gap:6px; flex:1; max-height:280px; overflow:auto; }
+.fdv-diff-card .fdv-diff-item { font-size:12.5px; color:var(--gray-800); background:var(--gray-50); border:1px solid var(--gray-100); padding:7px 10px; border-radius:8px; word-break:break-word; }
+.fdv-diff-card .fdv-diff-empty { font-size:12px; color:var(--gray-400); padding:8px 4px; text-align:center; font-weight:600; }
+.fdv-diff-card .fdv-diff-rename { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.fdv-diff-card .fdv-diff-rename .fdv-rn-old { color:var(--gray-500); text-decoration:line-through; }
+.fdv-diff-card .fdv-diff-rename .fdv-rn-arrow { color:var(--info-600); font-weight:800; }
+.fdv-diff-card .fdv-diff-rename .fdv-rn-new { color:var(--gray-800); font-weight:700; }
+
+.fdv-diff-card.fdv-diff-added { border-color:var(--success-200, #b7e7ce); }
+.fdv-diff-card.fdv-diff-added .fdv-diff-head { background:var(--success-50, #ecfaf2); color:var(--success-700, #0f9f5c); border-bottom-color:var(--success-100, #d6f3e3); }
+.fdv-diff-card.fdv-diff-added .fdv-diff-count { background:rgba(15,159,92,.18); color:var(--success-700, #0f9f5c); }
+.fdv-diff-card.fdv-diff-added .fdv-diff-item { background:#f4fbf7; border-color:#dff1e7; }
+
+.fdv-diff-card.fdv-diff-removed { border-color:#f5c2c2; }
+.fdv-diff-card.fdv-diff-removed .fdv-diff-head { background:#fef2f2; color:var(--error-700, #b91c1c); border-bottom-color:#fbe1e1; }
+.fdv-diff-card.fdv-diff-removed .fdv-diff-count { background:rgba(220,38,38,.16); color:var(--error-700, #b91c1c); }
+.fdv-diff-card.fdv-diff-removed .fdv-diff-item { background:#fef5f5; border-color:#fadcdc; }
+
+.fdv-diff-card.fdv-diff-renamed { border-color:#cfe1f8; }
+.fdv-diff-card.fdv-diff-renamed .fdv-diff-head { background:#eff6ff; color:var(--info-700, #1d4ed8); border-bottom-color:#dbeafe; }
+.fdv-diff-card.fdv-diff-renamed .fdv-diff-count { background:rgba(29,78,216,.18); color:var(--info-700, #1d4ed8); }
+.fdv-diff-card.fdv-diff-renamed .fdv-diff-item { background:#f5faff; border-color:#dde9fb; }
+
+@@media (max-width:992px) {
+    .fdv-diff-grid { grid-template-columns:1fr; }
+}
 .fd-save-btn { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
 .fd-save-btn:hover { transform:translateY(-1px); }
 .fd-save-btn.draft { background:var(--gray-500); }

@@ -582,11 +582,31 @@ function bnfSyncFilterUnitTreeLabel() {
     }
 }
 
+/** نفس نص عمود «الدور» في الجدول — أساس فلترة الدور الفرعي (تطابق تام). */
+function bnfBeneficiaryTableRoleDisplay(b) {
+    if (!b) return '';
+    return String(b.roleDisplayTable || b.RoleDisplayTable || b.roleDisplay || '').trim();
+}
+
+/**
+ * يحوّل قيمة فلتر الدور إلى النص المقارَن لعمود الجدول.
+ * القيم السحرية القديمة تُربَط بعناوين الجدول الفعلية حرفيًا.
+ */
+function bnfNormalizeSubRoleFilterForTableMatch(raw) {
+    if (raw == null) return '';
+    var s = String(raw).trim();
+    if (!s) return '';
+    if (s === '__employee__') return 'موظف';
+    if (s === '__unit_manager__') return 'موظف - مدير وحدة تنظيمية';
+    return s;
+}
+
 function bnfGetFilteredBeneficiaries() {
     var nameQ = (document.getElementById('bnfFilterName') && document.getElementById('bnfFilterName').value || '').trim();
     var nidQ = (document.getElementById('bnfFilterNationalId') && document.getElementById('bnfFilterNationalId').value || '').trim();
     var unitId = document.getElementById('bnfFilterUnit') ? document.getElementById('bnfFilterUnit').value : '';
-    var subRole = document.getElementById('bnfFilterSubRole') ? document.getElementById('bnfFilterSubRole').value : '';
+    var subRoleRaw = document.getElementById('bnfFilterSubRole') ? document.getElementById('bnfFilterSubRole').value : '';
+    var roleFilter = bnfNormalizeSubRoleFilterForTableMatch(subRoleRaw);
 
     return bnfAll.filter(function (b) {
         if (nameQ && (b.fullName || '').indexOf(nameQ) === -1)
@@ -595,16 +615,8 @@ function bnfGetFilteredBeneficiaries() {
             return false;
         if (unitId && String(b.organizationalUnitId) !== String(unitId))
             return false;
-        if (subRole) {
-            var isUnitMgr = !!(b.isUnitManager || (b.mainRole || '').trim() === 'مدير');
-            if (subRole === '__employee__') {
-                if (isUnitMgr) return false;
-            } else if (subRole === '__unit_manager__') {
-                if (!isUnitMgr) return false;
-            } else {
-                var sr = (b.subRole || '').trim();
-                if (sr !== subRole) return false;
-            }
+        if (roleFilter) {
+            if (bnfBeneficiaryTableRoleDisplay(b) !== roleFilter) return false;
         }
         return true;
     });
