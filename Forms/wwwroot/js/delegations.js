@@ -34,8 +34,6 @@ var delBeneficiaries = [];
 var delOrgUnits = [];
 var delRows = [];
 var delEditingId = null;
-/** فعّال عند فتح التعديل: كان التفويض «سارٍ» (active) قبل التعديل — لفرض قاعدة تاريخ البداية. */
-var delEditingWasActive = false;
 
 function delTodayIso() {
     var n = new Date();
@@ -54,11 +52,13 @@ function delConfigureStartDateForAdd() {
     sd.value = today;
 }
 
-/** تعديل تفويض: إزالة min حتى تظهر تواريخ بداية قديمة بشكل صالح؛ التحقق من التطبيق يبقى في delSave للتفاويض السارية. */
+/** تعديل تفويض (تحديث): تاريخ البداية يُضبط تلقائياً على اليوم، مع min = اليوم (type=date يعطّل الأيام الأقدم في المنتقي). */
 function delConfigureStartDateForEdit() {
     var sd = document.getElementById('delStartDate');
     if (!sd) return;
-    sd.removeAttribute('min');
+    var today = delTodayIso();
+    sd.min = today;
+    sd.value = today;
 }
 
 function delClearFilters() {
@@ -786,7 +786,6 @@ async function delShowDetails(id) {
 
 function delShowAddModal() {
     delEditingId = null;
-    delEditingWasActive = false;
     var titleText = document.getElementById('delModalTitleText');
     if (titleText) titleText.textContent = 'إضافة تفويض';
     delOuExpandedDelegator = {};
@@ -837,7 +836,6 @@ async function delEdit(id) {
             return;
         }
         delEditingId = id;
-        delEditingWasActive = String(d.statusCode || '').toLowerCase() === 'active';
         var mt = document.getElementById('delModalTitleText');
         if (mt) mt.textContent = 'تعديل تفويض';
         var dorId = parseInt(d.delegatorOrgUnitId, 10) || 0;
@@ -859,7 +857,6 @@ async function delEdit(id) {
         delDelegateeOuSetSelection(d.delegateeOrgUnitId, delOuLookupName(deeId));
         document.getElementById('delDelegateeBen').value = String(d.delegateeBeneficiaryId || '');
         delConfigureStartDateForEdit();
-        document.getElementById('delStartDate').value = d.startDate || '';
         document.getElementById('delEndDate').value = d.endDate || '';
         document.getElementById('delDraft').checked = false;
         var draftWrap = document.getElementById('delDraftWrap');
@@ -915,22 +912,14 @@ async function delSave() {
         return;
     }
 
-    if (!delEditingId) {
-        var todayIso = delTodayIso();
-        if (!startDate) {
-            errEl.textContent = 'تاريخ البداية مطلوب';
-            errEl.classList.remove('d-none');
-            return;
-        }
-        if (startDate < todayIso) {
-            errEl.textContent = 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
-            errEl.classList.remove('d-none');
-            return;
-        }
+    var todayIso = delTodayIso();
+    if (!startDate) {
+        errEl.textContent = 'تاريخ البداية مطلوب';
+        errEl.classList.remove('d-none');
+        return;
     }
-
-    if (delEditingId && delEditingWasActive && startDate && startDate < delTodayIso()) {
-        errEl.textContent = 'تفويض سارٍ لا يمكن جعل تاريخ بدايته قبل تاريخ اليوم. إذا احتجت تعديلاً يخص فترة سابقة، أنشئ تفويضاً جديداً أو انتهِ من الإصدار الحالي أولاً.';
+    if (startDate < todayIso) {
+        errEl.textContent = 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
         errEl.classList.remove('d-none');
         return;
     }
@@ -1023,7 +1012,6 @@ async function delSubmitCancelDelegation() {
             bootstrap.Modal.getInstance(document.getElementById('delCancelDelegationModal')).hide();
             bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
             delEditingId = null;
-            delEditingWasActive = false;
             var btnCancelDel = document.getElementById('delBtnCancelDelegation');
             if (btnCancelDel) btnCancelDel.classList.add('d-none');
             showToast(r.message || 'تم إلغاء التفويض', 'success');

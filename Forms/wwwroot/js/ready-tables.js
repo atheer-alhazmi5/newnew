@@ -8,6 +8,16 @@ function rtEscHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** خلية «نوع الحقل» — نفس شارات النماذج المستخدمة (form-definitions.js) */
+function rtFieldTypeCellHtml(fieldType) {
+    try {
+        if (typeof window.fdFieldTypeBadgeHtml === 'function') {
+            return window.fdFieldTypeBadgeHtml(fieldType);
+        }
+    } catch (e) {}
+    return rtEscHtml(fieldType);
+}
+
 function rtNormalizeHeaderHex(val) {
     if (!val || typeof val !== 'string') return '#d1d5db';
     var s = val.trim();
@@ -1085,7 +1095,7 @@ function rtcRenderFieldsTable() {
     rtcFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1355,7 +1365,7 @@ async function rtShowDetails(id) {
             d.fields.forEach(function(f) {
                 var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
                 var propsSummary = rtGetPropsSummary(f);
-                html += '<tr><td>' + f.sortOrder + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
+                html += '<tr><td>' + f.sortOrder + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
             });
             html += '</tbody></table></div></div>';
         }
@@ -1607,7 +1617,7 @@ function rtEditRenderFieldsTable() {
     rtEditFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }

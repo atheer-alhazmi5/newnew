@@ -2207,18 +2207,13 @@ public class SettingsController : BaseController
         if (ComputeDelegationStatus(d) == "expired")
             return Json(new { success = false, message = "لا يمكن تعديل تفويض منتهي" });
 
-        // التفويض الساري: لا يُسمح بإرجاع تاريخ البداية إلى ما قبل تاريخ اليوم.
-        var stateBefore = ComputeDelegationStatus(d);
-        if (stateBefore == "active" && !string.IsNullOrWhiteSpace(req.StartDate))
+        // عند التحديث: لا يُسمح بتاريخ بداية قبل اليوم (يتوافق مع حقل type=date وmin في الواجهة).
+        if (!string.IsNullOrWhiteSpace(req.StartDate))
         {
             DateTime newStart;
             try { newStart = ParseDelegationDate(req.StartDate!); } catch { newStart = DateTime.MinValue; }
             if (newStart != DateTime.MinValue && newStart.Date < DateTime.Today)
-                return Json(new
-                {
-                    success = false,
-                    message = "تفويض سارٍ لا يمكن جعل تاريخ بدايته قبل تاريخ اليوم. إذا احتجت تعديلاً يخص فترة سابقة، أنشئ تفويضاً جديداً أو انتهِ من الإصدار الحالي أولاً."
-                });
+                return Json(new { success = false, message = "تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم" });
         }
 
         var err = await ValidateDelegationAsync(req, excludeDelegationId: req.Id);

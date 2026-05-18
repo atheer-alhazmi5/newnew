@@ -1066,7 +1066,7 @@ function wpBuildFormHtml(d, mode) {
                 </div>
             </div>
             <input type="hidden" id="wpProcedureClassification" value="${esc(procClass)}"></div>
-        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> مستوى السرية</label>
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> مستوى الاولوية</label>
             <div class="dropdown wp-dd w-100">
                 <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                     <span id="wpConfDdLbl">${esc(conf)}</span>
@@ -1909,7 +1909,7 @@ async function wpShowDetails(id) {
                 <span class="fd-detail-lbl">مساحة العمل</span><span class="fd-detail-val">${esc(d.workspaceName)}</span>
                 <span class="fd-detail-lbl">معدل الاستخدام</span><span class="fd-detail-val">${esc(d.usageFrequency)}</span>
                 <span class="fd-detail-lbl">التصنيف</span><span class="fd-detail-val">${esc(d.procedureClassification)}</span>
-                <span class="fd-detail-lbl">مستوى السرية</span><span class="fd-detail-val">${esc(d.confidentialityLevel)}</span>
+                <span class="fd-detail-lbl">مستوى الاولوية</span><span class="fd-detail-val">${esc(d.confidentialityLevel)}</span>
                 <span class="fd-detail-lbl">نوع الإجراء</span><span class="fd-detail-val">${esc(d.procedureActionTypeName || d.ProcedureActionTypeName) || '—'}</span>
                 <span class="fd-detail-lbl">القالب المستخدم</span><span class="fd-detail-val">${esc(d.formTemplateName || d.FormTemplateName) || '—'}</span>
                 <span class="fd-detail-lbl">رقم الإصدار</span><span class="fd-detail-val" style="font-weight:700;color:var(--sa-700);">${esc(d.versionLabel || d.VersionLabel || 'V1.0')}</span>

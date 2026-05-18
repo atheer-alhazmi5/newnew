@@ -245,6 +245,164 @@ const FD_FIELD_TYPES = {
     Object.keys(FD_FIELD_TYPES).forEach(k => { if (!skip.has(k)) FD_FIELD_TYPES[k].props.push({ ...roProp }); });
 })();
 
+/** أيقونة + فئة لونية لشارة نوع الحقل — مصدر واحد لصفحة النماذج والجداول الجاهزة */
+const FD_FIELD_TYPE_UI = {
+    'الاسم الكامل': { icon: 'bi-person-vcard', tone: 'text' },
+    'البريد الإلكتروني': { icon: 'bi-envelope', tone: 'text' },
+    'رقم الهاتف': { icon: 'bi-telephone', tone: 'text' },
+    'نص قصير': { icon: 'bi-input-cursor-text', tone: 'text' },
+    'نص طويل': { icon: 'bi-textarea-resize', tone: 'text' },
+    'فقرة': { icon: 'bi-text-paragraph', tone: 'rich' },
+    'رقم': { icon: 'bi-hash', tone: 'numeric' },
+    'قائمة منسدلة': { icon: 'bi-menu-button-wide-fill', tone: 'choice' },
+    'قائمة اختيار الواحد': { icon: 'bi-record-circle', tone: 'choice' },
+    'قائمة اختيار متعدد': { icon: 'bi-ui-checks', tone: 'choice' },
+    'تاريخ': { icon: 'bi-calendar3', tone: 'date' },
+    'وقت': { icon: 'bi-clock', tone: 'date' },
+    'رفع ملف': { icon: 'bi-cloud-arrow-up', tone: 'file' },
+    'دوار رقمي': { icon: 'bi-arrow-down-up', tone: 'numeric' },
+    'التقييم بالنجوم': { icon: 'bi-star-fill', tone: 'rating' },
+    'التقييم بالأرقام': { icon: 'bi-123', tone: 'rating' },
+    'جدول بيانات': { icon: 'bi-table', tone: 'grid' },
+    'شبكة خيارات متعددة': { icon: 'bi-grid-3x3-gap', tone: 'grid' },
+    'شبكة مربعات اختيار': { icon: 'bi-ui-checks-grid', tone: 'grid' },
+    'عنوان': { icon: 'bi-type-h1', tone: 'structure' },
+    'خط فاصل': { icon: 'bi-hr', tone: 'structure' },
+    'عملة': { icon: 'bi-currency-exchange', tone: 'numeric' },
+    'تأشير': { icon: 'bi-pen', tone: 'file' },
+    'توقيع': { icon: 'bi-vector-pen', tone: 'file' },
+    'تاريخ ووقت': { icon: 'bi-calendar-event', tone: 'date' },
+    'تبديل': { icon: 'bi-toggle2-on', tone: 'bool' },
+    'رابط': { icon: 'bi-link-45deg', tone: 'meta' },
+    'فاصل صفحات': { icon: 'bi-files', tone: 'structure' },
+    'صورة عرض': { icon: 'bi-image', tone: 'media' }
+};
+
+let _fdFieldTypeBadgeStylesDone = false;
+function fdEnsureFieldTypeBadgeStyles() {
+    if (typeof document === 'undefined' || _fdFieldTypeBadgeStylesDone) return;
+    const id = 'fd-field-type-badge-styles-v1';
+    if (document.getElementById(id)) { _fdFieldTypeBadgeStylesDone = true; return; }
+    const el = document.createElement('style');
+    el.id = id;
+    el.textContent = `
+.fd-field-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  font-family: inherit;
+  border: 1px solid transparent;
+  vertical-align: middle;
+}
+.fd-field-type-badge__icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+.fd-field-type-badge__text { font-weight: 700; }
+/* ألوان مجموعات الحقول */
+.fd-field-type-badge--text {
+  background: var(--gray-100, #f3f4f6);
+  color: var(--gray-700, #374151);
+  border-color: var(--gray-200, #e5e7eb);
+}
+.fd-field-type-badge--rich {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.fd-field-type-badge--numeric {
+  background: var(--info-50, #eff6ff);
+  color: var(--info-800, #1e40af);
+  border-color: var(--info-200, #bfdbfe);
+}
+.fd-field-type-badge--choice {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #ddd6fe;
+}
+.fd-field-type-badge--date {
+  background: var(--sa-50, #ecfdf5);
+  color: var(--sa-800, #065f46);
+  border-color: var(--sa-200, #a7f3d0);
+}
+.fd-field-type-badge--file {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+.fd-field-type-badge--rating {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #fde047;
+}
+.fd-field-type-badge--grid {
+  background: #ecfeff;
+  color: #155e75;
+  border-color: #a5f3fc;
+}
+.fd-field-type-badge--structure {
+  background: var(--gray-200, #e5e7eb);
+  color: var(--gray-700, #374151);
+  border-color: var(--gray-300, #d1d5db);
+}
+.fd-field-type-badge--bool {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+.fd-field-type-badge--meta {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border-color: #e9d5ff;
+}
+.fd-field-type-badge--media {
+  background: #fce7f3;
+  color: #9d174d;
+  border-color: #f9a8d4;
+}
+.fd-field-type-badge--default {
+  background: var(--gray-100, #f3f4f6);
+  color: var(--gray-600, #4b5563);
+  border-color: var(--gray-200, #e5e7eb);
+}
+/* توحيد شارات «إجباري» مع الجداول الجاهزة */
+table .fd-field-req:not([style*="background"]) {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 11px;
+  background: #dcf5e8;
+  color: #0f9f5c;
+}
+`;
+    document.head.appendChild(el);
+    _fdFieldTypeBadgeStylesDone = true;
+}
+
+/** HTML لعرض نوع الحقل في الجداول — يُعاد استخدامه في الجداول الجاهزة */
+function fdFieldTypeBadgeHtml(fieldType) {
+    fdEnsureFieldTypeBadgeStyles();
+    const raw = fieldType == null ? '' : String(fieldType).trim();
+    if (!raw) {
+        return '<span class="fd-field-type-badge fd-field-type-badge--default"><span class="fd-field-type-badge__text">—</span></span>';
+    }
+    const meta = FD_FIELD_TYPE_UI[raw] || { icon: 'bi-tag-fill', tone: 'default' };
+    const tone = meta.tone && /^[a-z]+$/.test(meta.tone) ? meta.tone : 'default';
+    const ic = meta.icon && /^bi-[a-z0-9-]+$/.test(meta.icon) ? meta.icon : 'bi-tag-fill';
+    return `<span class="fd-field-type-badge fd-field-type-badge--${tone}" title="${fdEscAttr(raw)}"><i class="bi ${ic} fd-field-type-badge__icon" aria-hidden="true"></i><span class="fd-field-type-badge__text">${esc(raw)}</span></span>`;
+}
+
 const FD_FILE_TYPE_CHOICES = [
     { ext:'pdf', label:'PDF' }, { ext:'jpg', label:'JPG' }, { ext:'jpeg', label:'JPEG' },
     { ext:'png', label:'PNG' }, { ext:'doc', label:'Word (.doc)' }, { ext:'docx', label:'Word (.docx)' },
@@ -3057,6 +3215,7 @@ function fdSigClearCanvas(canvasId) {
 
 function fdInitDynamicWidgets(root) {
     fdEnsureDateFieldStyles();
+    fdEnsureFieldTypeBadgeStyles();
     fdDdlEnsureTreeExpandDelegation();
     (root || document).querySelectorAll('canvas[data-fd-init-sig]').forEach(fdSigBindCanvas);
     (root || document).querySelectorAll('.fd-oc-group').forEach(fdOcInitGroup);
@@ -3070,6 +3229,7 @@ function fdInitDynamicWidgets(root) {
 
 if (typeof window !== 'undefined') {
     window.fdInitDynamicWidgets = fdInitDynamicWidgets;
+    window.fdFieldTypeBadgeHtml = fdFieldTypeBadgeHtml;
 }
 
 /** التنقل بين صفحات النموذج (التالي/السابق) — يُحدِّث حالة الأزرار والمؤشرات. */
@@ -4532,7 +4692,7 @@ function fdRenderFieldsTable() {
             const layout = f.displayLayout || 'يمتد عبر كامل الصف (واحد من واحد)';
             html += `<tr>
                 <td style="text-align:center;font-weight:700;color:var(--gray-500);">${globalIdx}</td>
-                <td><span class="fd-field-type">${esc(f.fieldType)}</span></td>
+                <td>${fdFieldTypeBadgeHtml(f.fieldType)}</td>
                 <td style="font-weight:600;">${esc(f.fieldName)}</td>
                 <td style="text-align:center;">${req}</td>
                 <td style="text-align:center;">${ro}</td>
