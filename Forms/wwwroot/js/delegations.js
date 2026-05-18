@@ -45,6 +45,22 @@ function delTodayIso() {
     return y + '-' + m + '-' + da;
 }
 
+/** إضافة تفويض: تاريخ البداية = اليوم، ولا يُسمح باختيار تاريخ قبل اليوم (min على حقل type=date). */
+function delConfigureStartDateForAdd() {
+    var sd = document.getElementById('delStartDate');
+    if (!sd) return;
+    var today = delTodayIso();
+    sd.min = today;
+    sd.value = today;
+}
+
+/** تعديل تفويض: إزالة min حتى تظهر تواريخ بداية قديمة بشكل صالح؛ التحقق من التطبيق يبقى في delSave للتفاويض السارية. */
+function delConfigureStartDateForEdit() {
+    var sd = document.getElementById('delStartDate');
+    if (!sd) return;
+    sd.removeAttribute('min');
+}
+
 function delClearFilters() {
     var s = document.getElementById('delSearch');
     if (s) s.value = '';
@@ -796,7 +812,7 @@ function delShowAddModal() {
     delDelegatorOuClose();
     delDelegateeOuClose();
     delRebuildDelegatorBenOptions();
-    document.getElementById('delStartDate').value = '';
+    delConfigureStartDateForAdd();
     document.getElementById('delEndDate').value = '';
     document.getElementById('delDraft').checked = false;
     var draftWrap = document.getElementById('delDraftWrap');
@@ -842,6 +858,7 @@ async function delEdit(id) {
         if (deeId) delOuExpandAncestors(delOuExpandedDelegatee, deeId);
         delDelegateeOuSetSelection(d.delegateeOrgUnitId, delOuLookupName(deeId));
         document.getElementById('delDelegateeBen').value = String(d.delegateeBeneficiaryId || '');
+        delConfigureStartDateForEdit();
         document.getElementById('delStartDate').value = d.startDate || '';
         document.getElementById('delEndDate').value = d.endDate || '';
         document.getElementById('delDraft').checked = false;
@@ -896,6 +913,20 @@ async function delSave() {
         errEl.textContent = 'اختر المفوض والمفوض له من أسماء المستفيدين في كل وحدة';
         errEl.classList.remove('d-none');
         return;
+    }
+
+    if (!delEditingId) {
+        var todayIso = delTodayIso();
+        if (!startDate) {
+            errEl.textContent = 'تاريخ البداية مطلوب';
+            errEl.classList.remove('d-none');
+            return;
+        }
+        if (startDate < todayIso) {
+            errEl.textContent = 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
+            errEl.classList.remove('d-none');
+            return;
+        }
     }
 
     if (delEditingId && delEditingWasActive && startDate && startDate < delTodayIso()) {

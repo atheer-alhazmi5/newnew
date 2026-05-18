@@ -161,6 +161,41 @@
 }
 .wp-dd-menu .text-muted.small { padding:10px 14px; }
 
+/* قائمة الإجراء المصدر — عرض هرمي مجمَّع حسب سلسلة الإصدارات */
+.wp-ver-group { border-bottom:1px solid var(--gray-200); }
+.wp-ver-group:last-child { border-bottom:none; }
+.wp-ver-group-head {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    background:var(--sa-50);
+    border-bottom:1px solid var(--gray-100);
+    direction:rtl;
+    font-weight:800; font-size:13px; color:var(--sa-800);
+    font-family:'Cairo',sans-serif;
+    user-select:none;
+}
+.wp-ver-group-head > .bi { color:var(--sa-600); font-size:14px; }
+.wp-ver-group-name { flex:1; min-width:0; text-align:right; }
+.wp-ver-group-code { font-size:11px; font-weight:600; color:var(--gray-500); direction:ltr; padding:1px 8px; background:#fff; border:1px solid var(--gray-200); border-radius:999px; }
+.wp-ver-group-count { font-size:11px; font-weight:700; color:var(--sa-700); background:#fff; border:1px solid var(--sa-200); border-radius:999px; padding:1px 8px; min-width:22px; text-align:center; }
+.wp-ver-group-body { background:#fff; }
+.wp-ver-item-row { padding-right:32px; border-bottom:1px solid var(--gray-100); }
+.wp-ver-item-row:last-child { border-bottom:none; }
+.wp-ver-item-label { display:flex !important; flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap; }
+.wp-ver-item-ver { font-weight:800; font-size:13px; color:var(--gray-900); direction:ltr; min-width:60px; }
+.wp-ver-item-code { font-size:11px; color:var(--gray-400); direction:ltr; }
+.wp-ver-badge {
+    display:inline-flex; align-items:center;
+    font-size:10.5px; font-weight:700; line-height:1;
+    padding:3px 8px; border-radius:999px;
+    border:1px solid transparent;
+    font-family:'Cairo',sans-serif;
+}
+.wp-ver-badge-approved { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+.wp-ver-badge-pending  { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.wp-ver-badge-rejected { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.wp-ver-badge-draft    { background:var(--gray-100); color:var(--gray-700); border-color:var(--gray-200); }
+
 #wpEditBody .fd-form-row.cols-1 .fd-form-group,
 #wpEditBody .fd-form-group.fd-form-group--wp-dd {
     width: 100%;

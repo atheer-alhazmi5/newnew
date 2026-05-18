@@ -94,8 +94,6 @@
 .rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input { text-align:center; direction:ltr; font-weight:700; -moz-appearance:textfield; }
 .rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input::-webkit-inner-spin-button,
 .rt-preview-form-table .input-group.fd-spinner-group .fd-spin-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
-.rt-star-rating .rt-star-icon { transition:color .15s; user-select:none; }
-.rt-star-rating .rt-star-icon:hover { transform:scale(1.2); }
 /* شجرة الوحدة التنظيمية (فلتر) — نفس أسلوب اضافه مستفيد / القوائم المنسدلة */
 .bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
@@ -315,6 +313,10 @@
                                                 <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
                                                 <option value="تاريخ">تاريخ</option>
                                                 <option value="وقت">وقت</option>
+                                                <option value="تاريخ ووقت">تاريخ ووقت</option>
+                                                <option value="تبديل">تبديل</option>
+                                                <option value="رابط">رابط</option>
+                                                <option value="صورة عرض">صورة عرض</option>
                                                 <option value="رفع ملف">رفع ملف</option>
                                                 <option value="دوار رقمي">دوار رقمي</option>
                                                 <option value="التقييم بالنجوم">التقييم بالنجوم</option>
@@ -504,6 +506,10 @@
                                                 <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
                                                 <option value="تاريخ">تاريخ</option>
                                                 <option value="وقت">وقت</option>
+                                                <option value="تاريخ ووقت">تاريخ ووقت</option>
+                                                <option value="تبديل">تبديل</option>
+                                                <option value="رابط">رابط</option>
+                                                <option value="صورة عرض">صورة عرض</option>
                                                 <option value="رفع ملف">رفع ملف</option>
                                                 <option value="دوار رقمي">دوار رقمي</option>
                                                 <option value="التقييم بالنجوم">التقييم بالنجوم</option>
@@ -587,5 +593,6 @@
 </div>
 
 @section Scripts {
+<script src="~/js/form-definitions.js?v=@DateTime.Now.Ticks"></script>
 <script src="~/js/ready-tables.js?v=@DateTime.Now.Ticks"></script>
 }

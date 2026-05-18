@@ -1053,7 +1053,15 @@ public class WorkProceduresController : BaseController
         return Json(new
         {
             success = true,
-            data = all.OrderByDescending(p => p.CreatedAt).Select(p => new { p.Id, p.Code, p.Name }).ToList()
+            data = all.OrderByDescending(p => p.CreatedAt).Select(p => new
+            {
+                p.Id,
+                p.Code,
+                p.Name,
+                p.VersionLabel,
+                p.VersionRootProcedureId,
+                p.Status
+            }).ToList()
         });
     }
 

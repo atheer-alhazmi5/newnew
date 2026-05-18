@@ -3068,6 +3068,10 @@ function fdInitDynamicWidgets(root) {
     fdIvBindLive(root);
 }
 
+if (typeof window !== 'undefined') {
+    window.fdInitDynamicWidgets = fdInitDynamicWidgets;
+}
+
 /** التنقل بين صفحات النموذج (التالي/السابق) — يُحدِّث حالة الأزرار والمؤشرات. */
 function fdPagerNav(btn, direction) {
     const pager = btn && btn.closest ? btn.closest('[data-fd-pager="1"]') : null;
@@ -4041,60 +4045,45 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         }
     }
 
-    // ── template layout (مطابقة إدارة القوالب: لا نفرض لون العلامة على الخط الفاصل، ولا خلفية للتذييل، ونُظهر العلامة المائية) ──
-    const tpl      = tplData;
-    const pageDir  = tpl ? String(tpl.pageDirection || tpl.PageDirection || 'RTL').toLowerCase() : 'rtl';
-    const mt = tpl ? (tpl.marginTop    ?? tpl.MarginTop    ?? 24) : 24;
-    const mb = tpl ? (tpl.marginBottom ?? tpl.MarginBottom ?? 24) : 24;
-    const mr = tpl ? (tpl.marginRight  ?? tpl.MarginRight  ?? 24) : 24;
-    const ml = tpl ? (tpl.marginLeft   ?? tpl.MarginLeft   ?? 24) : 24;
-    /** لون خط الرأس/الفاصل كما في شاشة القوالب — رمادي محايد، وليس لون العلامة (color). */
-    const headerDividerCss = 'var(--gray-200)';
-
-    let headerHtml = '', headerLineHtml = '', footerLineHtml = '', footerHtml = '';
-    let wmLayer = '';
-    let titleIntroHtml = '';
-
-    if (tpl) {
-        const { hd, fd } = fdTplHeaderFooterArrays(tpl);
-        const tplName = tpl.name || tpl.Name || '';
-        const showHeadLine = !!(tpl.showHeaderLine ?? tpl.ShowHeaderLine);
-        const showFootLine = !!(tpl.showFooterLine ?? tpl.ShowFooterLine);
-        wmLayer = fdBuildWatermarkLayerHtml(tpl);
-
-        headerHtml = hd.length
-            ? `<div style="display:grid;grid-template-columns:repeat(${hd.length},1fr);min-height:52px;align-items:center;padding:10px ${mr}px;background:#fff;">${hd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-            : `<div style="padding:12px ${mr}px;background:#fff;color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tplName)}</div>`;
-
-        headerLineHtml = showHeadLine ? `<div style="height:2px;background:${headerDividerCss};"></div>` : '';
-        footerLineHtml = showFootLine ? `<div style="height:1px;background:${headerDividerCss};"></div>` : '';
-
-        footerHtml = fd.length
-            ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:transparent;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-            : `<div style="padding:10px ${mr}px;background:transparent;color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tplName)}</div>`;
-
-        titleIntroHtml =
-            `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
-                `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--gray-900);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
-                (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
-            `</div>`;
-    } else {
-        headerHtml = `<div style="background:var(--sa-800);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:13px;font-weight:700;color:#fff;font-style:normal;"><i class="bi bi-file-earmark-richtext" style="margin-left:6px;"></i>${esc(formName)}</span>
-            <span style="font-size:11px;color:rgba(255,255,255,.4);">لم يُحدَّد قالب</span>
-        </div>`;
-        footerHtml = `<div style="background:var(--gray-100);padding:10px 24px;border-top:1px solid var(--gray-200);font-size:11px;color:var(--gray-400);text-align:center;font-style:normal;">تذييل النموذج</div>`;
-
-        titleIntroHtml =
-            `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-100);text-align:${tAlign};">` +
-                `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--sa-800);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
-                (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
-            `</div>`;
+    // ── المسار بلا قالب: حاوية بسيطة فقط (بدون رأس/تذييل/خطوط/إطار قالب وهمي) ──
+    if (!hasTpl) {
+        return `<div style="background:#fff;padding:24px;direction:rtl;font-style:normal;">${fieldsHtml}</div>`;
     }
 
-    const outerBorder = tpl ? '1px solid var(--gray-200)' : '2px solid var(--gray-200)';
+    // ── template layout (مطابقة إدارة القوالب: لا نفرض لون العلامة على الخط الفاصل، ولا خلفية للتذييل، ونُظهر العلامة المائية) ──
+    // عند الوصول هنا، يوجد قالب فعليًا (تم التعامل مع حالة «بدون قالب» أعلاه بإرجاع مبكر).
+    const tpl      = tplData;
+    const pageDir  = String(tpl.pageDirection || tpl.PageDirection || 'RTL').toLowerCase();
+    const mt = tpl.marginTop    ?? tpl.MarginTop    ?? 24;
+    const mb = tpl.marginBottom ?? tpl.MarginBottom ?? 24;
+    const mr = tpl.marginRight  ?? tpl.MarginRight  ?? 24;
+    const ml = tpl.marginLeft   ?? tpl.MarginLeft   ?? 24;
+    /** لون خط الرأس/الفاصل كما في شاشة القوالب — رمادي محايد، وليس لون العلامة (color). */
+    const headerDividerCss = 'var(--gray-200)';
+    const { hd, fd } = fdTplHeaderFooterArrays(tpl);
+    const tplName = tpl.name || tpl.Name || '';
+    const showHeadLine = !!(tpl.showHeaderLine ?? tpl.ShowHeaderLine);
+    const showFootLine = !!(tpl.showFooterLine ?? tpl.ShowFooterLine);
+    const wmLayer = fdBuildWatermarkLayerHtml(tpl);
 
-    return `<div style="border:${outerBorder};border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
+    const headerHtml = hd.length
+        ? `<div style="display:grid;grid-template-columns:repeat(${hd.length},1fr);min-height:52px;align-items:center;padding:10px ${mr}px;background:#fff;">${hd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
+        : `<div style="padding:12px ${mr}px;background:#fff;color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tplName)}</div>`;
+
+    const headerLineHtml = showHeadLine ? `<div style="height:2px;background:${headerDividerCss};"></div>` : '';
+    const footerLineHtml = showFootLine ? `<div style="height:1px;background:${headerDividerCss};"></div>` : '';
+
+    const footerHtml = fd.length
+        ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:transparent;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
+        : `<div style="padding:10px ${mr}px;background:transparent;color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tplName)}</div>`;
+
+    const titleIntroHtml =
+        `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
+            `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--gray-900);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
+            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
+        `</div>`;
+
+    return `<div style="border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
         ${headerHtml}${headerLineHtml}
         <div style="background:#fff;padding:${mt}px ${mr}px ${mb}px ${ml}px;direction:${pageDir};font-style:normal;position:relative;overflow:hidden;">
             ${wmLayer}

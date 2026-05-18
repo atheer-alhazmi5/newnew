@@ -422,10 +422,10 @@ function wpRenderTable() {
 
 function wpActions(f) {
     const parts = [];
+    const isApproved = f.status === 'approved';
     parts.push(`<button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`);
     parts.push(`<button type="button" class="fd-action-btn fd-action-btn-flow" onclick="wpShowWorkflow(${f.id})"><i class="bi bi-diagram-3"></i> سير العمل</button>`);
-    parts.push(`<button type="button" class="fd-action-btn fd-action-btn-edit" style="border-color:var(--info-600);color:var(--info-700);" onclick="wpShowCreateNewVersion(${f.id})"><i class="bi bi-layers"></i> إصدار جديد</button>`);
-    if (wpIsAdmin || f.status === 'draft' || f.status === 'rejected')
+    if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`);
     if (!wpIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-send" onclick="wpSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`);
@@ -433,7 +433,7 @@ function wpActions(f) {
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-approve" onclick="wpApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`);
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-reject" onclick="wpShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`);
     }
-    if (wpIsAdmin || f.status === 'draft' || f.status === 'rejected')
+    if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-delete" onclick="wpShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`);
     return `<div class="wp-action-grid">${parts.join('')}</div>`;
 }
@@ -1424,11 +1424,63 @@ function wpUpdateVersionSaveButtons() {
 }
 
 function wpVersionSourceItemsAll() {
-    return (wpAllProceduresList || []).map((p) => ({
-        id: p.id != null ? p.id : p.Id,
-        name: p.name != null ? p.name : (p.Name || ''),
-        code: p.code != null ? p.code : (p.Code || '')
-    })).filter((x) => x.id > 0);
+    return (wpAllProceduresList || []).map((p) => {
+        const id = p.id != null ? p.id : p.Id;
+        const rootRaw = p.versionRootProcedureId != null ? p.versionRootProcedureId : p.VersionRootProcedureId;
+        const rootId = (rootRaw != null && rootRaw > 0) ? rootRaw : id;
+        return {
+            id,
+            name: p.name != null ? p.name : (p.Name || ''),
+            code: p.code != null ? p.code : (p.Code || ''),
+            versionLabel: p.versionLabel != null ? p.versionLabel : (p.VersionLabel || ''),
+            status: p.status != null ? p.status : (p.Status || ''),
+            rootId
+        };
+    }).filter((x) => x.id > 0);
+}
+
+/** يحوّل الرقم في «V12.3» إلى عدد لترتيب الإصدارات تنازلياً. */
+function wpParseVersionMajor(label) {
+    const m = String(label || '').match(/v?(\d+)(?:\.(\d+))?/i);
+    if (!m) return 0;
+    const major = parseInt(m[1], 10) || 0;
+    const minor = parseInt(m[2] || '0', 10) || 0;
+    return major * 1000 + minor;
+}
+
+/** ترجمة قصيرة لحالة الإصدار لعرضها كـ badge بجانب الإصدار. */
+function wpVersionStatusBadge(status) {
+    const s = String(status || '').toLowerCase();
+    if (s === 'approved') return '<span class="wp-ver-badge wp-ver-badge-approved">معتمد</span>';
+    if (s === 'pending')  return '<span class="wp-ver-badge wp-ver-badge-pending">قيد الاعتماد</span>';
+    if (s === 'rejected') return '<span class="wp-ver-badge wp-ver-badge-rejected">مرفوض</span>';
+    if (s === 'draft')    return '<span class="wp-ver-badge wp-ver-badge-draft">مسودة</span>';
+    return '';
+}
+
+/** يجمّع الإجراءات حسب VersionRootProcedureId ويعيد قائمة مجموعات مرتبة. */
+function wpBuildVersionSourceGroups(items) {
+    const groupsMap = new Map();
+    items.forEach((it) => {
+        const key = it.rootId;
+        if (!groupsMap.has(key)) groupsMap.set(key, { rootId: key, name: '', code: '', items: [] });
+        groupsMap.get(key).items.push(it);
+    });
+    groupsMap.forEach((g) => {
+        // اسم الجذر إن وُجد، وإلا أقدم إصدار في المجموعة (أقل versionLabel) لاتساق التسمية.
+        const root = g.items.find((x) => x.id === g.rootId);
+        if (root) {
+            g.name = root.name;
+            g.code = root.code;
+        } else {
+            const oldest = g.items.slice().sort((a, b) => wpParseVersionMajor(a.versionLabel) - wpParseVersionMajor(b.versionLabel))[0];
+            g.name = (oldest && oldest.name) || '';
+            g.code = (oldest && oldest.code) || '';
+        }
+        // إصدارات تنازليًا (الأحدث أولًا).
+        g.items.sort((a, b) => wpParseVersionMajor(b.versionLabel) - wpParseVersionMajor(a.versionLabel));
+    });
+    return Array.from(groupsMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
 }
 
 function wpRenderVersionSourceDd() {
@@ -1437,33 +1489,66 @@ function wpRenderVersionSourceDd() {
     const lbl = document.getElementById('wpVersionSourceDdLbl');
     const searchEl = document.getElementById('wpVersionSourceSearch');
     if (!hid || !host || !lbl) return;
-    let items = wpVersionSourceItemsAll();
+    const allItems = wpVersionSourceItemsAll();
     const q = (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : '';
-    if (q) {
-        items = items.filter((x) =>
+    const filtered = q
+        ? allItems.filter((x) =>
             (x.name || '').toLowerCase().includes(q) ||
-            (x.code || '').toLowerCase().includes(q));
+            (x.code || '').toLowerCase().includes(q) ||
+            (x.versionLabel || '').toLowerCase().includes(q))
+        : allItems;
+    const groups = wpBuildVersionSourceGroups(filtered);
+    // عند البحث: إذا طابق اسم الجذر/الكود، نُظهر كل إصدارات المجموعة حتى يستفيد المستخدم من السياق الكامل.
+    if (q) {
+        const matchedRootIds = new Set(groups
+            .filter((g) => (g.name || '').toLowerCase().includes(q) || (g.code || '').toLowerCase().includes(q))
+            .map((g) => g.rootId));
+        if (matchedRootIds.size) {
+            const fullByRoot = new Map();
+            allItems.forEach((it) => {
+                if (matchedRootIds.has(it.rootId)) {
+                    if (!fullByRoot.has(it.rootId)) fullByRoot.set(it.rootId, []);
+                    fullByRoot.get(it.rootId).push(it);
+                }
+            });
+            groups.forEach((g) => {
+                if (fullByRoot.has(g.rootId)) {
+                    g.items = fullByRoot.get(g.rootId).slice().sort((a, b) => wpParseVersionMajor(b.versionLabel) - wpParseVersionMajor(a.versionLabel));
+                }
+            });
+        }
     }
+
     const sid = parseInt(hid.value, 10) || 0;
     const syncLbl = () => {
         const v = parseInt(hid.value, 10) || 0;
-        const row = wpVersionSourceItemsAll().find((x) => x.id === v);
-        lbl.textContent = row ? `${row.name} — ${row.code}` : 'اختر الإجراء الذي تريد إصدار نسخة منه...';
+        const row = allItems.find((x) => x.id === v);
+        lbl.textContent = row ? `${row.name} — ${row.versionLabel || ''}` : 'اختر الإجراء الذي تريد إصدار نسخة منه...';
     };
-    if (!items.length) {
+    if (!groups.length) {
         host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد إجراءات مسجلة</div>';
         syncLbl();
         return;
     }
-    host.innerHTML = items.map((p) => {
-        const id = p.id;
-        const checked = id === sid ? 'checked' : '';
-        const eid = `wp_versrc_${id}`;
-        const rowLbl = `${p.name} — ${p.code}`;
-        return `<div class="wp-dd-check-row">
+    host.innerHTML = groups.map((g) => {
+        const headerCode = g.code ? `<span class="wp-ver-group-code">${esc(g.code)}</span>` : '';
+        const head = `<div class="wp-ver-group-head"><i class="bi bi-folder2-open" aria-hidden="true"></i><span class="wp-ver-group-name">${esc(g.name || '(بدون اسم)')}</span>${headerCode}<span class="wp-ver-group-count">${g.items.length}</span></div>`;
+        const rows = g.items.map((p) => {
+            const id = p.id;
+            const checked = id === sid ? 'checked' : '';
+            const eid = `wp_versrc_${id}`;
+            const verLbl = p.versionLabel || '—';
+            const badge = wpVersionStatusBadge(p.status);
+            return `<div class="wp-dd-check-row wp-ver-item-row">
   <input type="radio" class="wp-dd-check-row-cb wp-version-source-radio" name="wpVerSrcRadio" value="${id}" id="${eid}" ${checked} onclick="event.stopPropagation()">
-  <label class="wp-dd-check-row-label" for="${eid}">${esc(rowLbl)}</label>
+  <label class="wp-dd-check-row-label wp-ver-item-label" for="${eid}">
+    <span class="wp-ver-item-ver">${esc(verLbl)}</span>
+    ${badge}
+    <span class="wp-ver-item-code">${esc(p.code || '')}</span>
+  </label>
 </div>`;
+        }).join('');
+        return `<div class="wp-ver-group">${head}<div class="wp-ver-group-body">${rows}</div></div>`;
     }).join('');
     syncLbl();
     host.querySelectorAll('input.wp-version-source-radio').forEach((r) => {
@@ -2258,10 +2343,6 @@ function wpWfRenderForm(editId) {
         <div id="wpWfReturnRow" class="wp-wf-sub-row" style="display:none;">
           <div class="wp-wf-sub-row-left">
             <span class="wp-wf-sub-label">خطوة الرجوع <span class="required-star">*</span></span>
-            <div class="wp-wf-radio-row wp-wf-yesno" id="wpWfReturnYesNoRow">
-              <label class="wp-wf-radio"><input type="radio" name="wpWfReturnYesNo" value="yes" checked><span>نعم</span></label>
-              <label class="wp-wf-radio"><input type="radio" name="wpWfReturnYesNo" value="no"><span>لا</span></label>
-            </div>
           </div>
           <select class="form-select wp-wf-sub-select" id="wpWfReturnStep"><option value="">—</option></select>
         </div>
@@ -2270,10 +2351,6 @@ function wpWfRenderForm(editId) {
         <div id="wpWfConcurrentRow" class="wp-wf-sub-row" style="display:none;">
           <div class="wp-wf-sub-row-left">
             <span class="wp-wf-sub-label">خطوة التزامن <span class="required-star">*</span></span>
-            <div class="wp-wf-radio-row wp-wf-yesno" id="wpWfConcurrentYesNoRow">
-              <label class="wp-wf-radio"><input type="radio" name="wpWfConcurrentYesNo" value="yes" checked><span>نعم</span></label>
-              <label class="wp-wf-radio"><input type="radio" name="wpWfConcurrentYesNo" value="no"><span>لا</span></label>
-            </div>
           </div>
           <select class="form-select wp-wf-sub-select" id="wpWfConcurrentStep"><option value="">—</option></select>
         </div>
@@ -2323,12 +2400,6 @@ function wpWfRenderForm(editId) {
         });
     });
 
-    document.querySelectorAll('input[name="wpWfReturnYesNo"]').forEach((r) => {
-        r.addEventListener('change', () => wpWfUpdateReturnStepVisibility());
-    });
-    document.querySelectorAll('input[name="wpWfConcurrentYesNo"]').forEach((r) => {
-        r.addEventListener('change', () => wpWfUpdateConcurrentStepVisibility());
-    });
     wpWfUpdateReturnStepVisibility();
     wpWfUpdateConcurrentStepVisibility();
     wpWfUpdateChannelHint();
@@ -2400,6 +2471,167 @@ function wpWfOrgUnitOptionsHtml(selectedId) {
     }).join('');
 }
 
+/* ─── شجرة الوحدة التنظيمية للمنفذ (مطابقة لشكل قائمة المستفيد) ─────────── */
+let wpWfFixedOrgExpanded = {};
+
+function wpWfOuItemId(u)        { return u.id != null ? u.id : u.Id; }
+function wpWfOuItemParentId(u)  { return u.parentId != null ? u.parentId : u.ParentId; }
+function wpWfOuItemSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
+function wpWfOuItemName(u)      { return u.name != null ? u.name : (u.Name || ''); }
+
+function wpWfOuBuildTreeMap() {
+    const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+    const ids = {};
+    units.forEach((u) => { ids[wpWfOuItemId(u)] = true; });
+    const byParent = {};
+    units.forEach((u) => {
+        const p = wpWfOuItemParentId(u);
+        const pk = (p != null && p !== '' && ids[p]) ? String(p) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach((k) => {
+        byParent[k].sort((a, b) => {
+            const sa = wpWfOuItemSortOrder(a);
+            const sb = wpWfOuItemSortOrder(b);
+            if (sa !== sb) return sa - sb;
+            return wpWfOuItemName(a).localeCompare(wpWfOuItemName(b), 'ar');
+        });
+    });
+    return byParent;
+}
+
+function wpWfFixedOrgExpandAncestors(selectId) {
+    const sid = parseInt(selectId, 10) || 0;
+    if (!sid) return;
+    const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+    const byParent = wpWfOuBuildTreeMap();
+    let cur = units.find((x) => wpWfOuItemId(x) === sid);
+    while (cur) {
+        const pid = wpWfOuItemParentId(cur);
+        if (pid == null || pid === '' || !byParent[String(pid)]) break;
+        wpWfFixedOrgExpanded[String(pid)] = true;
+        cur = units.find((x) => wpWfOuItemId(x) === pid);
+    }
+}
+
+function wpWfFixedOrgRenderRows(byParent, parentKey, depth, selectedId) {
+    const rows = byParent[parentKey] || [];
+    const sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    let html = '';
+    rows.forEach((u) => {
+        const uid = wpWfOuItemId(u);
+        const idStr = String(uid);
+        const children = byParent[idStr] || [];
+        const hasChildren = children.length > 0;
+        const expanded = !!wpWfFixedOrgExpanded[idStr];
+        const indent = depth * 22;
+        const rowSel = sel === idStr ? ' is-selected' : '';
+        const nmEsc = esc(wpWfOuItemName(u));
+        html += `<div class="wp-wf-ou-tree-row d-flex align-items-center${rowSel}" data-id="${uid}" data-name="${nmEsc}" role="option" dir="rtl" style="padding:8px 10px; padding-right:${12 + indent}px;">`;
+        if (hasChildren) {
+            html += `<button type="button" class="wp-wf-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}" title="${expanded ? 'طي' : 'توسيع'}">${expanded ? '−' : '+'}</button>`;
+        } else {
+            html += '<span class="wp-wf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += `<span class="wp-wf-ou-tree-name flex-grow-1">${nmEsc}</span></div>`;
+        if (hasChildren && expanded) {
+            html += wpWfFixedOrgRenderRows(byParent, idStr, depth + 1, selectedId);
+        }
+    });
+    return html;
+}
+
+function wpWfRenderFixedOrgPanel() {
+    const panel = document.getElementById('wpWfFixedOrgPanel');
+    if (!panel) return;
+    const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+    if (!units.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    const byParent = wpWfOuBuildTreeMap();
+    const hid = document.getElementById('wpWfFixedOrgUnit');
+    const selectedId = hid ? hid.value : '';
+    panel.innerHTML = wpWfFixedOrgRenderRows(byParent, '', 0, selectedId)
+        || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function wpWfFixedOrgSyncLabel() {
+    const lbl = document.getElementById('wpWfFixedOrgLabel');
+    const hid = document.getElementById('wpWfFixedOrgUnit');
+    if (!lbl || !hid) return;
+    const sid = parseInt(hid.value, 10) || 0;
+    if (!sid) { lbl.textContent = '-- اختر --'; return; }
+    const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+    const u = units.find((x) => wpWfOuItemId(x) === sid);
+    lbl.textContent = u ? wpWfOuItemName(u) : '-- اختر --';
+}
+
+function wpWfFixedOrgTogglePanel() {
+    const panel = document.getElementById('wpWfFixedOrgPanel');
+    const trig = document.getElementById('wpWfFixedOrgTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        const hid = document.getElementById('wpWfFixedOrgUnit');
+        if (hid && hid.value) wpWfFixedOrgExpandAncestors(hid.value);
+        wpWfRenderFixedOrgPanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        wpWfFixedOrgClosePanel();
+    }
+}
+
+function wpWfFixedOrgClosePanel() {
+    const panel = document.getElementById('wpWfFixedOrgPanel');
+    const trig = document.getElementById('wpWfFixedOrgTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function wpWfFixedOrgToggleExp(idStr) {
+    wpWfFixedOrgExpanded[idStr] = !wpWfFixedOrgExpanded[idStr];
+    wpWfRenderFixedOrgPanel();
+}
+
+function wpWfFixedOrgSelect(uid, name) {
+    const hid = document.getElementById('wpWfFixedOrgUnit');
+    const lbl = document.getElementById('wpWfFixedOrgLabel');
+    if (hid) hid.value = String(uid);
+    if (lbl) lbl.textContent = name || '— اختر —';
+    wpWfFixedOrgClosePanel();
+}
+
+/** ربط أحداث الشجرة (التوسيع/الاختيار + الإغلاق عند النقر خارجها). يُستدعى مرة واحدة. */
+function wpWfFixedOrgWireEvents() {
+    if (wpWfFixedOrgWireEvents._wired) return;
+    wpWfFixedOrgWireEvents._wired = true;
+    document.addEventListener('click', function (e) {
+        const panel = document.getElementById('wpWfFixedOrgPanel');
+        if (!panel || panel.classList.contains('d-none')) return;
+        const wrap = e.target.closest('.wp-wf-ou-tree-wrap');
+        if (wrap && wrap.contains(panel)) {
+            const expBtn = e.target.closest('.wp-wf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const eid = expBtn.getAttribute('data-exp');
+                if (eid) wpWfFixedOrgToggleExp(eid);
+                return;
+            }
+            const row = e.target.closest('.wp-wf-ou-tree-row');
+            if (row && row.getAttribute('data-id')) {
+                const uid = parseInt(row.getAttribute('data-id'), 10);
+                const nm = row.getAttribute('data-name') || '';
+                if (uid) wpWfFixedOrgSelect(uid, nm);
+            }
+            return;
+        }
+        wpWfFixedOrgClosePanel();
+    }, true);
+}
+
 /** يرسم قسم «المنفذ» حسب نوع المكلف (محدد / ثابت). الوضع الفارغ يخفي الكتلة. */
 function wpWfRenderAssigneeBlock(mode, init) {
     const host = document.getElementById('wpWfAssigneeBlock');
@@ -2413,6 +2645,7 @@ function wpWfRenderAssigneeBlock(mode, init) {
     host.style.display = '';
     if (mode === 'fixed') {
         const showOrg = wpWfFixedTypeNeedsOrgUnit(init.fixedType);
+        const initOrgId = (init && init.orgUnitId) ? String(init.orgUnitId) : '';
         host.innerHTML = `
             <div class="fd-form-group">
                 <label><span class="required-star">*</span> المنفذ</label>
@@ -2423,11 +2656,17 @@ function wpWfRenderAssigneeBlock(mode, init) {
             </div>
             <div class="fd-form-group" id="wpWfFixedOrgGroup" style="display:${showOrg ? '' : 'none'};">
                 <label><span class="required-star">*</span> الوحدة التنظيمية للمنفذ</label>
-                <select class="form-select" id="wpWfFixedOrgUnit">
-                    <option value="">— اختر —</option>
-                    ${wpWfOrgUnitOptionsHtml(init.orgUnitId)}
-                </select>
+                <div class="wp-wf-ou-tree-wrap">
+                    <input type="hidden" id="wpWfFixedOrgUnit" value="${initOrgId}">
+                    <button type="button" class="form-select wp-wf-ou-tree-trigger text-end w-100" id="wpWfFixedOrgTrigger" onclick="event.preventDefault();wpWfFixedOrgTogglePanel();" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="wp-wf-ou-tree-label text-truncate d-block" id="wpWfFixedOrgLabel">-- اختر --</span>
+                    </button>
+                    <div class="wp-wf-ou-tree-panel d-none" id="wpWfFixedOrgPanel" role="listbox"></div>
+                </div>
             </div>`;
+        wpWfFixedOrgExpanded = {};
+        wpWfFixedOrgSyncLabel();
+        wpWfFixedOrgWireEvents();
     } else {
         host.innerHTML = `
             <div class="fd-form-group" style="grid-column:1 / -1;">
@@ -2542,13 +2781,7 @@ function wpWfUpdateReturnStepVisibility() {
     const sel = document.getElementById('wpWfReturnStep');
     const isOn = wpWfActionChecked('return');
     if (row) row.style.display = isOn ? '' : 'none';
-    if (!isOn) {
-        if (sel) sel.value = '';
-        return;
-    }
-    const yes = (document.querySelector('input[name="wpWfReturnYesNo"]:checked') || {}).value || 'yes';
-    if (sel) sel.style.display = yes === 'yes' ? '' : 'none';
-    if (sel && yes !== 'yes') sel.value = '';
+    if (!isOn && sel) sel.value = '';
 }
 
 function wpWfUpdateConcurrentStepVisibility() {
@@ -2556,13 +2789,7 @@ function wpWfUpdateConcurrentStepVisibility() {
     const sel = document.getElementById('wpWfConcurrentStep');
     const isOn = wpWfActionChecked('concurrent_approvals');
     if (row) row.style.display = isOn ? '' : 'none';
-    if (!isOn) {
-        if (sel) sel.value = '';
-        return;
-    }
-    const yes = (document.querySelector('input[name="wpWfConcurrentYesNo"]:checked') || {}).value || 'yes';
-    if (sel) sel.style.display = yes === 'yes' ? '' : 'none';
-    if (sel && yes !== 'yes') sel.value = '';
+    if (!isOn && sel) sel.value = '';
 }
 
 function wpWfToggleDecisionFields() {
@@ -2673,19 +2900,13 @@ async function wpWfSubmitForm() {
 
     let returnStepId = null;
     if (allowed.includes('return')) {
-        const yes = (document.querySelector('input[name="wpWfReturnYesNo"]:checked') || {}).value || 'yes';
-        if (yes === 'yes') {
-            returnStepId = parseInt(document.getElementById('wpWfReturnStep')?.value || '0', 10) || null;
-            if (!returnStepId) return showToast('خطوة الرجوع مطلوبة', 'error');
-        }
+        returnStepId = parseInt(document.getElementById('wpWfReturnStep')?.value || '0', 10) || null;
+        if (!returnStepId) return showToast('خطوة الرجوع مطلوبة', 'error');
     }
     let concurrentStepId = null;
     if (allowed.includes('concurrent_approvals')) {
-        const yes = (document.querySelector('input[name="wpWfConcurrentYesNo"]:checked') || {}).value || 'yes';
-        if (yes === 'yes') {
-            concurrentStepId = parseInt(document.getElementById('wpWfConcurrentStep')?.value || '0', 10) || null;
-            if (!concurrentStepId) return showToast('خطوة التزامن مطلوبة', 'error');
-        }
+        concurrentStepId = parseInt(document.getElementById('wpWfConcurrentStep')?.value || '0', 10) || null;
+        if (!concurrentStepId) return showToast('خطوة التزامن مطلوبة', 'error');
     }
 
     const step = {

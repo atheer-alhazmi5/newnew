@@ -198,12 +198,13 @@ var RT_FIELD_TYPES = {
     ] },
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
-        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] }
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true },
         { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
@@ -220,6 +221,30 @@ var RT_FIELD_TYPES = {
         { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
         { key:"timeRangeStart", label:"بداية النطاق", type:"time" },
         { key:"timeRangeEnd", label:"نهاية النطاق", type:"time" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "تاريخ ووقت": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text", placeholder:"YYYY-MM-DDTHH:mm" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"startDate", label:"أقل تاريخ مسموح", type:"date" },
+        { key:"endDate", label:"أقصى تاريخ مسموح", type:"date" },
+        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "تبديل": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"onText", label:"نص الحالة المفعلة", type:"text", placeholder:"نعم" },
+        { key:"offText", label:"نص الحالة غير المفعلة", type:"text", placeholder:"لا" },
+        { key:"defaultOn", label:"الحالة الافتراضية مفعلة", type:"checkbox", checkboxLabel:"يبدأ مفعلاً" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "رابط": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"الرابط الافتراضي", type:"text", placeholder:"https://example.com" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"linkLabel", label:"نص الزر", type:"text", placeholder:"فتح الرابط" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رفع ملف": { props: [
@@ -265,6 +290,13 @@ var RT_FIELD_TYPES = {
         { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
         { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "صورة عرض": { props: [
+        { key:"imageUrl", label:"إرفاق صورة", type:"displayImageUpload" },
+        { key:"altText", label:"نص بديل", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"320" },
+        { key:"heightPx", label:"الارتفاع بالبيكسل", type:"number", placeholder:"200" },
+        { key:"imageAlign", label:"محاذاة الصورة", type:"select", options:["يمين","وسط","يسار"] }
     ] }
 };
 
@@ -304,12 +336,14 @@ function rtStripLegacyProps(props) {
     return props;
 }
 
-function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey) {
+function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey, perOptionOther) {
     propKey = propKey || 'options';
     var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return;
     el.classList.add('rtc-option-list-editor');
     el.setAttribute('data-mode', mode);
+    if (perOptionOther) el.setAttribute('data-fd-per-option-other', '1');
+    else el.removeAttribute('data-fd-per-option-other');
     el.innerHTML = '';
     var rowsHost = document.createElement('div');
     rowsHost.className = 'rtc-opt-rows';
@@ -323,8 +357,11 @@ function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey) {
         defaultStr = (po.defaultOption || '').trim();
     }
     var defaultMulti = mode === 'multi' ? defaultStr.split(/,\s*/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
-    lines.forEach(function (text) {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti, propKey));
+    var markLines = String(po.choiceOtherMarks || '').split(/[\r\n]+/);
+    var showO = !!perOptionOther;
+    lines.forEach(function (text, idx) {
+        var oth = !!(showO && (markLines[idx] === '1' || /^true$/i.test(String(markLines[idx] || '').trim())));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti, propKey, { showOtherCheckbox: showO, otherChecked: oth }));
     });
     el.appendChild(rowsHost);
     var btn = document.createElement('button');
@@ -332,13 +369,14 @@ function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey) {
     btn.className = 'btn btn-sm btn-outline-primary mt-2';
     btn.innerHTML = '<i class="bi bi-plus-lg"></i> إضافة خيار';
     btn.addEventListener('click', function () {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', [], propKey));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', [], propKey, { showOtherCheckbox: showO, otherChecked: false }));
     });
     el.appendChild(btn);
 }
 
-function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr, propKey) {
+function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr, propKey, rowOpts) {
     propKey = propKey || 'options';
+    rowOpts = rowOpts || {};
     var wrap = document.createElement('div');
     wrap.className = 'rtc-opt-row d-flex align-items-center gap-2 mb-2 flex-wrap';
     var inp = document.createElement('input');
@@ -363,6 +401,20 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr,
         d.appendChild(c);
         d.appendChild(lid);
         wrap.appendChild(d);
+        if (rowOpts.showOtherCheckbox) {
+            var od = document.createElement('div');
+            od.className = 'form-check m-0 flex-shrink-0';
+            var oc = document.createElement('input');
+            oc.type = 'checkbox';
+            oc.className = 'form-check-input rtc-opt-choice-other';
+            if (rowOpts.otherChecked) oc.checked = true;
+            var ol = document.createElement('label');
+            ol.className = 'form-check-label small';
+            ol.textContent = 'أخرى';
+            od.appendChild(oc);
+            od.appendChild(ol);
+            wrap.appendChild(od);
+        }
     } else {
         var d2 = document.createElement('div');
         d2.className = 'form-check m-0 flex-shrink-0';
@@ -378,6 +430,20 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr,
         d2.appendChild(r);
         d2.appendChild(lid2);
         wrap.appendChild(d2);
+        if (rowOpts.showOtherCheckbox) {
+            var od2 = document.createElement('div');
+            od2.className = 'form-check m-0 flex-shrink-0';
+            var oc2 = document.createElement('input');
+            oc2.type = 'checkbox';
+            oc2.className = 'form-check-input rtc-opt-choice-other';
+            if (rowOpts.otherChecked) oc2.checked = true;
+            var ol2 = document.createElement('label');
+            ol2.className = 'form-check-label small';
+            ol2.textContent = 'أخرى';
+            od2.appendChild(oc2);
+            od2.appendChild(ol2);
+            wrap.appendChild(od2);
+        }
     }
     var rm = document.createElement('button');
     rm.type = 'button';
@@ -399,9 +465,13 @@ function rtCollectOptionListFromEditor(idPrefix, propKey) {
     var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return null;
     var mode = el.getAttribute('data-mode') || 'single';
+    var perOther = el.getAttribute('data-fd-per-option-other') === '1';
     var host = el.querySelector('.rtc-opt-rows');
     if (!host) return { options: '', defaultOption: '' };
-    var lines = [], defaultOption = '', defaultsMulti = [];
+    var lines = [];
+    var defaultOption = '';
+    var defaultsMulti = [];
+    var otherMarks = [];
     host.querySelectorAll('.rtc-opt-row').forEach(function (row) {
         var ti = row.querySelector('.rtc-opt-text');
         var t = ti ? ti.value.trim() : '';
@@ -410,12 +480,22 @@ function rtCollectOptionListFromEditor(idPrefix, propKey) {
         if (mode === 'multi') {
             var c = row.querySelector('.rtc-opt-def-multi');
             if (c && c.checked) defaultsMulti.push(t);
+            if (perOther) {
+                var oc = row.querySelector('.rtc-opt-choice-other');
+                otherMarks.push(oc && oc.checked ? '1' : '0');
+            }
         } else {
             var r = row.querySelector('.rtc-opt-def-single');
             if (r && r.checked) defaultOption = t;
+            if (perOther) {
+                var oc2 = row.querySelector('.rtc-opt-choice-other');
+                otherMarks.push(oc2 && oc2.checked ? '1' : '0');
+            }
         }
     });
-    return { options: lines.join('\n'), defaultOption: mode === 'multi' ? defaultsMulti.join(', ') : defaultOption };
+    var out = { options: lines.join('\n'), defaultOption: mode === 'multi' ? defaultsMulti.join(', ') : defaultOption };
+    if (perOther) out.choiceOtherMarks = otherMarks.join('\n');
+    return out;
 }
 
 function rtCollectFileTypesPick(idPrefix) {
@@ -452,6 +532,7 @@ function rtMergeSpecialPropsIntoResult(type, idPrefix, result) {
         result[p.key] = o.options;
         if (p.choiceMode === 'multi') result.defaultOption = o.defaultOption;
         else if (p.key === 'options') result.defaultOption = o.defaultOption;
+        if (p.perOptionOther && o.choiceOtherMarks != null) result.choiceOtherMarks = o.choiceOtherMarks;
     });
     if (def.props.some(function (p) { return p.type === 'fileTypesPick'; })) {
         result.fileTypes = rtCollectFileTypesPick(idPrefix);
@@ -465,10 +546,49 @@ function rtApplyPropsSpecialEditors(type, idPrefix, propsObj) {
     var po = propsObj || {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList') {
-            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po, p.key);
+            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po, p.key, p.perOptionOther);
         }
     });
     rtApplyFileTypesFromProps(idPrefix, po);
+    if (type === 'صورة عرض') rtWireDisplayImageProp(idPrefix, 'imageUrl');
+}
+
+/** ربط إرفاق صورة «صورة عرض» (نفس منطق النماذج المستخدمة). */
+function rtWireDisplayImageProp(pfx, key) {
+    var tid = pfx + '_' + key;
+    var fileInp = document.getElementById(tid + '_file');
+    var ta = document.getElementById(tid);
+    var prev = document.getElementById(tid + '_preview');
+    var empty = document.getElementById(tid + '_empty');
+    var clr = document.getElementById(tid + '_clear');
+    if (!fileInp || !ta) return;
+    function sync() {
+        var v = String(ta.value || '').trim();
+        if (v) {
+            if (prev) { prev.src = v; prev.style.display = ''; }
+            if (empty) empty.style.display = 'none';
+            if (clr) clr.style.display = '';
+        } else {
+            if (prev) { prev.removeAttribute('src'); prev.style.display = 'none'; }
+            if (empty) empty.style.display = '';
+            if (clr) clr.style.display = 'none';
+        }
+    }
+    fileInp.onchange = function () {
+        var f = fileInp.files && fileInp.files[0];
+        if (!f) return;
+        if (!/^image\//i.test(f.type)) {
+            if (typeof showToast === 'function') showToast('يرجى اختيار ملف صورة', 'error');
+            fileInp.value = '';
+            return;
+        }
+        var r = new FileReader();
+        r.onload = function () { ta.value = r.result || ''; sync(); };
+        r.readAsDataURL(f);
+        fileInp.value = '';
+    };
+    if (clr) clr.onclick = function () { ta.value = ''; sync(); };
+    sync();
 }
 
 function rtBuildSinglePropHtml(p, idPrefix) {
@@ -480,7 +600,20 @@ function rtBuildSinglePropHtml(p, idPrefix) {
             '</div></div>';
     }
     if (p.type === 'optionList') {
-        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
+        var dOther = p.perOptionOther ? ' data-fd-per-option-other="1"' : '';
+        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"' + dOther + '></div></div>';
+    }
+    if (p.type === 'displayImageUpload') {
+        var fid = idPrefix + '_' + p.key;
+        return '<div class="col-12 mb-3 fd-display-image-prop">' +
+            '<label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label>' +
+            '<input type="file" class="form-control form-control-sm" id="' + fid + '_file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">' +
+            '<p class="text-muted small mb-0 mt-1" style="font-size:11px;">اختر ملف صورة من الجهاز (PNG، JPEG، GIF، WebP).</p>' +
+            '<textarea class="form-control form-control-sm visually-hidden" id="' + fid + '" rows="1" autocomplete="off" style="position:absolute;left:-9999px;height:1px;width:1px;opacity:0;" aria-hidden="true"></textarea>' +
+            '<div class="mt-2 p-2 rounded-3" style="border:1px dashed var(--gray-300);background:var(--gray-50);min-height:72px;">' +
+            '<img id="' + fid + '_preview" alt="" class="rounded" style="max-width:100%;max-height:180px;display:none;object-fit:contain;">' +
+            '<span id="' + fid + '_empty" class="text-muted small">لم تُرفع صورة بعد</span></div>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="' + fid + '_clear" style="display:none;">إزالة الصورة</button></div>';
     }
     if (p.type === 'fileTypesPick') {
         var h = '<div class="col-12 mb-3"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><div id="' + idPrefix + '_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">';
@@ -1022,398 +1155,54 @@ function rtpParseLines(s) {
     return String(s).split(/[\r\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
 }
 
-function rtpBuildFieldInput(f, opt) {
-    var ph = rtpFieldPlaceholder(f);
-    var props = {};
-    try { props = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
-    if (opt && opt.forceReadOnly) props.readOnly = true;
-    var defVal = (props.defaultValue != null && props.defaultValue !== '') ? String(props.defaultValue).replace(/"/g, '&quot;') : '';
-    var roAttr = props.readOnly ? ' readonly' : '';
-    var roSel = props.readOnly ? ' disabled' : '';
-    var roStyle = props.readOnly ? 'background:#f3f4f6;cursor:not-allowed;' : '';
-    var reqAttr = f.isRequired ? ' required' : '';
-    var maxL = (props.maxLength || props.charLimit) ? ' maxlength="' + (props.maxLength || props.charLimit) + '"' : '';
-    var minL = props.minLength ? ' minlength="' + props.minLength + '"' : '';
-    var wStyle = props.widthPx ? 'width:' + props.widthPx + 'px;' : '';
-    var ttAttr = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '"' : '';
-    function mkStyle(extra) { var s = (wStyle + roStyle + (extra || '')).trim(); return s ? ' style="' + s + '"' : ''; }
-    var inp = '';
-
-    if (f.fieldType === 'الاسم الكامل' || f.fieldType === 'نص قصير') {
-        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'رقم الهاتف') {
-        var fmt = props.phoneFormat || '+966 (9 أرقام)';
-        if (fmt === '+966 (9 أرقام)') {
-            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}" value="' + defVal + '"' + reqAttr + roAttr + mkStyle('direction:ltr;') + '></div>';
-        } else if (fmt === '05xxxxxxxx (10 أرقام)') {
-            inp = '<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}" value="' + (defVal || '') + '"' + reqAttr + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
-        } else if (fmt === 'تلفون') {
-            inp = '<input type="tel" class="form-control" placeholder="' + (ph || 'XXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
-        } else {
-            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+</span><input type="tel" class="form-control" placeholder="' + (ph || 'XXX XXXXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + mkStyle('direction:ltr;') + '></div>';
-        }
-    } else if (f.fieldType === 'البريد الإلكتروني') {
-        var pat = '';
-        if (props.emailFormat) {
-            pat = ' pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa"';
-        }
-        inp = '<input type="email" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + pat + reqAttr + maxL + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'نص طويل' || f.fieldType === 'فقرة') {
-        var dv = (props.defaultValue != null) ? String(props.defaultValue) : '';
-        var hPx = props.heightPx ? 'height:' + props.heightPx + 'px;' : '';
-        inp = '<textarea class="form-control" rows="3" placeholder="' + ph + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle(hPx) + '>' + dv.replace(/</g, '&lt;') + '</textarea>';
-    } else if (f.fieldType === 'رقم') {
-        var numMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
-        var numMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
-        inp = '<input type="number" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + numMin + numMax + reqAttr + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'دوار رقمي') {
-        var spMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
-        var spMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
-        var spStep = (props.stepValue != null && props.stepValue !== '') ? ' step="' + props.stepValue + '"' : ' step="1"';
-        var spNoD = props.noDecimals ? ' step="1"' : spStep;
-        var spinNum = NaN;
-        if (props.defaultValue != null && props.defaultValue !== '') spinNum = parseFloat(String(props.defaultValue).trim());
-        if (isNaN(spinNum)) {
-            if (props.minValue != null && props.minValue !== '') spinNum = parseFloat(String(props.minValue));
-            else spinNum = 0;
-        }
-        var loSpin = (props.minValue != null && props.minValue !== '') ? parseFloat(String(props.minValue)) : null;
-        var hiSpin = (props.maxValue != null && props.maxValue !== '') ? parseFloat(String(props.maxValue)) : null;
-        if (loSpin != null && !isNaN(loSpin) && spinNum < loSpin) spinNum = loSpin;
-        if (hiSpin != null && !isNaN(hiSpin) && spinNum > hiSpin) spinNum = hiSpin;
-        var spinValStr = String(spinNum);
-        var spinRtEv = props.readOnly ? '' : ' oninput="rtSpinClamp(this)" onblur="rtSpinClamp(this)"';
-        var spinWrap = wStyle ? ' style="' + wStyle + '"' : '';
-        var spinInpStyle = props.readOnly ? ' readonly style="text-align:center;direction:ltr;background:#f3f4f6;"' : ' style="text-align:center;direction:ltr;"';
-        // مطابقة شكل النماذج المستخدمة (fd-spinner-group + fd-spin-input بدون كلاسات إضافية)
-        inp = '<div class="input-group fd-spinner-group"' + ttAttr + spinWrap + '><button type="button" class="btn btn-outline-secondary" onclick="rtSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input" value="' + spinValStr + '"' + spMin + spMax + spNoD + reqAttr + spinInpStyle + spinRtEv + '><button type="button" class="btn btn-outline-secondary" onclick="rtSpinInc(this)" style="padding:4px 10px;">+</button></div>';
-    } else if (f.fieldType === 'التقييم بالأرقام') {
-        var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
-        var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
-        inp = '<div' + ttAttr + '><input type="range" class="form-range" min="' + arMin + '" max="' + arMax + '" value="' + (defVal || arMin) + '" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold" style="font-size:14px;">' + (defVal || arMin) + '</div>';
-        var lo = props.lowRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.lowRatingText) + '</span>' : '';
-        var hi = props.highRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.highRatingText) + '</span>' : '';
-        if (lo || hi) inp += '<div class="d-flex justify-content-between">' + lo + hi + '</div>';
-        inp += '</div>';
-    } else if (f.fieldType === 'قائمة منسدلة') {
-        // تطابق هيكل النماذج المستخدمة: select بسيط مع خيار فارغ + خيارات + قيمة افتراضية
-        var opts = [];
-        if (props.options) opts = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-        var emptyText = (props.emptyText || '').trim();
-        var defaultOpt = (props.defaultOption || '').trim();
-        var firstLabel = emptyText || ph || 'اختر...';
-        inp = '<select class="form-select"' + reqAttr + roSel + ttAttr + mkStyle() + '>';
-        inp += '<option value="">' + String(firstLabel).replace(/</g, '&lt;') + '</option>';
-        opts.forEach(function (o) {
-            var sel = (defaultOpt && o === defaultOpt) ? ' selected' : '';
-            inp += '<option value="' + rtEscAttr(o) + '"' + sel + '>' + String(o).replace(/</g, '&lt;') + '</option>';
-        });
-        inp += '</select>';
-    } else if (f.fieldType === 'قائمة اختيار الواحد') {
-        // تطابق شكل النماذج المستخدمة (fd-oc-group + form-check بدون mb-0)
-        var optsS = [];
-        if (props.options) optsS = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-        var defaultOptS = (props.defaultOption || '').trim();
-        var isHorizS = String(props.optionsOrientation || '').trim() === 'أفقي';
-        var grpClsS = isHorizS
-            ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3'
-            : 'fd-oc-group d-flex flex-column gap-1';
-        var disAttrS = props.readOnly ? ' disabled' : '';
-        var gnameS = 'rt_sc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
-        if (optsS.length === 0) {
-            inp = '<span class="text-muted"' + ttAttr + '>—</span>';
-        } else {
-            var bodyS = '';
-            optsS.forEach(function (o, i) {
-                var ridS = gnameS + '_' + i;
-                var selS = (defaultOptS && defaultOptS === o) ? ' checked' : '';
-                var reqOneS = (f.isRequired && i === 0) ? ' required' : '';
-                bodyS += '<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="radio" name="' + gnameS + '" id="' + ridS + '" value="' + rtEscAttr(o) + '"' + selS + disAttrS + reqOneS + '><label class="form-check-label" for="' + ridS + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
-            });
-            inp = '<div class="' + grpClsS + '"' + ttAttr + mkStyle() + '>' + bodyS + '</div>';
-        }
-    } else if (f.fieldType === 'قائمة اختيار متعدد') {
-        // تطابق شكل النماذج المستخدمة
-        var opts2 = [];
-        if (props.options) opts2 = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-        var defaultSet = {};
-        String(props.defaultOption || '').split(/,\s*/).forEach(function (d) {
-            var t = d.trim();
-            if (t) defaultSet[t] = true;
-        });
-        var isHorizM = String(props.optionsOrientation || '').trim() === 'أفقي';
-        var grpClsM = isHorizM
-            ? 'fd-oc-group fd-oc-horiz d-flex flex-wrap gap-3'
-            : 'fd-oc-group d-flex flex-column gap-1';
-        var disAttrM = props.readOnly ? ' disabled' : '';
-        var gnameM = 'rt_mc_' + (f.id || 'n') + '_' + String(f.fieldName || 'f').replace(/\s+/g, '_') + '_' + Math.random().toString(36).slice(2, 8);
-        if (opts2.length === 0) {
-            inp = '<span class="text-muted"' + ttAttr + '>—</span>';
-        } else {
-            var bodyM = '';
-            opts2.forEach(function (o, i) {
-                var cidM = gnameM + '_' + i;
-                var chkM = defaultSet[o] ? ' checked' : '';
-                bodyM += '<div class="fd-oc-item"><div class="form-check"><input class="form-check-input" type="checkbox" name="' + gnameM + '[]" id="' + cidM + '" value="' + rtEscAttr(o) + '"' + chkM + disAttrM + '><label class="form-check-label" for="' + cidM + '">' + String(o).replace(/</g, '&lt;') + '</label></div></div>';
-            });
-            inp = '<div class="' + grpClsM + '"' + ttAttr + mkStyle() + '>' + bodyM + '</div>';
-        }
-    } else if (f.fieldType === 'تاريخ') {
-        var calT = String(props.calendarType || 'ميلادي').trim();
-        var dtMin = props.startDate ? ' min="' + rtEscAttr(String(props.startDate)) + '"' : '';
-        var dtMax = props.endDate ? ' max="' + rtEscAttr(String(props.endDate)) + '"' : '';
-        var ttlOpenCal = rtEscAttr('فتح التقويم');
-        var ttlHijNA = rtEscAttr('التقويم التفاعلي غير مدعوم — أدخل التاريخ الهجري يدوياً');
-        var dateWrapStyle = (wStyle || 'direction:ltr;') !== 'direction:ltr;' ? mkStyle('direction:ltr;') : ' style="direction:ltr;"';
-        if (calT === 'هجري') {
-            var hijPh = rtEscAttr(ph || '1447/06/15 — مثال');
-            inp = '<div class="fd-date-field-wrap fd-date-hijri position-relative"' + ttAttr + dateWrapStyle + '><div class="input-group fd-date-input-group fd-date-cal-left"><button type="button" class="btn btn-outline-secondary fd-date-cal-btn" disabled tabindex="-1" title="' + ttlHijNA + '" aria-label="' + ttlHijNA + '"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="text" class="form-control fd-date-control" dir="ltr" placeholder="' + hijPh + '" value="' + defVal + '"' + reqAttr + roAttr + '></div></div>';
-        } else {
-            var dtRoBtn = props.readOnly ? ' disabled' : '';
-            inp = '<div class="fd-date-field-wrap fd-date-miladi position-relative"' + ttAttr + dateWrapStyle + '><div class="input-group fd-date-input-group fd-date-cal-left"><button type="button" class="btn btn-outline-secondary fd-date-cal-btn" onclick="rtDateOpenPicker(this)"' + dtRoBtn + ' title="' + ttlOpenCal + '" aria-label="' + ttlOpenCal + '"><i class="bi bi-calendar3" aria-hidden="true"></i></button><input type="date" class="form-control fd-date-control" value="' + defVal + '"' + dtMin + dtMax + reqAttr + roAttr + '></div></div>';
-        }
-    } else if (f.fieldType === 'وقت') {
-        var tfmt = props.timeFormat || '';
-        inp = '<input type="time" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + (tfmt === '24 ساعة' ? '' : ' step="3600"') + '>';
-    } else if (f.fieldType === 'رفع ملف') {
-        var acc = rtpFileAcceptFromProps(props);
-        var rtpMx = typeof window.fdResolvedMaxFilesFromProps === 'function'
-            ? window.fdResolvedMaxFilesFromProps(props)
-            : (function () {
-                var raw = props.maxFiles != null && props.maxFiles !== ''
-                    ? props.maxFiles
-                    : (props.MaxFiles != null && props.MaxFiles !== '' ? props.MaxFiles : null);
-                if (raw == null || raw === '') return 1;
-                var latin = String(raw).replace(/[\u0660-\u0669]/g, function (ch) { return String(ch.charCodeAt(0) - 0x0660); })
-                    .replace(/[\u06f0-\u06f9]/gi, function (ch) { return String(ch.charCodeAt(0) - 0x06f0); });
-                var x = parseInt(latin.trim(), 10);
-                if (isNaN(x) || x < 1) return 1;
-                return Math.min(x, 100);
-            })();
-        var rtpMulti = rtpMx > 1 ? ' multiple="multiple"' : '';
-        inp = '<div class="fd-file-upload-wrap" data-fd-max-files="' + rtpMx + '"><input type="file" class="form-control form-control-sm fd-file-input"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + rtpMulti + reqAttr + ttAttr + '></div>';
-    } else if (f.fieldType === 'التقييم بالنجوم') {
-        var range = parseInt(props.ratingRange) || 5;
-        var icon = props.ratingIcon || 'نجمة';
-        var starChar = icon === 'قلب' ? '♥' : icon === 'إبهام' ? '👍' : '★';
-        var sdef = parseInt(defVal) || 0;
-        inp = '<div class="rt-star-rating d-flex gap-1 align-items-center"' + ttAttr + ' data-val="' + sdef + '">';
-        for (var si = 1; si <= range; si++) {
-            var active = si <= sdef ? 'color:#f59e0b;' : 'color:#d1d5db;';
-            inp += '<span class="rt-star-icon" data-i="' + si + '" style="font-size:22px;cursor:pointer;' + active + '" onclick="rtStarClick(this,' + si + ')">' + starChar + '</span>';
-        }
-        inp += '<span class="rt-star-val ms-2 fw-bold" style="font-size:13px;">' + sdef + '/' + range + '</span></div>';
-    } else if (f.fieldType === 'جدول بيانات') {
-        var colsD = rtpParseLines(props.options);
-        var cD = colsD.length ? colsD : ['عمود'];
-        var numRows = 1;
-        var roD = props.readOnly ? ' readonly' : '';
-        var i, j;
-        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr>';
-        for (i = 0; i < cD.length; i++) inp += '<th>' + String(cD[i]).replace(/</g, '&lt;') + '</th>';
-        inp += '</tr></thead><tbody>';
-        for (i = 0; i < numRows; i++) {
-            inp += '<tr>';
-            for (j = 0; j < cD.length; j++) inp += '<td><input type="text" class="form-control form-control-sm"' + roD + reqAttr + '></td>';
-            inp += '</tr>';
-        }
-        inp += '</tbody></table></div>';
-    } else if (f.fieldType === 'شبكة خيارات متعددة') {
-        var colsR = rtpParseLines(props.options);
-        var rowsR = rtpParseLines(props.rowLabels);
-        var cR = colsR.length ? colsR : ['خيار'];
-        var rR = rowsR.length ? rowsR : ['صف'];
-        var gridName = 'rt_gr_' + (f.id || 'n') + '_' + String(f.fieldName || '').replace(/\s/g, '_');
-        var disR = props.readOnly ? ' disabled' : '';
-        var ir, jr;
-        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
-        for (ir = 0; ir < cR.length; ir++) inp += '<th class="text-center">' + String(cR[ir]).replace(/</g, '&lt;') + '</th>';
-        inp += '</tr></thead><tbody>';
-        for (ir = 0; ir < rR.length; ir++) {
-            inp += '<tr><th scope="row" style="background:var(--gray-50);">' + String(rR[ir]).replace(/</g, '&lt;') + '</th>';
-            for (jr = 0; jr < cR.length; jr++) inp += '<td class="text-center"><input type="radio" class="form-check-input" name="' + gridName + '_r' + ir + '"' + disR + '></td>';
-            inp += '</tr>';
-        }
-        inp += '</tbody></table></div>';
-    } else if (f.fieldType === 'شبكة مربعات اختيار') {
-        var colsC = rtpParseLines(props.options);
-        var rowsC = rtpParseLines(props.rowLabels);
-        var cC = colsC.length ? colsC : ['عمود'];
-        var rC = rowsC.length ? rowsC : ['صف'];
-        var disC = props.readOnly ? ' disabled' : '';
-        var ic, jc;
-        inp = '<div class="table-responsive"' + ttAttr + '><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr><th></th>';
-        for (ic = 0; ic < cC.length; ic++) inp += '<th class="text-center">' + String(cC[ic]).replace(/</g, '&lt;') + '</th>';
-        inp += '</tr></thead><tbody>';
-        for (ic = 0; ic < rC.length; ic++) {
-            inp += '<tr><th scope="row" style="background:var(--gray-50);">' + String(rC[ic]).replace(/</g, '&lt;') + '</th>';
-            for (jc = 0; jc < cC.length; jc++) inp += '<td class="text-center"><input type="checkbox" class="form-check-input"' + disC + '></td>';
-            inp += '</tr>';
-        }
-        inp += '</tbody></table></div>';
-    } else {
-        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
-    }
-    var subName = (f.subName || props.subName || '').trim();
-    if (subName) {
-        inp += '<div class="rt-field-subname">' + subName.replace(/</g, '&lt;') + '</div>';
-    }
-    return inp;
+/** معرّف فريد لكل خلية معاينة (يتجنّب تكرار id عند صفوف متعددة). */
+function rtpSyntheticPreviewFieldId(f) {
+    var base = String((f && f.fieldName) || 'f').replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF\-]/g, '') || 'fld';
+    return 'rtpv_' + base + '_' + Math.random().toString(36).slice(2, 11);
 }
 
-function rtSpinArabicDigitsToAscii(s) {
-    return String(s)
-        .replace(/[\u0660-\u0669]/g, function(ch) { return String(ch.charCodeAt(0) - 0x0660); })
-        .replace(/[\u06F0-\u06F9]/g, function(ch) { return String(ch.charCodeAt(0) - 0x06F0); });
-}
-function rtSpinAllowsFraction(el) {
-    if (!el) return true;
-    var raw = String(el.getAttribute('step') || '').replace(/,/g, '.').trim();
-    if (!raw) return true;
-    var st = parseFloat(raw);
-    if (!(isFinite(st)) || st <= 0) return true;
-    if (st > 0 && st < 1) return true;
-    return st !== Math.floor(st);
-}
-function rtSpinAllowsNegative(el) {
-    var lo = rtSpinGetMin(el);
-    return lo === -Infinity || lo < 0;
-}
-function rtSpinCleanRaw(s, allowFrac, allowNeg) {
-    var t = rtSpinArabicDigitsToAscii(String(s)).replace(/\s/g, '').replace(/,/g, '.').replace(/\u066B/g, '.');
-    var out = '';
-    var seenDot = false;
-    var i = 0;
-    if (allowNeg && i < t.length && t[i] === '-') {
-        out += '-';
-        i++;
-    }
-    while (i < t.length) {
-        var c = t[i++];
-        if (c >= '0' && c <= '9') {
-            out += c;
-            continue;
-        }
-        if ((c === '.' || c === ',') && allowFrac && !seenDot) {
-            seenDot = true;
-            out += '.';
-        }
-    }
-    return out;
-}
-function rtSpinGetMin(el) {
-    if (!el || !el.hasAttribute('min')) return -Infinity;
-    var x = parseFloat(String(el.getAttribute('min')).replace(/,/g, '.'));
-    return isNaN(x) ? -Infinity : x;
-}
-function rtSpinGetMax(el) {
-    if (!el || !el.hasAttribute('max')) return Infinity;
-    var x = parseFloat(String(el.getAttribute('max')).replace(/,/g, '.'));
-    return isNaN(x) ? Infinity : x;
-}
-function rtSpinFormatForInput(v, el) {
-    var stAttr = el.getAttribute('step');
-    var st = (stAttr != null && stAttr !== '') ? parseFloat(String(stAttr).replace(/,/g, '.')) : NaN;
-    if (!isNaN(st) && st > 0 && st < 1) {
-        var decPart = String(st).split('.')[1] || '';
-        var dec = Math.min(Math.max(decPart.length || 2, 1), 10);
-        return (+v).toFixed(dec);
-    }
-    var rounded = +(+(v).toFixed(4));
-    return rounded === Math.floor(rounded) ? String(Math.floor(rounded)) : String(rounded);
-}
-function rtSpinClamp(el) {
-    if (!el || !el.classList.contains('fd-spin-input')) return;
-    if (el.readOnly || el.disabled) return;
-    var allowFrac = rtSpinAllowsFraction(el);
-    var allowNeg = rtSpinAllowsNegative(el);
-    var lo = rtSpinGetMin(el);
-    var hi = rtSpinGetMax(el);
-
-    var cleaned = rtSpinCleanRaw(el.value, allowFrac, allowNeg);
-    if (!allowFrac) {
-        var ixDot = cleaned.indexOf('.');
-        if (ixDot >= 0) cleaned = cleaned.slice(0, ixDot);
-    }
-    var t = cleaned.trim();
-    el.value = cleaned;
-
-    if (t === '' || t === '-' || !t) return;
-    if (allowFrac && (/^-?\d+\.$/).test(cleaned)) return;
-    if (allowFrac && (cleaned === '.' || cleaned === '-.')) return;
-
-    var pv = parseFloat(cleaned.replace(/,/g, '.'));
-    if (!isFinite(pv)) {
-        if (isFinite(lo)) el.value = rtSpinFormatForInput(lo, el);
-        else el.value = '';
-        return;
-    }
-    var x = pv;
-    if (x < lo) x = lo;
-    if (x > hi) x = hi;
-    el.value = rtSpinFormatForInput(x, el);
-}
-function rtSpinInc(btn) {
-    var inp = btn.parentElement && btn.parentElement.querySelector('.fd-spin-input');
-    if (!inp || inp.readOnly || inp.disabled) return;
-    var stAttr = inp.getAttribute('step');
-    var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
-    var lo = rtSpinGetMin(inp), hi = rtSpinGetMax(inp);
-    var v = parseFloat(String(inp.value).replace(/,/g, '.'));
-    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
-    var next = v + step;
-    if (next > hi) next = hi;
-    inp.value = rtSpinFormatForInput(next, inp);
-    rtSpinClamp(inp);
-}
-function rtSpinDec(btn) {
-    var inp = btn.parentElement && btn.parentElement.querySelector('.fd-spin-input');
-    if (!inp || inp.readOnly || inp.disabled) return;
-    var stAttr = inp.getAttribute('step');
-    var step = (stAttr != null && stAttr !== '') ? (parseFloat(String(stAttr).replace(/,/g, '.')) || 1) : 1;
-    var lo = rtSpinGetMin(inp), hi = rtSpinGetMax(inp);
-    var v = parseFloat(String(inp.value).replace(/,/g, '.'));
-    if (isNaN(v)) v = (lo !== -Infinity) ? lo : 0;
-    var next = v - step;
-    if (next < lo) next = lo;
-    inp.value = rtSpinFormatForInput(next, inp);
-    rtSpinClamp(inp);
-}
-if (typeof window !== 'undefined') {
-    window.rtSpinClamp = rtSpinClamp;
-    window.rtSpinInc = rtSpinInc;
-    window.rtSpinDec = rtSpinDec;
-}
-
-/** فتح منتقي التاريخ الافتراضي للمتصفّح من زر التقويم على يسار حقل التاريخ. */
-function rtDateOpenPicker(btn) {
-    if (!btn) return;
-    var grp = btn.closest('.fd-date-input-group');
-    if (!grp) return;
-    var inp = grp.querySelector('input.fd-date-control');
-    if (!inp || inp.disabled || inp.readOnly) return;
-    try {
-        if (typeof inp.showPicker === 'function') {
-            inp.showPicker();
-            return;
-        }
-    } catch (e) {}
-    try { inp.focus(); inp.click(); } catch (e) {}
-}
-if (typeof window !== 'undefined') {
-    window.rtDateOpenPicker = rtDateOpenPicker;
-}
-function rtStarClick(el, idx) {
-    var wrap = el.closest('.rt-star-rating');
-    if (!wrap) return;
-    wrap.setAttribute('data-val', idx);
-    var stars = wrap.querySelectorAll('.rt-star-icon');
-    stars.forEach(function(s) {
-        var i = parseInt(s.getAttribute('data-i'));
-        s.style.color = (i <= idx) ? '#f59e0b' : '#d1d5db';
+/** حمولة متوافقة مع fdBuildFieldInput (تلميح/نائب من الحقل أو من JSON الخصائص). */
+function rtpFdFieldPayload(f, opt) {
+    var propsHint = {};
+    try { propsHint = JSON.parse((f && f.propertiesJson) || '{}'); } catch (e) {}
+    var tip = '';
+    if (f && f.tooltipText != null && String(f.tooltipText).trim() !== '') tip = String(f.tooltipText).trim();
+    else if (propsHint.tooltipText != null && String(propsHint.tooltipText).trim() !== '') tip = String(propsHint.tooltipText).trim();
+    var placeholder = ((f && f.placeholder) || propsHint.placeholder || '').trim();
+    return Object.assign({}, f, {
+        id: rtpSyntheticPreviewFieldId(f),
+        tooltipText: tip,
+        placeholder: placeholder
     });
-    var lbl = wrap.querySelector('.rt-star-val');
-    if (lbl) lbl.textContent = idx + '/' + stars.length;
+}
+
+/** ربط التقويم والدوار وقوائم الاختيار ورفع الملفات كما في النماذج المستخدمة. */
+function rtpAfterPreviewRendered(root) {
+    if (!root) return;
+    try {
+        if (typeof window.fdInitDynamicWidgets === 'function') window.fdInitDynamicWidgets(root);
+    } catch (e) { console.warn('rtpAfterPreviewRendered', e); }
+}
+
+function rtpBuildFieldInput(f, opt) {
+    var props = {};
+    try { props = JSON.parse((f && f.propertiesJson) || '{}'); } catch (e) {}
+    var subName = ((f && f.subName) || props.subName || '').trim();
+    var html = '';
+    if (typeof fdBuildFieldInput === 'function') {
+        try {
+            html = fdBuildFieldInput(rtpFdFieldPayload(f, opt), opt || {});
+        } catch (e) {
+            console.warn('rtpBuildFieldInput', e);
+            html = '';
+        }
+    }
+    if (!html) {
+        var ph = rtpFieldPlaceholder(f || {});
+        html = '<input type="text" class="form-control" placeholder="' + ph + '">';
+    }
+    if (subName) html += '<div class="rt-field-subname">' + subName.replace(/</g, '&lt;') + '</div>';
+    return html;
 }
 
 function rtpBuildRowHtml() {
@@ -1432,6 +1221,7 @@ function rtpAddRow(btn) {
     tr.innerHTML = fields.map(function(f){ return '<td>' + rtpBuildFieldInput(f) + '</td>'; }).join('');
     tbody.insertBefore(tr, addRow);
     rtpWireFileUploadMulti(tr);
+    rtpAfterPreviewRendered(tr);
 }
 
 /** تفعيل اختيار عدة ملفات في معاينة الجداول الجاهزة (يربط fdFileUploadBindInRoot إن وُجد). */
@@ -1509,6 +1299,7 @@ function rtcShowPreview() {
     body.innerHTML = html;
 
     rtpWireFileUploadMulti(body);
+    rtpAfterPreviewRendered(body);
 
     var createModal = document.getElementById('rtCreateModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
@@ -1862,6 +1653,7 @@ function rtEditShowPreview() {
 
     body.innerHTML = html;
     rtpWireFileUploadMulti(body);
+    rtpAfterPreviewRendered(body);
     var editModal = document.getElementById('rtEditModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
     var editModalInstance = bootstrap.Modal.getInstance(editModal);

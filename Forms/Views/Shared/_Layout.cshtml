@@ -86,9 +86,8 @@
         </div>
     </div>
 
-    <!-- APP BODY -->
     <div id="app-body">
-        <!-- SIDEBAR -->
+       
         <div id="sidebar">
             <nav class="sidebar-nav">
                 @{
@@ -170,7 +169,7 @@
     </footer>
 </div>
 
-<!-- TOAST CONTAINER -->
+<!--  CONTAINER -->
 <div id="toast-container" style="position:fixed;bottom:24px;left:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
 
 <script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
@@ -219,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             });
         }
         setTimeout(showNext, 800);
-    } catch (e) { /* silent */ }
+    } catch (e) {  }
 
     function showPopup(p, onClose) {
         const container = document.getElementById('sysPopupContainer');

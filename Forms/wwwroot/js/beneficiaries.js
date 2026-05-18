@@ -9,15 +9,13 @@ function bnfIsSysAdminRole() {
     return !!(c && c.value === 'مدير النظام');
 }
 
-/** ما يُحفظ في SubRole: مدير النظام | مستفيد فعلي | ممثل الوحدة التنظيمية */
+/** SubRole عند الحفظ: الممثل من checkbox؛ وإلا مستفيد فعلي (حتى مع مدير وحدة). */
 function bnfResolveSubRoleForSubmit() {
     var main = document.querySelector('input[name="bnfSubRole"]:checked');
     if (!main) return '';
     if (main.value === 'مدير النظام') return 'مدير النظام';
-    var ouRel = document.querySelector('input[name="bnfOuRelation"]:checked');
-    if (!ouRel) return 'مستفيد فعلي';
-    if (ouRel.value === 'representative') return 'ممثل الوحدة التنظيمية';
-    if (ouRel.value === 'manager') return 'مستفيد فعلي';
+    var repCb = document.getElementById('bnfOuRelationRep');
+    if (repCb && repCb.checked) return 'ممثل الوحدة التنظيمية';
     return 'مستفيد فعلي';
 }
 
@@ -598,6 +596,8 @@ function bnfNormalizeSubRoleFilterForTableMatch(raw) {
     if (!s) return '';
     if (s === '__employee__') return 'موظف';
     if (s === '__unit_manager__') return 'موظف - مدير وحدة تنظيمية';
+    /** عمود الجدول: «موظف - ممثل وحدة تنظيمية» وليس نص الفلتر وحده */
+    if (s === 'ممثل الوحدة التنظيمية') return 'موظف - ممثل وحدة تنظيمية';
     return s;
 }
 
@@ -835,10 +835,8 @@ function bnfShowAddModal() {
     var bnfAdm = document.getElementById('bnfSubRoleAdmin');
     if (bnfAct) bnfAct.checked = true;
     if (bnfAdm) bnfAdm.checked = false;
-    var ouNone = document.getElementById('bnfOuRelationNone');
     var ouMgr = document.getElementById('bnfOuRelationMgr');
     var ouRep = document.getElementById('bnfOuRelationRep');
-    if (ouNone) ouNone.checked = true;
     if (ouMgr) ouMgr.checked = false;
     if (ouRep) ouRep.checked = false;
     bnfApplyRoleVisibility();
@@ -924,15 +922,10 @@ function bnfShowEditModal(id) {
     if (act) act.checked = !isSys;
 
     var isUm = !!(b.isUnitManager || (b.mainRole || '').trim() === 'مدير');
-    var ouNone = document.getElementById('bnfOuRelationNone');
     var ouMgr = document.getElementById('bnfOuRelationMgr');
     var ouRep = document.getElementById('bnfOuRelationRep');
-    if (ouNone && ouMgr && ouRep) {
-        ouNone.checked = ouMgr.checked = ouRep.checked = false;
-        if (isUm) ouMgr.checked = true;
-        else if (subRole === 'ممثل الوحدة التنظيمية') ouRep.checked = true;
-        else ouNone.checked = true;
-    }
+    if (ouMgr) ouMgr.checked = isUm;
+    if (ouRep) ouRep.checked = subRole === 'ممثل الوحدة التنظيمية';
     document.getElementById('bnfUsername').value = b.username || '';
     document.getElementById('bnfPassword').value = '';
     document.getElementById('bnfConfirmPassword').value = '';
@@ -973,9 +966,8 @@ function bnfSubmit() {
 
     var photoData = document.getElementById('bnfPhoto').dataset.base64 || '';
     var isSys = bnfIsSysAdminRole();
-    var ouRelEl = document.querySelector('input[name="bnfOuRelation"]:checked');
-    var ouRel = ouRelEl ? ouRelEl.value : '';
-    var isUnitMgr = !isSys && ouRel === 'manager';
+    var mgrCb = document.getElementById('bnfOuRelationMgr');
+    var isUnitMgr = !isSys && !!(mgrCb && mgrCb.checked);
     var subRoleSaved = bnfResolveSubRoleForSubmit();
     var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
     var sysAdd = isSys && isAdd;
