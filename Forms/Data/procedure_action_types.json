@@ -1,1 +1,15 @@
-[]
+[
+  {
+    "Id": 1,
+    "Name": "tt",
+    "Description": "",
+    "Color": "#25935f",
+    "Icon": "bi-clipboard2-check-fill",
+    "SortOrder": 1,
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-05-18T13:19:19.905222+03:00",
+    "UpdatedBy": null,
+    "UpdatedAt": null
+  }
+]

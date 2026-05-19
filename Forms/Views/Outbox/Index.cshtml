@@ -1,78 +1,266 @@
 @{
-    ViewBag.Title = "الصادر";
-    ViewBag.PageName = "الصادر";
+    ViewBag.Title = "صندوق الصادر";
+    ViewBag.PageName = "صندوق الصادر";
 }
 
 <style>
-.reply-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px; }
-.reply-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-.reply-name { font-weight:700; font-size:14px; color:var(--gray-800); }
-.reply-dept { font-size:12px; color:var(--gray-500); }
-.reply-date { font-size:12px; color:var(--gray-500); }
-.reply-answer { margin-bottom:8px; }
-.reply-answer .q-label { font-weight:600; font-size:13px; color:var(--sa-800); margin-bottom:2px; }
-.reply-answer .q-value { font-size:14px; color:var(--gray-700); padding:6px 10px; background:#fff; border-radius:8px; border:1px solid #e5e7eb; }
-.modal-xl-custom { max-width:900px; }
+/* ── يستخدم نفس Design System (fd-*, rt-*) المعتمد في باقي النظام ── */
+.ob-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+.ob-title-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.ob-count-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px; border-radius:999px;
+    background:var(--sa-50); color:var(--sa-700);
+    border:1px solid var(--sa-200);
+    font-weight:700; font-size:12.5px;
+}
+.ob-count-pill .bi { font-size:13px; }
+.ob-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
+
+/* الجدول */
+.ob-table thead th {
+    background:var(--gray-50) !important;
+    color:var(--gray-700);
+    font-size:13px;
+    font-weight:700;
+    white-space:nowrap;
+    border-bottom:2px solid var(--gray-200);
+    padding:12px 14px;
+}
+.ob-table tbody td { vertical-align:middle; font-size:13px; padding:12px 14px; }
+.ob-table tbody tr:hover { background:var(--sa-25); }
+
+/* رقم الطلب — رابط أزرق */
+.ob-req-link {
+    color:var(--info-600); font-weight:700; direction:ltr; display:inline-block;
+    text-decoration:none; border-bottom:1px dashed transparent; transition:border-color .15s;
+}
+.ob-req-link:hover { color:var(--info-700); border-bottom-color:var(--info-400); }
+
+/* بطاقة نوع الإجراء داخل الجدول */
+.ob-proc-type {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:4px 10px; border-radius:999px;
+    background:var(--gray-100); color:var(--gray-700);
+    border:1px solid var(--gray-200); font-weight:600; font-size:12px;
+}
+.ob-proc-type .bi { font-size:13px; }
+
+/* badges حالة/أولوية/SLA — نفس مقاس fd-badge */
+.ob-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+.ob-badge .bi { font-size:12px; }
+
+/* تصنيف الحالة */
+.ob-cat-open    { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
+.ob-cat-closed  { background:var(--error-100);   color:var(--error-700);   border:1px solid var(--error-200); }
+
+/* الأولوية */
+.ob-prio-urgent { background:#fde8e8; color:#b42318; border:1px solid #fecdca; }
+.ob-prio-high   { background:#fff1e6; color:#b54708; border:1px solid #fed7aa; }
+.ob-prio-med    { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
+.ob-prio-low    { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
+
+/* SLA */
+.ob-sla-early   { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
+.ob-sla-onTime  { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.ob-sla-late    { background:var(--error-100);   color:var(--error-700);   border:1px solid var(--error-200); }
+.ob-sla-escalated { background:#7f1d1d; color:#fff; border:1px solid #991b1b; }
+
+/* المرحلة الحالية — بادج بلون مخصّص (يأتي من قاعدة البيانات: حالة الإجراء) */
+.ob-stage {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px;
+    background:var(--gray-50); border:1px solid var(--gray-200);
+    color:var(--gray-700); font-weight:700; font-size:12px;
+}
+.ob-stage-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* أزرار الإجراءات — نفس fd-action-btn */
+.ob-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:#fff; }
+.ob-act-detail { border-color:var(--info-500); color:var(--info-500); }
+.ob-act-detail:hover { background:var(--info-50); }
+.ob-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
+.ob-act-edit:hover { background:var(--sa-50); }
+.ob-act-del { border-color:var(--error-500); color:var(--error-500); }
+.ob-act-del:hover { background:var(--error-50); }
+
+.ob-empty { text-align:center; padding:48px 16px; color:var(--gray-400); }
+.ob-empty i { font-size:48px; display:block; margin-bottom:10px; color:var(--gray-300); }
+.ob-empty p { margin:0; font-weight:600; }
+
+/* مودال (نفس fd-modal) */
+.ob-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.ob-modal-header { padding:24px 28px; position:relative; }
+.ob-modal-header.details { background:var(--info-700); }
+.ob-modal-header.edit { background:var(--sa-800); }
+.ob-modal-header.danger { background:var(--error-600); }
+.ob-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.ob-modal-header .btn-close-x:hover { color:#fff; }
+.ob-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.ob-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.ob-modal-body { padding:24px 28px; max-height:75vh; overflow-y:auto; }
+.ob-modal-footer { padding:18px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:flex-end; background:var(--gray-50); }
+
+.ob-detail-grid { display:grid; grid-template-columns:170px 1fr; gap:10px 16px; font-size:13px; }
+.ob-detail-lbl  { font-weight:700; color:var(--gray-500); }
+.ob-detail-val  { color:var(--gray-800); font-weight:500; }
+
+/* فلاتر — تكامل تام مع rt-filters/rt-filter-select الموجودة */
+.ob-filters { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px; }
+.ob-filters .form-select.rt-filter-select { min-width:160px; height:40px; }
+.ob-filters .rt-search-box { min-width:220px; max-width:280px; }
+.ob-filters .rt-search-box input { height:40px; }
+.ob-filters .ob-date-input { min-width:148px; height:40px; border-radius:10px; border:2px solid var(--gray-200); font-size:13px; padding:8px 12px; font-family:'Cairo',sans-serif; }
+.ob-filters .ob-date-input:focus { border-color:var(--sa-400); box-shadow:none; outline:none; }
+
+@@media (max-width:768px) {
+    .ob-detail-grid { grid-template-columns:1fr; }
+}
 </style>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-    <h2 class="page-title" style="margin:0;">الصادر</h2>
-    @if (ViewBag.UserRole?.ToString() == "Admin" || ViewBag.UserRole?.ToString() == "Manager" || ViewBag.UserRole?.ToString() == "Employee")
-    {
-        <a href="/FormBuilder/Index" class="btn btn-primary" style="border-radius:10px;">
-            <i class="bi bi-plus-lg" style="margin-left:6px;"></i> إنشاء نموذج جديد
+<div class="ob-page-header">
+    <div>
+        <div class="ob-title-row">
+            <h2 class="page-title mb-0">صندوق الصادر</h2>
+            <span class="ob-count-pill" id="obCountPill"><i class="bi bi-send-fill"></i><span id="obCountTxt">0</span></span>
+        </div>
+        <p class="ob-subtitle">إدارة ومتابعة الطلبات الصادرة</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/Outbox/Submit" class="btn btn-primary" style="border-radius:12px;padding:10px 28px;font-weight:700;">
+            <i class="bi bi-plus-lg"></i> تقديم طلب جديد
         </a>
-    }
+    </div>
 </div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap">
-    <select class="form-select" style="max-width:200px;" id="statusFilter" onchange="loadOutbox()">
-        <option value="">جميع الحالات</option>
-        <option value="published">منشور</option>
-        <option value="pending_approval">قيد الاعتماد</option>
+<div class="ob-filters rt-filters">
+    <div class="rt-search-box">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="obSearch" placeholder="البحث في أرقام الطلبات..." oninput="obApplyFilters()">
+    </div>
+    <select class="rt-filter-select form-select" id="obFilterProcedure" onchange="obApplyFilters()" aria-label="الإجراءات">
+        <option value="">الإجراءات</option>
     </select>
+    <select class="rt-filter-select form-select" id="obFilterType" onchange="obApplyFilters()" aria-label="نوع الإجراء">
+        <option value="">نوع الإجراء</option>
+    </select>
+    <select class="rt-filter-select form-select" id="obFilterCategory" onchange="obApplyFilters()" aria-label="تصنيف الحالة">
+        <option value="">الحالة</option>
+        <option value="مفتوح">مفتوح</option>
+        <option value="مغلق">مغلق</option>
+    </select>
+    <select class="rt-filter-select form-select" id="obFilterStage" onchange="obApplyFilters()" aria-label="المرحلة الحالية">
+        <option value="">المرحلة الحالية</option>
+    </select>
+    <select class="rt-filter-select form-select" id="obFilterSla" onchange="obApplyFilters()" aria-label="سرعة الاستجابة SLA">
+        <option value="">سرعة الاستجابة SLA</option>
+        <option value="مبكر">مبكر</option>
+        <option value="في الموعد">في الموعد</option>
+        <option value="متأخر">متأخر</option>
+        <option value="تم التصعيد">تم التصعيد</option>
+    </select>
+    <select class="rt-filter-select form-select" id="obFilterPriority" onchange="obApplyFilters()" aria-label="الأولوية">
+        <option value="">الأولوية</option>
+        <option value="عاجل">عاجل</option>
+        <option value="عالي">عالي</option>
+        <option value="متوسط">متوسط</option>
+        <option value="منخفض">منخفض</option>
+    </select>
+    <input type="date" class="ob-date-input" id="obFilterDateFrom" onchange="obApplyFilters()" aria-label="من تاريخ">
+    <input type="date" class="ob-date-input" id="obFilterDateTo" onchange="obApplyFilters()" aria-label="إلى تاريخ">
+    <button type="button" class="rt-clear-btn" onclick="obClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
 <div class="card">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table mb-0">
+        <div class="table-responsive" style="overflow-x:auto;">
+            <table class="table ob-table mb-0" id="obTable">
                 <thead>
                     <tr>
-                        <th>النموذج</th>
-                        <th>أُرسل إلى</th>
-                        <th>تاريخ الإرسال</th>
-                        <th>الحالة</th>
-                        <th>الردود</th>
-                        <th>إجراء</th>
+                        <th style="width:50px;text-align:center;">ت</th>
+                        <th>رقم الطلب</th>
+                        <th>اسم الإجراء</th>
+                        <th>تاريخ تقديم الطلب</th>
+                        <th>نوع الإجراء</th>
+                        <th style="text-align:center;">الأولوية</th>
+                        <th style="text-align:center;">تصنيف الحالة</th>
+                        <th>الحالة / المرحلة</th>
+                        <th style="text-align:center;">سرعة الاستجابة SLA</th>
+                        <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="outboxBody">
-                    <tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                <tbody id="obBody">
+                    <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
-
-<!-- Replies Modal -->
-<div class="modal fade" id="repliesModal" tabindex="-1">
-    <div class="modal-dialog modal-xl-custom modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius:16px;border:none;">
-            <div class="modal-header" style="background:var(--sa-800);border-radius:16px 16px 0 0;">
-                <h5 class="modal-title text-white"><i class="bi bi-reply-all" style="margin-left:8px;"></i>الردود على النموذج</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- مودال تفاصيل الطلب -->
+<div class="modal fade" id="obDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ob-modal">
+            <div class="ob-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ob-modal-title">تفاصيل الطلب</h5>
+                <div class="ob-modal-subtitle" id="obDetailsSub">عرض كامل لبيانات الطلب</div>
             </div>
-            <div class="modal-body" id="repliesBody" style="min-height:200px;">
+            <div class="ob-modal-body" id="obDetailsBody">
                 <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="ob-modal-footer">
+                <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تحديث الطلب -->
+<div class="modal fade" id="obEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ob-modal">
+            <div class="ob-modal-header edit">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ob-modal-title">تحديث الطلب</h5>
+                <div class="ob-modal-subtitle" id="obEditSub">تعديل بيانات الطلب الحالي</div>
+            </div>
+            <div class="ob-modal-body" id="obEditBody"></div>
+            <div class="ob-modal-footer" style="justify-content:space-between;">
+                <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" style="border-radius:10px;padding:10px 28px;font-weight:700;" onclick="obSubmitEdit()">
+                    <i class="bi bi-check2-circle"></i> حفظ التحديث
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال حذف -->
+<div class="modal fade" id="obDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content ob-modal">
+            <div class="ob-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ob-modal-title">تأكيد حذف الطلب</h5>
+                <div class="ob-modal-subtitle">هذا الإجراء لا يمكن التراجع عنه</div>
+            </div>
+            <div class="ob-modal-body">
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">
+                    هل أنت متأكد من حذف الطلب <strong id="obDeleteName" style="direction:ltr;display:inline-block;"></strong>؟
+                </p>
+            </div>
+            <div class="ob-modal-footer">
+                <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn" style="border-radius:10px;padding:10px 28px;font-weight:700;background:var(--error-600);color:#fff;" onclick="obSubmitDelete()">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-<script>var __userRole = '@(ViewBag.UserRole)';</script>
 <script src="~/js/outbox.js?v=@DateTime.Now.Ticks"></script>
+<script>obLoad();</script>
 }

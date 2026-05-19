@@ -1,0 +1,320 @@
+@{
+    ViewBag.Title = "تقديم طلب جديد";
+    ViewBag.PageName = "تقديم طلب جديد";
+}
+
+<style>
+/* ── معالج خطوات (Stepper) — نفس لغة النظام (Saudi Enterprise) ── */
+.obs-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.obs-back-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    background:#fff; border:2px solid var(--gray-200); color:var(--gray-700);
+    padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px;
+    font-family:'Cairo',sans-serif; text-decoration:none; transition:all .15s;
+}
+.obs-back-btn:hover { border-color:var(--sa-400); color:var(--sa-700); }
+
+/* Stepper */
+.obs-stepper { display:flex; align-items:center; gap:0; padding:24px 18px; background:#fff; border:1px solid var(--gray-200); border-radius:14px; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; }
+.obs-step { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1 1 auto; min-width:120px; }
+.obs-step-circle {
+    width:44px; height:44px; border-radius:50%;
+    background:var(--gray-100); color:var(--gray-500);
+    border:2px solid var(--gray-200);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:15px; transition:all .2s;
+}
+.obs-step-label { font-size:13px; font-weight:700; color:var(--gray-500); text-align:center; transition:color .2s; }
+.obs-step-conn { flex:1 1 auto; height:3px; background:var(--gray-200); margin:0 -8px; align-self:center; min-width:30px; }
+
+.obs-step.is-active .obs-step-circle { background:var(--sa-600); color:#fff; border-color:var(--sa-600); box-shadow:0 4px 12px rgba(27,131,84,.25); }
+.obs-step.is-active .obs-step-label { color:var(--sa-800); }
+.obs-step.is-done .obs-step-circle { background:var(--sa-100); color:var(--sa-700); border-color:var(--sa-400); }
+.obs-step.is-done .obs-step-label { color:var(--sa-700); }
+.obs-step.is-done + .obs-step-conn,
+.obs-step.is-active + .obs-step-conn { background:linear-gradient(90deg,var(--sa-400),var(--gray-200)); }
+.obs-step.is-done + .obs-step-conn { background:var(--sa-400); }
+
+/* Panel */
+.obs-panel { background:#fff; border:1px solid var(--gray-200); border-radius:14px; padding:24px 28px; min-height:300px; }
+.obs-panel-title { font-size:16px; font-weight:800; color:var(--sa-800); padding-bottom:12px; border-bottom:2px solid var(--sa-100); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.obs-panel-title i { color:var(--sa-600); }
+
+/* بطاقات اختيار النوع */
+.obs-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.obs-card {
+    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    padding:18px 20px; display:flex; flex-direction:column; gap:12px;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    cursor:pointer; position:relative;
+}
+.obs-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.06); border-color:var(--sa-300); }
+.obs-card.is-selected { border-color:var(--sa-600); background:var(--sa-25); box-shadow:0 6px 20px rgba(27,131,84,.14); }
+.obs-card-head { display:flex; align-items:center; gap:12px; }
+.obs-card-icon {
+    width:44px; height:44px; flex-shrink:0;
+    border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+    color:#fff; font-size:20px;
+}
+.obs-card-name { font-weight:800; font-size:15px; color:var(--gray-900); flex:1; min-width:0; }
+.obs-card-name small { display:block; font-size:11.5px; color:var(--gray-400); font-weight:600; direction:ltr; margin-top:2px; }
+.obs-card-type {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 10px; border-radius:999px;
+    background:var(--gray-100); color:var(--gray-700);
+    border:1px solid var(--gray-200);
+    font-size:11.5px; font-weight:700; align-self:flex-start;
+}
+.obs-card-actions { display:flex; gap:8px; margin-top:auto; padding-top:8px; border-top:1px dashed var(--gray-200); }
+.obs-card-actions button { flex:1; }
+
+.obs-card-selected-mark {
+    position:absolute; top:10px; left:10px;
+    width:24px; height:24px; border-radius:50%; background:var(--sa-600);
+    color:#fff; display:none; align-items:center; justify-content:center; font-size:13px;
+}
+.obs-card.is-selected .obs-card-selected-mark { display:inline-flex; }
+
+/* الأزرار داخل البطاقات */
+.obs-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 12px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.obs-btn-detail { border-color:var(--info-500); color:var(--info-500); }
+.obs-btn-detail:hover { background:var(--info-50); }
+.obs-btn-pick { border-color:var(--sa-600); color:var(--sa-600); }
+.obs-btn-pick:hover { background:var(--sa-50); }
+.obs-btn-pick.is-picked { background:var(--sa-600); color:#fff; }
+
+/* footer للأزرار */
+.obs-foot { display:flex; justify-content:space-between; gap:12px; margin-top:18px; }
+.obs-foot .left { display:flex; gap:10px; }
+.obs-next, .obs-prev, .obs-submit {
+    padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700;
+    font-family:'Cairo',sans-serif; border:none; cursor:pointer; transition:all .15s;
+}
+.obs-next, .obs-submit { background:var(--sa-600); color:#fff; }
+.obs-next:hover, .obs-submit:hover { background:var(--sa-700); }
+.obs-next:disabled, .obs-submit:disabled { background:var(--gray-300); cursor:not-allowed; }
+.obs-prev { background:var(--gray-200); color:var(--gray-700); }
+.obs-prev:hover { background:var(--gray-300); }
+
+/* Step 2 — تعبئة النموذج */
+.obs-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.obs-form-row.cols-1 { grid-template-columns:1fr; }
+.obs-form-group { display:flex; flex-direction:column; gap:4px; }
+.obs-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.obs-form-group .form-control,
+.obs-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.obs-form-group .form-control:focus,
+.obs-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.obs-form-group textarea.form-control { min-height:90px; resize:vertical; }
+
+/* Step 2 — meta row + dynamic form host */
+.obs-meta-row { display:flex; flex-wrap:wrap; gap:14px; padding:14px 16px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; margin-bottom:16px; }
+.obs-meta-cell { display:flex; flex-direction:column; gap:4px; min-width:200px; flex:1 1 220px; }
+.obs-meta-lbl { font-size:12px; font-weight:700; color:var(--gray-500); }
+.obs-meta-val { font-size:14px; font-weight:700; color:var(--gray-900); padding:6px 10px; background:#fff; border:1px solid var(--gray-200); border-radius:8px; }
+
+.obs-form-host { border:1px solid var(--gray-200); border-radius:12px; padding:6px; background:var(--gray-25,#fcfcfd); min-height:160px; }
+.obs-form-host .row.g-3 { margin-inline:0; }
+.obs-form-host > * { font-family:'Cairo',sans-serif; }
+
+/* Step 3 — مراجعة (مجموعات حسب أقسام النموذج) */
+.obs-review { display:flex; flex-direction:column; gap:14px; }
+.obs-review-section { background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:14px 16px; }
+.obs-review-section-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:8px; border-bottom:2px solid var(--sa-100); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.obs-review-section-title i { color:var(--sa-600); font-size:15px; }
+.obs-review-grid { display:grid; grid-template-columns:200px 1fr; gap:8px 14px; font-size:13px; }
+.obs-review-grid .lbl { font-weight:700; color:var(--gray-500); }
+.obs-review-grid .val { color:var(--gray-900); font-weight:500; white-space:pre-wrap; word-break:break-word; }
+.obs-review-grid .val.empty { color:var(--gray-400); font-style:italic; }
+.obs-review-files { display:flex; flex-wrap:wrap; gap:6px; }
+.obs-review-files .file-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--info-50); color:var(--info-700); border:1px solid var(--info-100); font-size:12px; font-weight:700; }
+
+.obs-review-meta { display:flex; flex-wrap:wrap; gap:10px; padding:12px 14px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; }
+.obs-review-meta .mtch { display:flex; flex-direction:column; gap:2px; min-width:150px; flex:1 1 180px; }
+.obs-review-meta .mtch .l { font-size:11.5px; font-weight:700; color:var(--gray-500); }
+.obs-review-meta .mtch .v { font-size:13px; font-weight:700; color:var(--gray-900); }
+
+/* Step 4 — تأكيد */
+.obs-confirm { text-align:center; padding:32px 20px; }
+.obs-confirm i.bi-check-circle-fill { font-size:64px; color:var(--success-600); }
+.obs-confirm h3 { margin-top:14px; font-weight:800; color:var(--gray-900); }
+.obs-confirm .obs-req-num { display:inline-block; direction:ltr; font-family:'Courier New',monospace; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:8px 14px; margin-top:8px; font-weight:800; color:var(--info-700); }
+.obs-confirm .obs-confirm-msg { color:var(--gray-700); margin-top:14px; font-size:14px; max-width:760px; margin-inline:auto; line-height:1.85; }
+.obs-confirm-notes { margin-top:18px; max-width:760px; margin-inline:auto; padding:16px 18px; text-align:right; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; }
+.obs-confirm-notes h6 { color:var(--sa-800); font-weight:800; font-size:14px; margin:0 0 10px; display:flex; align-items:center; gap:6px; }
+.obs-confirm-notes ul { margin:0; padding-inline-start:22px; }
+.obs-confirm-notes li { color:var(--gray-700); font-size:13.5px; line-height:1.9; }
+.obs-confirm-notes li strong { color:var(--sa-800); }
+.obs-confirm-routing { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-width:760px; margin-inline:auto; text-align:right; }
+.obs-routing-card { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:#fff; border:1px solid var(--gray-200); border-radius:10px; font-size:13px; color:var(--gray-700); }
+.obs-routing-card i { color:var(--sa-600); font-size:18px; margin-top:2px; flex-shrink:0; }
+.obs-routing-card b { color:var(--gray-900); display:block; margin-bottom:2px; font-size:13px; }
+.obs-routing-card .chips { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
+.obs-routing-card .chips span { background:var(--gray-50); border:1px solid var(--gray-200); color:var(--gray-700); font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:999px; }
+
+/* مودال تفاصيل الإجراء */
+.obs-details-modal .modal-content { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.obs-details-modal .ob-modal-header { padding:24px 28px; position:relative; background:var(--info-700); }
+.obs-details-modal .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.obs-details-modal .ob-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.obs-details-modal .ob-modal-body { padding:24px 28px; max-height:70vh; overflow-y:auto; }
+.obs-details-modal .ob-modal-footer { padding:18px 28px; display:flex; justify-content:flex-end; background:var(--gray-50); }
+.obs-detail-grid { display:grid; grid-template-columns:160px 1fr; gap:10px 16px; font-size:13px; }
+.obs-detail-grid .lbl { font-weight:700; color:var(--gray-500); }
+.obs-detail-grid .val { color:var(--gray-800); font-weight:500; }
+
+.obs-stages-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.obs-stages-list .stg {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px;
+    background:var(--gray-50); border:1px solid var(--gray-200);
+    font-size:12px; font-weight:700; color:var(--gray-700);
+}
+.obs-stages-list .stg-dot { width:8px; height:8px; border-radius:50%; }
+
+@@media (max-width:768px) {
+    .obs-form-row { grid-template-columns:1fr; }
+    .obs-review { grid-template-columns:1fr; }
+    .obs-detail-grid { grid-template-columns:1fr; }
+}
+</style>
+
+<div class="obs-header">
+    <div>
+        <h2 class="page-title mb-0">تقديم طلب جديد</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">أكمل الخطوات لإرسال الطلب إلى الإجراء المناسب</p>
+    </div>
+    <a href="/Outbox/Index" class="obs-back-btn"><i class="bi bi-arrow-right"></i> العودة للصادر</a>
+</div>
+
+<!-- Stepper -->
+<div class="obs-stepper" id="obsStepper">
+    <div class="obs-step is-active" data-step="1">
+        <div class="obs-step-circle">1</div>
+        <div class="obs-step-label">اختيار النوع</div>
+    </div>
+    <div class="obs-step-conn"></div>
+    <div class="obs-step" data-step="2">
+        <div class="obs-step-circle">2</div>
+        <div class="obs-step-label">تعبئة النموذج</div>
+    </div>
+    <div class="obs-step-conn"></div>
+    <div class="obs-step" data-step="3">
+        <div class="obs-step-circle">3</div>
+        <div class="obs-step-label">مراجعة</div>
+    </div>
+    <div class="obs-step-conn"></div>
+    <div class="obs-step" data-step="4">
+        <div class="obs-step-circle">4</div>
+        <div class="obs-step-label">تأكيد</div>
+    </div>
+</div>
+
+<!-- Panels -->
+<div class="obs-panel" id="obsPanel1">
+    <div class="obs-panel-title"><i class="bi bi-grid-3x3-gap-fill"></i> اختر نوع الإجراء</div>
+    <div id="obsCardsHost" class="obs-cards-grid">
+        <div class="text-center w-100 py-4" style="grid-column:1/-1;"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+    </div>
+    <div class="obs-foot">
+        <span></span>
+        <button class="obs-next" id="obsBtnNext1" onclick="obsGoStep(2)" disabled>التالي <i class="bi bi-arrow-left"></i></button>
+    </div>
+</div>
+
+<div class="obs-panel" id="obsPanel2" style="display:none;">
+    <div class="obs-panel-title"><i class="bi bi-pencil-square"></i> تعبئة بيانات الطلب</div>
+
+    <div class="obs-meta-row">
+        <div class="obs-meta-cell">
+            <span class="obs-meta-lbl">الإجراء المختار</span>
+            <span class="obs-meta-val" id="obsPickedProc">—</span>
+        </div>
+        <div class="obs-meta-cell">
+            <span class="obs-meta-lbl">الأولوية <span style="color:#ef4444;">*</span></span>
+            <select class="form-select form-select-sm" id="obsPriority" style="max-width:220px;">
+                <option value="عاجل">عاجل</option>
+                <option value="عالي">عالي</option>
+                <option value="متوسط" selected>متوسط</option>
+                <option value="منخفض">منخفض</option>
+            </select>
+        </div>
+    </div>
+    <!-- مضيف النموذج الديناميكي — يُحمَّل بناءً على الإجراء المختار -->
+    <div id="obsFormHost" class="obs-form-host">
+        <div class="text-center py-4" style="color:var(--gray-500);"><i class="bi bi-info-circle" style="font-size:24px;display:block;margin-bottom:6px;color:var(--gray-300);"></i>اختر إجراءً أولاً لتحميل نموذجه</div>
+    </div>
+
+    <div class="obs-form-row cols-1" style="margin-top:14px;">
+        <div class="obs-form-group">
+            <label>ملاحظات إضافية</label>
+            <textarea id="obsNotes" class="form-control" placeholder="ملاحظات اختيارية"></textarea>
+        </div>
+    </div>
+    <div class="obs-foot">
+        <button class="obs-prev" onclick="obsGoStep(1)"><i class="bi bi-arrow-right"></i> السابق</button>
+        <button class="obs-next" onclick="obsGoStep(3)">التالي <i class="bi bi-arrow-left"></i></button>
+    </div>
+</div>
+
+<div class="obs-panel" id="obsPanel3" style="display:none;">
+    <div class="obs-panel-title"><i class="bi bi-clipboard-check"></i> مراجعة بيانات الطلب</div>
+    <div class="obs-review" id="obsReviewHost"></div>
+    <div class="obs-foot">
+        <button class="obs-prev" onclick="obsGoStep(2)"><i class="bi bi-arrow-right"></i> السابق</button>
+        <button class="obs-submit" id="obsBtnSubmit" onclick="obsSubmit()"><i class="bi bi-send-fill"></i> تأكيد وإرسال</button>
+    </div>
+</div>
+
+<div class="obs-panel" id="obsPanel4" style="display:none;">
+    <div class="obs-confirm">
+        <i class="bi bi-check-circle-fill"></i>
+        <h3>تم تقديم الطلب بنجاح</h3>
+        <div class="obs-req-num" id="obsConfirmNumber">REQ-—</div>
+        <p class="obs-confirm-msg">
+            تم توجيه طلبك إلى مسار العمل المخصص، وسيتلقى المعتمد الأول إشعاراً عبر النظام أو البريد الإلكتروني أو الرسائل النصية.
+            يمكنك متابعة سير العمل لحظة بلحظة من صفحة المتابعة.
+        </p>
+
+        <div class="obs-confirm-routing" id="obsConfirmRouting"></div>
+
+        <div class="obs-confirm-notes">
+            <h6><i class="bi bi-info-circle-fill"></i> توضيحات حول مسار الطلب</h6>
+            <ul>
+                <li>الإجراء سوف يصل بناءً على <strong>الوحدات التنظيمية المستهدفة</strong> المحددة في إجراء العمل.</li>
+                <li><strong>المنفذون</strong> المرتبطون بالإجراء سوف يصلهم الطلب في <strong>صندوق الوارد</strong>.</li>
+            </ul>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 mt-4">
+            <a href="/Outbox/Index" class="btn btn-primary" style="border-radius:10px;padding:10px 28px;font-weight:700;">
+                <i class="bi bi-list-ul"></i> عرض الصادر
+            </a>
+            <button class="obs-prev" onclick="obsResetAndStart()"><i class="bi bi-plus-lg"></i> تقديم طلب آخر</button>
+        </div>
+    </div>
+</div>
+
+<!-- مودال تفاصيل الإجراء (الزر «تفاصيل» داخل البطاقة) -->
+<div class="modal fade obs-details-modal" id="obsProcDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="ob-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ob-modal-title">تفاصيل الإجراء</h5>
+            </div>
+            <div class="ob-modal-body" id="obsProcDetailsBody">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="ob-modal-footer">
+                <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/form-definitions.js?v=@DateTime.Now.Ticks"></script>
+<script src="~/js/outbox-submit.js?v=@DateTime.Now.Ticks"></script>
+<script>obsInit();</script>
+}

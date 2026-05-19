@@ -41,7 +41,7 @@
     </div>-->
 
     <!-- HEADER -->
-    <div id="main-header">
+   <!-- <div id="main-header">
         <div class="header-content">
             <div class="header-right">
                 <img src="~/images/logo1.webp" alt="شعار" class="header-logo"
@@ -74,7 +74,52 @@
                 </form>
             </div>
         </div>
+    </div>-->
+
+
+<!-- HEADER -->
+<div id="main-header">
+    <div class="header-content">
+        <div class="header-right">
+            <img src="~/images/logo1.webp" alt="شعار" class="header-logo me-3" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
+            <span class="header-title">
+                نظام أتمتة النماذج وإدارة سير العمل
+            </span>
+        </div>
+        <div class="header-center">
+        </div>
+        <div class="header-left">
+            <a href="/Note/Index" class="notification-bell">
+                <i class="bi bi-stickies"></i>
+            </a>
+            <a href="/Notifications/Index" class="notification-bell" id="notif-bell">
+                <i class="bi bi-bell-fill"></i>
+                <span class="notification-dot d-none" id="notif-count">0</span>
+            </a>
+            <a href="/" class="notification-bell">
+                <i class="bi bi-brightness-high"></i>
+            </a>
+           <div class="user-info">
+                <div class="user-avatar-circle">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name">@ViewBag.UserFullName</div>
+                    <div class="user-role">@GetRoleLabel(ViewBag.UserRole?.ToString())</div>
+                </div>
+            </div>
+            <form method="post" action="/Account/Logout" style="margin:0;">
+                <input type="hidden" name="__RequestVerificationToken"
+                       value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+                <button type="submit" class="btn-logout">
+                    <i class="bi bi-box-arrow-right"></i> خروج
+                </button>
+            </form>
+        </div>
     </div>
+</div>
+
+
 
     <!-- SUB HEADER -->
   <!--  <div id="sub-header">

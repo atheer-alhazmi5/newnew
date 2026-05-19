@@ -1956,6 +1956,100 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    // ─── OUTBOX REQUESTS ──────────────────────────────────────────────────────
+    public Task<List<OutboxRequest>> ListOutboxRequestsAsync()
+        => Task.FromResult(_db.OutboxRequests.OrderByDescending(r => r.SubmittedAt).ToList());
+
+    public Task<OutboxRequest?> GetOutboxRequestByIdAsync(int id)
+        => Task.FromResult(_db.OutboxRequests.FirstOrDefault(r => r.Id == id));
+
+    public Task<OutboxRequest> AddOutboxRequestAsync(OutboxRequest r)
+    {
+        var list = _db.OutboxRequests;
+        r.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        r.SubmittedAt = r.SubmittedAt == default ? DateTime.Now : r.SubmittedAt;
+        list.Add(r);
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(r);
+    }
+
+    public Task<bool> UpdateOutboxRequestAsync(OutboxRequest r)
+    {
+        var list = _db.OutboxRequests;
+        var idx = list.FindIndex(x => x.Id == r.Id);
+        if (idx < 0) return Task.FromResult(false);
+        r.UpdatedAt = DateTime.Now;
+        list[idx] = r;
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteOutboxRequestAsync(int id)
+    {
+        var list = _db.OutboxRequests;
+        var r = list.FirstOrDefault(x => x.Id == id);
+        if (r == null) return Task.FromResult(false);
+        list.Remove(r);
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── OUTBOX ASSIGNMENTS ───────────────────────────────────────────────────
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsAsync()
+        => Task.FromResult(_db.OutboxAssignments.OrderByDescending(a => a.AssignedAt).ToList());
+
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsForUserAsync(int userId)
+        => Task.FromResult(_db.OutboxAssignments.Where(a => a.RecipientUserId == userId).OrderByDescending(a => a.AssignedAt).ToList());
+
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsForRequestAsync(int outboxRequestId)
+        => Task.FromResult(_db.OutboxAssignments.Where(a => a.OutboxRequestId == outboxRequestId).OrderBy(a => a.AssignedAt).ToList());
+
+    public Task<OutboxAssignment?> GetOutboxAssignmentByIdAsync(int id)
+        => Task.FromResult(_db.OutboxAssignments.FirstOrDefault(a => a.Id == id));
+
+    public Task<OutboxAssignment> AddOutboxAssignmentAsync(OutboxAssignment a)
+    {
+        var list = _db.OutboxAssignments;
+        a.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (a.AssignedAt == default) a.AssignedAt = DateTime.Now;
+        list.Add(a);
+        _db.SaveOutboxAssignments(list);
+        return Task.FromResult(a);
+    }
+
+    public Task<bool> UpdateOutboxAssignmentAsync(OutboxAssignment a)
+    {
+        var list = _db.OutboxAssignments;
+        var idx = list.FindIndex(x => x.Id == a.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = a;
+        _db.SaveOutboxAssignments(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> MarkOutboxAssignmentReadAsync(int id, int userId)
+    {
+        var list = _db.OutboxAssignments;
+        var a = list.FirstOrDefault(x => x.Id == id && x.RecipientUserId == userId);
+        if (a == null) return Task.FromResult(false);
+        if (!a.IsRead) { a.IsRead = true; a.ReadAt = DateTime.Now; _db.SaveOutboxAssignments(list); }
+        return Task.FromResult(true);
+    }
+
+    /// <summary>توليد رقم الطلب: REQ-YYYY-MM-DD-# (تسلسل لليوم نفسه).</summary>
+    public Task<string> GenerateOutboxRequestNumberAsync(DateTime? at = null)
+    {
+        var dt = (at ?? DateTime.Now).Date;
+        var prefix = $"REQ-{dt:yyyy-MM-dd}-";
+        var todays = _db.OutboxRequests
+            .Where(r => !string.IsNullOrEmpty(r.RequestNumber) && r.RequestNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.RequestNumber!.Substring(prefix.Length))
+            .Select(suf => int.TryParse(suf, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return Task.FromResult(prefix + (todays + 1).ToString(CultureInfo.InvariantCulture));
+    }
+
     // ─── ALIAS METHODS ────────────────────────────────────────────────────────
     public Task<List<Reply>> ListRepliesByFormIdAsync(int formId)
         => Task.FromResult(_db.Replies.Where(r => r.FormId == formId)
