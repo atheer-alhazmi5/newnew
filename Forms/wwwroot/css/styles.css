@@ -1,4 +1,4 @@
-﻿
+
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
 
 :root {
@@ -511,7 +511,8 @@ a {
 }
 
 .sidebar-group.expanded .sidebar-children {
-    max-height: 800px;
+    max-height: 1200px;
+    overflow-y: auto;
 }
 
 .sidebar-child {

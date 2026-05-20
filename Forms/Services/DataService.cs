@@ -2036,6 +2036,65 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    // ─── USER GUIDE ITEMS ─────────────────────────────────────────────────────
+    public Task<List<UserGuideItem>> ListUserGuideItemsAsync()
+        => Task.FromResult(_db.UserGuideItems
+            .OrderBy(x => x.ParentId ?? 0)
+            .ThenBy(x => x.SortOrder)
+            .ToList());
+
+    public Task<UserGuideItem?> GetUserGuideItemByIdAsync(int id)
+        => Task.FromResult(_db.UserGuideItems.FirstOrDefault(x => x.Id == id));
+
+    public Task<bool> IsUserGuideItemNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = (name ?? "").Trim();
+        if (string.IsNullOrEmpty(n)) return Task.FromResult(false);
+        var list = _db.UserGuideItems;
+        return Task.FromResult(list.Any(x =>
+            x.Name.Trim().Equals(n, StringComparison.OrdinalIgnoreCase)
+            && (!excludeId.HasValue || x.Id != excludeId.Value)));
+    }
+
+    public Task<UserGuideItem> AddUserGuideItemAsync(UserGuideItem item)
+    {
+        var list = _db.UserGuideItems;
+        item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        var siblings = list.Where(x => x.ParentId == item.ParentId).ToList();
+        if (item.SortOrder <= 0) item.SortOrder = (siblings.Count == 0 ? 0 : siblings.Max(x => x.SortOrder)) + 1;
+        if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
+        list.Add(item);
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(item);
+    }
+
+    public Task<bool> UpdateUserGuideItemAsync(UserGuideItem item)
+    {
+        var list = _db.UserGuideItems;
+        var idx = list.FindIndex(x => x.Id == item.Id);
+        if (idx < 0) return Task.FromResult(false);
+        item.UpdatedAt = DateTime.UtcNow;
+        list[idx] = item;
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteUserGuideItemAsync(int id)
+    {
+        var list = _db.UserGuideItems;
+        var item = list.FirstOrDefault(x => x.Id == id);
+        if (item == null) return Task.FromResult(false);
+        // عند حذف جذر: نحذف جميع أبنائه أيضاً
+        var toRemove = new List<int> { id };
+        toRemove.AddRange(list.Where(x => x.ParentId == id).Select(x => x.Id));
+        list.RemoveAll(x => toRemove.Contains(x.Id));
+        // إعادة ترتيب الإخوة بعد الحذف
+        var siblings = list.Where(x => x.ParentId == item.ParentId).OrderBy(x => x.SortOrder).ToList();
+        for (int i = 0; i < siblings.Count; i++) siblings[i].SortOrder = i + 1;
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(true);
+    }
+
     /// <summary>توليد رقم الطلب: REQ-YYYY-MM-DD-# (تسلسل لليوم نفسه).</summary>
     public Task<string> GenerateOutboxRequestNumberAsync(DateTime? at = null)
     {

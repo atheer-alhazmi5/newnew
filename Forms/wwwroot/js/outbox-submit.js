@@ -584,46 +584,191 @@ function obsRenderRoutingCards() {
     host.innerHTML = html;
 }
 
-// ─── Procedure Details Modal ───────────────────────────────────────────────
-async function obsShowProcDetails(id) {
+// ─── Procedure Details Modal — يفوّض للـ shared modal opdShow ───────────────
+async function obsShowProcDetails(id, opts) {
+    if (typeof window.opdShow === 'function') {
+        return window.opdShow(id, opts || {});
+    }
+    // fallback (لو لم يُحمَّل outbox-procedure-details.js لأي سبب)
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('obsProcDetailsModal'));
     var host = document.getElementById('obsProcDetailsBody');
     if (host) host.innerHTML = '<div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>';
     modal.show();
-    var r = await apiFetch('/Outbox/GetProcedureDetails?id=' + encodeURIComponent(id));
+    var url = '/Outbox/GetProcedureDetails?id=' + encodeURIComponent(id);
+    if (opts && opts.outboxRequestId) url += '&outboxRequestId=' + encodeURIComponent(opts.outboxRequestId);
+    var r = await apiFetch(url);
     if (!r || !r.success) { host.innerHTML = '<div class="text-center py-4 text-muted">تعذّر التحميل</div>'; return; }
-    var d = r.data || {};
-    var stages = r.stages || [];
+    host.innerHTML = obsBuildProcedureDetailsHtml(r.data || {}, r.workflow || []);
+}
 
-    var stagesHtml = '';
-    stages.forEach(function (s) {
-        var dot = s.color && /^#/.test(s.color) ? s.color : '#9DA4AE';
-        stagesHtml += '<span class="stg"><span class="stg-dot" style="background:' + dot + '"></span>' + esc(s.name || '') + ' <span style="color:var(--gray-400);font-weight:500;">— ' + esc(s.statusCategory || '') + '</span></span>';
-    });
+/** Fallback لبناء محتوى المودال (مستخدم فقط لو الـ shared file غير مُحمَّل) */
+function obsBuildProcedureDetailsHtml(d, workflow) {
+    function dash(v) { return (v == null || String(v).trim() === '') ? '<span class="opd-empty">…</span>' : esc(String(v)); }
+    function refs(list, label) {
+        if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
+        return list.map(function (x, i) { return (label ? (i + 1) + '- ' : '') + esc(x.name || '') + (x.code ? ' <span class="opd-muted">(' + esc(x.code) + ')</span>' : ''); }).join('<br>');
+    }
+    function orgUnits(list) {
+        if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
+        return list.map(function (x, i) { return (i + 1) + '- ' + esc(x.name || ''); }).join('<br>');
+    }
+    function reglist(list) {
+        if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
+        return list.map(function (s, i) { return (i + 1) + '- ' + esc(String(s || '')); }).join('<br>');
+    }
 
     var icon = obsNormBiIcon(d.typeIcon);
     var tColor = d.typeColor || '#25935F';
-    host.innerHTML =
-        '<div class="d-flex align-items-center gap-3 mb-3">'
-        + '<span class="obs-card-icon" style="background:' + obsEscAttr(tColor) + ';"><i class="' + obsEscAttr(icon) + '"></i></span>'
-        + '<div><div style="font-weight:800;font-size:16px;color:var(--gray-900);">' + esc(d.name || '') + '</div>'
-        +   '<div style="font-size:12px;color:var(--gray-500);direction:ltr;text-align:right;">' + esc(d.code || '') + ' • ' + esc(d.versionLabel || 'V1.0') + '</div></div>'
+
+    // Header — title chip + sub
+    var head =
+        '<div class="opd-head">'
+        + '<div class="opd-head-ttl"><i class="bi bi-file-earmark-text"></i> تفاصيل الإجراء</div>'
+        + '<div class="opd-head-meta">'
+        +   '<span class="obs-card-icon opd-type-ic" style="background:' + obsEscAttr(tColor) + ';"><i class="' + obsEscAttr(icon) + '"></i></span>'
+        +   '<div class="opd-head-info">'
+        +     '<div class="opd-head-name">' + esc(d.name || '') + '</div>'
+        +     '<div class="opd-head-sub">' + esc(d.code || '') + (d.versionLabel ? ' • ' + esc(d.versionLabel) : '') + (d.typeName ? ' • ' + esc(d.typeName) : '') + '</div>'
+        +   '</div>'
         + '</div>'
-        + '<div class="obs-detail-grid">'
-        +   '<div class="lbl">نوع الإجراء</div><div class="val">' + esc(d.typeName || '—') + '</div>'
-        +   '<div class="lbl">القالب المستخدم</div><div class="val">' + esc(d.formTemplateName || '—') + '</div>'
-        +   '<div class="lbl">مساحة العمل</div><div class="val">' + esc(d.workspaceName || '—') + '</div>'
-        +   '<div class="lbl">الوحدة المالكة</div><div class="val">' + esc(d.ownerOrgName || '—') + '</div>'
-        +   '<div class="lbl">التصنيف</div><div class="val">' + esc(d.procedureClassification || '—') + '</div>'
-        +   '<div class="lbl">السرية</div><div class="val">' + esc(d.confidentialityLevel || '—') + '</div>'
-        +   '<div class="lbl">تكرار الاستخدام</div><div class="val">' + esc(d.usageFrequency || '—') + '</div>'
-        +   '<div class="lbl">صلاحية الإجراء</div><div class="val">' + esc(d.validityType || '—')
-        +     (d.validityStartDate ? ' <span style="direction:ltr;color:var(--gray-500);">— ' + esc(d.validityStartDate) + (d.validityEndDate ? ' ← ' + esc(d.validityEndDate) : '') + '</span>' : '') + '</div>'
-        + (d.objectives ? '<div class="lbl">الأهداف</div><div class="val" style="white-space:pre-wrap;">' + esc(d.objectives) + '</div>' : '')
-        + (d.additionalInputs ? '<div class="lbl">مدخلات إضافية</div><div class="val" style="white-space:pre-wrap;">' + esc(d.additionalInputs) + '</div>' : '')
-        + (d.additionalOutputs ? '<div class="lbl">مخرجات إضافية</div><div class="val" style="white-space:pre-wrap;">' + esc(d.additionalOutputs) + '</div>' : '')
-        + (stagesHtml ? '<div class="lbl">مراحل الإجراء</div><div class="val"><div class="obs-stages-list">' + stagesHtml + '</div></div>' : '')
         + '</div>';
+
+    // ── Table 1: Procedure details (يطابق التخطيط الشبكي في الصورة) ──
+    function row(cells) {
+        return '<tr>' + cells.map(function (c) {
+            var lbl = c.lbl ? '<th class="opd-th">' + esc(c.lbl) + '</th>' : '';
+            var spanAttr = c.span ? ' colspan="' + (c.span * 2) + '"' : '';
+            return lbl + '<td class="opd-td"' + spanAttr + '>' + (c.val == null ? '<span class="opd-empty">…</span>' : c.val) + '</td>';
+        }).join('') + '</tr>';
+    }
+
+    var detailsTbl =
+        '<div class="opd-section">'
+        + '<div class="opd-section-ttl">تفاصيل الإجراء</div>'
+        + '<table class="opd-table"><tbody>'
+        +   row([
+                { lbl: 'ترميز الإجراء', val: dash(d.code) },
+                { lbl: 'اسم الإجراء', val: dash(d.name) },
+                { lbl: 'حالة الإجراء', val: opdStatusBadge(d.statusCode, d.statusLabel, d.isActive) }
+            ])
+        +   row([
+                { lbl: 'صلاحية الإجراء', val: dash(d.validityType) },
+                { lbl: 'تاريخ بدء الصلاحية', val: d.validityStartDate ? esc(d.validityStartDate) : '<span class="opd-empty">…</span>' },
+                { lbl: 'تاريخ انتهاء الصلاحية', val: d.validityEndDate ? esc(d.validityEndDate) : '<span class="opd-empty">…</span>' }
+            ])
+        +   row([
+                { lbl: 'الهدف من الإجراء', val: d.objectives ? '<div class="opd-pre">' + esc(d.objectives) + '</div>' : '<span class="opd-empty">…</span>', span: 3 }
+            ])
+        +   row([
+                { lbl: 'معدل الاستخدام', val: dash(d.usageFrequency) },
+                { lbl: 'التصنيف', val: dash(d.procedureClassification) },
+                { lbl: 'نوع الإجراء', val: dash(d.typeName) }
+            ])
+        +   row([
+                { lbl: 'الأولوية', val: d.priority ? opdPriorityBadge(d.priority) : '<span class="opd-empty">…</span>' },
+                { lbl: 'مساحة العمل', val: dash(d.workspaceName) },
+                { lbl: 'الوحدة التنظيمية المالكة للإجراء', val: dash(d.ownerOrgName) }
+            ])
+        +   row([
+                { lbl: 'الوحدات التنظيمية المستهدفة', val: orgUnits(d.targetOrgUnits), span: 3 }
+            ])
+        +   row([
+                { lbl: 'الإجراءات السابقة المرتبطة', val: refs(d.previousProcedures), span: 3 }
+            ])
+        +   row([
+                { lbl: 'الإجراءات الضمنية المرتبطة', val: refs(d.implicitProcedures), span: 3 }
+            ])
+        +   row([
+                { lbl: 'الإجراءات اللاحقة المرتبطة', val: refs(d.nextProcedures), span: 3 }
+            ])
+        +   row([
+                { lbl: 'المدخلات', val: d.additionalInputs ? '<div class="opd-pre">' + esc(d.additionalInputs) + '</div>' : '<span class="opd-empty">…</span>', span: 3 }
+            ])
+        +   row([
+                { lbl: 'المخرجات', val: d.additionalOutputs ? '<div class="opd-pre">' + esc(d.additionalOutputs) + '</div>' : '<span class="opd-empty">…</span>', span: 3 }
+            ])
+        +   row([
+                { lbl: 'الأنظمة واللوائح والتعليمات المنظمة لعمل الإجراء', val: reglist(d.regulations), span: 3 }
+            ])
+        + '</tbody></table>'
+        + '</div>';
+
+    // ── Table 2: Workflow ──
+    var wfHead =
+        '<thead><tr>'
+        + '<th>ت</th>'
+        + '<th>اسم الخطوة</th>'
+        + '<th>المكلف بالتنفيذ</th>'
+        + '<th>المنفذ</th>'
+        + '<th>مدة الإنجاز</th>'
+        + '<th>الإرجاع</th>'
+        + '<th>خطوة الرجوع</th>'
+        + '<th>موافقات متزامنة</th>'
+        + '<th>النموذج المستخدم</th>'
+        + '<th>قناة الإشعار</th>'
+        + '<th>الحالة</th>'
+        + '</tr></thead>';
+
+    var wfBody = '';
+    if (!Array.isArray(workflow) || workflow.length === 0) {
+        wfBody = '<tbody><tr><td colspan="11" class="opd-empty-row">لا توجد خطوات سير عمل معرَّفة</td></tr></tbody>';
+    } else {
+        wfBody = '<tbody>' + workflow.map(function (w) {
+            var stColor = w.statusColor && /^#/.test(w.statusColor) ? w.statusColor : '#9DA4AE';
+            var stChip = w.statusLabel && w.statusLabel !== '—'
+                ? '<span class="opd-status-chip"><span class="opd-status-dot" style="background:' + obsEscAttr(stColor) + '"></span>' + esc(w.statusLabel) + '</span>'
+                : '<span class="opd-empty">…</span>';
+            var retChip = w.canReturn
+                ? '<span class="opd-pill opd-pill-ok"><i class="bi bi-check-circle-fill"></i> نعم</span>'
+                : '<span class="opd-pill opd-pill-no"><i class="bi bi-dash-circle"></i> لا</span>';
+            return '<tr>'
+                + '<td class="opd-cnum">' + esc(String(w.index)) + '</td>'
+                + '<td class="opd-step-name">' + esc(w.stepLabel || '') + '</td>'
+                + '<td>' + esc(w.assigner || '—') + '</td>'
+                + '<td>' + esc(w.executors || '—') + '</td>'
+                + '<td>' + esc(w.duration || '—') + '</td>'
+                + '<td class="opd-c">' + retChip + '</td>'
+                + '<td>' + esc(w.returnLabel || '—') + '</td>'
+                + '<td>' + esc(w.concurrentLabel || '—') + '</td>'
+                + '<td>' + esc(w.formName || '—') + '</td>'
+                + '<td>' + esc(w.channelLabel || '—') + '</td>'
+                + '<td>' + stChip + '</td>'
+                + '</tr>';
+        }).join('') + '</tbody>';
+    }
+
+    var workflowTbl =
+        '<div class="opd-section">'
+        + '<div class="opd-section-ttl">سير عمل الإجراء</div>'
+        + '<div class="opd-table-scroll"><table class="opd-table opd-wf-table">' + wfHead + wfBody + '</table></div>'
+        + '</div>';
+
+    return head + detailsTbl + workflowTbl;
+}
+
+function opdStatusBadge(code, label, isActive) {
+    var c = (code || '').toLowerCase();
+    var cls = 'opd-pill opd-pill-muted';
+    var ic = 'bi-dash-circle';
+    if (c === 'approved') { cls = 'opd-pill opd-pill-ok'; ic = 'bi-check-circle-fill'; }
+    else if (c === 'pending') { cls = 'opd-pill opd-pill-warn'; ic = 'bi-hourglass-split'; }
+    else if (c === 'rejected') { cls = 'opd-pill opd-pill-no'; ic = 'bi-x-circle-fill'; }
+    else if (c === 'draft') { cls = 'opd-pill opd-pill-muted'; ic = 'bi-pencil-fill'; }
+    var act = isActive
+        ? ' <span class="opd-pill opd-pill-ok"><i class="bi bi-toggle-on"></i> مفعّل</span>'
+        : ' <span class="opd-pill opd-pill-muted"><i class="bi bi-toggle-off"></i> غير مفعّل</span>';
+    return '<span class="' + cls + '"><i class="bi ' + ic + '"></i> ' + esc(label || code || '—') + '</span>' + act;
+}
+
+function opdPriorityBadge(p) {
+    var v = (p || '').trim();
+    var cls = 'opd-pill opd-pill-muted';
+    var ic = 'bi-dash';
+    if (v === 'عاجل')   { cls = 'opd-pill opd-pill-urgent'; ic = 'bi-exclamation-triangle-fill'; }
+    else if (v === 'عالي') { cls = 'opd-pill opd-pill-high'; ic = 'bi-arrow-up'; }
+    else if (v === 'متوسط') { cls = 'opd-pill opd-pill-med'; ic = 'bi-dash'; }
+    else if (v === 'منخفض') { cls = 'opd-pill opd-pill-low'; ic = 'bi-arrow-down'; }
+    return '<span class="' + cls + '"><i class="bi ' + ic + '"></i> ' + esc(v || '—') + '</span>';
 }
 
 // ─── Reset ─────────────────────────────────────────────────────────────────

@@ -230,10 +230,14 @@ async function obShowDetails(id) {
         }
     } catch (e) {}
 
+    var procDetailsBtn = (d.procedureId || d.procedureId === 0)
+        ? '<button type="button" class="ob-act-btn ob-act-detail" style="margin-inline-start:8px;" onclick="obShowProcedureDetails(' + (d.procedureId || 0) + ',' + (d.id || 0) + ')"><i class="bi bi-file-earmark-text"></i> تفاصيل الإجراء</button>'
+        : '';
+
     host.innerHTML =
         '<div class="ob-detail-grid">'
         + '<div class="ob-detail-lbl">رقم الطلب</div><div class="ob-detail-val" style="direction:ltr;">' + esc(d.requestNumber || '—') + '</div>'
-        + '<div class="ob-detail-lbl">اسم الإجراء</div><div class="ob-detail-val">' + esc(d.procedureName || '—') + '</div>'
+        + '<div class="ob-detail-lbl">اسم الإجراء</div><div class="ob-detail-val">' + esc(d.procedureName || '—') + procDetailsBtn + '</div>'
         + '<div class="ob-detail-lbl">نوع الإجراء</div><div class="ob-detail-val">' + esc(d.procedureTypeName || '—') + '</div>'
         + '<div class="ob-detail-lbl">تاريخ التقديم</div><div class="ob-detail-val" style="direction:ltr;text-align:right;">' + esc(obFmtDate(d.submittedAt)) + '</div>'
         + '<div class="ob-detail-lbl">الموعد المتوقع</div><div class="ob-detail-val" style="direction:ltr;text-align:right;">' + esc(obFmtDate(d.expectedDueAt)) + '</div>'
@@ -346,6 +350,15 @@ async function obSubmitDelete() {
     obLoad();
 }
 
+function obShowProcedureDetails(procedureId, outboxRequestId) {
+    if (!procedureId) return;
+    if (typeof window.opdShow === 'function') {
+        window.opdShow(procedureId, { outboxRequestId: outboxRequestId || 0 });
+    } else {
+        showToast('تعذّر فتح تفاصيل الإجراء — أعد تحميل الصفحة', 'danger');
+    }
+}
+
 window.obLoad = obLoad;
 window.obApplyFilters = obApplyFilters;
 window.obClearFilters = obClearFilters;
@@ -354,3 +367,4 @@ window.obShowEdit = obShowEdit;
 window.obSubmitEdit = obSubmitEdit;
 window.obAskDelete = obAskDelete;
 window.obSubmitDelete = obSubmitDelete;
+window.obShowProcedureDetails = obShowProcedureDetails;

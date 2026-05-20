@@ -601,9 +601,9 @@ public class OutboxController : BaseController
         return Json(new { success = true, message = "تم الحذف" });
     }
 
-    // ─── PROCEDURE DETAILS (reuse work-procedures details panel) ─────────────
+    // ─── PROCEDURE DETAILS (full payload: header + workflow grid) ────────────
     [HttpGet]
-    public async Task<IActionResult> GetProcedureDetails(int id)
+    public async Task<IActionResult> GetProcedureDetails(int id, int? outboxRequestId = null)
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var p = await _ds.GetWorkProcedureByIdAsync(id);
@@ -614,12 +614,130 @@ public class OutboxController : BaseController
         var templates = await _ds.ListFormTemplatesAsync();
         var orgUnits = await _ds.ListOrganizationalUnitsAsync();
         var statuses = await _ds.ListFormStatusesAsync();
+        var execRoles = await _ds.ListExecutorRolesAsync();
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var procsAll = await _ds.ListWorkProceduresAsync();
 
         var t = procTypes.FirstOrDefault(x => x.Id == p.ProcedureActionTypeId);
         var ws = workspaces.FirstOrDefault(w => w.Id == p.WorkspaceId);
         var tpl = templates.FirstOrDefault(x => x.Id == p.FormTemplateId);
         var ou = orgUnits.FirstOrDefault(u => u.Id == p.OrganizationalUnitId);
         var stages = ProcedureStages(p, statuses).ToList();
+
+        var targetOrgIds = ParseIntArray(p.TargetOrganizationalUnitIdsJson);
+        var prevIds = ParseIntArray(p.PreviousProcedureIdsJson);
+        var implicitIds = ParseIntArray(p.ImplicitProcedureIdsJson);
+        var nextIds = ParseIntArray(p.NextProcedureIdsJson);
+
+        var targetOrgUnits = orgUnits.Where(u => targetOrgIds.Contains(u.Id)).Select(u => new { id = u.Id, name = u.Name }).ToList();
+        List<object> ProcRefs(List<int> ids) => procsAll
+            .Where(x => ids.Contains(x.Id))
+            .Select(x => (object)new { id = x.Id, name = x.Name, code = x.Code }).ToList();
+
+        // الأنظمة واللوائح: قد تُحفظ كـ JSON مرفقات (label/url/name) — نُسطّحها لأسماء فقط
+        var regulations = new List<string>();
+        if (!string.IsNullOrWhiteSpace(p.RegulationsAttachmentsJson))
+        {
+            try
+            {
+                using var rdoc = JsonDocument.Parse(p.RegulationsAttachmentsJson);
+                if (rdoc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in rdoc.RootElement.EnumerateArray())
+                    {
+                        if (el.ValueKind == JsonValueKind.String) regulations.Add(el.GetString() ?? "");
+                        else if (el.ValueKind == JsonValueKind.Object)
+                        {
+                            foreach (var k in new[] { "name", "label", "title", "fileName" })
+                                if (el.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String) { regulations.Add(v.GetString() ?? ""); break; }
+                        }
+                    }
+                }
+            }
+            catch { /* ignore */ }
+        }
+
+        // خطوات سير العمل بكامل التفاصيل
+        var steps = ParseWorkflowStepsFull(p);
+        var workflowRows = steps.OrderBy(s => s.SortOrder).Select((st, idx) =>
+        {
+            var role = execRoles.FirstOrDefault(r => r.Id == st.ExecutorRoleId);
+            var assignerLabel = WorkflowAssignerLabel(st, role);
+            var executorsLabel = WorkflowExecutorsLabel(st, role, beneficiaries, orgUnits);
+            var durationLabel = WorkflowDurationLabel(st);
+            var allowedActions = (st.AllowedActions ?? new List<string>()).Select(a => a.Trim().ToLowerInvariant()).ToHashSet();
+            var canReturn = allowedActions.Contains("return");
+            var returnStepLabel = "—";
+            if (st.ReturnStepId.HasValue && st.ReturnStepId.Value > 0)
+            {
+                var ret = steps.FirstOrDefault(x => x.Id == st.ReturnStepId.Value);
+                returnStepLabel = ret != null ? (string.IsNullOrWhiteSpace(ret.StepLabel) ? $"خطوة {ret.SortOrder}" : ret.StepLabel) : "—";
+            }
+            var concurrentLabel = "—";
+            if (st.IsConcurrentStep && allowedActions.Contains("concurrent_approvals"))
+            {
+                if (st.ConcurrentStepId.HasValue && st.ConcurrentStepId.Value > 0)
+                {
+                    var cc = steps.FirstOrDefault(x => x.Id == st.ConcurrentStepId.Value);
+                    concurrentLabel = cc != null ? (string.IsNullOrWhiteSpace(cc.StepLabel) ? $"خطوة {cc.SortOrder}" : cc.StepLabel) : "متزامنة";
+                }
+                else concurrentLabel = "متزامنة";
+            }
+            var formName = "—";
+            if (st.FormDefinitionId.HasValue && st.FormDefinitionId.Value > 0)
+            {
+                var fd = fdAll.FirstOrDefault(x => x.Id == st.FormDefinitionId.Value);
+                if (fd != null) formName = fd.Name;
+            }
+            var channels = (st.NotificationChannels != null && st.NotificationChannels.Count > 0)
+                ? st.NotificationChannels
+                : (new List<string> { st.NotificationChannel ?? "in_app" });
+            var channelLabel = string.Join(" • ", channels.Select(NotificationChannelLabel));
+            var statusLabel = "—";
+            var statusColor = "#9DA4AE";
+            if (st.FormStatusId.HasValue && st.FormStatusId.Value > 0)
+            {
+                var fs = statuses.FirstOrDefault(x => x.Id == st.FormStatusId.Value);
+                if (fs != null) { statusLabel = fs.Name; statusColor = fs.Color; }
+            }
+
+            return new
+            {
+                index = idx + 1,
+                stepId = st.Id,
+                sortOrder = st.SortOrder,
+                stepLabel = string.IsNullOrWhiteSpace(st.StepLabel) ? $"خطوة {st.SortOrder}" : st.StepLabel,
+                assigner = assignerLabel,
+                executors = executorsLabel,
+                duration = durationLabel,
+                canReturn,
+                returnLabel = canReturn ? returnStepLabel : "غير مسموح",
+                concurrentLabel,
+                formName,
+                channelLabel,
+                statusLabel,
+                statusColor
+            };
+        }).ToList();
+
+        // الأولوية من الطلب إن وُجد (لإظهار قيمة فعلية في تفاصيل الطلب)
+        string? priority = null;
+        if (outboxRequestId.HasValue && outboxRequestId.Value > 0)
+        {
+            var ob = await _ds.GetOutboxRequestByIdAsync(outboxRequestId.Value);
+            if (ob != null && (ob.SubmittedById == CurrentUserId || CurrentUserRole == "Admin"))
+                priority = ob.Priority;
+        }
+
+        var statusLabelProc = (p.Status ?? "draft") switch
+        {
+            "approved" => "معتمد",
+            "pending" => "بانتظار الاعتماد",
+            "rejected" => "مرفوض",
+            "draft" => "مسودة",
+            _ => p.Status ?? ""
+        };
 
         return Json(new
         {
@@ -630,9 +748,13 @@ public class OutboxController : BaseController
                 p.Code,
                 p.Name,
                 p.Objectives,
+                StatusCode = p.Status ?? "",
+                StatusLabel = statusLabelProc,
+                IsActive = p.IsActive,
                 TypeName = t?.Name ?? "",
                 TypeIcon = t?.Icon ?? "",
                 TypeColor = t?.Color ?? "#25935F",
+                Priority = priority ?? "",
                 WorkspaceName = ws?.Name ?? "",
                 FormTemplateName = tpl?.Name ?? "",
                 OwnerOrgName = ou?.Name ?? "",
@@ -644,10 +766,109 @@ public class OutboxController : BaseController
                 ValidityEndDate = p.ValidityEndDate?.ToString("yyyy-MM-dd"),
                 p.AdditionalInputs,
                 p.AdditionalOutputs,
-                VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel
+                Regulations = regulations,
+                VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel,
+                TargetOrgUnits = targetOrgUnits,
+                PreviousProcedures = ProcRefs(prevIds),
+                ImplicitProcedures = ProcRefs(implicitIds),
+                NextProcedures = ProcRefs(nextIds)
             },
-            stages
+            stages,
+            workflow = workflowRows
         });
+    }
+
+    // ─── Workflow helpers ────────────────────────────────────────────────────
+    private static List<WorkflowStepFullDto> ParseWorkflowStepsFull(WorkProcedure? p)
+    {
+        if (p == null || string.IsNullOrWhiteSpace(p.WorkflowStepsJson)) return new();
+        try { return JsonSerializer.Deserialize<List<WorkflowStepFullDto>>(p.WorkflowStepsJson, WorkflowJsonOpts) ?? new(); }
+        catch { return new(); }
+    }
+
+    private static string WorkflowAssignerLabel(WorkflowStepFullDto st, ExecutorRole? role)
+    {
+        var mode = (st.AssigneeMode ?? "specific").Trim().ToLowerInvariant();
+        if (mode == "specific")
+            return role != null && !string.IsNullOrWhiteSpace(role.Name) ? role.Name : "دور المنفذين";
+        // fixed
+        return (st.AssigneeFixedType ?? "").Trim().ToLowerInvariant() switch
+        {
+            "employee" => "الموظف",
+            "direct_manager" => "المدير المباشر",
+            "managers_chain" => "سلسلة المدراء",
+            "unit_manager" => "مدير الوحدة التنظيمية",
+            "unit_representative" => "ممثل الوحدة التنظيمية",
+            _ => "—"
+        };
+    }
+
+    private static string WorkflowExecutorsLabel(WorkflowStepFullDto st, ExecutorRole? role, List<Beneficiary> beneficiaries, List<OrganizationalUnit> units)
+    {
+        var mode = (st.AssigneeMode ?? "specific").Trim().ToLowerInvariant();
+        if (mode == "specific" && role != null)
+        {
+            var ids = ParseCsvIntIds(role.ExecutorIds).ToList();
+            var names = beneficiaries.Where(b => ids.Contains(b.Id)).Select(b => b.FullName).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            if (names.Count == 0) return "—";
+            if (names.Count <= 2) return string.Join("، ", names);
+            return $"{names[0]}، {names[1]} (+{names.Count - 2})";
+        }
+        if (mode == "fixed")
+        {
+            var ft = (st.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
+            if (ft == "unit_manager" || ft == "unit_representative")
+            {
+                if (st.AssigneeOrgUnitId.HasValue && st.AssigneeOrgUnitId.Value > 0)
+                {
+                    var u = units.FirstOrDefault(x => x.Id == st.AssigneeOrgUnitId.Value);
+                    return u != null ? $"({u.Name})" : "—";
+                }
+                return "(حسب الوحدات المستهدفة)";
+            }
+            return "—";
+        }
+        return "—";
+    }
+
+    private static string WorkflowDurationLabel(WorkflowStepFullDto st)
+    {
+        var parts = new List<string>();
+        if (double.TryParse(st.ExpectedDurationDays, out var d) && d > 0) parts.Add($"{TrimNumber(d)} يوم");
+        if (double.TryParse(st.ExpectedDurationHours, out var h) && h > 0) parts.Add($"{TrimNumber(h)} ساعة");
+        return parts.Count > 0 ? string.Join(" + ", parts) : "—";
+    }
+
+    private static string TrimNumber(double n)
+        => n == Math.Floor(n) ? ((long)n).ToString() : n.ToString("0.##");
+
+    private static string NotificationChannelLabel(string c) => (c ?? "").Trim().ToLowerInvariant() switch
+    {
+        "in_app" => "داخل النظام",
+        "email" => "بريد إلكتروني",
+        "sms" => "رسالة نصية",
+        _ => c ?? ""
+    };
+
+    private class WorkflowStepFullDto
+    {
+        public int Id { get; set; }
+        public int SortOrder { get; set; }
+        public string StepLabel { get; set; } = "";
+        public int ExecutorRoleId { get; set; }
+        public string ExpectedDurationDays { get; set; } = "";
+        public string ExpectedDurationHours { get; set; } = "";
+        public int? FormStatusId { get; set; }
+        public int? FormDefinitionId { get; set; }
+        public int? ReturnStepId { get; set; }
+        public int? ConcurrentStepId { get; set; }
+        public bool IsConcurrentStep { get; set; }
+        public string AssigneeMode { get; set; } = "specific";
+        public string AssigneeFixedType { get; set; } = "";
+        public int? AssigneeOrgUnitId { get; set; }
+        public List<string>? AllowedActions { get; set; }
+        public string NotificationChannel { get; set; } = "in_app";
+        public List<string>? NotificationChannels { get; set; }
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

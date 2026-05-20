@@ -2541,6 +2541,277 @@ public class SettingsController : BaseController
         await _ds.AddAuditLogAsync(BuildAuditEntry("إعادة ترتيب نوع إجراء", "ProcedureActionType", req.Id.ToString(), r.Name ?? ""));
         return Json(new { success = true, message = "تم تحديث الترتيب" });
     }
+
+    // ─── دليل المستخدم (User Guide) ───────────────────────────────────────────
+    public IActionResult UserGuide()
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        if (CurrentUserRole != "Admin")
+            return RedirectToAction("Index", "Forms");
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "دليل المستخدم";
+        ViewBag.Title = "دليل المستخدم";
+        return View("~/Views/Settings/UserGuide.cshtml");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUserGuideItems(string? search, string? isActive)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var all = await _ds.ListUserGuideItemsAsync();
+        var allById = all.ToDictionary(x => x.Id);
+        var filtered = all.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            filtered = filtered.Where(r => (r.Name ?? "").ToLower().Contains(s));
+        }
+        if (!string.IsNullOrWhiteSpace(isActive))
+            filtered = filtered.Where(r => r.IsActive == (isActive == "1"));
+
+        // قائمة الجذور (للـ dropdown «القائمة الرئيسية»)
+        var roots = all
+            .Where(x => !x.ParentId.HasValue)
+            .OrderBy(x => x.SortOrder)
+            .Select(x => new { id = x.Id, name = x.Name })
+            .ToList();
+
+        var data = filtered.Select(r =>
+        {
+            string parentName = "";
+            int? parentOrder = null;
+            if (r.ParentId.HasValue && allById.TryGetValue(r.ParentId.Value, out var p))
+            {
+                parentName = p.Name;
+                parentOrder = p.SortOrder;
+            }
+            var displayOrder = r.ParentId.HasValue && parentOrder.HasValue
+                ? $"{r.SortOrder}-{parentOrder.Value}"
+                : r.SortOrder.ToString();
+            return new
+            {
+                r.Id,
+                r.ParentId,
+                ParentName = parentName,
+                r.Name,
+                r.Content,
+                r.AttachmentUrl,
+                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "bi-journal-text" : r.Icon,
+                Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
+                r.Notes,
+                r.SortOrder,
+                DisplayOrder = displayOrder,
+                IsRoot = !r.ParentId.HasValue,
+                r.IsActive,
+                r.CreatedBy,
+                CreatedAt = r.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                r.UpdatedBy,
+                UpdatedAt = r.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
+            };
+        })
+        .OrderBy(x => x.ParentId ?? 0)
+        .ThenBy(x => x.SortOrder)
+        .ToList();
+
+        return Json(new { success = true, data, roots });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUserGuideItemDetails(int id)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var r = await _ds.GetUserGuideItemByIdAsync(id);
+        if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
+
+        string parentName = "";
+        if (r.ParentId.HasValue)
+        {
+            var p = await _ds.GetUserGuideItemByIdAsync(r.ParentId.Value);
+            parentName = p?.Name ?? "";
+        }
+
+        return Json(new
+        {
+            success = true,
+            data = new
+            {
+                r.Id,
+                r.ParentId,
+                ParentName = parentName,
+                r.Name,
+                r.Content,
+                r.AttachmentUrl,
+                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "bi-journal-text" : r.Icon,
+                Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
+                r.Notes,
+                r.SortOrder,
+                IsRoot = !r.ParentId.HasValue,
+                r.IsActive,
+                r.CreatedBy,
+                CreatedAt = r.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                r.UpdatedBy,
+                UpdatedAt = r.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
+            }
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddUserGuideItem([FromBody] UserGuideItemRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
+        if (string.IsNullOrWhiteSpace(req.Icon))
+            return Json(new { success = false, message = "أيقونة الصورة مطلوبة — يرجى إرفاق صورة" });
+
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsUserGuideItemNameDuplicateAsync(trimmedName))
+            return Json(new { success = false, message = "الاسم موجود مسبقاً" });
+
+        int? parentId = null;
+        if (req.ParentId.HasValue && req.ParentId.Value > 0)
+        {
+            var parent = await _ds.GetUserGuideItemByIdAsync(req.ParentId.Value);
+            if (parent == null) return Json(new { success = false, message = "القائمة الرئيسية المختارة غير موجودة" });
+            if (parent.ParentId.HasValue) return Json(new { success = false, message = "لا يمكن أن يكون الأب عنصراً فرعياً (المستوى الأقصى = 2)" });
+            parentId = parent.Id;
+        }
+
+        var row = new UserGuideItem
+        {
+            ParentId = parentId,
+            Name = trimmedName,
+            Content = (req.Content ?? "").Trim(),
+            AttachmentUrl = (req.AttachmentUrl ?? "").Trim(),
+            Icon = req.Icon!.Trim(),
+            Color = string.IsNullOrWhiteSpace(req.Color) ? "#25935F" : req.Color!.Trim(),
+            Notes = (req.Notes ?? "").Trim(),
+            IsActive = req.IsActive,
+            CreatedBy = CurrentUserFullName
+        };
+
+        await _ds.AddUserGuideItemAsync(row);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة عنصر دليل", "UserGuideItem", row.Id.ToString(), row.Name));
+        return Json(new { success = true, message = "تمت الإضافة بنجاح", id = row.Id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateUserGuideItem([FromBody] UserGuideItemUpdateRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var r = await _ds.GetUserGuideItemByIdAsync(req.Id);
+        if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
+        if (string.IsNullOrWhiteSpace(req.Icon))
+            return Json(new { success = false, message = "أيقونة الصورة مطلوبة — يرجى إرفاق صورة" });
+
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsUserGuideItemNameDuplicateAsync(trimmedName, req.Id))
+            return Json(new { success = false, message = "الاسم موجود مسبقاً" });
+
+        int? parentId = null;
+        if (req.ParentId.HasValue && req.ParentId.Value > 0)
+        {
+            if (req.ParentId.Value == req.Id)
+                return Json(new { success = false, message = "لا يمكن أن يكون العنصر أباً لنفسه" });
+            var parent = await _ds.GetUserGuideItemByIdAsync(req.ParentId.Value);
+            if (parent == null) return Json(new { success = false, message = "القائمة الرئيسية المختارة غير موجودة" });
+            if (parent.ParentId.HasValue) return Json(new { success = false, message = "لا يمكن أن يكون الأب عنصراً فرعياً" });
+            parentId = parent.Id;
+        }
+
+        // إذا كان جذراً وله أبناء — منع تحويله لفرع
+        if (r.ParentId == null && parentId.HasValue)
+        {
+            var all = await _ds.ListUserGuideItemsAsync();
+            if (all.Any(x => x.ParentId == r.Id))
+                return Json(new { success = false, message = "لا يمكن تحويل قائمة جذر لها أبناء إلى عنصر فرعي" });
+        }
+
+        // إذا تغيّر الأب — أعد ترتيبه في المستوى الجديد
+        var parentChanged = r.ParentId != parentId;
+        r.ParentId = parentId;
+        r.Name = trimmedName;
+        r.Content = (req.Content ?? "").Trim();
+        r.AttachmentUrl = (req.AttachmentUrl ?? "").Trim();
+        r.Icon = req.Icon!.Trim();
+        if (!string.IsNullOrWhiteSpace(req.Color)) r.Color = req.Color!.Trim();
+        r.Notes = (req.Notes ?? "").Trim();
+        r.IsActive = req.IsActive;
+        r.UpdatedBy = CurrentUserFullName;
+
+        if (parentChanged)
+        {
+            var allAfter = await _ds.ListUserGuideItemsAsync();
+            var siblings = allAfter.Where(x => x.ParentId == r.ParentId && x.Id != r.Id).ToList();
+            r.SortOrder = (siblings.Count == 0 ? 0 : siblings.Max(x => x.SortOrder)) + 1;
+        }
+
+        await _ds.UpdateUserGuideItemAsync(r);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث عنصر دليل", "UserGuideItem", r.Id.ToString(), r.Name));
+        return Json(new { success = true, message = "تم التحديث بنجاح" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteUserGuideItem([FromBody] UserGuideItemIdRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var r = await _ds.GetUserGuideItemByIdAsync(req.Id);
+        if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
+
+        await _ds.DeleteUserGuideItemAsync(req.Id);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف عنصر دليل", "UserGuideItem", req.Id.ToString(), r.Name));
+        return Json(new { success = true, message = "تم الحذف بنجاح" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ToggleUserGuideItem([FromBody] UserGuideItemIdRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var r = await _ds.GetUserGuideItemByIdAsync(req.Id);
+        if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
+
+        r.IsActive = !r.IsActive;
+        r.UpdatedBy = CurrentUserFullName;
+        await _ds.UpdateUserGuideItemAsync(r);
+        await _ds.AddAuditLogAsync(BuildAuditEntry(r.IsActive ? "تفعيل عنصر دليل" : "تعطيل عنصر دليل", "UserGuideItem", r.Id.ToString(), r.Name));
+        return Json(new { success = true, isActive = r.IsActive });
+    }
+}
+
+public class UserGuideItemRequest
+{
+    public int? ParentId { get; set; }
+    public string? Name { get; set; }
+    public string? Content { get; set; }
+    public string? AttachmentUrl { get; set; }
+    public string? Icon { get; set; }
+    public string? Color { get; set; }
+    public string? Notes { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public class UserGuideItemUpdateRequest : UserGuideItemRequest
+{
+    public int Id { get; set; }
+}
+
+public class UserGuideItemIdRequest
+{
+    public int Id { get; set; }
 }
 
 public class ProcedureActionTypeRequest

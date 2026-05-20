@@ -70,6 +70,7 @@ public class AppDbContext
     public List<ProcedureActionType> ProcedureActionTypes => Load<ProcedureActionType>("procedure_action_types");
     public List<OutboxRequest> OutboxRequests => Load<OutboxRequest>("outbox_requests");
     public List<OutboxAssignment> OutboxAssignments => Load<OutboxAssignment>("outbox_assignments");
+    public List<UserGuideItem> UserGuideItems => Load<UserGuideItem>("user_guide_items");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -104,6 +105,7 @@ public class AppDbContext
     public void SaveProcedureActionTypes(List<ProcedureActionType> d) => Save("procedure_action_types", d);
     public void SaveOutboxRequests(List<OutboxRequest> d) => Save("outbox_requests", d);
     public void SaveOutboxAssignments(List<OutboxAssignment> d) => Save("outbox_assignments", d);
+    public void SaveUserGuideItems(List<UserGuideItem> d) => Save("user_guide_items", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }
