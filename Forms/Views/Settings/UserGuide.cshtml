@@ -151,15 +151,15 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">القائمة الرئيسية</label>
-                    <select class="form-select" id="ugAddParent">
-                        <option value="">رئيسية (إنشاؤها كقائمة جذر)</option>
+                    <label class="form-label" for="ugAddParent">القائمة الرئيسية</label>
+                    <select class="form-select" id="ugAddParent" style="font-family:'Cairo',sans-serif;">
+                        <option value="">— رئيسية (بدون أب في الشجرة) —</option>
                     </select>
-          
+                    <small class="text-muted" style="display:block;margin-top:6px;font-size:12px;">المسافة والرمز └ تمثل مستوى التبعية في الشجرة؛ اترك «رئيسية» لإنشاء عنصر في الجذر.</small>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <label class="form-label">الأيقونة</label>
                     <div class="ug-attach-row">
                         <div class="ug-attach-preview ug-icon-preview" id="ugAddIconPreview">
                             <i class="bi bi-image" style="font-size:28px;"></i>
@@ -173,8 +173,8 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">المحتوى</label>
-                    <textarea class="form-control" id="ugAddContent" rows="5" placeholder="اكتب محتوى الصفحة/الشرح هنا..."></textarea>
+                    <label class="form-label">المحتوى<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="ugAddContent" placeholder="اكتب محتوى الصفحة/الشرح هنا...">
                 </div>
 
                 <div class="mb-3">
@@ -247,14 +247,15 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">القائمة الرئيسية</label>
-                    <select class="form-select" id="ugEditParent">
-                        <option value="">رئيسية (قائمة جذر)</option>
+                    <label class="form-label" for="ugEditParent">القائمة الرئيسية</label>
+                    <select class="form-select" id="ugEditParent" style="font-family:'Cairo',sans-serif;">
+                        <option value="">— رئيسية (بدون أب في الشجرة) —</option>
                     </select>
+                    <small class="text-muted" style="display:block;margin-top:6px;font-size:12px;">المسافة والرمز └ تمثل مستوى التبعية في الشجرة.</small>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">الأيقونة<span class="required-star">*</span></label>
+                    <label class="form-label">الأيقونة</label>
                     <div class="ug-attach-row">
                         <div class="ug-attach-preview ug-icon-preview" id="ugEditIconPreview">
                             <i class="bi bi-image" style="font-size:28px;"></i>
@@ -268,8 +269,8 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">المحتوى</label>
-                    <textarea class="form-control" id="ugEditContent" rows="5"></textarea>
+                    <label class="form-label">المحتوى<span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="ugEditContent">
                 </div>
 
                 <div class="mb-3">
@@ -352,7 +353,7 @@
                 <input type="hidden" id="ugDeleteId">
                 <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا العنصر؟</p>
                 <p style="font-size:13.5px;color:var(--gray-500);" id="ugDeleteNameLabel"></p>
-                <p style="font-size:12px;color:var(--error-600);background:var(--error-50);padding:8px 12px;border-radius:8px;border:1px solid var(--error-100);">عند حذف قائمة جذر، تُحذف جميع الصفحات التابعة لها.</p>
+                <p style="font-size:12px;color:var(--error-600);background:var(--error-50);padding:8px 12px;border-radius:8px;border:1px solid var(--error-100);">عند حذف عنصر، تُحذف جميع العناصر التابعة له في الشجرة.</p>
                 <div id="ugDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
             </div>
             <div class="ug-modal-footer" style="justify-content:center;background:var(--gray-50);">

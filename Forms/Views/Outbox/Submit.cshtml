@@ -223,34 +223,13 @@
 </div>
 
 <div class="obs-panel" id="obsPanel2" style="display:none;">
-    <div class="obs-panel-title"><i class="bi bi-pencil-square"></i> تعبئة بيانات الطلب</div>
+    <div class="obs-panel-title"><i class="bi bi-pencil-square"></i> تعبئة النموذج</div>
 
-    <div class="obs-meta-row">
-        <div class="obs-meta-cell">
-            <span class="obs-meta-lbl">الإجراء المختار</span>
-            <span class="obs-meta-val" id="obsPickedProc">—</span>
-        </div>
-        <div class="obs-meta-cell">
-            <span class="obs-meta-lbl">الأولوية <span style="color:#ef4444;">*</span></span>
-            <select class="form-select form-select-sm" id="obsPriority" style="max-width:220px;">
-                <option value="عاجل">عاجل</option>
-                <option value="عالي">عالي</option>
-                <option value="متوسط" selected>متوسط</option>
-                <option value="منخفض">منخفض</option>
-            </select>
-        </div>
-    </div>
     <!-- مضيف النموذج الديناميكي — يُحمَّل بناءً على الإجراء المختار -->
     <div id="obsFormHost" class="obs-form-host">
         <div class="text-center py-4" style="color:var(--gray-500);"><i class="bi bi-info-circle" style="font-size:24px;display:block;margin-bottom:6px;color:var(--gray-300);"></i>اختر إجراءً أولاً لتحميل نموذجه</div>
     </div>
 
-    <div class="obs-form-row cols-1" style="margin-top:14px;">
-        <div class="obs-form-group">
-            <label>ملاحظات إضافية</label>
-            <textarea id="obsNotes" class="form-control" placeholder="ملاحظات اختيارية"></textarea>
-        </div>
-    </div>
     <div class="obs-foot">
         <button class="obs-prev" onclick="obsGoStep(1)"><i class="bi bi-arrow-right"></i> السابق</button>
         <button class="obs-next" onclick="obsGoStep(3)">التالي <i class="bi bi-arrow-left"></i></button>

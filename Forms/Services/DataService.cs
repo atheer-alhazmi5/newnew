@@ -2084,13 +2084,24 @@ public class DataService
         var list = _db.UserGuideItems;
         var item = list.FirstOrDefault(x => x.Id == id);
         if (item == null) return Task.FromResult(false);
-        // عند حذف جذر: نحذف جميع أبنائه أيضاً
-        var toRemove = new List<int> { id };
-        toRemove.AddRange(list.Where(x => x.ParentId == id).Select(x => x.Id));
+
+        var toRemove = new HashSet<int> { id };
+        var added = true;
+        while (added)
+        {
+            added = false;
+            foreach (var x in list)
+            {
+                if (x.ParentId.HasValue && toRemove.Contains(x.ParentId.Value) && toRemove.Add(x.Id))
+                    added = true;
+            }
+        }
+
         list.RemoveAll(x => toRemove.Contains(x.Id));
-        // إعادة ترتيب الإخوة بعد الحذف
+
         var siblings = list.Where(x => x.ParentId == item.ParentId).OrderBy(x => x.SortOrder).ToList();
         for (int i = 0; i < siblings.Count; i++) siblings[i].SortOrder = i + 1;
+
         _db.SaveUserGuideItems(list);
         return Task.FromResult(true);
     }
@@ -2154,6 +2165,55 @@ public class DataService
         if (d == null) return Task.FromResult(false);
         list.Remove(d);
         _db.SaveDelegations(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── SYSTEM FEEDBACK (تقييم النظام) ───────────────────────────────────────
+    public static readonly string[] SystemFeedbackRatingLevels = { "ممتاز", "جيد", "متوسط", "منخفض", "منخفض جداً" };
+
+    public static string NormalizeFeedbackRating(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (v == "منخفض جدا" || v == "منخفض جداً") return "منخفض جداً";
+        return SystemFeedbackRatingLevels.Contains(v) ? v : "";
+    }
+
+    public Task<List<SystemFeedback>> ListSystemFeedbacksAsync()
+        => Task.FromResult(_db.SystemFeedbacks.OrderByDescending(x => x.CreatedAt).ToList());
+
+    public Task<SystemFeedback?> GetSystemFeedbackByIdAsync(int id)
+        => Task.FromResult(_db.SystemFeedbacks.FirstOrDefault(x => x.Id == id));
+
+    public Task<SystemFeedback?> GetSystemFeedbackByUserIdAsync(int userId)
+        => Task.FromResult(_db.SystemFeedbacks.FirstOrDefault(x => x.UserId == userId));
+
+    public Task<SystemFeedback> AddSystemFeedbackAsync(SystemFeedback item)
+    {
+        var list = _db.SystemFeedbacks;
+        item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
+        list.Add(item);
+        _db.SaveSystemFeedbacks(list);
+        return Task.FromResult(item);
+    }
+
+    public Task<bool> UpdateSystemFeedbackAsync(SystemFeedback item)
+    {
+        var list = _db.SystemFeedbacks;
+        var idx = list.FindIndex(x => x.Id == item.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = item;
+        _db.SaveSystemFeedbacks(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleSystemFeedbackPublishAsync(int id)
+    {
+        var list = _db.SystemFeedbacks;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsPublished = !list[idx].IsPublished;
+        _db.SaveSystemFeedbacks(list);
         return Task.FromResult(true);
     }
 }

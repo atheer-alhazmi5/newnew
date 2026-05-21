@@ -5,9 +5,10 @@
  */
 
 let ugAll = [];
-let ugRoots = [];
+let ugTree = [];
 let ugFiltered = [];
 let ugCurrentPage = 1;
+let ugEditingId = null;
 const ugPerPage = 10;
 
 function ugEsc(s) {
@@ -27,8 +28,84 @@ function ugIconCellHtml(icon, color) {
     if (ugIsIconImage(icon)) {
         return '<span class="ug-icon-display" style="background:' + color + '11;"><img src="' + icon + '" alt="أيقونة"></span>';
     }
+    if (!icon) {
+        return '<span class="ug-icon-display" style="background:var(--gray-100);color:var(--gray-400);"><i class="bi bi-image"></i></span>';
+    }
     var iconCls = icon || 'bi-journal-text';
     return '<span class="ug-icon-display" style="background:' + color + '22;color:' + color + ';"><i class="bi ' + iconCls + '"></i></span>';
+}
+
+function ugExcludedIdsForParentPicker(editItemId) {
+    if (!editItemId) return {};
+    var byParent = {};
+    ugTree.forEach(function (item) {
+        var pid = item.parentId != null ? item.parentId : item.ParentId;
+        var key = (pid != null && pid !== '') ? String(pid) : '';
+        if (!byParent[key]) byParent[key] = [];
+        byParent[key].push(item.id != null ? item.id : item.Id);
+    });
+    var ex = {};
+    function walk(id) {
+        ex[id] = true;
+        (byParent[String(id)] || []).forEach(walk);
+    }
+    walk(editItemId);
+    return ex;
+}
+
+function ugFillParentSelect(selectId, currentValue, excludeId) {
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    var exclude = ugExcludedIdsForParentPicker(excludeId);
+    var allowed = ugTree.filter(function (item) {
+        var id = item.id != null ? item.id : item.Id;
+        return !exclude[id];
+    });
+    var allowedIds = {};
+    allowed.forEach(function (item) {
+        allowedIds[item.id != null ? item.id : item.Id] = true;
+    });
+
+    var childrenOf = {};
+    function addChild(key, node) {
+        if (!childrenOf[key]) childrenOf[key] = [];
+        childrenOf[key].push(node);
+    }
+    allowed.forEach(function (item) {
+        var id = item.id != null ? item.id : item.Id;
+        var pid = item.parentId != null ? item.parentId : item.ParentId;
+        if (pid && allowedIds[pid]) addChild(String(pid), item);
+        else addChild('__root__', item);
+    });
+
+    function sortItems(arr) {
+        return arr.slice().sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : (a.SortOrder != null ? a.SortOrder : 0);
+            var sb = b.sortOrder != null ? b.sortOrder : (b.SortOrder != null ? b.SortOrder : 0);
+            if (sa !== sb) return sa - sb;
+            return String(a.name || a.Name || '').localeCompare(String(b.name || b.Name || ''), 'ar');
+        });
+    }
+
+    var prev = currentValue != null && currentValue !== '' ? String(currentValue) : sel.value;
+    var parts = ['<option value="">— رئيسية (بدون أب في الشجرة) —</option>'];
+
+    function walk(nodes, depth) {
+        sortItems(nodes || []).forEach(function (item) {
+            var id = item.id != null ? item.id : item.Id;
+            var prefix = '';
+            if (depth > 0) {
+                prefix = '\u200f' + '\u00A0\u00A0'.repeat(depth) + '\u2514\u00A0';
+            }
+            parts.push('<option value="' + id + '"' + (String(prev) === String(id) ? ' selected' : '') + '>' + prefix + ugEsc(item.name || item.Name || '') + '</option>');
+            walk(childrenOf[String(id)], depth + 1);
+        });
+    }
+
+    walk(childrenOf['__root__'], 0);
+    sel.innerHTML = parts.join('');
+    if (prev && Array.prototype.some.call(sel.options, function (o) { return o.value === String(prev); }))
+        sel.value = String(prev);
 }
 
 function ugBindIconInput(prefix) {
@@ -69,17 +146,6 @@ function ugClearIcon(prefix) {
     document.getElementById('ug' + prefix + 'Icon').value = '';
     document.getElementById('ug' + prefix + 'IconInput').value = '';
     ugRenderIconPreview(prefix, '');
-}
-
-function ugFillParentSelect(selectId, currentValue, excludeId) {
-    var sel = document.getElementById(selectId);
-    if (!sel) return;
-    var defaultOpt = '<option value="">رئيسية (قائمة جذر)</option>';
-    var opts = ugRoots
-        .filter(function (r) { return !excludeId || Number(r.id) !== Number(excludeId); })
-        .map(function (r) { return '<option value="' + r.id + '"' + (Number(currentValue) === Number(r.id) ? ' selected' : '') + '>' + ugEsc(r.name) + '</option>'; })
-        .join('');
-    sel.innerHTML = defaultOpt + opts;
 }
 
 function ugBindAttachInput(prefix) {
@@ -144,7 +210,9 @@ async function ugLoad() {
         var r = await apiFetch('/Settings/GetUserGuideItems');
         if (r && r.success) {
             ugAll = r.data || [];
-            ugRoots = r.roots || [];
+            ugTree = r.tree || ugAll.map(function (x) {
+                return { id: x.id, parentId: x.parentId, name: x.name, sortOrder: x.sortOrder };
+            });
             ugApplyFilter();
         } else {
             document.getElementById('ugBody').innerHTML =
@@ -199,13 +267,16 @@ function ugRenderTable() {
         var statusText = c.isActive ? 'مفعل' : 'معطل';
         var color = c.color || '#25935F';
         var orderPillCls = 'ug-order-pill' + (c.isRoot ? ' is-root' : '');
-        var indent = c.isRoot ? '' : '<span class="child-indent"><i class="bi bi-arrow-return-left"></i></span>';
+        var depth = c.depth != null ? c.depth : (c.Depth != null ? c.Depth : 0);
+        var indent = depth > 0
+            ? '<span class="child-indent">' + '\u00A0\u00A0'.repeat(Math.min(depth, 6)) + '<i class="bi bi-arrow-return-left"></i></span>'
+            : '';
         var branchTag = c.isRoot
             ? '<span class="branch-tag" style="background:var(--sa-50);color:var(--sa-700);border-color:var(--sa-100);">جذر</span>'
-            : '<span class="branch-tag">فرع</span>';
+            : '<span class="branch-tag">مستوى ' + (depth + 1) + '</span>';
         var parentCell = c.isRoot
             ? '<span class="ug-parent-cell"><span class="root-tag"><i class="bi bi-bookmark-star-fill"></i> رئيسية</span></span>'
-            : '<span class="ug-parent-cell">' + ugEsc(c.parentName || '—') + '</span>';
+            : '<span class="ug-parent-cell">' + ugEsc(c.parentPath || c.parentName || '—') + '</span>';
 
         html += '<tr>'
             + '<td class="text-center"><span class="' + orderPillCls + '">' + ugEsc(c.displayOrder || String(c.sortOrder)) + '</span></td>'
@@ -236,6 +307,7 @@ function ugChangePage(p) { ugCurrentPage = p; ugRenderTable(); }
 
 // ─── ADD ────────────────────────────────────────────────────────────────────
 function ugShowAddModal() {
+    ugEditingId = null;
     document.getElementById('ugAddName').value = '';
     document.getElementById('ugAddContent').value = '';
     document.getElementById('ugAddNotes').value = '';
@@ -253,15 +325,16 @@ function ugShowAddModal() {
 async function ugSubmitAdd() {
     var name = (document.getElementById('ugAddName').value || '').trim();
     if (!name) { ugShowError('Add', 'اسم القائمة/الصفحة مطلوب'); return; }
+    var content = (document.getElementById('ugAddContent').value || '').trim();
+    if (!content) { ugShowError('Add', 'المحتوى مطلوب'); return; }
     var icon = (document.getElementById('ugAddIcon').value || '').trim();
-    if (!icon) { ugShowError('Add', 'أيقونة الصورة مطلوبة — يرجى إرفاق صورة'); return; }
     var parentRaw = document.getElementById('ugAddParent').value;
     var parentId = parentRaw ? parseInt(parentRaw, 10) : null;
 
     var payload = {
         parentId: parentId,
         name: name,
-        content: document.getElementById('ugAddContent').value || '',
+        content: content,
         attachmentUrl: document.getElementById('ugAddAttachData').value || '',
         icon: icon,
         color: document.getElementById('ugAddColor').value || '#25935F',
@@ -278,6 +351,7 @@ async function ugSubmitAdd() {
 
 // ─── EDIT ───────────────────────────────────────────────────────────────────
 async function ugShowEdit(id) {
+    ugEditingId = id;
     var r = await apiFetch('/Settings/GetUserGuideItemDetails?id=' + encodeURIComponent(id));
     if (!r || !r.success) { showToast((r && r.message) || 'تعذّر التحميل', 'danger'); return; }
     var d = r.data || {};
@@ -303,8 +377,9 @@ async function ugSubmitEdit() {
     var id = parseInt(document.getElementById('ugEditId').value, 10);
     var name = (document.getElementById('ugEditName').value || '').trim();
     if (!name) { ugShowError('Edit', 'اسم القائمة/الصفحة مطلوب'); return; }
+    var content = (document.getElementById('ugEditContent').value || '').trim();
+    if (!content) { ugShowError('Edit', 'المحتوى مطلوب'); return; }
     var icon = (document.getElementById('ugEditIcon').value || '').trim();
-    if (!icon) { ugShowError('Edit', 'أيقونة الصورة مطلوبة — يرجى إرفاق صورة'); return; }
     var parentRaw = document.getElementById('ugEditParent').value;
     var parentId = parentRaw ? parseInt(parentRaw, 10) : null;
 
@@ -312,7 +387,7 @@ async function ugSubmitEdit() {
         id: id,
         parentId: parentId,
         name: name,
-        content: document.getElementById('ugEditContent').value || '',
+        content: content,
         attachmentUrl: document.getElementById('ugEditAttachData').value || '',
         icon: icon,
         color: document.getElementById('ugEditColor').value || '#25935F',
@@ -335,7 +410,9 @@ async function ugShowDetails(id) {
     var color = d.color || '#25935F';
     var iconHeader = ugIsIconImage(d.icon)
         ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:' + color + '11;"><img src="' + d.icon + '" alt="أيقونة"></span>'
-        : '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:' + color + '22;color:' + color + ';font-size:22px;"><i class="bi ' + (d.icon || 'bi-journal-text') + '"></i></span>';
+        : (d.icon
+            ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:' + color + '22;color:' + color + ';font-size:22px;"><i class="bi ' + d.icon + '"></i></span>'
+            : '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:var(--gray-100);color:var(--gray-400);font-size:22px;"><i class="bi bi-image"></i></span>');
     var statusBadge = d.isActive
         ? '<span class="ug-status-pill active"><span class="ug-status-dot"></span>مفعل</span>'
         : '<span class="ug-status-pill inactive"><span class="ug-status-dot"></span>معطل</span>';
@@ -347,7 +424,7 @@ async function ugShowDetails(id) {
         '<div class="d-flex align-items-center gap-3 mb-3" style="padding:12px 14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;">'
         + iconHeader
         + '<div><div style="font-weight:800;font-size:16px;color:var(--gray-900);">' + ugEsc(d.name || '') + '</div>'
-        +   '<div style="font-size:12px;color:var(--gray-500);">' + (d.isRoot ? 'قائمة رئيسية (جذر)' : 'صفحة/فرع تابع لـ: <strong>' + ugEsc(d.parentName || '—') + '</strong>') + '</div></div>'
+        +   '<div style="font-size:12px;color:var(--gray-500);">' + (d.isRoot ? 'قائمة رئيسية (جذر)' : 'تابع لـ: <strong>' + ugEsc(d.parentPath || d.parentName || '—') + '</strong>') + '</div></div>'
         + '<div style="margin-inline-start:auto;">' + statusBadge + '</div>'
         + '</div>'
         + '<div style="display:grid;grid-template-columns:160px 1fr;gap:10px 14px;font-size:13.5px;">'
@@ -355,7 +432,7 @@ async function ugShowDetails(id) {
         +   '<div style="font-weight:700;color:var(--gray-500);">الأيقونة</div><div>' + (ugIsIconImage(d.icon) ? '<img src="' + d.icon + '" alt="أيقونة" style="max-width:80px;max-height:80px;border-radius:10px;border:1px solid var(--gray-200);">' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">اللون</div><div><span class="ug-color-circle" style="background:' + color + '"></span> <span style="font-family:monospace;direction:ltr;display:inline-block;margin-inline-start:6px;">' + ugEsc(color) + '</span></div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">المرفق</div><div>' + attach + '</div>'
-        +   '<div style="font-weight:700;color:var(--gray-500);">المحتوى</div><div>' + (d.content ? '<div class="ug-content-pre">' + ugEsc(d.content) + '</div>' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
+        +   '<div style="font-weight:700;color:var(--gray-500);">المحتوى</div><div>' + (d.content ? ugEsc(d.content) : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">الملاحظات</div><div>' + (d.notes ? '<div class="ug-content-pre" style="background:var(--info-50);border-color:var(--info-100);">' + ugEsc(d.notes) + '</div>' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">أنشئ بواسطة</div><div>' + ugEsc(d.createdBy || '—') + ' <span style="color:var(--gray-400);font-size:11.5px;">— ' + ugEsc(d.createdAt || '') + '</span></div>'
         + (d.updatedAt ? '<div style="font-weight:700;color:var(--gray-500);">آخر تعديل</div><div>' + ugEsc(d.updatedBy || '—') + ' <span style="color:var(--gray-400);font-size:11.5px;">— ' + ugEsc(d.updatedAt || '') + '</span></div>' : '')

@@ -138,7 +138,7 @@ public class FormDefinitionsController : BaseController
         var orgUnitFilters = units
             .OrderBy(u => u.SortOrder)
             .ThenBy(u => u.Name)
-            .Select(u => new { id = u.Id, name = u.Name })
+            .Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
             .ToList();
 
         return Json(new

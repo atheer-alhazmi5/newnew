@@ -61,8 +61,7 @@ function obCatBadge(cat) {
 
 function obPriorityBadge(p) {
     var v = (p || '').trim();
-    if (v === 'عاجل') return '<span class="ob-badge ob-prio-urgent"><i class="bi bi-exclamation-triangle-fill"></i> عاجل</span>';
-    if (v === 'عالي' || v === 'عالية') return '<span class="ob-badge ob-prio-high"><i class="bi bi-arrow-up"></i> عالي</span>';
+    if (v === 'مرتفع' || v === 'عالي' || v === 'عالية' || v === 'عاجل') return '<span class="ob-badge ob-prio-high"><i class="bi bi-arrow-up"></i> مرتفع</span>';
     if (v === 'منخفض' || v === 'منخفضة') return '<span class="ob-badge ob-prio-low"><i class="bi bi-arrow-down"></i> منخفض</span>';
     return '<span class="ob-badge ob-prio-med"><i class="bi bi-dash"></i> متوسط</span>';
 }
@@ -284,7 +283,7 @@ async function obShowEdit(id) {
         +   '</div>'
         +   '<div class="obs-form-group"><label>الأولوية</label>'
         +     '<select class="form-select" id="obEditPriority">'
-        +       ['عاجل','عالي','متوسط','منخفض'].map(function (p) { return '<option value="' + p + '"' + (p === d.priority ? ' selected' : '') + '>' + p + '</option>'; }).join('')
+        +       ['منخفض','متوسط','مرتفع'].map(function (p) { return '<option value="' + p + '"' + (p === d.priority || (p === 'مرتفع' && (d.priority === 'عالي' || d.priority === 'عاجل')) ? ' selected' : '') + '>' + p + '</option>'; }).join('')
         +     '</select>'
         +   '</div>'
         + '</div>'

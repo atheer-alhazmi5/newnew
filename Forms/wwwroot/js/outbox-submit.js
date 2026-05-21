@@ -16,6 +16,7 @@ var obsTemplateData = null;
 var obsTargetOrgUnits = [];
 var obsExecutors = [];
 var obsFirstApprover = '';
+var obsProcedurePriority = 'متوسط';
 var obsCollected = null;      // آخر مجموعة إجابات تم جمعها لخطوة المراجعة
 
 function obsEscAttr(s) {
@@ -128,8 +129,6 @@ async function obsPick(id, ev) {
         return;
     }
     obsPickedData = r.data || null;
-    var pi = document.getElementById('obsPickedProc');
-    if (pi && obsPickedData) pi.textContent = (obsPickedData.name || '') + (obsPickedData.code ? ' — ' + obsPickedData.code : '');
 
     // تحميل النموذج المرتبط مسبقاً ليكون جاهزاً للخطوة الثانية
     await obsLoadProcedureForm(id);
@@ -152,6 +151,7 @@ async function obsLoadProcedureForm(procedureId) {
     obsTargetOrgUnits = r.targetOrgUnits || [];
     obsExecutors = r.executors || [];
     obsFirstApprover = r.firstApprover || '';
+    obsProcedurePriority = r.priorityLevel || 'متوسط';
 
     if (!r.hasForm) {
         obsFormDef = null;
@@ -245,8 +245,7 @@ function obsCollectAnswers(opt) {
     var validateRequired = !!(opt && opt.validateRequired);
     var host = document.getElementById('obsFormHost');
     if (!obsFormDef || !host) {
-        // لا يوجد نموذج: نقبل بدون قيم
-        return { fields: [], priority: document.getElementById('obsPriority')?.value || 'متوسط', notes: (document.getElementById('obsNotes')?.value || '').trim() };
+        return { fields: [], priority: obsProcedurePriority || 'متوسط', notes: '' };
     }
 
     // 1) التحقق من سلامة الحقول (Format) عبر fdValidateInteractivePreview
@@ -292,8 +291,8 @@ function obsCollectAnswers(opt) {
 
     return {
         fields: entries,
-        priority: document.getElementById('obsPriority')?.value || 'متوسط',
-        notes: (document.getElementById('obsNotes')?.value || '').trim()
+        priority: obsProcedurePriority || 'متوسط',
+        notes: ''
     };
 }
 
@@ -418,8 +417,7 @@ function obsExtractFieldValue(host, f) {
 function obsRenderReview() {
     var host = document.getElementById('obsReviewHost');
     if (!host) return;
-    var priority = obsCollected?.priority || document.getElementById('obsPriority')?.value || 'متوسط';
-    var notes = obsCollected?.notes || (document.getElementById('obsNotes')?.value || '').trim();
+    var priority = obsCollected?.priority || obsProcedurePriority || 'متوسط';
     var procName = obsPickedData?.name || '—';
     var procCode = obsPickedData?.code || '';
     var procType = obsPickedData?.typeName || '—';
@@ -459,13 +457,6 @@ function obsRenderReview() {
         html += '<div class="obs-review-section"><div class="obs-review-section-title"><i class="bi bi-info-circle"></i>لم يتم تعبئة أي حقول</div></div>';
     } else if (!obsFormDef) {
         html += '<div class="obs-review-section"><div class="obs-review-section-title"><i class="bi bi-info-circle"></i>لا يوجد نموذج مرتبط بالإجراء</div></div>';
-    }
-
-    if (notes) {
-        html += '<div class="obs-review-section">';
-        html += '<div class="obs-review-section-title"><i class="bi bi-journal-text"></i>ملاحظات إضافية</div>';
-        html += '<div style="white-space:pre-wrap;color:var(--gray-800);font-size:13px;">' + esc(notes) + '</div>';
-        html += '</div>';
     }
 
     host.innerHTML = html;
@@ -528,7 +519,7 @@ async function obsSubmit() {
 
     var payload = {
         procedureId: obsPickedId,
-        priority: obsCollected.priority || 'متوسط',
+        priority: obsCollected.priority || obsProcedurePriority || 'متوسط',
         notes: obsCollected.notes || '',
         formDataJson: JSON.stringify({
             formId: obsFormDef ? obsFormDef.id : 0,
@@ -762,10 +753,10 @@ function opdStatusBadge(code, label, isActive) {
 
 function opdPriorityBadge(p) {
     var v = (p || '').trim();
+    if (v === 'عاجل' || v === 'عالي' || v === 'عالية') v = 'مرتفع';
     var cls = 'opd-pill opd-pill-muted';
     var ic = 'bi-dash';
-    if (v === 'عاجل')   { cls = 'opd-pill opd-pill-urgent'; ic = 'bi-exclamation-triangle-fill'; }
-    else if (v === 'عالي') { cls = 'opd-pill opd-pill-high'; ic = 'bi-arrow-up'; }
+    if (v === 'مرتفع') { cls = 'opd-pill opd-pill-high'; ic = 'bi-arrow-up'; }
     else if (v === 'متوسط') { cls = 'opd-pill opd-pill-med'; ic = 'bi-dash'; }
     else if (v === 'منخفض') { cls = 'opd-pill opd-pill-low'; ic = 'bi-arrow-down'; }
     return '<span class="' + cls + '"><i class="bi ' + ic + '"></i> ' + esc(v || '—') + '</span>';
@@ -781,9 +772,7 @@ function obsResetAndStart() {
     obsTargetOrgUnits = [];
     obsExecutors = [];
     obsFirstApprover = '';
-    var notes = document.getElementById('obsNotes'); if (notes) notes.value = '';
-    var pri = document.getElementById('obsPriority'); if (pri) pri.value = 'متوسط';
-    var pi = document.getElementById('obsPickedProc'); if (pi) pi.textContent = '—';
+    obsProcedurePriority = 'متوسط';
     var fh = document.getElementById('obsFormHost');
     if (fh) fh.innerHTML = '<div class="text-center py-4" style="color:var(--gray-500);"><i class="bi bi-info-circle" style="font-size:24px;display:block;margin-bottom:6px;color:var(--gray-300);"></i>اختر إجراءً أولاً لتحميل نموذجه</div>';
     obsStep = 1;

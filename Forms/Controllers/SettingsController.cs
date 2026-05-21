@@ -2543,6 +2543,61 @@ public class SettingsController : BaseController
     }
 
     // ─── دليل المستخدم (User Guide) ───────────────────────────────────────────
+    private static string BuildUserGuideDisplayOrder(UserGuideItem item, Dictionary<int, UserGuideItem> allById)
+    {
+        var parts = new List<int> { item.SortOrder };
+        var cur = item;
+        while (cur.ParentId.HasValue && allById.TryGetValue(cur.ParentId.Value, out var parent))
+        {
+            parts.Insert(0, parent.SortOrder);
+            cur = parent;
+        }
+        return string.Join("-", parts);
+    }
+
+    private static string BuildUserGuideParentPath(UserGuideItem? item, Dictionary<int, UserGuideItem> allById)
+    {
+        if (item?.ParentId == null) return "";
+        var names = new List<string>();
+        var curId = item.ParentId;
+        var guard = 0;
+        while (curId.HasValue && allById.TryGetValue(curId.Value, out var p) && guard++ < 64)
+        {
+            names.Insert(0, p.Name ?? "");
+            curId = p.ParentId;
+        }
+        return string.Join(" › ", names.Where(n => !string.IsNullOrWhiteSpace(n)));
+    }
+
+    private static int BuildUserGuideDepth(UserGuideItem item, Dictionary<int, UserGuideItem> allById)
+    {
+        var depth = 0;
+        var curId = item.ParentId;
+        var guard = 0;
+        while (curId.HasValue && allById.TryGetValue(curId.Value, out var p) && guard++ < 64)
+        {
+            depth++;
+            curId = p.ParentId;
+        }
+        return depth;
+    }
+
+    private static bool WouldCreateUserGuideCycle(List<UserGuideItem> all, int itemId, int? newParentId)
+    {
+        if (!newParentId.HasValue || newParentId.Value <= 0) return false;
+        if (newParentId.Value == itemId) return true;
+        var byId = all.ToDictionary(x => x.Id);
+        var cur = newParentId.Value;
+        var guard = 0;
+        while (cur > 0 && guard++ < 64)
+        {
+            if (cur == itemId) return true;
+            if (!byId.TryGetValue(cur, out var node) || !node.ParentId.HasValue) break;
+            cur = node.ParentId.Value;
+        }
+        return false;
+    }
+
     public IActionResult UserGuide()
     {
         var auth = RequireAuth(); if (auth != null) return auth;
@@ -2572,7 +2627,7 @@ public class SettingsController : BaseController
         if (!string.IsNullOrWhiteSpace(isActive))
             filtered = filtered.Where(r => r.IsActive == (isActive == "1"));
 
-        // قائمة الجذور (للـ dropdown «القائمة الرئيسية»)
+        // قائمة الجذور (للتوافق) + كل العناصر للشجرة
         var roots = all
             .Where(x => !x.ParentId.HasValue)
             .OrderBy(x => x.SortOrder)
@@ -2582,24 +2637,23 @@ public class SettingsController : BaseController
         var data = filtered.Select(r =>
         {
             string parentName = "";
-            int? parentOrder = null;
-            if (r.ParentId.HasValue && allById.TryGetValue(r.ParentId.Value, out var p))
-            {
-                parentName = p.Name;
-                parentOrder = p.SortOrder;
-            }
-            var displayOrder = r.ParentId.HasValue && parentOrder.HasValue
-                ? $"{r.SortOrder}-{parentOrder.Value}"
-                : r.SortOrder.ToString();
+            if (r.ParentId.HasValue && allById.TryGetValue(r.ParentId.Value, out var directParent))
+                parentName = directParent.Name ?? "";
+
+            var parentPath = BuildUserGuideParentPath(r, allById);
+            var displayOrder = BuildUserGuideDisplayOrder(r, allById);
+            var depth = BuildUserGuideDepth(r, allById);
             return new
             {
                 r.Id,
                 r.ParentId,
                 ParentName = parentName,
+                ParentPath = parentPath,
+                Depth = depth,
                 r.Name,
                 r.Content,
                 r.AttachmentUrl,
-                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "bi-journal-text" : r.Icon,
+                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "" : r.Icon,
                 Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
                 r.Notes,
                 r.SortOrder,
@@ -2616,7 +2670,7 @@ public class SettingsController : BaseController
         .ThenBy(x => x.SortOrder)
         .ToList();
 
-        return Json(new { success = true, data, roots });
+        return Json(new { success = true, data, roots, tree = all.Select(x => new { x.Id, x.ParentId, x.Name, x.SortOrder }).ToList() });
     }
 
     [HttpGet]
@@ -2628,12 +2682,11 @@ public class SettingsController : BaseController
         var r = await _ds.GetUserGuideItemByIdAsync(id);
         if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
 
+        var all = await _ds.ListUserGuideItemsAsync();
+        var allById = all.ToDictionary(x => x.Id);
         string parentName = "";
-        if (r.ParentId.HasValue)
-        {
-            var p = await _ds.GetUserGuideItemByIdAsync(r.ParentId.Value);
-            parentName = p?.Name ?? "";
-        }
+        if (r.ParentId.HasValue && allById.TryGetValue(r.ParentId.Value, out var p))
+            parentName = p.Name ?? "";
 
         return Json(new
         {
@@ -2643,13 +2696,15 @@ public class SettingsController : BaseController
                 r.Id,
                 r.ParentId,
                 ParentName = parentName,
+                ParentPath = BuildUserGuideParentPath(r, allById),
                 r.Name,
                 r.Content,
                 r.AttachmentUrl,
-                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "bi-journal-text" : r.Icon,
+                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "" : r.Icon,
                 Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
                 r.Notes,
                 r.SortOrder,
+                DisplayOrder = BuildUserGuideDisplayOrder(r, allById),
                 IsRoot = !r.ParentId.HasValue,
                 r.IsActive,
                 r.CreatedBy,
@@ -2667,8 +2722,8 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
-        if (string.IsNullOrWhiteSpace(req.Icon))
-            return Json(new { success = false, message = "أيقونة الصورة مطلوبة — يرجى إرفاق صورة" });
+        if (string.IsNullOrWhiteSpace(req.Content))
+            return Json(new { success = false, message = "المحتوى مطلوب" });
 
         var trimmedName = req.Name.Trim();
         if (await _ds.IsUserGuideItemNameDuplicateAsync(trimmedName))
@@ -2679,7 +2734,6 @@ public class SettingsController : BaseController
         {
             var parent = await _ds.GetUserGuideItemByIdAsync(req.ParentId.Value);
             if (parent == null) return Json(new { success = false, message = "القائمة الرئيسية المختارة غير موجودة" });
-            if (parent.ParentId.HasValue) return Json(new { success = false, message = "لا يمكن أن يكون الأب عنصراً فرعياً (المستوى الأقصى = 2)" });
             parentId = parent.Id;
         }
 
@@ -2687,9 +2741,9 @@ public class SettingsController : BaseController
         {
             ParentId = parentId,
             Name = trimmedName,
-            Content = (req.Content ?? "").Trim(),
+            Content = req.Content!.Trim(),
             AttachmentUrl = (req.AttachmentUrl ?? "").Trim(),
-            Icon = req.Icon!.Trim(),
+            Icon = (req.Icon ?? "").Trim(),
             Color = string.IsNullOrWhiteSpace(req.Color) ? "#25935F" : req.Color!.Trim(),
             Notes = (req.Notes ?? "").Trim(),
             IsActive = req.IsActive,
@@ -2711,12 +2765,14 @@ public class SettingsController : BaseController
         if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
-        if (string.IsNullOrWhiteSpace(req.Icon))
-            return Json(new { success = false, message = "أيقونة الصورة مطلوبة — يرجى إرفاق صورة" });
+        if (string.IsNullOrWhiteSpace(req.Content))
+            return Json(new { success = false, message = "المحتوى مطلوب" });
 
         var trimmedName = req.Name.Trim();
         if (await _ds.IsUserGuideItemNameDuplicateAsync(trimmedName, req.Id))
             return Json(new { success = false, message = "الاسم موجود مسبقاً" });
+
+        var all = await _ds.ListUserGuideItemsAsync();
 
         int? parentId = null;
         if (req.ParentId.HasValue && req.ParentId.Value > 0)
@@ -2725,14 +2781,14 @@ public class SettingsController : BaseController
                 return Json(new { success = false, message = "لا يمكن أن يكون العنصر أباً لنفسه" });
             var parent = await _ds.GetUserGuideItemByIdAsync(req.ParentId.Value);
             if (parent == null) return Json(new { success = false, message = "القائمة الرئيسية المختارة غير موجودة" });
-            if (parent.ParentId.HasValue) return Json(new { success = false, message = "لا يمكن أن يكون الأب عنصراً فرعياً" });
+            if (WouldCreateUserGuideCycle(all, req.Id, parent.Id))
+                return Json(new { success = false, message = "لا يمكن اختيار عنصر تابع (مباشرة أو غير مباشرة) كقائمة رئيسية" });
             parentId = parent.Id;
         }
 
         // إذا كان جذراً وله أبناء — منع تحويله لفرع
         if (r.ParentId == null && parentId.HasValue)
         {
-            var all = await _ds.ListUserGuideItemsAsync();
             if (all.Any(x => x.ParentId == r.Id))
                 return Json(new { success = false, message = "لا يمكن تحويل قائمة جذر لها أبناء إلى عنصر فرعي" });
         }
@@ -2741,9 +2797,9 @@ public class SettingsController : BaseController
         var parentChanged = r.ParentId != parentId;
         r.ParentId = parentId;
         r.Name = trimmedName;
-        r.Content = (req.Content ?? "").Trim();
+        r.Content = req.Content!.Trim();
         r.AttachmentUrl = (req.AttachmentUrl ?? "").Trim();
-        r.Icon = req.Icon!.Trim();
+        r.Icon = (req.Icon ?? "").Trim();
         if (!string.IsNullOrWhiteSpace(req.Color)) r.Color = req.Color!.Trim();
         r.Notes = (req.Notes ?? "").Trim();
         r.IsActive = req.IsActive;

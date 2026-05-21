@@ -22,7 +22,7 @@ public class OutboxRequest
     /// <summary>FormStatusId المرتبط بالخطوة الحالية — يحدد «الحالة/المرحلة» وتصنيفها (مفتوح/مغلق).</summary>
     public int? CurrentFormStatusId { get; set; }
 
-    /// <summary>الأولوية: عاجل | عالي | متوسط | منخفض</summary>
+    /// <summary>الأولوية: منخفض | متوسط | مرتفع (من مستوى الأولوية في إجراء العمل)</summary>
     public string Priority { get; set; } = "متوسط";
 
     /// <summary>تصنيف الحالة المُحسوب: مفتوح | مغلق</summary>

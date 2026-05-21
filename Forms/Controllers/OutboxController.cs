@@ -79,7 +79,7 @@ public class OutboxController : BaseController
                 ProcedureTypeName = type?.Name ?? "",
                 ProcedureTypeIcon = type?.Icon ?? "",
                 ProcedureTypeColor = type?.Color ?? "#25935F",
-                r.Priority,
+                Priority = NormalizePriority(r.Priority),
                 r.StatusCategory,
                 CurrentStageName = fs?.Name ?? "",
                 CurrentStageColor = fs?.Color ?? "#9DA4AE",
@@ -146,7 +146,7 @@ public class OutboxController : BaseController
                 ProcedureTypeName = type?.Name ?? "",
                 ProcedureTypeIcon = type?.Icon ?? "",
                 ProcedureTypeColor = type?.Color ?? "#25935F",
-                r.Priority,
+                Priority = NormalizePriority(r.Priority),
                 r.StatusCategory,
                 CurrentStageId = r.CurrentFormStatusId,
                 CurrentStageName = fs?.Name ?? "",
@@ -299,6 +299,7 @@ public class OutboxController : BaseController
                 {
                     p.Id, p.Name, p.Code
                 },
+                priorityLevel = NormalizePriority(p.ConfidentialityLevel),
                 targetOrgUnits,
                 executors,
                 firstApprover = firstApproverNames.FirstOrDefault() ?? ""
@@ -348,6 +349,7 @@ public class OutboxController : BaseController
             success = true,
             hasForm = true,
             procedure = new { p.Id, p.Name, p.Code },
+            priorityLevel = NormalizePriority(p.ConfidentialityLevel),
             form = new
             {
                 fd.Id, fd.Name, fd.Description, fd.FieldsJson, fd.TemplateId
@@ -419,7 +421,7 @@ public class OutboxController : BaseController
         if (proc == null || !proc.IsActive || proc.Status != "approved")
             return Json(new { success = false, message = "الإجراء غير متاح" });
 
-        var priority = NormalizePriority(req.Priority);
+        var priority = NormalizePriority(proc.ConfidentialityLevel);
 
         var steps = ParseWorkflowSteps(proc);
         var first = steps.OrderBy(s => s.SortOrder).FirstOrDefault();
@@ -877,8 +879,7 @@ public class OutboxController : BaseController
         var v = (p ?? "").Trim();
         return v switch
         {
-            "عاجل" => "عاجل",
-            "عالي" or "عالية" => "عالي",
+            "مرتفع" or "عالي" or "عالية" or "عاجل" => "مرتفع",
             "منخفض" or "منخفضة" => "منخفض",
             _ => "متوسط"
         };

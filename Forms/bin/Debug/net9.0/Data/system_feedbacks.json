@@ -1,0 +1,17 @@
+[
+  {
+    "Id": 1,
+    "UserId": 1,
+    "SubmitterName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "OrganizationalUnitId": 3,
+    "OrganizationalUnitName": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "OverallRating": "\u0645\u062A\u0648\u0633\u0637",
+    "EaseOfUse": "\u0645\u062A\u0648\u0633\u0637",
+    "Design": "\u0645\u062A\u0648\u0633\u0637",
+    "Performance": "\u0645\u062A\u0648\u0633\u0637",
+    "TechnicalSupport": "\u0645\u062A\u0648\u0633\u0637",
+    "Notes": "",
+    "IsPublished": true,
+    "CreatedAt": "2026-05-21T10:33:55.465411Z"
+  }
+]
