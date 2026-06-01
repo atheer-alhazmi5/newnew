@@ -1,0 +1,231 @@
+@{
+    ViewBag.Title = "الملاحظات";
+    ViewBag.PageName = "الملاحظات";
+}
+
+<style>
+.nt-page-header-card {
+    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    padding:20px 24px; margin-bottom:24px; box-shadow:var(--shadow);
+}
+.nt-page-header {
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;
+    width:100%; margin-bottom:0;
+}
+.nt-title-block { flex:1; min-width:200px; text-align:right; }
+.nt-page-sub { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
+.nt-header-actions {
+    display:flex; gap:10px; flex-wrap:wrap; flex-shrink:0;
+}
+.nt-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.nt-archive-btn { border-radius:12px; padding:10px 24px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:#fff; border:2px solid var(--gray-300); color:var(--gray-700); cursor:pointer; font-family:'Cairo',sans-serif; transition:all .15s; }
+.nt-archive-btn:hover { background:var(--gray-50); border-color:var(--gray-400); }
+.nt-archive-btn.is-active { background:var(--sa-50); border-color:var(--sa-400); color:var(--sa-800); }
+.nt-search-box { position:relative; flex:1 1 260px; max-width:400px; }
+.nt-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
+.nt-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
+.nt-search-box .nt-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--gray-400); pointer-events:none; }
+.nt-clear-btn { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--gray-100); color:var(--gray-700); border:2px solid var(--gray-200); cursor:pointer; font-family:'Cairo',sans-serif; height:44px; }
+.nt-clear-btn:hover { background:var(--gray-200); }
+.nt-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; direction:rtl; }
+.nt-card {
+    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    padding:16px 18px; display:flex; flex-direction:column; gap:10px;
+    box-shadow:var(--shadow); transition:box-shadow .15s, transform .15s;
+    position:relative; min-height:180px;
+}
+.nt-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
+.nt-card.is-pinned { border-width:2px; }
+.nt-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.nt-card-title { font-weight:800; font-size:15px; color:var(--gray-900); flex:1; min-width:0; word-break:break-word; }
+.nt-pin-btn {
+    width:32px; height:32px; border-radius:8px; border:2px solid var(--gray-200);
+    background:#fff; color:var(--gray-400); cursor:pointer; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center; font-size:15px; transition:all .15s;
+}
+.nt-pin-btn:hover { border-color:var(--gold-600); color:var(--gold-600); background:var(--gold-50,#fffbeb); }
+.nt-pin-btn.is-pinned { border-color:var(--gold-600); color:var(--gold-700); background:#fef3c7; }
+.nt-importance-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; align-self:flex-start; }
+.nt-importance-high { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+.nt-importance-med { background:#fef9c3; color:#b45309; border:1px solid #fde047; }
+.nt-importance-low { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
+.nt-card-dates { font-size:12px; color:var(--gray-500); display:flex; flex-direction:column; gap:3px; margin-top:auto; }
+.nt-card-dates span { display:flex; align-items:center; gap:5px; }
+.nt-card-actions { display:flex; gap:6px; flex-wrap:wrap; padding-top:10px; border-top:1px dashed var(--gray-200); margin-top:4px; }
+.nt-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.nt-act-detail { border-color:var(--info-500); color:var(--info-500); }
+.nt-act-detail:hover { background:var(--info-50); }
+.nt-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
+.nt-act-edit:hover { background:var(--sa-50); }
+.nt-act-archive { border-color:var(--gray-500); color:var(--gray-600); }
+.nt-act-archive:hover { background:var(--gray-50); }
+.nt-empty { text-align:center; padding:48px 20px; color:var(--gray-500); grid-column:1/-1; }
+.nt-empty i { font-size:48px; color:var(--gray-300); display:block; margin-bottom:10px; }
+/* Modal */
+.nt-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.nt-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
+.nt-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.nt-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.nt-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
+.nt-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.nt-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; justify-content:flex-start; background:var(--gray-50); }
+.nt-modal-body .form-control, .nt-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; }
+.nt-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
+.nt-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; display:inline-flex; align-items:center; gap:8px; }
+.nt-save-btn:hover { background:var(--sa-700); }
+.nt-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.nt-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; }
+.nt-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
+.nt-editor-toolbar { display:flex; flex-wrap:wrap; gap:4px; padding:8px 10px; background:var(--gray-50); border:2px solid var(--gray-200); border-bottom:none; border-radius:10px 10px 0 0; }
+.nt-editor-toolbar button { width:34px; height:34px; border:1px solid var(--gray-200); border-radius:8px; background:#fff; color:var(--gray-700); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:14px; transition:all .15s; }
+.nt-editor-toolbar button:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
+.nt-editor {
+    min-height:140px; max-height:240px; overflow-y:auto; padding:12px 14px;
+    border:2px solid var(--gray-200); border-radius:0 0 10px 10px;
+    font-size:14px; line-height:1.75; background:#fff;
+}
+.nt-editor:focus { outline:none; border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
+.nt-detail-content { padding:14px 16px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:12px; font-size:14px; line-height:1.85; max-height:320px; overflow-y:auto; }
+.required-star { color:#ef4444; margin-right:4px; }
+</style>
+
+<div class="nt-page-header-card">
+    <div class="nt-page-header">
+        <div class="nt-title-block">
+            <h2 class="page-title mb-0">الملاحظات</h2>
+            <p class="nt-page-sub" id="ntPageSub">إدارة إجراءات عمل المنظمة</p>
+        </div>
+        <div class="nt-header-actions">
+            <button type="button" class="nt-archive-btn" id="ntBtnArchive" onclick="ntToggleArchiveView()">
+                <i class="bi bi-archive"></i> أرشيف
+            </button>
+            <button type="button" class="btn btn-primary nt-add-btn" id="ntBtnAdd" onclick="ntShowAddModal()">
+                <i class="bi bi-plus-lg"></i> إضافة ملاحظة
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="nt-search-box">
+        <i class="bi bi-search nt-search-icon"></i>
+        <input type="text" class="form-control" id="ntSearch" placeholder="ابحث في عنوان الملاحظة" oninput="ntApplyFilters()">
+    </div>
+    <select class="rt-filter-select form-select" id="ntFilterImportance" onchange="ntApplyFilters()" style="max-width:180px;height:44px;" aria-label="درجة الأهمية">
+        <option value="">الكل</option>
+        <option value="عالية">عالية</option>
+        <option value="متوسطة">متوسطة</option>
+        <option value="منخفضة">منخفضة</option>
+    </select>
+    <select class="rt-filter-select form-select" id="ntFilterStatus" onchange="ntApplyFilters()" style="max-width:160px;height:44px;" aria-label="الحالة">
+        <option value="active">نشطة</option>
+        <option value="archived">مؤرشفة</option>
+        <option value="">الكل</option>
+    </select>
+    <button type="button" class="nt-clear-btn" onclick="ntClearFilters()"><i class="bi bi-arrow-counterclockwise"></i> إعادة تعيين</button>
+</div>
+
+<div class="nt-cards-grid" id="ntCardsHost">
+    <div class="nt-empty"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+</div>
+
+<!-- إضافة / تعديل -->
+<div class="modal fade" id="ntFormModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content nt-modal">
+            <div class="nt-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="nt-modal-title" id="ntFormTitle">إضافة ملاحظة جديدة</h5>
+                <div class="nt-modal-subtitle">أدخل بيانات الملاحظة ثم احفظ</div>
+            </div>
+            <div class="nt-modal-body">
+                <div class="mb-3">
+                    <label class="form-label">عنوان الملاحظة <span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="ntTitle" maxlength="200" placeholder="مثال: تنبيه">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">نص الملاحظة</label>
+                    <div class="nt-editor-toolbar">
+                        <button type="button" title="عريض" onclick="ntEditorCmd('bold')"><i class="bi bi-type-bold"></i></button>
+                        <button type="button" title="مائل" onclick="ntEditorCmd('italic')"><i class="bi bi-type-italic"></i></button>
+                        <button type="button" title="تسطير" onclick="ntEditorCmd('underline')"><i class="bi bi-type-underline"></i></button>
+                        <button type="button" title="قائمة نقطية" onclick="ntEditorCmd('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
+                        <button type="button" title="قائمة مرقمة" onclick="ntEditorCmd('insertOrderedList')"><i class="bi bi-list-ol"></i></button>
+                        <button type="button" title="رابط" onclick="ntEditorLink()"><i class="bi bi-link-45deg"></i></button>
+                    </div>
+                    <div class="nt-editor" id="ntEditor" contenteditable="true" dir="rtl"></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">درجة الأهمية <span class="required-star">*</span></label>
+                        <select class="form-select" id="ntImportance" onchange="ntOnImportanceChange()">
+                            <option value="عالية">عالية</option>
+                            <option value="متوسطة" selected>متوسطة</option>
+                            <option value="منخفضة">منخفضة</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">اللون</label>
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="nt-color-picker-wrap">
+                                <input type="color" id="ntColor" value="#fef9c3" oninput="ntOnColorInput()">
+                            </div>
+                            <span class="nt-color-hex" id="ntColorHex">#fef9c3</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" id="ntPinCheck">
+                    <label class="form-check-label" for="ntPinCheck" style="font-weight:700;font-size:13px;">تثبيت الملاحظة (تظهر أولاً)</label>
+                </div>
+            </div>
+            <div class="nt-modal-footer">
+                <button type="button" class="nt-save-btn" onclick="ntSaveNote()"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button type="button" class="nt-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- تفاصيل -->
+<div class="modal fade" id="ntDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content nt-modal">
+            <div class="nt-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="nt-modal-title" id="ntDetailTitle">—</h5>
+                <div class="nt-modal-subtitle" id="ntDetailMeta">—</div>
+            </div>
+            <div class="nt-modal-body">
+                <div class="nt-detail-content" id="ntDetailContent"></div>
+            </div>
+            <div class="nt-modal-footer">
+                <button type="button" class="nt-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- حذف -->
+<div class="modal fade" id="ntDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content nt-modal">
+            <div class="nt-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="nt-modal-title">حذف الملاحظة</h5>
+            </div>
+            <div class="nt-modal-body">
+                <p style="margin:0;color:var(--gray-700);font-size:14px;">هل أنت متأكد من حذف الملاحظة «<strong id="ntDeleteName">—</strong>»؟ لا يمكن التراجع.</p>
+            </div>
+            <div class="nt-modal-footer">
+                <button type="button" class="nt-save-btn" style="background:var(--error-600);" onclick="ntConfirmDelete()"><i class="bi bi-trash"></i> حذف</button>
+                <button type="button" class="nt-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/notes.js?v=@DateTime.Now.Ticks"></script>
+<script>ntInit();</script>
+}

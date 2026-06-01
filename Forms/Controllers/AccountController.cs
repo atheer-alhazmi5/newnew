@@ -349,10 +349,5 @@ public class AccountController : BaseController
         };
     }
 
-    private IActionResult RedirectAfterLogin(string role) => role switch
-    {
-        "Manager" => RedirectToAction("Index", "Dashboard"),
-        "Staff" => RedirectToAction("Index", "Inbox"),
-        _ => RedirectToAction("Index", "Forms")
-    };
+    private IActionResult RedirectAfterLogin(string role) => RedirectToAction("Index", "Dashboard");
 }

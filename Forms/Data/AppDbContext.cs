@@ -72,6 +72,8 @@ public class AppDbContext
     public List<OutboxAssignment> OutboxAssignments => Load<OutboxAssignment>("outbox_assignments");
     public List<UserGuideItem> UserGuideItems => Load<UserGuideItem>("user_guide_items");
     public List<SystemFeedback> SystemFeedbacks => Load<SystemFeedback>("system_feedbacks");
+    public List<UserNote> UserNotes => Load<UserNote>("user_notes");
+    public List<SupportTicket> SupportTickets => Load<SupportTicket>("support_tickets");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -108,6 +110,8 @@ public class AppDbContext
     public void SaveOutboxAssignments(List<OutboxAssignment> d) => Save("outbox_assignments", d);
     public void SaveUserGuideItems(List<UserGuideItem> d) => Save("user_guide_items", d);
     public void SaveSystemFeedbacks(List<SystemFeedback> d) => Save("system_feedbacks", d);
+    public void SaveUserNotes(List<UserNote> d) => Save("user_notes", d);
+    public void SaveSupportTickets(List<SupportTicket> d) => Save("support_tickets", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

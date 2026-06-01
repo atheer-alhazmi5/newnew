@@ -1349,6 +1349,62 @@ public class DataService
             b.Username.Equals(username, StringComparison.OrdinalIgnoreCase)
             && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
+    /// <summary>
+    /// Resolves the beneficiary linked to a system user without matching by national ID alone.
+    /// </summary>
+    public Task<Beneficiary?> ResolveBeneficiaryForUserAsync(User user)
+    {
+        if (user == null) return Task.FromResult<Beneficiary?>(null);
+
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            var byUsername = _db.Beneficiaries.FirstOrDefault(b =>
+                b.Username.Equals(user.Username.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (byUsername != null) return Task.FromResult<Beneficiary?>(byUsername);
+        }
+
+        if (string.IsNullOrWhiteSpace(user.NationalId))
+            return Task.FromResult<Beneficiary?>(null);
+
+        var nid = user.NationalId.Trim();
+        var matches = _db.Beneficiaries
+            .Where(b => b.NationalId != null && b.NationalId.Trim() == nid)
+            .ToList();
+
+        if (matches.Count == 0)
+            return Task.FromResult<Beneficiary?>(null);
+
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            var username = user.Username.Trim();
+            var byUserUsername = matches.FirstOrDefault(b =>
+                !string.IsNullOrWhiteSpace(b.Username) &&
+                b.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (byUserUsername != null) return Task.FromResult<Beneficiary?>(byUserUsername);
+        }
+
+        if (matches.Count == 1)
+        {
+            var only = matches[0];
+            if (NamesLikelySame(only.FullName, user.FullName))
+                return Task.FromResult<Beneficiary?>(only);
+        }
+        else
+        {
+            var byName = matches.FirstOrDefault(b => NamesLikelySame(b.FullName, user.FullName));
+            if (byName != null) return Task.FromResult<Beneficiary?>(byName);
+        }
+
+        return Task.FromResult<Beneficiary?>(null);
+    }
+
+    private static bool NamesLikelySame(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+        static string Norm(string s) => new string(s.Where(c => !char.IsWhiteSpace(c)).ToArray());
+        return string.Equals(Norm(a), Norm(b), StringComparison.OrdinalIgnoreCase);
+    }
+
     public Task<bool> HasManagerInUnitAsync(int organizationalUnitId, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.Any(b =>
             b.OrganizationalUnitId == organizationalUnitId
@@ -1703,6 +1759,70 @@ public class DataService
         var approved = _db.SentForms.Count(s => s.SenderId == userId && s.Status == "published");
         return Task.FromResult((approved, sent, pending, inbox));
     }
+
+    public async Task<(int inbox, int outbox, int notifications, int delegations)> GetDashboardSummaryCountsAsync(int userId, string? username)
+    {
+        var formInbox = _db.ReceivedForms.Count(r => r.RecipientId == userId);
+        var assignInbox = _db.OutboxAssignments.Count(a => a.RecipientUserId == userId);
+        var inbox = formInbox + assignInbox;
+
+        var outbox = _db.OutboxRequests.Count(r => r.SubmittedById == userId);
+
+        var notifications = _db.Notifications.Count(n => n.RecipientId == userId);
+
+        var delegations = 0;
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var me = await GetBeneficiaryByUsernameAsync(username.Trim(), null);
+            if (me != null)
+                delegations = _db.Delegations.Count(d =>
+                    d.DelegatorBeneficiaryId == me.Id || d.DelegateeBeneficiaryId == me.Id);
+        }
+
+        return (inbox, outbox, notifications, delegations);
+    }
+
+    public Task<List<(string label, int count)>> GetDashboardRequestStatusStatsAsync(int userId)
+    {
+        var requests = _db.OutboxRequests.Where(r => r.SubmittedById == userId).ToList();
+        if (requests.Count == 0)
+        {
+            return Task.FromResult(new List<(string, int)>
+            {
+                ("مفتوح", 0),
+                ("مغلق", 0)
+            });
+        }
+
+        var statuses = _db.FormStatuses.ToDictionary(s => s.Id);
+        var groups = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var r in requests)
+        {
+            string label;
+            if (r.CurrentFormStatusId.HasValue && statuses.TryGetValue(r.CurrentFormStatusId.Value, out var fs)
+                && !string.IsNullOrWhiteSpace(fs.Name))
+                label = fs.Name.Trim();
+            else if (!string.IsNullOrWhiteSpace(r.StatusCategory))
+                label = r.StatusCategory.Trim();
+            else
+                label = "غير محدد";
+
+            groups[label] = groups.TryGetValue(label, out var c) ? c + 1 : 1;
+        }
+
+        return Task.FromResult(groups.OrderByDescending(x => x.Value).Select(x => (x.Key, x.Value)).ToList());
+    }
+
+    public Task<List<AuditLog>> ListAuditLogsByUserIdAsync(int userId)
+        => Task.FromResult(_db.AuditLogs.Where(a => a.UserId == userId).OrderByDescending(a => a.CreatedAt).ToList());
+
+    public Task<List<ExecutorRole>> ListExecutorRolesForBeneficiaryAsync(int beneficiaryId)
+        => Task.FromResult(_db.ExecutorRoles
+            .Where(r => r.IsActive && IdListCsvContainsId(r.ExecutorIds, beneficiaryId))
+            .OrderBy(r => r.SortOrder)
+            .ThenBy(r => r.Name)
+            .ToList());
 
     // ─── EXECUTOR ROLES ──────────────────────────────────────────────────────
     public Task<List<ExecutorRole>> ListExecutorRolesAsync()
@@ -2215,6 +2335,161 @@ public class DataService
         list[idx].IsPublished = !list[idx].IsPublished;
         _db.SaveSystemFeedbacks(list);
         return Task.FromResult(true);
+    }
+
+    // ─── USER NOTES (الملاحظات) ───────────────────────────────────────────────
+    public static readonly string[] UserNoteImportanceLevels = { "عالية", "متوسطة", "منخفضة" };
+
+    public static string NormalizeNoteImportance(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return UserNoteImportanceLevels.Contains(v) ? v : "متوسطة";
+    }
+
+    public static string DefaultNoteColor(string importance) => importance switch
+    {
+        "عالية" => "#fee2e2",
+        "منخفضة" => "#d1fae5",
+        _ => "#fef9c3"
+    };
+
+    public Task<List<UserNote>> ListUserNotesByUserAsync(int userId)
+        => Task.FromResult(_db.UserNotes.Where(x => x.UserId == userId).ToList());
+
+    public Task<UserNote?> GetUserNoteByIdAsync(int id)
+        => Task.FromResult(_db.UserNotes.FirstOrDefault(x => x.Id == id));
+
+    public Task<UserNote> AddUserNoteAsync(UserNote note)
+    {
+        var list = _db.UserNotes;
+        note.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (note.CreatedAt == default) note.CreatedAt = DateTime.UtcNow;
+        list.Add(note);
+        _db.SaveUserNotes(list);
+        return Task.FromResult(note);
+    }
+
+    public Task<bool> UpdateUserNoteAsync(UserNote note)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == note.Id);
+        if (idx < 0) return Task.FromResult(false);
+        note.UpdatedAt = DateTime.UtcNow;
+        list[idx] = note;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteUserNoteAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var n = list.FirstOrDefault(x => x.Id == id);
+        if (n == null) return Task.FromResult(false);
+        list.Remove(n);
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleUserNotePinAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsPinned = !list[idx].IsPinned;
+        list[idx].UpdatedAt = DateTime.UtcNow;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleUserNoteArchiveAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsArchived = !list[idx].IsArchived;
+        list[idx].UpdatedAt = DateTime.UtcNow;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── SUPPORT TICKETS (الدعم الفني) ────────────────────────────────────────
+    public static readonly string[] SupportCategories =
+        { "استفسار", "شكوى", "ملاحظة", "اقتراح", "دعم فني", "طلب تفويض" };
+
+    public static readonly string[] SupportImportanceLevels = { "عالية", "متوسطة", "منخفضة" };
+
+    public static readonly string[] SupportStatusValues = { "مفتوح", "مغلق" };
+
+    public static string NormalizeSupportCategory(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportCategories.Contains(v) ? v : "";
+    }
+
+    public static string NormalizeSupportImportance(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportImportanceLevels.Contains(v) ? v : "متوسطة";
+    }
+
+    public static string NormalizeSupportStatus(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportStatusValues.Contains(v) ? v : "مفتوح";
+    }
+
+    public Task<List<SupportTicket>> ListSupportTicketsAsync()
+        => Task.FromResult(_db.SupportTickets.OrderByDescending(x => x.CreatedAt).ToList());
+
+    public Task<SupportTicket?> GetSupportTicketByIdAsync(int id)
+        => Task.FromResult(_db.SupportTickets.FirstOrDefault(x => x.Id == id));
+
+    public Task<SupportTicket> AddSupportTicketAsync(SupportTicket ticket)
+    {
+        var list = _db.SupportTickets;
+        ticket.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (ticket.CreatedAt == default) ticket.CreatedAt = DateTime.UtcNow;
+        list.Add(ticket);
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(ticket);
+    }
+
+    public Task<bool> UpdateSupportTicketAsync(SupportTicket ticket)
+    {
+        var list = _db.SupportTickets;
+        var idx = list.FindIndex(x => x.Id == ticket.Id);
+        if (idx < 0) return Task.FromResult(false);
+        ticket.UpdatedAt = DateTime.UtcNow;
+        list[idx] = ticket;
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteSupportTicketAsync(int id)
+    {
+        var list = _db.SupportTickets;
+        var t = list.FirstOrDefault(x => x.Id == id);
+        if (t == null) return Task.FromResult(false);
+        list.Remove(t);
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<string> GenerateSupportTicketNumberAsync(DateTime? at = null)
+    {
+        var dt = (at ?? DateTime.Now).Date;
+        var prefix = $"SUP-{dt:yyyy-MM-dd}-";
+        var todays = _db.SupportTickets
+            .Where(x => x.RequestNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.RequestNumber)
+            .ToList();
+        var maxSeq = 0;
+        foreach (var num in todays)
+        {
+            var part = num.Length > prefix.Length ? num[prefix.Length..] : "";
+            if (int.TryParse(part, out var seq) && seq > maxSeq) maxSeq = seq;
+        }
+        return Task.FromResult($"{prefix}{maxSeq + 1}");
     }
 }
 

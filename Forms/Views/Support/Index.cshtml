@@ -1,0 +1,257 @@
+@{
+    ViewBag.Title = "الدعم الفني";
+    ViewBag.PageName = "الدعم الفني";
+    var isAdmin = ViewBag.IsAdmin == true;
+}
+
+<style>
+.sp-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+.sp-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
+.sp-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.sp-table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding:12px 14px; }
+.sp-table tbody td { vertical-align:middle; font-size:13px; padding:12px 14px; text-align:center; }
+.sp-table tbody tr:hover { background:var(--sa-25); }
+.sp-req-num { color:var(--info-600); font-weight:700; direction:ltr; }
+.sp-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+.sp-cat-inquiry { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+.sp-cat-complaint { background:#7f1d1d; color:#fff; border:1px solid #991b1b; }
+.sp-cat-note { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+.sp-cat-suggestion { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
+.sp-cat-support { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
+.sp-cat-delegation { background:#1e3a8a; color:#fff; border:1px solid #1e40af; }
+.sp-imp-high { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+.sp-imp-med { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
+.sp-imp-low { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
+.sp-st-open { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
+.sp-st-closed { background:var(--error-100); color:var(--error-700); border:1px solid var(--error-200); }
+.sp-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.sp-act-detail { border-color:var(--info-500); color:var(--info-500); }
+.sp-act-detail:hover { background:var(--info-50); }
+.sp-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
+.sp-act-edit:hover { background:var(--sa-50); }
+.sp-act-del { border-color:var(--error-500); color:var(--error-500); }
+.sp-act-del:hover { background:var(--error-50); }
+.sp-empty { text-align:center; padding:48px 16px; color:var(--gray-400); }
+.sp-empty i { font-size:48px; display:block; margin-bottom:10px; color:var(--gray-300); }
+.sp-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.sp-modal-header { padding:24px 28px; position:relative; background:var(--sa-800); }
+.sp-modal-header.details { background:var(--info-700); }
+.sp-modal-header.danger { background:var(--error-600); }
+.sp-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.sp-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.sp-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
+.sp-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
+.sp-modal-footer { padding:20px 28px; display:flex; gap:12px; background:var(--gray-50); border-top:1px solid var(--gray-200); }
+.sp-modal-body .form-control, .sp-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; }
+.sp-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
+.sp-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; display:inline-flex; align-items:center; gap:8px; }
+.sp-save-btn:hover { background:var(--sa-700); }
+.sp-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.sp-detail-grid { display:grid; grid-template-columns:160px 1fr; gap:10px 16px; font-size:13px; }
+.sp-detail-grid .lbl { font-weight:700; color:var(--gray-500); }
+.sp-detail-grid .val { color:var(--gray-800); font-weight:500; word-break:break-word; }
+.sp-detail-content { padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; white-space:pre-wrap; line-height:1.8; max-height:200px; overflow-y:auto; }
+.sp-attach-list { display:flex; flex-direction:column; gap:6px; }
+.sp-attach-item { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:var(--info-50); border:1px solid var(--info-100); border-radius:8px; font-size:12.5px; font-weight:700; color:var(--info-700); text-decoration:none; }
+.sp-attach-item:hover { background:var(--info-100); }
+.sp-attach-upload { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:10px; border:2px dashed var(--gray-300); background:var(--gray-50); cursor:pointer; font-weight:700; font-size:13px; color:var(--gray-600); }
+.sp-attach-upload:hover { border-color:var(--sa-400); color:var(--sa-700); background:var(--sa-25); }
+.sp-attach-pending { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.sp-attach-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--gray-100); border:1px solid var(--gray-200); font-size:12px; font-weight:700; }
+.sp-attach-chip button { border:none; background:none; color:var(--error-500); cursor:pointer; padding:0; line-height:1; }
+.required-star { color:#ef4444; margin-right:4px; }
+.sp-date-input { height:44px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; padding:8px 12px; font-family:'Cairo',sans-serif; }
+@@media (max-width:768px) { .sp-detail-grid { grid-template-columns:1fr; } }
+</style>
+
+<div class="sp-page-header">
+    <div>
+        <h2 class="page-title mb-0">الدعم الفني</h2>
+        <p class="sp-subtitle">إدارة ومتابعة طلبات المستفيدين في النظام</p>
+    </div>
+    <button type="button" class="btn btn-primary sp-add-btn" onclick="spShowCreateModal()">
+        <i class="bi bi-plus-lg"></i> تقديم طلب
+    </button>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="rt-search-box flex-grow-1" style="max-width:360px;position:relative;">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="spSearch" placeholder="بحث برقم الطلب أو مقدم الطلب أو الموضوع..." oninput="spApplyFilters()" style="padding-right:42px;border-radius:12px;border:2px solid var(--gray-200);height:44px;">
+    </div>
+    @if (isAdmin)
+    {
+        <select class="rt-filter-select form-select" id="spFilterOrgUnit" onchange="spApplyFilters()" style="max-width:200px;height:44px;">
+            <option value="">الوحدة التنظيمية</option>
+        </select>
+    }
+    <select class="rt-filter-select form-select" id="spFilterCategory" onchange="spApplyFilters()" style="max-width:160px;height:44px;">
+        <option value="">التصنيف</option>
+        <option value="استفسار">استفسار</option>
+        <option value="شكوى">شكوى</option>
+        <option value="ملاحظة">ملاحظة</option>
+        <option value="اقتراح">اقتراح</option>
+        <option value="دعم فني">دعم فني</option>
+        <option value="طلب تفويض">طلب تفويض</option>
+    </select>
+    <select class="rt-filter-select form-select" id="spFilterImportance" onchange="spApplyFilters()" style="max-width:150px;height:44px;">
+        <option value="">درجة الأهمية</option>
+        <option value="عالية">عالية</option>
+        <option value="متوسطة">متوسطة</option>
+        <option value="منخفضة">منخفضة</option>
+    </select>
+    <input type="date" class="sp-date-input" id="spFilterDateFrom" onchange="spApplyFilters()" aria-label="من تاريخ">
+    <input type="date" class="sp-date-input" id="spFilterDateTo" onchange="spApplyFilters()" aria-label="إلى تاريخ">
+    <select class="rt-filter-select form-select" id="spFilterStatus" onchange="spApplyFilters()" style="max-width:130px;height:44px;">
+        <option value="">الحالة</option>
+        <option value="مفتوح">مفتوح</option>
+        <option value="مغلق">مغلق</option>
+    </select>
+    <button type="button" class="rt-clear-btn" onclick="spClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 sp-table" id="spTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">ت</th>
+                        <th>رقم الطلب</th>
+                        @if (isAdmin)
+                        {
+                            <th>مقدم الطلب</th>
+                            <th>الوحدة التنظيمية</th>
+                        }
+                        <th>تاريخ الطلب</th>
+                        <th>الموضوع</th>
+                        <th>التصنيف</th>
+                        <th>درجة الأهمية</th>
+                        <th>الحالة</th>
+                        <th style="min-width:200px;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="spBody">
+                    <tr><td colspan="@(isAdmin ? 10 : 8)" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- تقديم طلب -->
+<div class="modal fade" id="spCreateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content sp-modal">
+            <div class="sp-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="sp-modal-title">تقديم طلب جديد</h5>
+                <div class="sp-modal-subtitle">أدخل بيانات الطلب ثم احفظ</div>
+            </div>
+            <div class="sp-modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">التصنيف <span class="required-star">*</span></label>
+                        <select class="form-select" id="spCreateCategory">
+                            <option value="">— اختر —</option>
+                            <option value="استفسار">استفسار</option>
+                            <option value="شكوى">شكوى</option>
+                            <option value="ملاحظة">ملاحظة</option>
+                            <option value="اقتراح">اقتراح</option>
+                            <option value="دعم فني">دعم فني</option>
+                            <option value="طلب تفويض">طلب تفويض</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">درجة الأهمية <span class="required-star">*</span></label>
+                        <select class="form-select" id="spCreateImportance">
+                            <option value="عالية">عالية</option>
+                            <option value="متوسطة" selected>متوسطة</option>
+                            <option value="منخفضة">منخفضة</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">الموضوع <span class="required-star">*</span></label>
+                    <input type="text" class="form-control" id="spCreateSubject" maxlength="300" placeholder="موضوع الطلب">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">المحتوى <span class="required-star">*</span></label>
+                    <textarea class="form-control" id="spCreateContent" rows="5" placeholder="اشرح طلبك بالتفصيل..."></textarea>
+                </div>
+                <div class="mb-0">
+                    <label class="form-label">المرفقات</label>
+                    <label class="sp-attach-upload mb-0">
+                        <i class="bi bi-paperclip"></i> إضافة مرفق
+                        <input type="file" id="spCreateFile" style="display:none;" onchange="spHandleUpload(this, 'create')">
+                    </label>
+                    <div class="sp-attach-pending" id="spCreateAttachments"></div>
+                </div>
+            </div>
+            <div class="sp-modal-footer">
+                <button type="button" class="sp-save-btn" onclick="spSubmitCreate()"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button type="button" class="sp-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- تحديث (مدير) -->
+<div class="modal fade" id="spUpdateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content sp-modal">
+            <div class="sp-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="sp-modal-title">تحديث الطلب</h5>
+                <div class="sp-modal-subtitle" id="spUpdateSub">—</div>
+            </div>
+            <div class="sp-modal-body" id="spUpdateBody"></div>
+            <div class="sp-modal-footer">
+                <button type="button" class="sp-save-btn" onclick="spSubmitUpdate()"><i class="bi bi-check-lg"></i> حفظ</button>
+                <button type="button" class="sp-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- تفاصيل -->
+<div class="modal fade" id="spDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content sp-modal">
+            <div class="sp-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="sp-modal-title">تفاصيل الطلب</h5>
+                <div class="sp-modal-subtitle" id="spDetailSub">—</div>
+            </div>
+            <div class="sp-modal-body" id="spDetailBody"></div>
+            <div class="sp-modal-footer">
+                <button type="button" class="sp-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- حذف -->
+<div class="modal fade" id="spDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sp-modal">
+            <div class="sp-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="sp-modal-title">حذف الطلب</h5>
+            </div>
+            <div class="sp-modal-body">
+                <p style="margin:0;color:var(--gray-700);">هل أنت متأكد من حذف الطلب «<strong id="spDeleteName">—</strong>»؟</p>
+            </div>
+            <div class="sp-modal-footer">
+                <button type="button" class="sp-save-btn" style="background:var(--error-600);" onclick="spConfirmDelete()"><i class="bi bi-trash"></i> حذف</button>
+                <button type="button" class="sp-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>window.spIsAdmin = @(isAdmin ? "true" : "false");</script>
+<script src="~/js/support.js?v=@DateTime.Now.Ticks"></script>
+<script>spInit();</script>
+}

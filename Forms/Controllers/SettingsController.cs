@@ -2102,11 +2102,11 @@ public class SettingsController : BaseController
 
         var username = CurrentUserName?.Trim();
         if (string.IsNullOrEmpty(username))
-            return Json(new { success = true, data = Array.Empty<object>() });
+            return Json(new { success = true, myBeneficiaryId = (int?)null, data = Array.Empty<object>() });
 
         var me = await _ds.GetBeneficiaryByUsernameAsync(username, null);
         if (me == null)
-            return Json(new { success = true, data = Array.Empty<object>() });
+            return Json(new { success = true, myBeneficiaryId = (int?)null, data = Array.Empty<object>() });
 
         var list = await _ds.ListDelegationsAsync();
         var bens = await _ds.ListBeneficiariesAsync();
@@ -2147,7 +2147,7 @@ public class SettingsController : BaseController
             };
         }).ToList();
 
-        return Json(new { success = true, data });
+        return Json(new { success = true, myBeneficiaryId = me.Id, data });
     }
 
     [HttpPost]
