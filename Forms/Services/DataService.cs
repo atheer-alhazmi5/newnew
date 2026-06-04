@@ -1350,6 +1350,22 @@ public class DataService
     private static bool DelegationStatusIsCancelled(string? status) =>
         string.Equals((status ?? "").Trim(), "cancelled", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>القيم: draft / scheduled / active / expired / cancelled.</summary>
+    public static string ComputeDelegationStatusCode(Delegation d)
+    {
+        var status = (d.Status ?? "").Trim().ToLowerInvariant();
+        if (status == "cancelled") return "cancelled";
+        if (status == "draft") return "draft";
+        var today = DateTime.Today;
+        if (today < d.StartDate.Date) return "scheduled";
+        if (today > d.EndDate.Date) return "expired";
+        return "active";
+    }
+
+    /// <summary>تفويض ساري يمكن للمفوّض له الدخول بصلاحيته.</summary>
+    public static bool IsDelegationActiveForLogin(Delegation d) =>
+        ComputeDelegationStatusCode(d) == "active";
+
     private static bool IdListCsvContainsId(string? csv, int id)
     {
         if (string.IsNullOrWhiteSpace(csv)) return false;
@@ -2473,15 +2489,13 @@ public class DataService
     {
         const string reason = "تم إلغاء التفويض بواسطة المستفيد.";
         var list = _db.Delegations;
-        var today = DateTime.Today;
         var now = DateTime.Now;
         var count = 0;
         foreach (var d in list)
         {
             if (d.DelegatorBeneficiaryId != delegatorBeneficiaryId) continue;
-            if (DelegationStatusIsCancelled(d.Status)) continue;
-            if (string.Equals(d.Status?.Trim(), "draft", StringComparison.OrdinalIgnoreCase)) continue;
-            if (d.EndDate.Date < today) continue;
+            var code = ComputeDelegationStatusCode(d);
+            if (code is not ("active" or "scheduled")) continue;
 
             d.Status = "cancelled";
             d.CancellationReason = reason;

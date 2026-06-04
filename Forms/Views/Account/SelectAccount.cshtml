@@ -115,6 +115,7 @@
     </div>
     <div class="sa-grid">
         <form method="post" asp-controller="Account" asp-action="SelectAccount">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="choice" value="self" />
             <button type="submit" class="sa-card" style="width:100%;text-align:right;">
                 <span class="sa-tag">حسابك</span>
@@ -138,6 +139,7 @@
         @foreach (var op in options)
         {
             <form method="post" asp-controller="Account" asp-action="SelectAccount">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="choice" value="delegator" />
                 <input type="hidden" name="delegationId" value="@op.DelegationId" />
                 <button type="submit" class="sa-card delegator" style="width:100%;text-align:right;">

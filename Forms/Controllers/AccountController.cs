@@ -174,44 +174,50 @@ public class AccountController : BaseController
     /// <summary>إلغاء تلقائي للتفويضات الصادرة عند دخول المفوِّض الأساسي لحسابه (لا يُطبَّق على إلغاء المسؤول من الإعدادات).</summary>
     private async Task TryCancelOutgoingDelegationsForDelegatorSelfLoginAsync(User user)
     {
-        var bens = await _ds.ListBeneficiariesAsync();
-        var ben = bens.FirstOrDefault(b =>
-            (!string.IsNullOrEmpty(user.NationalId) && b.NationalId == user.NationalId) ||
-            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, user.Username, StringComparison.OrdinalIgnoreCase)));
-        if (ben == null) return;
-
-        var cancelledCount = await _ds.CancelOutgoingDelegationsForDelegatorSelfLoginAsync(ben.Id, user.FullName);
-        if (cancelledCount <= 0) return;
-
-        await _ds.AddAuditLogAsync(new AuditLog
+        try
         {
-            UserId = user.Id,
-            UserName = user.FullName,
-            NationalId = user.NationalId ?? "",
-            OrganizationalUnit = user.Department?.Name ?? "",
-            Action = "إلغاء تفويض تلقائي",
-            EntityType = "Delegation",
-            EntityId = ben.Id.ToString(),
-            Details = $"ألغى المفوِّض {cancelledCount} تفويضاً بالدخول إلى حسابه الشخصي",
-            IpAddress = GetClientIp(),
-            Browser = GetBrowserName(),
-            OperatingSystem = GetClientOS()
-        });
+            var ben = await _ds.ResolveBeneficiaryForUserAsync(user);
+            if (ben == null) return;
+
+            var cancelledCount = await _ds.CancelOutgoingDelegationsForDelegatorSelfLoginAsync(ben.Id, user.FullName);
+            if (cancelledCount <= 0) return;
+
+            await _ds.AddAuditLogAsync(new AuditLog
+            {
+                UserId = user.Id,
+                UserName = user.FullName,
+                NationalId = user.NationalId ?? "",
+                OrganizationalUnit = user.Department?.Name ?? "",
+                Action = "إلغاء تفويض تلقائي",
+                EntityType = "Delegation",
+                EntityId = ben.Id.ToString(),
+                Details = $"ألغى المفوِّض {cancelledCount} تفويضاً بالدخول إلى حسابه الشخصي",
+                IpAddress = GetClientIp(),
+                Browser = GetBrowserName(),
+                OperatingSystem = GetClientOS()
+            });
+        }
+        catch
+        {
+            // لا نمنع تسجيل الدخول إذا فشل الإلغاء التلقائي
+        }
     }
 
     private async Task<bool> UserHasActiveIncomingDelegationAsync(User user)
     {
-        var bens = await _ds.ListBeneficiariesAsync();
-        var ben = bens.FirstOrDefault(b =>
-            (!string.IsNullOrEmpty(user.NationalId) && b.NationalId == user.NationalId) ||
-            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, user.Username, StringComparison.OrdinalIgnoreCase)));
+        var ben = await _ds.ResolveBeneficiaryForUserAsync(user);
         if (ben == null) return false;
         var delegations = await _ds.ListDelegationsAsync();
-        var today = DateTime.Today;
         return delegations.Any(d =>
             d.DelegateeBeneficiaryId == ben.Id &&
-            d.Status != "cancelled" && d.Status != "draft" &&
-            d.StartDate.Date <= today && d.EndDate.Date >= today);
+            DataService.IsDelegationActiveForLogin(d));
+    }
+
+    private async Task<Beneficiary?> ResolveSessionBeneficiaryAsync()
+    {
+        var user = await _ds.GetUserByIdAsync(CurrentUserId);
+        if (user == null) return null;
+        return await _ds.ResolveBeneficiaryForUserAsync(user);
     }
 
     [HttpGet]
@@ -220,24 +226,20 @@ public class AccountController : BaseController
         if (!IsAuthenticated)
             return RedirectToAction("Login");
 
-        var bens = await _ds.ListBeneficiariesAsync();
-        var ben = bens.FirstOrDefault(b =>
-            (!string.IsNullOrEmpty(CurrentUserNationalId) && b.NationalId == CurrentUserNationalId) ||
-            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, CurrentUserName, StringComparison.OrdinalIgnoreCase)));
+        var ben = await ResolveSessionBeneficiaryAsync();
         if (ben == null)
             return RedirectAfterLogin(CurrentUserRole);
 
         var delegations = await _ds.ListDelegationsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var today = DateTime.Today;
         var active = delegations.Where(d =>
             d.DelegateeBeneficiaryId == ben.Id &&
-            d.Status != "cancelled" && d.Status != "draft" &&
-            d.StartDate.Date <= today && d.EndDate.Date >= today).ToList();
+            DataService.IsDelegationActiveForLogin(d)).ToList();
 
         if (!active.Any())
             return RedirectAfterLogin(CurrentUserRole);
 
+        var bens = await _ds.ListBeneficiariesAsync();
         var benById = bens.ToDictionary(b => b.Id);
         var unitById = units.ToDictionary(u => u.Id);
         var options = active.Select(d =>
@@ -281,19 +283,14 @@ public class AccountController : BaseController
             if (d == null)
                 return RedirectAfterLogin(CurrentUserRole);
 
-            var bens = await _ds.ListBeneficiariesAsync();
-            var meBen = bens.FirstOrDefault(b =>
-                (!string.IsNullOrEmpty(CurrentUserNationalId) && b.NationalId == CurrentUserNationalId) ||
-                (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, CurrentUserName, StringComparison.OrdinalIgnoreCase)));
+            var meBen = await ResolveSessionBeneficiaryAsync();
             if (meBen == null || d.DelegateeBeneficiaryId != meBen.Id)
                 return RedirectAfterLogin(CurrentUserRole);
 
-            var today = DateTime.Today;
-            var stillActive = d.Status != "cancelled" && d.Status != "draft" &&
-                              d.StartDate.Date <= today && d.EndDate.Date >= today;
-            if (!stillActive)
+            if (!DataService.IsDelegationActiveForLogin(d))
                 return RedirectAfterLogin(CurrentUserRole);
 
+            var bens = await _ds.ListBeneficiariesAsync();
             var dorBen = bens.FirstOrDefault(b => b.Id == d.DelegatorBeneficiaryId);
             User? dorUser = null;
             if (dorBen != null)
