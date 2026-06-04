@@ -198,6 +198,7 @@ function spShowCreateModal() {
     if (spCreateModal) spCreateModal.show();
 }
 
+
 function spRenderAttachmentChips(containerId, list, mode) {
     var host = document.getElementById(containerId);
     if (!host) return;

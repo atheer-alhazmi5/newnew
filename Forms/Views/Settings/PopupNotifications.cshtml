@@ -77,6 +77,10 @@
 .pn-prev-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
 .pn-preview-img   { width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px; }
 .pn-preview-video { width:100%;border-radius:8px;margin-top:10px; }
+.pn-action-btn-viewers { border-color:var(--gray-500);color:var(--gray-700);background:#fff; }
+.pn-action-btn-viewers:hover { background:var(--gray-50); }
+.pn-viewers-table thead th { background:var(--gray-50)!important;font-size:12px;font-weight:700;text-align:center; }
+.pn-viewers-table tbody td { font-size:13px;vertical-align:middle;text-align:center; }
 </style>
 
 <!-- Header -->
@@ -279,9 +283,18 @@
                             <input type="date" class="form-control" id="pnEndDate" style="border-radius:10px;font-size:13px;" />
                         </div>
                     </div>
+                    <div id="pnDateErr" class="alert alert-danger d-none mt-2" style="font-size:13px;"></div>
                 </div>
 
-    
+                <!-- Display Location (بعد فترة الظهور) -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
+                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
+                        <option value="landing">صفحة البداية (Landing)</option>
+                        <option value="dashboard">لوحة التحكم</option>
+                        <option value="login">صفحة تسجيل الدخول</option>
+                    </select>
+                </div>
 
                 <!-- Target Users -->
                 <div class="mb-3" id="pnTargetUsersSection">
@@ -321,15 +334,6 @@
                     </div>
                 </div>
 
-                <!-- Display Location -->
-                <div class="mb-2">
-                    <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
-                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
-                        <option value="landing">صفحة البداية (Landing)</option>
-                        <option value="dashboard">لوحة التحكم</option>
-                        <option value="login">صفحة تسجيل الدخول</option>
-                    </select>
-                </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:16px 24px;gap:10px;justify-content:flex-end;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
@@ -387,6 +391,40 @@
     </div>
 </div>
 
+<!-- ═══ VIEWERS MODAL ═══ -->
+<div class="modal fade" id="pnViewersModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:16px 22px;">
+                <h5 class="modal-title fw-bold" style="font-size:15px;margin:0;">
+                    <i class="bi bi-people" style="color:var(--sa-600);margin-left:6px;"></i>
+                    المراجعون — <span id="pnViewersTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 pn-viewers-table">
+                        <thead>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <th>الوحدة التنظيمية</th>
+                                <th>تاريخ ووقت الاطلاع</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pnViewersBody">
+                            <tr><td colspan="3" class="text-center py-4 text-muted">جارٍ التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="border:none;padding:12px 22px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ DELETE CONFIRM MODAL ═══ -->
 <div class="modal fade" id="pnDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
@@ -421,7 +459,7 @@
 let pnAllData = [], pnFiltered = [], pnPage = 1;
 const pnPer = 12;
 let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
-let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal;
+let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal, pnViewersModal;
 let pnPublishAfterSave = false;
 let pnLastDisplayLocation = 'landing';
 
@@ -490,11 +528,73 @@ const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };
 const PER_LABELS = { permanent:'دائم', specific:'فترة محددة', once:'مرة واحدة' };
 const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill' };
 
+function pnTodayIso() {
+    const n = new Date();
+    const y = n.getFullYear();
+    const m = String(n.getMonth() + 1).padStart(2, '0');
+    const d = String(n.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+}
+function pnAddDaysIso(iso, days) {
+    if (!iso) return '';
+    const p = iso.split('-');
+    const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    dt.setDate(dt.getDate() + days);
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+function pnValidateDates(startDate, endDate) {
+    const today = pnTodayIso();
+    if (!startDate) return 'تاريخ البداية مطلوب';
+    if (!endDate) return 'تاريخ النهاية مطلوب';
+    if (startDate < today) return 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
+    if (endDate < today) return 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ اليوم';
+    if (endDate <= startDate) {
+        if (startDate === endDate) return 'لا يمكن أن يكون تاريخ البداية مساوياً لتاريخ النهاية. يجب أن يكون تاريخ النهاية بعد تاريخ البداية.';
+        return 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية. يجب أن يكون تاريخ النهاية أكبر من تاريخ البداية.';
+    }
+    return null;
+}
+function pnConfigureDateFields() {
+    const today = pnTodayIso();
+    const sd = document.getElementById('pnStartDate');
+    const ed = document.getElementById('pnEndDate');
+    if (!sd || !ed) return;
+    sd.min = today;
+    const start = (sd.value || '').trim();
+    if (start) {
+        ed.min = pnAddDaysIso(start, 1);
+        ed.max = '';
+        sd.max = (ed.value || '').trim() ? pnAddDaysIso(ed.value.trim(), -1) : '';
+        if (ed.value && ed.value <= start) ed.value = '';
+    } else {
+        ed.min = today;
+        sd.removeAttribute('max');
+    }
+}
+function pnShowDateErr(msg) {
+    const el = document.getElementById('pnDateErr');
+    if (!el) return;
+    if (msg) { el.textContent = msg; el.classList.remove('d-none'); }
+    else el.classList.add('d-none');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     pnModal        = new bootstrap.Modal(document.getElementById('pnModal'));
     pnPreviewModal = new bootstrap.Modal(document.getElementById('pnPreviewModal'));
     pnDetailsModal = new bootstrap.Modal(document.getElementById('pnDetailsModal'));
     pnDeleteModal  = new bootstrap.Modal(document.getElementById('pnDeleteModal'));
+    pnViewersModal = new bootstrap.Modal(document.getElementById('pnViewersModal'));
+    const pnStart = document.getElementById('pnStartDate');
+    const pnEnd = document.getElementById('pnEndDate');
+    function pnOnDateChange() {
+        pnConfigureDateFields();
+        const period = document.querySelector('input[name="pnPeriod"]:checked')?.value;
+        if (period === 'specific') {
+            pnShowDateErr(pnValidateDates((pnStart?.value || '').trim(), (pnEnd?.value || '').trim()));
+        } else pnShowDateErr(null);
+    }
+    if (pnStart) { pnStart.addEventListener('change', pnOnDateChange); pnStart.addEventListener('input', pnOnDateChange); }
+    if (pnEnd) { pnEnd.addEventListener('change', pnOnDateChange); pnEnd.addEventListener('input', pnOnDateChange); }
     await pnLoadMeta();
     await pnLoad();
     const active = document.querySelector('#sidebar .sidebar-child.active');
@@ -577,9 +677,10 @@ function pnRender() {
             <td>
                 <div class="pn-act">
                     <button type="button" class="pn-action-btn pn-action-btn-detail" onclick="pnShowDetails(${d.id})"><i class="bi bi-eye"></i> تفاصيل</button>
+                    <button type="button" class="pn-action-btn pn-action-btn-viewers" onclick="pnShowViewers(${d.id})" title="المراجعون"><i class="bi bi-people"></i> مراجعون${(d.viewerCount||0) > 0 ? ' (' + d.viewerCount + ')' : ''}</button>
                     <button type="button" class="pn-action-btn pn-action-btn-edit" onclick="pnOpenEditModal(${d.id})"><i class="bi bi-pencil"></i> تعديل</button>
                     ${pubBtn}
-                    <button type="button" class="pn-action-btn pn-action-btn-delete" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title)}')"><i class="bi bi-trash3"></i> حذف</button>
+                    <button type="button" class="pn-action-btn pn-action-btn-delete" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title).replace(/'/g, "\\'")}')"><i class="bi bi-trash3"></i> حذف</button>
                 </div>
             </td>
         </tr>`;
@@ -634,6 +735,7 @@ function pnResetModal() {
     document.getElementById('pnDateRange').style.display = 'none';
     document.getElementById('pnStartDate').value = '';
     document.getElementById('pnEndDate').value = '';
+    pnShowDateErr(null);
     document.getElementById('pnDisplayLocation').value = 'landing';
     ['pnCategoryErr','pnContentTypeErr','pnTitleErr'].forEach(id =>
         document.getElementById(id).style.display = 'none');
@@ -669,8 +771,9 @@ async function pnOpenEditModal(id) {
     }
     const pRadio = document.querySelector(`input[name="pnPeriod"][value="${d.displayPeriod}"]`);
     if (pRadio) { pRadio.checked = true; pnSyncPeriod(); }
-    if (d.startDate) document.getElementById('pnStartDate').value = d.startDate;
-    if (d.endDate)   document.getElementById('pnEndDate').value   = d.endDate;
+    if (d.startDate) document.getElementById('pnStartDate').value = (d.startDate + '').substring(0, 10);
+    if (d.endDate)   document.getElementById('pnEndDate').value   = (d.endDate + '').substring(0, 10);
+    pnConfigureDateFields();
     document.getElementById('pnDisplayLocation').value = d.displayLocation || 'landing';
     pnApplyInitialDisplayLocationRules(d.targetUserIds || [], d.targetDepartmentIds || []);
     pnModal.show();
@@ -686,7 +789,10 @@ function pnSyncContentType() {
 }
 function pnSyncPeriod() {
     const val = document.querySelector('input[name="pnPeriod"]:checked')?.value;
-    document.getElementById('pnDateRange').style.display = val === 'specific' ? 'flex' : 'none';
+    const showDates = val === 'specific';
+    document.getElementById('pnDateRange').style.display = showDates ? 'flex' : 'none';
+    if (showDates) pnConfigureDateFields();
+    else pnShowDateErr(null);
 }
 
 /* ── Target lists ── */
@@ -925,6 +1031,13 @@ async function pnDoSave(publish) {
     if (!valid) return;
 
     const period  = document.querySelector('input[name="pnPeriod"]:checked')?.value || 'permanent';
+    if (period === 'specific') {
+        const startVal = (document.getElementById('pnStartDate').value || '').trim();
+        const endVal = (document.getElementById('pnEndDate').value || '').trim();
+        const dateMsg = pnValidateDates(startVal, endVal);
+        if (dateMsg) { pnShowDateErr(dateMsg); return; }
+    }
+    pnShowDateErr(null);
     const displayLoc = document.getElementById('pnDisplayLocation').value;
     const isPublicLoc = pnIsPublicDisplayLocation(displayLoc);
     const userIds = isPublicLoc ? [] : [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
@@ -990,6 +1103,34 @@ async function pnDeleteConfirm() {
         else showToast('فشل الحذف', 'danger');
     } catch { showToast('حدث خطأ', 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3"></i> حذف'; pnDeleteId = null; }
+}
+
+/* ── Viewers ── */
+async function pnShowViewers(id) {
+    const item = pnAllData.find(x => x.id === id);
+    document.getElementById('pnViewersTitle').textContent = item ? item.title : '';
+    const body = document.getElementById('pnViewersBody');
+    body.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color:var(--sa-600);"></div></td></tr>';
+    pnViewersModal.show();
+    try {
+        const r = await apiFetch('/Settings/GetPopupViewers?id=' + encodeURIComponent(id));
+        if (!r || !r.success) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">' + esc(r?.message || 'تعذّر التحميل') + '</td></tr>';
+            return;
+        }
+        const rows = r.data || [];
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">لم يطلع أي مستخدم على هذا الإشعار بعد</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(v =>
+            '<tr><td style="font-weight:600;text-align:right;">' + esc(v.fullName) + '</td>' +
+            '<td style="text-align:right;">' + esc(v.orgUnitName || '—') + '</td>' +
+            '<td style="direction:ltr;unicode-bidi:plaintext;">' + esc(v.viewedAt) + '</td></tr>'
+        ).join('');
+    } catch {
+        body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
+    }
 }
 
 /* ── Details ── */

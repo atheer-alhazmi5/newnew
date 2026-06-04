@@ -48,12 +48,7 @@ function ouFillParentSelect() {
     });
 
     function sortUnits(arr) {
-        return arr.slice().sort(function (a, b) {
-            var sa = a.sortOrder != null ? a.sortOrder : 0;
-            var sb = b.sortOrder != null ? b.sortOrder : 0;
-            if (sa !== sb) return sa - sb;
-            return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
-        });
+        return arr.slice().sort(ouCompareHierarchy);
     }
 
     var prev = sel.value;
@@ -82,7 +77,7 @@ async function ouLoad() {
         var r = await apiFetch('/Settings/GetOrganizationalUnits');
         if (!r || !r.success) {
             document.getElementById('ouBody').innerHTML =
-                '<tr><td colspan="9" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
+                '<tr><td colspan="8" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
             return;
         }
         ouRows = r.data || [];
@@ -92,7 +87,7 @@ async function ouLoad() {
         ouRenderTable();
     } catch (e) {
         document.getElementById('ouBody').innerHTML =
-            '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
+            '<tr><td colspan="8" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
     }
 }
 
@@ -109,20 +104,36 @@ function ouFillClassificationSelect(elId) {
     sel.value = keep;
 }
 
-async function ouClearFilters() {
+function ouClearFilters() {
     var search = document.getElementById('ouSearch');
     var cls = document.getElementById('ouFilterClassification');
+    var mgr = document.getElementById('ouFilterDirectManager');
     if (search) search.value = '';
     if (cls) cls.value = '';
-    await ouLoad();
+    if (mgr) mgr.checked = false;
+    ouRenderTable();
+}
+
+function ouCompareHierarchy(a, b) {
+    var pa = String(a.orderPath || a.OrderPath || '').split('،').map(function (x) { return parseInt(x, 10) || 0; });
+    var pb = String(b.orderPath || b.OrderPath || '').split('،').map(function (x) { return parseInt(x, 10) || 0; });
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+        var da = pa[i] || 0;
+        var db = pb[i] || 0;
+        if (da !== db) return da - db;
+    }
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
 }
 
 function ouFilteredRows() {
     var q = (document.getElementById('ouSearch') && document.getElementById('ouSearch').value || '').trim().toLowerCase();
     var cf = document.getElementById('ouFilterClassification') ? document.getElementById('ouFilterClassification').value : '';
+    var onlyWithManager = document.getElementById('ouFilterDirectManager') && document.getElementById('ouFilterDirectManager').checked;
     return ouRows.filter(function (u) {
         if (q && String(u.name || '').toLowerCase().indexOf(q) === -1) return false;
         if (cf && String(u.classificationId) !== String(cf)) return false;
+        if (onlyWithManager && !(u.hasUnitManager || u.HasUnitManager)) return false;
         return true;
     });
 }
@@ -132,17 +143,12 @@ function ouRenderTable() {
     if (!body) return;
     var list = ouFilteredRows();
     if (!list.length) {
-        body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
         return;
     }
-    list.sort(function (a, b) {
-        var sa = a.sortOrder != null ? a.sortOrder : 0;
-        var sb = b.sortOrder != null ? b.sortOrder : 0;
-        if (sa !== sb) return sa - sb;
-        return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
-    });
+    list.sort(ouCompareHierarchy);
     var html = '';
-    list.forEach(function (u, idx) {
+    list.forEach(function (u) {
         var cls = ouClassifications.find(function (c) { return String(c.id) === String(u.classificationId); });
         var badgeColor = cls && cls.color ? cls.color : '#25935F';
         var parentNm = u.parentName ? ouEsc(u.parentName) : '<span class="text-muted">—</span>';
@@ -154,14 +160,14 @@ function ouRenderTable() {
         var activePill = u.isActive !== false
             ? '<span class="ou-status ou-on">مفعل</span>'
             : '<span class="ou-status ou-off">معطل</span>';
+        var orderPath = u.orderPath || u.OrderPath || '—';
         html += '<tr>' +
-            '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td>' +
+            '<td style="text-align:center;font-weight:800;color:var(--sa-700);direction:ltr;unicode-bidi:plaintext;">' + ouEsc(orderPath) + '</td>' +
             '<td style="font-weight:700;">' + ouEsc(u.name || '') + '</td>' +
             '<td><span class="badge rounded-pill" style="background:' + badgeColor + ';font-size:11px;">' + ouEsc(u.classificationName || '') + '</span></td>' +
             '<td style="font-size:12px;">' + parentNm + '</td>' +
             '<td style="text-align:center;font-weight:700;">' + mc + '</td>' +
             '<td style="font-size:12px;max-width:220px;">' + mgrCell + '</td>' +
-            '<td style="text-align:center;">' + u.sortOrder + '</td>' +
             '<td style="text-align:center;">' + activePill + '</td>' +
             '<td style="white-space:nowrap;text-align:center;">' +
             '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
@@ -223,7 +229,7 @@ function ouShowDetails(id) {
         detailRow('الوحدة التنظيمية الرئيسية', parentNm ? ouEsc(parentNm) : '<span class="text-muted">وحدة رئيسية (جذر)</span>') +
         detailRow('عدد المنسوبين', '<strong>' + mc + '</strong> مستفيد مرتبط بالوحدة التنظيمية') +
         detailRow('مدير الوحدة التنظيمية', mgrHtml) +
-        detailRow('ترتيب العرض', String(u.sortOrder != null ? u.sortOrder : '')) +
+        detailRow('الترتيب', ouEsc(u.orderPath || u.OrderPath || '—')) +
         detailRow('التفعيل', ouEsc(activeTxt)) +
         membersBlock +
         detailRow('أنشئ بواسطة', ouEsc(u.createdBy || '—')) +
@@ -240,7 +246,6 @@ function ouShowAddModal() {
     document.getElementById('ouName').value = '';
     document.getElementById('ouClassificationId').value = '';
     document.getElementById('ouIsActive').checked = true;
-    document.getElementById('ouSortWrap').style.display = 'none';
     ouFillParentSelect();
     document.getElementById('ouParentId').value = '';
     document.getElementById('ouError').classList.add('d-none');
@@ -255,8 +260,6 @@ function ouEdit(id) {
     document.getElementById('ouName').value = u.name || '';
     document.getElementById('ouClassificationId').value = String(u.classificationId || '');
     document.getElementById('ouIsActive').checked = u.isActive !== false;
-    document.getElementById('ouSortWrap').style.display = '';
-    document.getElementById('ouSortOrder').value = u.sortOrder != null ? u.sortOrder : '';
     ouFillParentSelect();
     var pid = u.parentId != null ? u.parentId : u.ParentId;
     document.getElementById('ouParentId').value = pid ? String(pid) : '';
@@ -294,15 +297,12 @@ async function ouSave() {
 
     try {
         if (ouEditingId) {
-            var sortOrder = parseInt(document.getElementById('ouSortOrder').value, 10);
-            if (!sortOrder || sortOrder < 1) sortOrder = 1;
             var r = await apiFetch('/Settings/UpdateOrganizationalUnit', 'POST', {
                 id: ouEditingId,
                 name: name,
                 classificationId: cid,
                 parentId: parentId,
-                isActive: document.getElementById('ouIsActive').checked,
-                sortOrder: sortOrder
+                isActive: document.getElementById('ouIsActive').checked
             });
             if (r.success) {
                 bootstrap.Modal.getInstance(document.getElementById('ouModal')).hide();
@@ -365,7 +365,9 @@ async function ouSubmitDelete() {
 document.addEventListener('DOMContentLoaded', function () {
     var s = document.getElementById('ouSearch');
     var f = document.getElementById('ouFilterClassification');
+    var m = document.getElementById('ouFilterDirectManager');
     if (s) s.addEventListener('input', function () { ouRenderTable(); });
     if (f) f.addEventListener('change', function () { ouRenderTable(); });
+    if (m) m.addEventListener('change', function () { ouRenderTable(); });
     ouLoad();
 });

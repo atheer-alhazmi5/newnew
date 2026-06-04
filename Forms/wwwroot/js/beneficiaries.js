@@ -29,9 +29,34 @@ function bnfApplyRoleVisibility() {
 function bnfSyncDeactivateReasonVisibility() {
     var active = document.getElementById('bnfIsActive');
     var wrap = document.getElementById('bnfDeactivateReasonWrap');
+    var reason = document.getElementById('bnfDeactivateReason');
     if (!active || !wrap) return;
-    if (active.checked) wrap.classList.add('d-none');
-    else wrap.classList.remove('d-none');
+    if (active.checked) {
+        wrap.classList.add('d-none');
+        if (reason) {
+            reason.removeAttribute('required');
+            reason.classList.remove('is-invalid');
+        }
+    } else {
+        wrap.classList.remove('d-none');
+        if (reason) reason.setAttribute('required', 'required');
+    }
+}
+
+function bnfValidateNationalId(nid) {
+    if (!nid) return 'رقم الهوية مطلوب';
+    if (nid.length !== 10 || !/^\d{10}$/.test(nid))
+        return 'رقم الهوية يجب أن يتكون من 10 أرقام فقط';
+    if (!nid.startsWith('1'))
+        return 'رقم الهوية يجب أن يبدأ بالرقم 1';
+    return null;
+}
+
+function bnfValidateDeactivateReason() {
+    if (document.getElementById('bnfIsActive').checked) return null;
+    if (!(document.getElementById('bnfDeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
 }
 
 function bnfBindDigitsOnly(inputId, maxLen) {
@@ -732,15 +757,11 @@ function bnfValidate(isAdd) {
             var pwStrengthSa = bnfValidatePasswordStrength(pwdSa);
             if (pwStrengthSa) return pwStrengthSa;
         }
-        return null;
+        return bnfValidateDeactivateReason();
     }
 
-    var nid = (document.getElementById('bnfNationalId').value || '').trim();
-    if (!nid) return 'الهوية الوطنية مطلوبة';
-    if (nid.length !== 10 || !/^\d+$/.test(nid))
-        return 'الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11';
-    if (!nid.startsWith('10') && !nid.startsWith('11'))
-        return 'الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11';
+    var nidErr = bnfValidateNationalId((document.getElementById('bnfNationalId').value || '').trim());
+    if (nidErr) return nidErr;
 
     var phone = (document.getElementById('bnfPhone').value || '').trim();
     if (!phone) return 'رقم الجوال مطلوب';
@@ -773,7 +794,7 @@ function bnfValidate(isAdd) {
         var pwStrength = bnfValidatePasswordStrength(pwd);
         if (pwStrength) return pwStrength;
     }
-    return null;
+    return bnfValidateDeactivateReason();
 }
 
 function bnfGetEndorsementData() {

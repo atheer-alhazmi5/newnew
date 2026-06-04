@@ -330,7 +330,8 @@ public class SettingsController : BaseController
                 : new List<string> { "جميع الموظفين" },
             TargetDeptNames = p.TargetDepartmentIds.Any()
                 ? depts.Where(d => p.TargetDepartmentIds.Contains(d.Id)).Select(d => d.Name).ToList()
-                : new List<string> { "جميع الوحدات" }
+                : new List<string> { "جميع الوحدات" },
+            ViewerCount = (p.ViewedBy ?? new List<PopupViewEntry>()).Select(v => v.UserId).Distinct().Count()
         }));
     }
 
@@ -343,6 +344,36 @@ public class SettingsController : BaseController
         return Json(p);
     }
 
+    private static string? ValidatePopupNotificationDates(string? displayPeriod, DateTime? startDate, DateTime? endDate)
+    {
+        if (!string.Equals(displayPeriod?.Trim(), "specific", StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (!startDate.HasValue || !endDate.HasValue)
+            return "تاريخ البداية وتاريخ النهاية مطلوبان عند اختيار «عرض لفترة محددة»";
+        var start = startDate.Value.Date;
+        var end = endDate.Value.Date;
+        var today = DateTime.Today;
+        if (start < today)
+            return "تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم";
+        if (end < today)
+            return "تاريخ النهاية لا يمكن أن يكون قبل تاريخ اليوم";
+        if (end <= start)
+            return "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+        return null;
+    }
+
+    private static void NormalizePopupNotificationDates(PopupNotification req)
+    {
+        if (!string.Equals(req.DisplayPeriod?.Trim(), "specific", StringComparison.OrdinalIgnoreCase))
+        {
+            req.StartDate = null;
+            req.EndDate = null;
+            return;
+        }
+        if (req.StartDate.HasValue) req.StartDate = req.StartDate.Value.Date;
+        if (req.EndDate.HasValue) req.EndDate = req.EndDate.Value.Date;
+    }
+
     [HttpPost]
     public async Task<IActionResult> SavePopupNotification([FromBody] PopupNotification req)
     {
@@ -353,6 +384,11 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "التصنيف مطلوب" });
         if (string.IsNullOrWhiteSpace(req.ContentType))
             return Json(new { success = false, message = "نوع المحتوى مطلوب" });
+
+        var dateErr = ValidatePopupNotificationDates(req.DisplayPeriod, req.StartDate, req.EndDate);
+        if (dateErr != null)
+            return Json(new { success = false, message = dateErr });
+        NormalizePopupNotificationDates(req);
 
         req.CreatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
 
@@ -370,6 +406,7 @@ public class SettingsController : BaseController
             req.CreatedAt   = existing.CreatedAt;
             req.PublishedAt = existing.PublishedAt;
             req.DismissedByUserIds = existing.DismissedByUserIds;
+            req.ViewedBy = existing.ViewedBy;
             await _ds.UpdatePopupNotificationAsync(req);
             await _ds.AddAuditLogAsync(BuildAuditEntry(
                 $"تعديل إشعار منبثق: {req.Title}", "إشعارات", req.Id.ToString()));
@@ -450,7 +487,8 @@ public class SettingsController : BaseController
 
         var userId = IsAuthenticated ? CurrentUserId : 0;
         var deptId = IsAuthenticated ? CurrentDeptId : 0;
-        var popups = await _ds.GetActivePopupsForUserAsync(userId, deptId, loc);
+        var username = IsAuthenticated ? CurrentUserName : null;
+        var popups = await _ds.GetActivePopupsForUserAsync(userId, deptId, loc, username);
         return Json(popups.Select(p => new
         {
             p.Id, p.Title, p.TitleColor, p.TitleFontSize,
@@ -461,12 +499,43 @@ public class SettingsController : BaseController
     }
 
     [HttpPost]
+    public async Task<IActionResult> RecordPopupView(int id)
+    {
+        if (!IsAuthenticated)
+            return Json(new { success = true });
+        await _ds.RecordPopupViewAsync(id, CurrentUserId);
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> DismissPopup(int id)
     {
         if (!IsAuthenticated)
-            return Json(new { success = true }); // 
+            return Json(new { success = true });
         await _ds.DismissPopupAsync(id, CurrentUserId);
         return Json(new { success = true });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPopupViewers(int id)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Unauthorized();
+        var p = await _ds.GetPopupNotificationAsync(id);
+        if (p == null) return Json(new { success = false, message = "الإشعار غير موجود" });
+        var rows = await _ds.GetPopupViewerRowsAsync(id);
+        return Json(new
+        {
+            success = true,
+            title = p.Title,
+            data = rows.Select(r => new
+            {
+                r.UserId,
+                FullName = r.FullName,
+                OrgUnitName = r.OrgUnitName,
+                ViewedAt = r.ViewedAt.ToString("yyyy-MM-dd HH:mm")
+            }).ToList()
+        });
     }
 
     public class PublishPopupRequest { public bool Publish { get; set; } }
@@ -996,7 +1065,7 @@ public class SettingsController : BaseController
         if (CurrentUserRole != "Admin")
             return RedirectToAction("Index", "Forms");
         SetViewBagUser(_ui);
-        ViewBag.PageName = "حالات الإجراء";
+        ViewBag.PageName = "حالات الطلبات";
         return View();
     }
 
@@ -1178,6 +1247,9 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var units = await _ds.ListOrganizationalUnitsAsync();
+        if (units.Any(u => string.IsNullOrWhiteSpace(u.OrderPath)))
+            await _ds.RecalculateOrganizationalUnitHierarchyAsync();
+        units = await _ds.ListOrganizationalUnitsAsync();
         var beneficiaries = await _ds.ListBeneficiariesAsync();
         var memberCountByOu = beneficiaries
             .Where(b => b.OrganizationalUnitId.HasValue && b.OrganizationalUnitId.Value > 0)
@@ -1220,6 +1292,7 @@ public class SettingsController : BaseController
                 HasUnitManager = !string.IsNullOrWhiteSpace(mn),
                 u.IsActive,
                 u.SortOrder,
+                u.OrderPath,
                 CreatedBy = ResolveStoredCreatedByDisplay(u.CreatedBy, u.Id, ouCreatorById),
                 u.UpdatedBy,
                 CreatedAt = u.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
@@ -1248,7 +1321,8 @@ public class SettingsController : BaseController
         if (parentErr != null)
             return Json(new { success = false, message = parentErr });
 
-        var nextOrder = all.Count > 0 ? all.Max(u => u.SortOrder) + 1 : 1;
+        var parentId = req.ParentId.HasValue && req.ParentId.Value > 0 ? req.ParentId : null;
+        var nextOrder = await _ds.GetNextOrganizationalUnitSiblingSortOrderAsync(parentId);
 
         var unit = new OrganizationalUnit
         {
@@ -1258,9 +1332,10 @@ public class SettingsController : BaseController
             SortOrder = nextOrder,
             CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
-        ApplyOrgUnitHierarchyFromParent(unit, req.ParentId);
+        ApplyOrgUnitHierarchyFromParent(unit, parentId);
 
         await _ds.AddOrganizationalUnitAsync(unit);
+        await _ds.RecalculateOrganizationalUnitHierarchyAsync();
         await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name));
 
         return Json(new { success = true, message = "تم إضافة الوحدة بنجاح" });
@@ -1283,25 +1358,26 @@ public class SettingsController : BaseController
         if (isDupName)
             return Json(new { success = false, message = "اسم الوحدة موجود مسبقاً، لا يمكن تكرار الاسم" });
 
-        var taken = await _ds.IsOrganizationalUnitSortOrderTakenAsync(req.SortOrder, req.Id);
-        if (taken)
-            return Json(new { success = false, message = "رقم الترتيب مستخدم مسبقاً" });
-
         var all = await _ds.ListOrganizationalUnitsAsync();
         var parentErr = ValidateOrganizationalUnitParent(req.Id, req.ParentId, all);
         if (parentErr != null)
             return Json(new { success = false, message = parentErr });
 
+        var newParentId = req.ParentId.HasValue && req.ParentId.Value > 0 ? req.ParentId : null;
+        var parentChanged = unit.ParentId != newParentId;
+
         unit.Name = req.Name.Trim();
         unit.ClassificationId = req.ClassificationId;
-        ApplyOrgUnitHierarchyFromParent(unit, req.ParentId);
+        ApplyOrgUnitHierarchyFromParent(unit, newParentId);
         unit.IsActive = req.IsActive;
         unit.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         unit.UpdatedAt = DateTime.Now;
 
+        if (parentChanged)
+            unit.SortOrder = await _ds.GetNextOrganizationalUnitSiblingSortOrderAsync(newParentId, req.Id);
+
         await _ds.UpdateOrganizationalUnitAsync(unit);
-        if (req.SortOrder > 0 && req.SortOrder != unit.SortOrder)
-            await _ds.ReorderOrganizationalUnitsAsync(unit.Id, req.SortOrder);
+        await _ds.RecalculateOrganizationalUnitHierarchyAsync();
 
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name));
 
@@ -1323,13 +1399,7 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "هذا العنصر مرتبط بعنصر آخر ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف" });
 
         await _ds.DeleteOrganizationalUnitAsync(req.Id);
-
-        var remaining = await _ds.ListOrganizationalUnitsAsync();
-        for (int i = 0; i < remaining.Count; i++)
-        {
-            remaining[i].SortOrder = i + 1;
-            await _ds.UpdateOrganizationalUnitAsync(remaining[i]);
-        }
+        await _ds.RecalculateOrganizationalUnitHierarchyAsync();
 
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف وحدة تنظيمية", "OrganizationalUnit", req.Id.ToString(), unit.Name));
 
@@ -1672,16 +1742,18 @@ public class SettingsController : BaseController
                 var pwdErr = ValidateBeneficiaryPasswordStrength(pwd);
                 if (pwdErr != null) return pwdErr;
             }
+            var deactivateErrSa = ValidateBeneficiaryDeactivateReason(req.IsActive, req.DeactivateReason);
+            if (deactivateErrSa != null) return deactivateErrSa;
             return null;
         }
 
         if (string.IsNullOrWhiteSpace(req.NationalId))
-            return "الهوية الوطنية مطلوبة";
+            return "رقم الهوية مطلوب";
         var nid = ((string?)req.NationalId ?? "").Trim();
-        if (nid.Length != 10 || !nid.All(c => char.IsDigit(c)))
-            return "الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11";
-        if (!nid.StartsWith("10") && !nid.StartsWith("11"))
-            return "الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11";
+        if (nid.Length != 10 || !nid.All(char.IsDigit))
+            return "رقم الهوية يجب أن يتكون من 10 أرقام فقط";
+        if (!nid.StartsWith('1'))
+            return "رقم الهوية يجب أن يبدأ بالرقم 1";
 
         if (string.IsNullOrWhiteSpace(req.Phone))
             return "رقم الجوال مطلوب";
@@ -1718,6 +1790,17 @@ public class SettingsController : BaseController
             var pwdErr = ValidateBeneficiaryPasswordStrength(pwdRep);
             if (pwdErr != null) return pwdErr;
         }
+
+        var deactivateErr = ValidateBeneficiaryDeactivateReason(req.IsActive, req.DeactivateReason);
+        if (deactivateErr != null) return deactivateErr;
+        return null;
+    }
+
+    private static string? ValidateBeneficiaryDeactivateReason(bool isActive, string? deactivateReason)
+    {
+        if (isActive) return null;
+        if (string.IsNullOrWhiteSpace(deactivateReason))
+            return "سبب التعطيل مطلوب عند اختيار حالة معطل";
         return null;
     }
 
@@ -2018,6 +2101,9 @@ public class SettingsController : BaseController
                 StartDate = d.StartDate.ToString("yyyy-MM-dd"),
                 EndDate = d.EndDate.ToString("yyyy-MM-dd"),
                 StatusCode = ComputeDelegationStatus(d),
+                CancellationReason = d.CancellationReason ?? "",
+                d.CancelledBy,
+                CancelledAt = d.CancelledAt?.ToString("yyyy-MM-dd HH:mm"),
                 d.CreatedBy,
                 CreatedAt = d.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 d.UpdatedBy,
@@ -2085,6 +2171,8 @@ public class SettingsController : BaseController
                 d.Status,
                 StatusCode = ComputeDelegationStatus(d),
                 CancellationReason = d.CancellationReason ?? "",
+                d.CancelledBy,
+                CancelledAt = d.CancelledAt?.ToString("yyyy-MM-dd HH:mm"),
                 d.CreatedBy,
                 CreatedAt = d.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 d.UpdatedBy,
@@ -2140,6 +2228,9 @@ public class SettingsController : BaseController
                 StartDate = d.StartDate.ToString("yyyy-MM-dd"),
                 EndDate = d.EndDate.ToString("yyyy-MM-dd"),
                 StatusCode = ComputeDelegationStatus(d),
+                CancellationReason = d.CancellationReason ?? "",
+                d.CancelledBy,
+                CancelledAt = d.CancelledAt?.ToString("yyyy-MM-dd HH:mm"),
                 d.CreatedBy,
                 CreatedAt = d.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 d.UpdatedBy,
@@ -2195,10 +2286,13 @@ public class SettingsController : BaseController
             var reason = (req.CancellationReason ?? "").Trim();
             if (string.IsNullOrEmpty(reason))
                 return Json(new { success = false, message = "سبب إلغاء التفويض مطلوب" });
+            var now = DateTime.Now;
             d.Status = "cancelled";
             d.CancellationReason = reason;
+            d.CancelledBy = CurrentUserFullName;
+            d.CancelledAt = now;
             d.UpdatedBy = CurrentUserFullName;
-            d.UpdatedAt = DateTime.Now;
+            d.UpdatedAt = now;
             await _ds.UpdateDelegationAsync(d);
             await _ds.AddAuditLogAsync(BuildAuditEntry("إلغاء تفويض", "Delegation", d.Id.ToString(), reason));
             return Json(new { success = true, message = "تم إلغاء التفويض" });
@@ -2543,16 +2637,24 @@ public class SettingsController : BaseController
     }
 
     // ─── دليل المستخدم (User Guide) ───────────────────────────────────────────
-    private static string BuildUserGuideDisplayOrder(UserGuideItem item, Dictionary<int, UserGuideItem> allById)
+    private static string FormatUserGuideDisplayOrder(string? orderPath)
     {
-        var parts = new List<int> { item.SortOrder };
-        var cur = item;
-        while (cur.ParentId.HasValue && allById.TryGetValue(cur.ParentId.Value, out var parent))
-        {
-            parts.Insert(0, parent.SortOrder);
-            cur = parent;
-        }
-        return string.Join("-", parts);
+        if (string.IsNullOrWhiteSpace(orderPath)) return "—";
+        var parts = orderPath.Split('،', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0) return "—";
+        if (parts.Length == 1) return parts[0];
+        if (parts.Length == 2) return $"{parts[0]}،{parts[1]}";
+        return $"{parts[0]}،{parts[1]}-{string.Join("-", parts.Skip(2))}";
+    }
+
+    private static bool IsUserGuideContentEmpty(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return true;
+        var text = System.Text.RegularExpressions.Regex.Replace(content, "<[^>]+>", " ")
+            .Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase)
+            .Trim();
+        if (!string.IsNullOrEmpty(text)) return false;
+        return !System.Text.RegularExpressions.Regex.IsMatch(content, @"<(img|iframe|video|table)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
     private static string BuildUserGuideParentPath(UserGuideItem? item, Dictionary<int, UserGuideItem> allById)
@@ -2616,6 +2718,9 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var all = await _ds.ListUserGuideItemsAsync();
+        if (all.Any(x => string.IsNullOrWhiteSpace(x.OrderPath)))
+            await _ds.RecalculateUserGuideHierarchyAsync();
+        all = await _ds.ListUserGuideItemsAsync();
         var allById = all.ToDictionary(x => x.Id);
         var filtered = all.AsEnumerable();
 
@@ -2641,7 +2746,6 @@ public class SettingsController : BaseController
                 parentName = directParent.Name ?? "";
 
             var parentPath = BuildUserGuideParentPath(r, allById);
-            var displayOrder = BuildUserGuideDisplayOrder(r, allById);
             var depth = BuildUserGuideDepth(r, allById);
             return new
             {
@@ -2657,7 +2761,8 @@ public class SettingsController : BaseController
                 Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
                 r.Notes,
                 r.SortOrder,
-                DisplayOrder = displayOrder,
+                r.OrderPath,
+                DisplayOrder = FormatUserGuideDisplayOrder(r.OrderPath),
                 IsRoot = !r.ParentId.HasValue,
                 r.IsActive,
                 r.CreatedBy,
@@ -2666,8 +2771,7 @@ public class SettingsController : BaseController
                 UpdatedAt = r.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
             };
         })
-        .OrderBy(x => x.ParentId ?? 0)
-        .ThenBy(x => x.SortOrder)
+        .OrderBy(x => x.OrderPath, StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false))
         .ToList();
 
         return Json(new { success = true, data, roots, tree = all.Select(x => new { x.Id, x.ParentId, x.Name, x.SortOrder }).ToList() });
@@ -2704,7 +2808,8 @@ public class SettingsController : BaseController
                 Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color,
                 r.Notes,
                 r.SortOrder,
-                DisplayOrder = BuildUserGuideDisplayOrder(r, allById),
+                r.OrderPath,
+                DisplayOrder = FormatUserGuideDisplayOrder(r.OrderPath),
                 IsRoot = !r.ParentId.HasValue,
                 r.IsActive,
                 r.CreatedBy,
@@ -2722,7 +2827,7 @@ public class SettingsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
-        if (string.IsNullOrWhiteSpace(req.Content))
+        if (IsUserGuideContentEmpty(req.Content))
             return Json(new { success = false, message = "المحتوى مطلوب" });
 
         var trimmedName = req.Name.Trim();
@@ -2737,11 +2842,13 @@ public class SettingsController : BaseController
             parentId = parent.Id;
         }
 
+        var nextOrder = await _ds.GetNextUserGuideSiblingSortOrderAsync(parentId);
         var row = new UserGuideItem
         {
             ParentId = parentId,
             Name = trimmedName,
-            Content = req.Content!.Trim(),
+            Content = (req.Content ?? "").Trim(),
+            SortOrder = nextOrder,
             AttachmentUrl = (req.AttachmentUrl ?? "").Trim(),
             Icon = (req.Icon ?? "").Trim(),
             Color = string.IsNullOrWhiteSpace(req.Color) ? "#25935F" : req.Color!.Trim(),
@@ -2765,7 +2872,7 @@ public class SettingsController : BaseController
         if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة/الصفحة مطلوب" });
-        if (string.IsNullOrWhiteSpace(req.Content))
+        if (IsUserGuideContentEmpty(req.Content))
             return Json(new { success = false, message = "المحتوى مطلوب" });
 
         var trimmedName = req.Name.Trim();
@@ -2790,14 +2897,14 @@ public class SettingsController : BaseController
         if (r.ParentId == null && parentId.HasValue)
         {
             if (all.Any(x => x.ParentId == r.Id))
-                return Json(new { success = false, message = "لا يمكن تحويل قائمة جذر لها أبناء إلى عنصر فرعي" });
+                return Json(new { success = false, message = "لا يمكن تحويل قائمة جذر لها عناصر فرعية إلى عنصر تابع. انقل العناصر الفرعية أولاً." });
         }
 
         // إذا تغيّر الأب — أعد ترتيبه في المستوى الجديد
         var parentChanged = r.ParentId != parentId;
         r.ParentId = parentId;
         r.Name = trimmedName;
-        r.Content = req.Content!.Trim();
+        r.Content = (req.Content ?? "").Trim();
         r.AttachmentUrl = (req.AttachmentUrl ?? "").Trim();
         r.Icon = (req.Icon ?? "").Trim();
         if (!string.IsNullOrWhiteSpace(req.Color)) r.Color = req.Color!.Trim();
@@ -2806,11 +2913,7 @@ public class SettingsController : BaseController
         r.UpdatedBy = CurrentUserFullName;
 
         if (parentChanged)
-        {
-            var allAfter = await _ds.ListUserGuideItemsAsync();
-            var siblings = allAfter.Where(x => x.ParentId == r.ParentId && x.Id != r.Id).ToList();
-            r.SortOrder = (siblings.Count == 0 ? 0 : siblings.Max(x => x.SortOrder)) + 1;
-        }
+            r.SortOrder = await _ds.GetNextUserGuideSiblingSortOrderAsync(r.ParentId, r.Id);
 
         await _ds.UpdateUserGuideItemAsync(r);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث عنصر دليل", "UserGuideItem", r.Id.ToString(), r.Name));
@@ -2825,6 +2928,10 @@ public class SettingsController : BaseController
 
         var r = await _ds.GetUserGuideItemByIdAsync(req.Id);
         if (r == null) return Json(new { success = false, message = "العنصر غير موجود" });
+
+        var blockReason = await _ds.GetUserGuideItemDeleteBlockReasonAsync(req.Id);
+        if (blockReason != null)
+            return Json(new { success = false, message = blockReason });
 
         await _ds.DeleteUserGuideItemAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف عنصر دليل", "UserGuideItem", req.Id.ToString(), r.Name));
@@ -2946,7 +3053,6 @@ public class OrgUnitUpdateRequest
     public int ClassificationId { get; set; }
     public int? ParentId { get; set; }
     public bool IsActive { get; set; }
-    public int SortOrder { get; set; }
 }
 
 public class OrgUnitDeleteRequest

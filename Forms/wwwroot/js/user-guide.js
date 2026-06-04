@@ -10,11 +10,83 @@ let ugFiltered = [];
 let ugCurrentPage = 1;
 let ugEditingId = null;
 const ugPerPage = 10;
+let ugQuillAdd = null;
+let ugQuillEdit = null;
+
+var ugQuillToolbar = [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ align: [] }],
+    ['link'],
+    ['clean']
+];
 
 function ugEsc(s) {
     if (typeof esc === 'function') return esc(s);
     if (s == null) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** عرض مسار الترتيب بأسلوب الفهرس: 1، 1،1، 1،1-1 */
+function ugFormatDisplayOrder(orderPath) {
+    if (!orderPath) return '—';
+    var parts = String(orderPath).split('،').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!parts.length) return '—';
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) return parts[0] + '،' + parts[1];
+    return parts[0] + '،' + parts[1] + '-' + parts.slice(2).join('-');
+}
+
+function ugCompareHierarchy(a, b) {
+    var pa = String(a.orderPath || a.OrderPath || a.displayOrder || '').split('،').map(function (x) { return parseInt(x, 10) || 0; });
+    var pb = String(b.orderPath || b.OrderPath || b.displayOrder || '').split('،').map(function (x) { return parseInt(x, 10) || 0; });
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+        if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+    }
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
+}
+
+function ugHasChildren(id) {
+    return ugAll.some(function (x) { return Number(x.parentId) === Number(id); });
+}
+
+function ugInitQuillEditors() {
+    if (typeof Quill === 'undefined') return;
+    var addEl = document.getElementById('ugAddContentEditor');
+    if (addEl && !ugQuillAdd) {
+        ugQuillAdd = new Quill(addEl, { theme: 'snow', modules: { toolbar: ugQuillToolbar }, placeholder: 'اكتب محتوى الصفحة هنا...' });
+    }
+    var editEl = document.getElementById('ugEditContentEditor');
+    if (editEl && !ugQuillEdit) {
+        ugQuillEdit = new Quill(editEl, { theme: 'snow', modules: { toolbar: ugQuillToolbar }, placeholder: 'عدّل المحتوى هنا...' });
+    }
+}
+
+function ugGetEditorHtml(which) {
+    var q = which === 'Add' ? ugQuillAdd : ugQuillEdit;
+    if (!q) return (document.getElementById('ug' + which + 'Content') && document.getElementById('ug' + which + 'Content').value) || '';
+    return q.root.innerHTML.trim();
+}
+
+function ugSetEditorHtml(which, html) {
+    var hid = document.getElementById('ug' + which + 'Content');
+    if (hid) hid.value = html || '';
+    var q = which === 'Add' ? ugQuillAdd : ugQuillEdit;
+    if (q) {
+        if (!html || html === '<p><br></p>') q.setText('');
+        else q.root.innerHTML = html;
+    }
+}
+
+function ugIsContentEmpty(html) {
+    if (!html) return true;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    var text = (tmp.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (text) return false;
+    return !/<(img|iframe|video|table)\b/i.test(html);
 }
 
 function ugIsIconImage(icon) {
@@ -80,10 +152,9 @@ function ugFillParentSelect(selectId, currentValue, excludeId) {
 
     function sortItems(arr) {
         return arr.slice().sort(function (a, b) {
-            var sa = a.sortOrder != null ? a.sortOrder : (a.SortOrder != null ? a.SortOrder : 0);
-            var sb = b.sortOrder != null ? b.sortOrder : (b.SortOrder != null ? b.SortOrder : 0);
-            if (sa !== sb) return sa - sb;
-            return String(a.name || a.Name || '').localeCompare(String(b.name || b.Name || ''), 'ar');
+            var oa = { orderPath: a.orderPath || a.OrderPath, name: a.name || a.Name };
+            var ob = { orderPath: b.orderPath || b.OrderPath, name: b.name || b.Name };
+            return ugCompareHierarchy(oa, ob);
         });
     }
 
@@ -189,6 +260,7 @@ function ugClearAttach(prefix) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    ugInitQuillEditors();
     ugLoad();
     ugBindIconInput('Add');
     ugBindIconInput('Edit');
@@ -236,6 +308,7 @@ function ugApplyFilter() {
         if (act === '0' && c.isActive) return false;
         return true;
     });
+    ugFiltered.sort(ugCompareHierarchy);
     ugCurrentPage = 1;
     ugRenderTable();
 }
@@ -278,8 +351,9 @@ function ugRenderTable() {
             ? '<span class="ug-parent-cell"><span class="root-tag"><i class="bi bi-bookmark-star-fill"></i> رئيسية</span></span>'
             : '<span class="ug-parent-cell">' + ugEsc(c.parentPath || c.parentName || '—') + '</span>';
 
+        var orderLabel = c.displayOrder || ugFormatDisplayOrder(c.orderPath) || String(c.sortOrder);
         html += '<tr>'
-            + '<td class="text-center"><span class="' + orderPillCls + '">' + ugEsc(c.displayOrder || String(c.sortOrder)) + '</span></td>'
+            + '<td class="text-center"><span class="' + orderPillCls + '" style="direction:ltr;unicode-bidi:plaintext;">' + ugEsc(orderLabel) + '</span></td>'
             + '<td class="text-center">' + ugIconCellHtml(c.icon, color) + '</td>'
             + '<td><span class="ug-row-name">' + indent + '<span style="font-weight:700;color:var(--gray-900);">' + ugEsc(c.name) + '</span>' + branchTag + '</span></td>'
             + '<td>' + parentCell + '</td>'
@@ -308,8 +382,9 @@ function ugChangePage(p) { ugCurrentPage = p; ugRenderTable(); }
 // ─── ADD ────────────────────────────────────────────────────────────────────
 function ugShowAddModal() {
     ugEditingId = null;
+    ugInitQuillEditors();
     document.getElementById('ugAddName').value = '';
-    document.getElementById('ugAddContent').value = '';
+    ugSetEditorHtml('Add', '');
     document.getElementById('ugAddNotes').value = '';
     ugClearIcon('Add');
     document.getElementById('ugAddColor').value = '#25935F';
@@ -325,8 +400,8 @@ function ugShowAddModal() {
 async function ugSubmitAdd() {
     var name = (document.getElementById('ugAddName').value || '').trim();
     if (!name) { ugShowError('Add', 'اسم القائمة/الصفحة مطلوب'); return; }
-    var content = (document.getElementById('ugAddContent').value || '').trim();
-    if (!content) { ugShowError('Add', 'المحتوى مطلوب'); return; }
+    var content = ugGetEditorHtml('Add');
+    if (ugIsContentEmpty(content)) { ugShowError('Add', 'المحتوى مطلوب'); return; }
     var icon = (document.getElementById('ugAddIcon').value || '').trim();
     var parentRaw = document.getElementById('ugAddParent').value;
     var parentId = parentRaw ? parseInt(parentRaw, 10) : null;
@@ -352,12 +427,13 @@ async function ugSubmitAdd() {
 // ─── EDIT ───────────────────────────────────────────────────────────────────
 async function ugShowEdit(id) {
     ugEditingId = id;
+    ugInitQuillEditors();
     var r = await apiFetch('/Settings/GetUserGuideItemDetails?id=' + encodeURIComponent(id));
     if (!r || !r.success) { showToast((r && r.message) || 'تعذّر التحميل', 'danger'); return; }
     var d = r.data || {};
     document.getElementById('ugEditId').value = d.id;
     document.getElementById('ugEditName').value = d.name || '';
-    document.getElementById('ugEditContent').value = d.content || '';
+    ugSetEditorHtml('Edit', d.content || '');
     document.getElementById('ugEditNotes').value = d.notes || '';
     document.getElementById('ugEditIcon').value = d.icon || '';
     ugRenderIconPreview('Edit', d.icon || '');
@@ -377,8 +453,8 @@ async function ugSubmitEdit() {
     var id = parseInt(document.getElementById('ugEditId').value, 10);
     var name = (document.getElementById('ugEditName').value || '').trim();
     if (!name) { ugShowError('Edit', 'اسم القائمة/الصفحة مطلوب'); return; }
-    var content = (document.getElementById('ugEditContent').value || '').trim();
-    if (!content) { ugShowError('Edit', 'المحتوى مطلوب'); return; }
+    var content = ugGetEditorHtml('Edit');
+    if (ugIsContentEmpty(content)) { ugShowError('Edit', 'المحتوى مطلوب'); return; }
     var icon = (document.getElementById('ugEditIcon').value || '').trim();
     var parentRaw = document.getElementById('ugEditParent').value;
     var parentId = parentRaw ? parseInt(parentRaw, 10) : null;
@@ -428,11 +504,13 @@ async function ugShowDetails(id) {
         + '<div style="margin-inline-start:auto;">' + statusBadge + '</div>'
         + '</div>'
         + '<div style="display:grid;grid-template-columns:160px 1fr;gap:10px 14px;font-size:13.5px;">'
-        +   '<div style="font-weight:700;color:var(--gray-500);">الترتيب</div><div>' + ugEsc(String(d.sortOrder || 1)) + '</div>'
+        +   '<div style="font-weight:700;color:var(--gray-500);">الترتيب</div><div style="direction:ltr;unicode-bidi:plaintext;font-weight:800;">' + ugEsc(d.displayOrder || ugFormatDisplayOrder(d.orderPath) || String(d.sortOrder || 1)) + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">الأيقونة</div><div>' + (ugIsIconImage(d.icon) ? '<img src="' + d.icon + '" alt="أيقونة" style="max-width:80px;max-height:80px;border-radius:10px;border:1px solid var(--gray-200);">' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">اللون</div><div><span class="ug-color-circle" style="background:' + color + '"></span> <span style="font-family:monospace;direction:ltr;display:inline-block;margin-inline-start:6px;">' + ugEsc(color) + '</span></div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">المرفق</div><div>' + attach + '</div>'
-        +   '<div style="font-weight:700;color:var(--gray-500);">المحتوى</div><div>' + (d.content ? ugEsc(d.content) : '<span style="color:var(--gray-400);">—</span>') + '</div>'
+        +   '<div style="font-weight:700;color:var(--gray-500);">المحتوى</div><div>' + (d.content && !ugIsContentEmpty(d.content)
+            ? '<div class="ug-rich-content">' + d.content + '</div>'
+            : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">الملاحظات</div><div>' + (d.notes ? '<div class="ug-content-pre" style="background:var(--info-50);border-color:var(--info-100);">' + ugEsc(d.notes) + '</div>' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">أنشئ بواسطة</div><div>' + ugEsc(d.createdBy || '—') + ' <span style="color:var(--gray-400);font-size:11.5px;">— ' + ugEsc(d.createdAt || '') + '</span></div>'
         + (d.updatedAt ? '<div style="font-weight:700;color:var(--gray-500);">آخر تعديل</div><div>' + ugEsc(d.updatedBy || '—') + ' <span style="color:var(--gray-400);font-size:11.5px;">— ' + ugEsc(d.updatedAt || '') + '</span></div>' : '')
@@ -442,6 +520,10 @@ async function ugShowDetails(id) {
 
 // ─── DELETE ─────────────────────────────────────────────────────────────────
 function ugAskDelete(id) {
+    if (ugHasChildren(id)) {
+        showToast('لا يمكن حذف هذا العنصر لوجود عناصر فرعية مرتبطة به. احذف أو انقل العناصر التابعة أولاً.', 'danger');
+        return;
+    }
     var item = ugAll.find(function (x) { return Number(x.id) === Number(id); });
     document.getElementById('ugDeleteId').value = id;
     document.getElementById('ugDeleteNameLabel').textContent = item ? (item.name || '') : '';

@@ -9,7 +9,10 @@ public class OrganizationalUnit
     public string Level { get; set; } = "رئيسي"; // رئيسي | فرعي
     public int? ParentId { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>ترتيب الأخوة ضمن نفس الأب (1-based).</summary>
     public int SortOrder { get; set; }
+    /// <summary>مسار هرمي للعرض، مثل 1 أو 1،1 أو 1،2.</summary>
+    public string OrderPath { get; set; } = "";
     public string CreatedBy { get; set; } = "مدير النظام";
     public string UpdatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

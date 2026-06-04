@@ -50,7 +50,7 @@
         </button>
     </div>
 
-    <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+    <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters w-100">
         <div class="rt-search-box" style="min-width:200px;max-width:280px;">
             <i class="bi bi-search rt-search-icon"></i>
             <input type="text" class="form-control" id="ouSearch" placeholder="بحث بالاسم..." autocomplete="off">
@@ -58,9 +58,15 @@
         <select class="form-select rt-filter-select" id="ouFilterClassification" style="min-width:200px;">
             <option value="">كل التصنيفات</option>
         </select>
-        <button type="button" class="rt-clear-btn rt-clear-btn-icon" id="ouClearFilters" onclick="ouClearFilters()" title="مسح " aria-label="مسح ">
-            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-        </button>
+        <div class="d-flex gap-3 align-items-center flex-wrap ms-auto">
+            <div class="form-check form-switch d-flex align-items-center gap-2" style="min-height:44px;padding:0 4px;">
+                <input class="form-check-input" type="checkbox" id="ouFilterDirectManager" style="cursor:pointer;">
+                <label class="form-check-label fw-bold" for="ouFilterDirectManager" style="font-size:13px;cursor:pointer;white-space:nowrap;">مدير مباشر</label>
+            </div>
+            <button type="button" class="rt-clear-btn rt-clear-btn-icon" id="ouClearFilters" onclick="ouClearFilters()" title="مسح " aria-label="مسح ">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            </button>
+        </div>
     </div>
 
     <div class="card bnf-tbl">
@@ -69,19 +75,18 @@
                 <table class="table mb-0">
                     <thead>
                         <tr>
-                            <th style="width:40px;">#</th>
+                            <th style="width:90px;">الترتيب</th>
                             <th>اسم الوحدة</th>
                             <th>التصنيف</th>
                             <th>الوحدة الرئيسية</th>
                             <th style="width:88px;text-align:center;">عدد المنسوبين</th>
                             <th>مدير الوحدة التنظيمية</th>
-                            <th style="width:90px;">الترتيب</th>
                             <th style="width:100px;">التفعيل</th>
                             <th style="min-width:280px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="ouBody">
-                        <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                        <tr><td colspan="8" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -110,10 +115,6 @@
                     <label class="form-label" for="ouParentId">الوحدة التنظيمية الرئيسية</label>
                     <select class="form-select" id="ouParentId" style="font-family:'Cairo',sans-serif;"></select>
                     <p class="text-muted small mb-0 mt-2" style="font-size:11px;">المسافة والرمز └ تمثل مستوى التبعية في الشجرة؛ اترك «وحدة رئيسية» لإنشاء وحدة في الجذر.</p>
-                </div>
-                <div class="mb-3" id="ouSortWrap" style="display:none;">
-                    <label class="form-label">ترتيب العرض<span class="required-star">*</span></label>
-                    <input type="number" class="form-control" id="ouSortOrder" min="1" step="1">
                 </div>
                 <div class="form-check form-switch mb-2">
                     <input class="form-check-input" type="checkbox" id="ouIsActive" checked>

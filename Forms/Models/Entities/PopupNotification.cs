@@ -18,6 +18,9 @@ public class PopupNotification
     public List<int> TargetUserIds       { get; set; } = new();
     public List<int> TargetDepartmentIds { get; set; } = new();
     public List<int> DismissedByUserIds  { get; set; } = new();
+
+    /// <summary>سجل المستخدمين الذين اطلّعوا على الإشعار (للتتبع والمراجعة).</summary>
+    public List<PopupViewEntry> ViewedBy { get; set; } = new();
     public string DisplayLocation { get; set; } = "dashboard"; 
     public string Status          { get; set; } = "draft";     
     public string CreatedBy       { get; set; } = "";

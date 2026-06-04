@@ -225,12 +225,13 @@
 
 <div id="sysPopupContainer"></div>
 <style>
-.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;animation:fadeIn .25s ease; }
-.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:440px;width:calc(100% - 40px);animation:slideUp .3s ease; }
-.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff; }
-.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff; }
-.sys-popup-body { background:#fff;padding:20px 22px; }
-.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center; }
+.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s ease; }
+.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:min(560px,96vw);width:100%;max-height:min(90vh,720px);display:flex;flex-direction:column;animation:slideUp .3s ease; }
+.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-body { background:#fff;padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
+.sys-popup-body p { word-break:break-word; }
+.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid var(--gray-100); }
 .sys-popup-close { background:#fff;border:1.5px solid #E5E7EB;border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:#374151;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
 .sys-popup-close:hover { background:#F9FAFB; }
 @@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
@@ -242,8 +243,12 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
     const base = (window.APP_PATH_BASE || '').replace(/\/$/, '').toLowerCase();
     let path = window.location.pathname.toLowerCase();
     if (base && path.startsWith(base)) path = path.slice(base.length) || '/';
-    if (!path.startsWith('/dashboard')) return;
-    const loc = 'dashboard';
+
+    let loc = null;
+    if (path === '/' || path.endsWith('/landing') || path.includes('/account/landing')) loc = 'landing';
+    else if (path.includes('/account/login') || path.endsWith('/login')) loc = 'login';
+    else if (path.startsWith('/dashboard')) loc = 'dashboard';
+    if (!loc) return;
 
     const dismissed = JSON.parse(localStorage.getItem('sysPopupDismissed') || '[]');
 
@@ -258,12 +263,10 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         function showNext() {
             if (idx >= queue.length) return;
             const p = queue[idx++];
-            showPopup(p, () => {
-                setTimeout(showNext, 400);
-            });
+            showPopup(p, () => setTimeout(showNext, 400));
         }
         setTimeout(showNext, 800);
-    } catch (e) {  }
+    } catch (e) { }
 
     function showPopup(p, onClose) {
         const container = document.getElementById('sysPopupContainer');
@@ -272,33 +275,36 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
 
         const headCls   = p.category === 'تنبيه' ? 'sys-popup-head-alert' : 'sys-popup-head-ad';
         const catBiIcon = p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill';
+        const mediaUrl = (p.attachmentUrl && (typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl)) || '';
 
         let bodyHtml = '';
         if (p.contentType === 'text') {
-            bodyHtml = `<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">${escHtml(p.textContent || '')}</p>`;
-        } else if (p.contentType === 'image') {
-            if (p.attachmentUrl)
-                bodyHtml = `<img src="${typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl}" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />`;
-        } else if (p.contentType === 'video') {
-            if (p.attachmentUrl)
-                bodyHtml = `<video src="${typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl}" controls style="width:100%;border-radius:10px;"></video>`;
+            const txt = (p.textContent || '').trim();
+            bodyHtml = txt
+                ? `<p style="color:#374151;font-size:14px;line-height:1.85;margin:0;white-space:pre-wrap;word-break:break-word;">${escHtml(txt)}</p>`
+                : '';
+        } else if (p.contentType === 'image' && mediaUrl) {
+            bodyHtml = `<img src="${mediaUrl}" alt="" style="width:100%;max-width:100%;height:auto;border-radius:10px;object-fit:contain;display:block;" />`;
+        } else if (p.contentType === 'video' && mediaUrl) {
+            bodyHtml = `<video src="${mediaUrl}" controls style="width:100%;max-width:100%;border-radius:10px;"></video>`;
         }
 
-        el.innerHTML = `<div class="sys-popup-box">
+        el.innerHTML = `<div class="sys-popup-box" role="dialog" aria-modal="true">
             <div class="${headCls}">
                 <div style="font-size:12px;font-weight:700;opacity:.9;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
                     <i class="bi ${catBiIcon}" style="color:#fff;"></i>
                     <span style="color:#fff;">${escHtml(p.category)}</span>
                 </div>
-                <div style="font-weight:700;font-size:${p.titleFontSize || 18}px;color:${escHtml(p.titleColor || '#ffffff')};">${escHtml(p.title)}</div>
+                <div style="font-weight:700;font-size:${p.titleFontSize || 18}px;color:${escHtml(p.titleColor || '#ffffff')};line-height:1.4;word-break:break-word;">${escHtml(p.title)}</div>
             </div>
             <div class="sys-popup-body">${bodyHtml || '<p style="color:#9CA3AF;font-size:13px;margin:0;">لا يوجد محتوى إضافي</p>'}</div>
             <div class="sys-popup-footer">
-                <button class="sys-popup-close" id="sysPClose_${p.id}">إغلاق</button>
+                <button type="button" class="sys-popup-close" id="sysPClose_${p.id}">إغلاق</button>
             </div>
         </div>`;
 
         container.appendChild(el);
+        apiFetch('/Settings/RecordPopupView?id=' + p.id, 'POST').catch(() => {});
 
         function closePopup() {
             el.style.animation = 'fadeOut .2s ease forwards';
@@ -383,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             settings.Children.Add(new SidebarItem { Url = "/Settings/FormSections", Icon = "bi-layout-text-sidebar-reverse", Label = "أنواع النماذج", PathPrefix = "/Settings/FormSections" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/ProcedureActionTypes", Icon = "bi-diagram-3-fill", Label = "أنواع الإجراءات", PathPrefix = "/Settings/ProcedureActionTypes" });
             settings.Children.Add(new SidebarItem { Url = "/ExecutorRoles/Index", Icon = "bi-person-badge-fill", Label = "أدوار المنفذين", PathPrefix = "/ExecutorRoles" });
-            settings.Children.Add(new SidebarItem { Url = "/Settings/FormStatuses", Icon = "bi-flag", Label = "حالات الإجراء", PathPrefix = "/Settings/FormStatuses" });
+            settings.Children.Add(new SidebarItem { Url = "/Settings/FormStatuses", Icon = "bi-flag", Label = "حالات الطلبات", PathPrefix = "/Settings/FormStatuses" });
             settings.Children.Add(new SidebarItem { Url = "/Templates/Index", Icon = "bi-file-earmark-richtext", Label = "إدارة القوالب", PathPrefix = "/Templates" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/PopupNotifications", Icon = "bi-bell-fill", Label = "الإشعارات المنبثقة", PathPrefix = "/Settings/PopupNotifications" });
             settings.Children.Add(new SidebarItem { Url = "/Settings/UserGuide", Icon = "bi-journal-text", Label = "دليل المستخدم", PathPrefix = "/Settings/UserGuide" });

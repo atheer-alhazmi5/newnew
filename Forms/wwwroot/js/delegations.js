@@ -43,6 +43,73 @@ function delTodayIso() {
     return y + '-' + m + '-' + da;
 }
 
+function delAddDaysIso(iso, days) {
+    if (!iso) return '';
+    var p = iso.split('-');
+    if (p.length !== 3) return '';
+    var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    dt.setDate(dt.getDate() + days);
+    var y = dt.getFullYear();
+    var m = String(dt.getMonth() + 1).padStart(2, '0');
+    var da = String(dt.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + da;
+}
+
+/** تاريخ النهاية يجب أن يكون بعد تاريخ البداية (وليس مساوياً له). */
+function delValidateDates(startDate, endDate) {
+    if (!startDate) return 'تاريخ بداية التفويض مطلوب';
+    if (!endDate) return 'تاريخ نهاية التفويض مطلوب';
+    if (startDate >= endDate) {
+        if (startDate === endDate) {
+            return 'لا يمكن أن يكون تاريخ البداية مساوياً لتاريخ النهاية. يجب أن يكون تاريخ النهاية بعد تاريخ البداية.';
+        }
+        return 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية. يجب أن يكون تاريخ النهاية أكبر من تاريخ البداية.';
+    }
+    return null;
+}
+
+function delShowDateValidationError(msg) {
+    var errEl = document.getElementById('delErr');
+    if (!errEl) return;
+    if (msg) {
+        errEl.textContent = msg;
+        errEl.classList.remove('d-none');
+    } else {
+        errEl.classList.add('d-none');
+    }
+}
+
+function delMarkDateFieldInvalid(el, invalid) {
+    if (!el) return;
+    if (invalid) el.classList.add('is-invalid');
+    else el.classList.remove('is-invalid');
+}
+
+/** يقيّد نطاق التواريخ في نموذج الإضافة/التعديل. */
+function delConfigureDateConstraints() {
+    var sd = document.getElementById('delStartDate');
+    var ed = document.getElementById('delEndDate');
+    if (!sd || !ed) return;
+    var start = (sd.value || '').trim();
+    var end = (ed.value || '').trim();
+    if (!start) {
+        ed.removeAttribute('min');
+        sd.removeAttribute('max');
+        return;
+    }
+    var minEnd = delAddDaysIso(start, 1);
+    ed.min = minEnd;
+    if (end) sd.max = delAddDaysIso(end, -1);
+    else sd.removeAttribute('max');
+    if (ed.value && ed.value <= start) ed.value = '';
+    if (start && end && start >= end) sd.max = delAddDaysIso(end, -1);
+}
+
+/** @deprecated استخدم delConfigureDateConstraints */
+function delConfigureEndDateMin() {
+    delConfigureDateConstraints();
+}
+
 /** إضافة تفويض: تاريخ البداية = اليوم، ولا يُسمح باختيار تاريخ قبل اليوم (min على حقل type=date). */
 function delConfigureStartDateForAdd() {
     var sd = document.getElementById('delStartDate');
@@ -50,6 +117,7 @@ function delConfigureStartDateForAdd() {
     var today = delTodayIso();
     sd.min = today;
     sd.value = today;
+    delConfigureEndDateMin();
 }
 
 /** تعديل تفويض (تحديث): تاريخ البداية يُضبط تلقائياً على اليوم، مع min = اليوم (type=date يعطّل الأيام الأقدم في المنتقي). */
@@ -59,6 +127,7 @@ function delConfigureStartDateForEdit() {
     var today = delTodayIso();
     sd.min = today;
     sd.value = today;
+    delConfigureEndDateMin();
 }
 
 function delClearFilters() {
@@ -760,7 +829,11 @@ async function delShowDetails(id) {
         var cancelReasonRow = '';
         if (sc === 'cancelled') {
             var cr = (x.cancellationReason != null ? x.cancellationReason : x.CancellationReason || '').trim();
+            var cby = (x.cancelledBy != null ? x.cancelledBy : x.CancelledBy || '').trim();
+            var cat = (x.cancelledAt != null ? x.cancelledAt : x.CancelledAt || '').trim();
             cancelReasonRow = delDetailRow('سبب إلغاء التفويض', delEsc(cr || '—'));
+            if (cby) cancelReasonRow += delDetailRow('أُلغي بواسطة', delEsc(cby));
+            if (cat) cancelReasonRow += delDetailRow('تاريخ الإلغاء', delEsc(cat));
         }
         var updatedByVal = (x.updatedBy != null ? x.updatedBy : x.UpdatedBy || '').trim();
         document.getElementById('delDetailsBody').innerHTML =
@@ -817,6 +890,8 @@ function delShowAddModal() {
     var draftWrap = document.getElementById('delDraftWrap');
     if (draftWrap) draftWrap.classList.remove('d-none');
     document.getElementById('delErr').classList.add('d-none');
+    delMarkDateFieldInvalid(document.getElementById('delStartDate'), false);
+    delMarkDateFieldInvalid(document.getElementById('delEndDate'), false);
     var btnCancelDel = document.getElementById('delBtnCancelDelegation');
     if (btnCancelDel) btnCancelDel.classList.add('d-none');
     bootstrap.Modal.getOrCreateInstance(document.getElementById('delModal')).show();
@@ -858,6 +933,7 @@ async function delEdit(id) {
         document.getElementById('delDelegateeBen').value = String(d.delegateeBeneficiaryId || '');
         delConfigureStartDateForEdit();
         document.getElementById('delEndDate').value = d.endDate || '';
+        delConfigureEndDateMin();
         document.getElementById('delDraft').checked = false;
         var draftWrap = document.getElementById('delDraftWrap');
         if (draftWrap) draftWrap.classList.add('d-none');
@@ -923,6 +999,14 @@ async function delSave() {
         errEl.classList.remove('d-none');
         return;
     }
+    var dateErr = delValidateDates(startDate, endDate);
+    delMarkDateFieldInvalid(document.getElementById('delStartDate'), !!dateErr);
+    delMarkDateFieldInvalid(document.getElementById('delEndDate'), !!dateErr);
+    if (dateErr) {
+        delShowDateValidationError(dateErr);
+        return;
+    }
+    delShowDateValidationError(null);
 
     try {
         if (delEditingId) {
@@ -1089,6 +1173,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     var dBen = document.getElementById('delDelegatorBen');
     if (dBen) dBen.addEventListener('change', delRebuildDelegateeBenOptions);
+    function delOnDateFieldChange() {
+        var sd = document.getElementById('delStartDate');
+        var ed = document.getElementById('delEndDate');
+        if (!sd || !ed) return;
+        delConfigureDateConstraints();
+        var msg = delValidateDates((sd.value || '').trim(), (ed.value || '').trim());
+        delMarkDateFieldInvalid(sd, !!msg && !!(sd.value || '').trim());
+        delMarkDateFieldInvalid(ed, !!msg && !!(ed.value || '').trim());
+        delShowDateValidationError(msg);
+    }
+    var delStart = document.getElementById('delStartDate');
+    if (delStart) {
+        delStart.addEventListener('change', delOnDateFieldChange);
+        delStart.addEventListener('input', delOnDateFieldChange);
+    }
+    var delEnd = document.getElementById('delEndDate');
+    if (delEnd) {
+        delEnd.addEventListener('change', delOnDateFieldChange);
+        delEnd.addEventListener('input', delOnDateFieldChange);
+    }
     var delModalEl = document.getElementById('delModal');
     if (delModalEl) {
         delModalEl.addEventListener('hidden.bs.modal', function () {

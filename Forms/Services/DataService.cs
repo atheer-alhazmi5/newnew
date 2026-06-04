@@ -1189,6 +1189,57 @@ public class DataService
         return Task.CompletedTask;
     }
 
+    public Task RecalculateOrganizationalUnitHierarchyAsync()
+    {
+        var list = _db.OrganizationalUnits.ToList();
+        ApplyOrganizationalUnitHierarchyPaths(list);
+        _db.SaveOrganizationalUnits(list);
+        return Task.CompletedTask;
+    }
+
+    private static bool SameOrgUnitParent(OrganizationalUnit u, int? parentId)
+    {
+        if (!parentId.HasValue || parentId.Value <= 0)
+            return !u.ParentId.HasValue || u.ParentId.Value <= 0;
+        return u.ParentId == parentId;
+    }
+
+    private static void ApplyOrganizationalUnitHierarchyPaths(List<OrganizationalUnit> units)
+    {
+        var comparer = StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false);
+
+        List<OrganizationalUnit> ChildrenOf(int? parentId) => units
+            .Where(u => SameOrgUnitParent(u, parentId))
+            .OrderBy(u => u.SortOrder)
+            .ThenBy(u => u.Name, comparer)
+            .ToList();
+
+        void Walk(int? parentId, string? parentPath)
+        {
+            var children = ChildrenOf(parentId);
+            for (var i = 0; i < children.Count; i++)
+            {
+                var segment = (i + 1).ToString();
+                var path = parentPath == null ? segment : parentPath + "،" + segment;
+                children[i].OrderPath = path;
+                children[i].SortOrder = i + 1;
+                Walk(children[i].Id, path);
+            }
+        }
+
+        Walk(null, null);
+    }
+
+    public Task<int> GetNextOrganizationalUnitSiblingSortOrderAsync(int? parentId, int? excludeId = null)
+    {
+        var siblings = _db.OrganizationalUnits
+            .Where(u => SameOrgUnitParent(u, parentId) && (!excludeId.HasValue || u.Id != excludeId.Value))
+            .Select(u => u.SortOrder)
+            .ToList();
+        var next = siblings.Count == 0 ? 1 : siblings.Max() + 1;
+        return Task.FromResult(next);
+    }
+
     // ─── BENEFICIARIES ───────────────────────────────────────────────────────
     public Task<List<Beneficiary>> ListBeneficiariesAsync()
         => Task.FromResult(_db.Beneficiaries.OrderBy(b => b.Id).ToList());
@@ -1691,50 +1742,94 @@ public class DataService
             StringComparison.OrdinalIgnoreCase);
     }
 
-    public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
-        int userId, int departmentId, string location)
+    public int ResolveUserOrganizationalUnitId(int userId, string? username)
     {
-        var now  = DateTime.Now;
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var ben = _db.Beneficiaries.FirstOrDefault(b =>
+                b.IsActive &&
+                string.Equals(b.Username?.Trim(), username.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (ben?.OrganizationalUnitId is > 0)
+                return ben.OrganizationalUnitId.Value;
+        }
+        var user = _db.Users.FirstOrDefault(u => u.Id == userId);
+        return user?.DepartmentId ?? 0;
+    }
+
+    private static bool PopupIsWithinDisplayPeriod(PopupNotification p)
+    {
+        if (!string.Equals(p.DisplayPeriod?.Trim(), "specific", StringComparison.OrdinalIgnoreCase))
+            return true;
+        var today = DateTime.Today;
+        if (p.StartDate.HasValue && today < p.StartDate.Value.Date)
+            return false;
+        if (p.EndDate.HasValue && today > p.EndDate.Value.Date)
+            return false;
+        return true;
+    }
+
+    public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
+        int userId, int departmentId, string location, string? username = null)
+    {
+        var effectiveDeptId = userId > 0
+            ? ResolveUserOrganizationalUnitId(userId, username)
+            : departmentId;
+        if (effectiveDeptId <= 0 && departmentId > 0)
+            effectiveDeptId = departmentId;
+
         var list = _db.PopupNotifications.Where(p =>
         {
-            if (!string.Equals(p.Status?.Trim(), "published", StringComparison.OrdinalIgnoreCase)) return false;
-            if (!PopupDisplayLocationMatches(p.DisplayLocation, location)) return false;
-            if (p.DisplayPeriod == "specific")
-            {
-                if (p.StartDate.HasValue && now < p.StartDate.Value) return false;
-                if (p.EndDate.HasValue   && now > p.EndDate.Value)   return false;
-            }
+            if (!string.Equals(p.Status?.Trim(), "published", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (!PopupDisplayLocationMatches(p.DisplayLocation, location))
+                return false;
+            if (!PopupIsWithinDisplayPeriod(p))
+                return false;
+
             var dismissed = p.DismissedByUserIds ?? new List<int>();
-            if (p.DisplayPeriod == "once" && dismissed.Contains(userId)) return false;
+            if (string.Equals(p.DisplayPeriod?.Trim(), "once", StringComparison.OrdinalIgnoreCase)
+                && userId > 0 && dismissed.Contains(userId))
+                return false;
 
             var userIds = p.TargetUserIds ?? new List<int>();
             var deptIds = p.TargetDepartmentIds ?? new List<int>();
             var hasU = userIds.Count > 0;
             var hasD = deptIds.Count > 0;
-            // صفحة البداية وتسجيل الدخول: الاستهداف بالموظفين/الوحدات لا يطبَّق — يعرض للجميع
             var publicPage = string.Equals(location, "landing", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(location, "login", StringComparison.OrdinalIgnoreCase);
-            if (publicPage) { hasD = false; hasU = false; }
+            if (publicPage)
+            {
+                hasD = false;
+                hasU = false;
+            }
 
             if (userId == 0)
-            {
-                if (hasU) return false;
-                return true;
-            }
+                return !hasU;
 
             if (!hasU && !hasD) return true;
             if (hasU && hasD)
-            {
-                var uOk = userIds.Contains(userId);
-                var dOk = deptIds.Contains(departmentId);
-                if (!uOk && !dOk) return false;
-                return true;
-            }
-            if (hasU && !userIds.Contains(userId)) return false;
-            if (hasD && !deptIds.Contains(departmentId)) return false;
+                return userIds.Contains(userId) || deptIds.Contains(effectiveDeptId);
+            if (hasU) return userIds.Contains(userId);
+            if (hasD) return deptIds.Contains(effectiveDeptId);
             return true;
         }).ToList();
         return Task.FromResult(list);
+    }
+
+    public Task RecordPopupViewAsync(int popupId, int userId)
+    {
+        if (userId <= 0) return Task.CompletedTask;
+        var list = _db.PopupNotifications;
+        var item = list.FirstOrDefault(p => p.Id == popupId);
+        if (item == null) return Task.CompletedTask;
+        item.ViewedBy ??= new List<PopupViewEntry>();
+        var existing = item.ViewedBy.FirstOrDefault(v => v.UserId == userId);
+        if (existing != null)
+            existing.ViewedAt = DateTime.Now;
+        else
+            item.ViewedBy.Add(new PopupViewEntry { UserId = userId, ViewedAt = DateTime.Now });
+        _db.SavePopupNotifications(list);
+        return Task.CompletedTask;
     }
 
     public Task<bool> DismissPopupAsync(int popupId, int userId)
@@ -1742,12 +1837,54 @@ public class DataService
         var list = _db.PopupNotifications;
         var item = list.FirstOrDefault(p => p.Id == popupId);
         if (item == null) return Task.FromResult(false);
-        if (!item.DismissedByUserIds.Contains(userId))
+        if (userId > 0)
         {
-            item.DismissedByUserIds.Add(userId);
-            _db.SavePopupNotifications(list);
+            item.DismissedByUserIds ??= new List<int>();
+            if (!item.DismissedByUserIds.Contains(userId))
+                item.DismissedByUserIds.Add(userId);
+            item.ViewedBy ??= new List<PopupViewEntry>();
+            var existing = item.ViewedBy.FirstOrDefault(v => v.UserId == userId);
+            if (existing != null)
+                existing.ViewedAt = DateTime.Now;
+            else
+                item.ViewedBy.Add(new PopupViewEntry { UserId = userId, ViewedAt = DateTime.Now });
         }
+        _db.SavePopupNotifications(list);
         return Task.FromResult(true);
+    }
+
+    public Task<List<(int UserId, string FullName, string OrgUnitName, DateTime ViewedAt)>> GetPopupViewerRowsAsync(int popupId)
+    {
+        var item = _db.PopupNotifications.FirstOrDefault(p => p.Id == popupId);
+        if (item?.ViewedBy == null || item.ViewedBy.Count == 0)
+            return Task.FromResult(new List<(int, string, string, DateTime)>());
+
+        var users = _db.Users.ToDictionary(u => u.Id);
+        var bensByUsername = _db.Beneficiaries
+            .Where(b => !string.IsNullOrWhiteSpace(b.Username))
+            .GroupBy(b => b.Username.Trim().ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First());
+        var ouMap = _db.OrganizationalUnits.ToDictionary(o => o.Id, o => o.Name);
+
+        var rows = item.ViewedBy
+            .GroupBy(v => v.UserId)
+            .Select(g => g.OrderByDescending(v => v.ViewedAt).First())
+            .OrderByDescending(v => v.ViewedAt)
+            .Select(v =>
+            {
+                users.TryGetValue(v.UserId, out var u);
+                var fullName = u?.FullName ?? $"مستخدم #{v.UserId}";
+                var ouName = "";
+                if (u != null && bensByUsername.TryGetValue(u.Username.Trim().ToLowerInvariant(), out var ben)
+                    && ben.OrganizationalUnitId is > 0)
+                    ouMap.TryGetValue(ben.OrganizationalUnitId.Value, out ouName);
+                else if (u?.DepartmentId is > 0)
+                    ouMap.TryGetValue(u.DepartmentId.Value, out ouName);
+                ouName ??= u?.Department?.Name ?? "—";
+                return (v.UserId, fullName, ouName, v.ViewedAt);
+            })
+            .ToList();
+        return Task.FromResult(rows);
     }
 
     // ─── DASHBOARD ────────────────────────────────────────────────────────────
@@ -2158,10 +2295,64 @@ public class DataService
 
     // ─── USER GUIDE ITEMS ─────────────────────────────────────────────────────
     public Task<List<UserGuideItem>> ListUserGuideItemsAsync()
-        => Task.FromResult(_db.UserGuideItems
-            .OrderBy(x => x.ParentId ?? 0)
-            .ThenBy(x => x.SortOrder)
-            .ToList());
+        => Task.FromResult(_db.UserGuideItems.ToList());
+
+    public Task RecalculateUserGuideHierarchyAsync()
+    {
+        var list = _db.UserGuideItems.ToList();
+        ApplyUserGuideHierarchyPaths(list);
+        _db.SaveUserGuideItems(list);
+        return Task.CompletedTask;
+    }
+
+    private static bool SameUserGuideParent(UserGuideItem item, int? parentId)
+    {
+        if (!parentId.HasValue || parentId.Value <= 0)
+            return !item.ParentId.HasValue || item.ParentId.Value <= 0;
+        return item.ParentId == parentId;
+    }
+
+    private static void ApplyUserGuideHierarchyPaths(List<UserGuideItem> items)
+    {
+        var comparer = StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false);
+
+        List<UserGuideItem> ChildrenOf(int? parentId) => items
+            .Where(x => SameUserGuideParent(x, parentId))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Name, comparer)
+            .ToList();
+
+        void Walk(int? parentId, string? parentPath)
+        {
+            var children = ChildrenOf(parentId);
+            for (var i = 0; i < children.Count; i++)
+            {
+                var segment = (i + 1).ToString();
+                var path = parentPath == null ? segment : parentPath + "،" + segment;
+                children[i].OrderPath = path;
+                children[i].SortOrder = i + 1;
+                Walk(children[i].Id, path);
+            }
+        }
+
+        Walk(null, null);
+    }
+
+    public Task<int> GetNextUserGuideSiblingSortOrderAsync(int? parentId, int? excludeId = null)
+    {
+        var siblings = _db.UserGuideItems
+            .Where(x => SameUserGuideParent(x, parentId) && (!excludeId.HasValue || x.Id != excludeId.Value))
+            .Select(x => x.SortOrder)
+            .ToList();
+        return Task.FromResult(siblings.Count == 0 ? 1 : siblings.Max() + 1);
+    }
+
+    public Task<string?> GetUserGuideItemDeleteBlockReasonAsync(int id)
+    {
+        if (_db.UserGuideItems.Any(x => x.ParentId == id))
+            return Task.FromResult<string?>("لا يمكن حذف هذا العنصر لوجود عناصر فرعية مرتبطة به في دليل المستخدم. احذف أو انقل العناصر التابعة أولاً، أو عطّل العنصر بدلًا من الحذف.");
+        return Task.FromResult<string?>(null);
+    }
 
     public Task<UserGuideItem?> GetUserGuideItemByIdAsync(int id)
         => Task.FromResult(_db.UserGuideItems.FirstOrDefault(x => x.Id == id));
@@ -2180,10 +2371,11 @@ public class DataService
     {
         var list = _db.UserGuideItems;
         item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
-        var siblings = list.Where(x => x.ParentId == item.ParentId).ToList();
-        if (item.SortOrder <= 0) item.SortOrder = (siblings.Count == 0 ? 0 : siblings.Max(x => x.SortOrder)) + 1;
+        if (item.SortOrder <= 0)
+            item.SortOrder = list.Where(x => SameUserGuideParent(x, item.ParentId)).Select(x => x.SortOrder).DefaultIfEmpty(0).Max() + 1;
         if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
         list.Add(item);
+        ApplyUserGuideHierarchyPaths(list);
         _db.SaveUserGuideItems(list);
         return Task.FromResult(item);
     }
@@ -2195,6 +2387,7 @@ public class DataService
         if (idx < 0) return Task.FromResult(false);
         item.UpdatedAt = DateTime.UtcNow;
         list[idx] = item;
+        ApplyUserGuideHierarchyPaths(list);
         _db.SaveUserGuideItems(list);
         return Task.FromResult(true);
     }
@@ -2205,23 +2398,8 @@ public class DataService
         var item = list.FirstOrDefault(x => x.Id == id);
         if (item == null) return Task.FromResult(false);
 
-        var toRemove = new HashSet<int> { id };
-        var added = true;
-        while (added)
-        {
-            added = false;
-            foreach (var x in list)
-            {
-                if (x.ParentId.HasValue && toRemove.Contains(x.ParentId.Value) && toRemove.Add(x.Id))
-                    added = true;
-            }
-        }
-
-        list.RemoveAll(x => toRemove.Contains(x.Id));
-
-        var siblings = list.Where(x => x.ParentId == item.ParentId).OrderBy(x => x.SortOrder).ToList();
-        for (int i = 0; i < siblings.Count; i++) siblings[i].SortOrder = i + 1;
-
+        list.Remove(item);
+        ApplyUserGuideHierarchyPaths(list);
         _db.SaveUserGuideItems(list);
         return Task.FromResult(true);
     }
@@ -2286,6 +2464,36 @@ public class DataService
         list.Remove(d);
         _db.SaveDelegations(list);
         return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// عند دخول المفوِّض الأساسي لحسابه الشخصي: إلغاء التفويضات الصادرة التي أنشأها (وليس إلغاء المسؤول من الإعدادات).
+    /// </summary>
+    public Task<int> CancelOutgoingDelegationsForDelegatorSelfLoginAsync(int delegatorBeneficiaryId, string cancelledBy)
+    {
+        const string reason = "تم إلغاء التفويض بواسطة المستفيد.";
+        var list = _db.Delegations;
+        var today = DateTime.Today;
+        var now = DateTime.Now;
+        var count = 0;
+        foreach (var d in list)
+        {
+            if (d.DelegatorBeneficiaryId != delegatorBeneficiaryId) continue;
+            if (DelegationStatusIsCancelled(d.Status)) continue;
+            if (string.Equals(d.Status?.Trim(), "draft", StringComparison.OrdinalIgnoreCase)) continue;
+            if (d.EndDate.Date < today) continue;
+
+            d.Status = "cancelled";
+            d.CancellationReason = reason;
+            d.CancelledBy = cancelledBy;
+            d.CancelledAt = now;
+            d.UpdatedBy = cancelledBy;
+            d.UpdatedAt = now;
+            count++;
+        }
+        if (count > 0)
+            _db.SaveDelegations(list);
+        return Task.FromResult(count);
     }
 
     // ─── SYSTEM FEEDBACK (تقييم النظام) ───────────────────────────────────────

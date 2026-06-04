@@ -28,6 +28,9 @@ public class UserGuideItem
     /// <summary>الترتيب داخل المستوى: للجذور = 1..N، وللأبناء = فهرس ضمن نفس الأب 1..M.</summary>
     public int SortOrder { get; set; }
 
+    /// <summary>مسار الترتيب الهرمي (مثل 1 أو 1،2 أو 1،2،3) — يُحدَّث تلقائياً.</summary>
+    public string OrderPath { get; set; } = "";
+
     public bool IsActive { get; set; } = true;
 
     public string CreatedBy { get; set; } = "";

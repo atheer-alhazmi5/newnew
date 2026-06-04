@@ -607,12 +607,13 @@
 
 <div id="sysPopupContainer"></div>
 <style>
-.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10050;display:flex;align-items:center;justify-content:center;animation:lpFadeIn .25s ease; }
-.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:440px;width:calc(100% - 40px);animation:lpSlideUp .3s ease; }
-.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff; }
-.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff; }
-.sys-popup-body { background:#fff;padding:20px 22px; }
-.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center; }
+.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;animation:lpFadeIn .25s ease; }
+.sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:min(560px,96vw);width:100%;max-height:min(90vh,720px);display:flex;flex-direction:column;animation:lpSlideUp .3s ease; }
+.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-body { background:#fff;padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
+.sys-popup-body p { word-break:break-word;white-space:pre-wrap; }
+.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid #E5E7EB; }
 .sys-popup-close { background:#fff;border:1.5px solid #E5E7EB;border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:#374151;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
 .sys-popup-close:hover { background:#F9FAFB; }
 @@keyframes lpFadeIn  { from { opacity:0; } to { opacity:1; } }
@@ -646,15 +647,16 @@ document.addEventListener('DOMContentLoaded', async function initLandingPopups()
         var catBiIcon = p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill';
         var bodyHtml = '';
         if (p.contentType === 'text') {
-            bodyHtml = '<p style="color:#374151;font-size:14px;line-height:1.75;margin:0;">' + escHtml(p.textContent || '') + '</p>';
+            var txt = (p.textContent || '').trim();
+            if (txt) bodyHtml = '<p style="color:#374151;font-size:14px;line-height:1.85;margin:0;word-break:break-word;white-space:pre-wrap;">' + escHtml(txt) + '</p>';
         } else if (p.contentType === 'image' && p.attachmentUrl) {
             var imgU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
-            bodyHtml = '<img src="' + imgU + '" style="width:100%;border-radius:10px;object-fit:cover;max-height:220px;" />';
+            bodyHtml = '<img src="' + imgU + '" alt="" style="width:100%;max-width:100%;height:auto;border-radius:10px;object-fit:contain;display:block;" />';
         } else if (p.contentType === 'video' && p.attachmentUrl) {
             var vidU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
-            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;border-radius:10px;"></video>';
+            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;max-width:100%;border-radius:10px;"></video>';
         }
-        el.innerHTML = '<div class="sys-popup-box">' +
+        el.innerHTML = '<div class="sys-popup-box" role="dialog" aria-modal="true">' +
             '<div class="' + headCls + '">' +
             '<div style="font-size:12px;font-weight:700;opacity:.9;margin-bottom:6px;display:flex;align-items:center;gap:5px;">' +
             '<i class="bi ' + catBiIcon + '" style="color:#fff;"></i><span style="color:#fff;">' + escHtml(p.category) + '</span></div>' +

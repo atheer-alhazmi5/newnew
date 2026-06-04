@@ -167,7 +167,36 @@ public class AccountController : BaseController
         if (await UserHasActiveIncomingDelegationAsync(user))
             return RedirectToAction("SelectAccount");
 
+        await TryCancelOutgoingDelegationsForDelegatorSelfLoginAsync(user);
         return RedirectAfterLogin(user.RoleName);
+    }
+
+    /// <summary>إلغاء تلقائي للتفويضات الصادرة عند دخول المفوِّض الأساسي لحسابه (لا يُطبَّق على إلغاء المسؤول من الإعدادات).</summary>
+    private async Task TryCancelOutgoingDelegationsForDelegatorSelfLoginAsync(User user)
+    {
+        var bens = await _ds.ListBeneficiariesAsync();
+        var ben = bens.FirstOrDefault(b =>
+            (!string.IsNullOrEmpty(user.NationalId) && b.NationalId == user.NationalId) ||
+            (!string.IsNullOrEmpty(b.Username) && string.Equals(b.Username, user.Username, StringComparison.OrdinalIgnoreCase)));
+        if (ben == null) return;
+
+        var cancelledCount = await _ds.CancelOutgoingDelegationsForDelegatorSelfLoginAsync(ben.Id, user.FullName);
+        if (cancelledCount <= 0) return;
+
+        await _ds.AddAuditLogAsync(new AuditLog
+        {
+            UserId = user.Id,
+            UserName = user.FullName,
+            NationalId = user.NationalId ?? "",
+            OrganizationalUnit = user.Department?.Name ?? "",
+            Action = "إلغاء تفويض تلقائي",
+            EntityType = "Delegation",
+            EntityId = ben.Id.ToString(),
+            Details = $"ألغى المفوِّض {cancelledCount} تفويضاً بالدخول إلى حسابه الشخصي",
+            IpAddress = GetClientIp(),
+            Browser = GetBrowserName(),
+            OperatingSystem = GetClientOS()
+        });
     }
 
     private async Task<bool> UserHasActiveIncomingDelegationAsync(User user)
@@ -239,7 +268,12 @@ public class AccountController : BaseController
             return RedirectToAction("Login");
 
         if (choice == "self")
+        {
+            var user = await _ds.GetUserByIdAsync(CurrentUserId);
+            if (user != null)
+                await TryCancelOutgoingDelegationsForDelegatorSelfLoginAsync(user);
             return RedirectAfterLogin(CurrentUserRole);
+        }
 
         if (choice == "delegator" && delegationId.HasValue)
         {

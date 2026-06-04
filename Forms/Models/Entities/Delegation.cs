@@ -26,6 +26,12 @@ public class Delegation
     /// <summary>سبب الإلغاء عندما تكون الحالة «ملغى». اختياري للسجلات القديمة.</summary>
     public string CancellationReason { get; set; } = "";
 
+    /// <summary>اسم المستخدم الذي ألغى التفويض (للتتبع).</summary>
+    public string CancelledBy { get; set; } = "";
+
+    /// <summary>تاريخ ووقت الإلغاء.</summary>
+    public DateTime? CancelledAt { get; set; }
+
     public string CreatedBy { get; set; } = "";
     public string? UpdatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
