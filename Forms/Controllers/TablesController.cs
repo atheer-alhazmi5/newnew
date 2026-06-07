@@ -38,7 +38,7 @@ public class TablesController : BaseController
             all = all.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == userOrgUnitId)).ToList();
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
         var fields = await Task.WhenAll(all.Select(async t => (t.Id, Count: (await _ds.ListReadyTableFieldsByTableIdAsync(t.Id)).Count)));
         var fieldCounts = fields.ToDictionary(x => x.Id, x => x.Count);
 
@@ -56,16 +56,22 @@ public class TablesController : BaseController
         if (orgUnitId.HasValue && orgUnitId.Value > 0)
             filtered = filtered.Where(t => t.OrganizationalUnitId == orgUnitId.Value);
 
-        var result = filtered.Select(t => new
+        var filteredList = filtered.OrderBy(t => t.SortOrder).ToList();
+        var result = new List<object>();
+        foreach (var t in filteredList)
         {
-            t.Id, t.Name, t.Description, t.SortOrder,
-            FieldCount = fieldCounts.GetValueOrDefault(t.Id, 0),
-            t.RowCountMode, t.MaxRows, t.OrganizationalUnitId,
-            OrganizationalUnitName = units.FirstOrDefault(u => u.Id == t.OrganizationalUnitId)?.Name ?? "",
-            t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
-            CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-            t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
-        }).OrderBy(x => x.SortOrder).ToList();
+            result.Add(new
+            {
+                t.Id, t.Name, t.Description, t.SortOrder,
+                FieldCount = fieldCounts.GetValueOrDefault(t.Id, 0),
+                t.RowCountMode, t.MaxRows, t.OrganizationalUnitId,
+                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == t.OrganizationalUnitId)?.Name ?? "",
+                t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
+                CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),
+                CanModify = await CanModifyReadyTableAsync(t)
+            });
+        }
 
         return Json(new
         {
@@ -120,6 +126,21 @@ public class TablesController : BaseController
         return units.Count > 0 ? units.First().Id : 0;
     }
 
+    private Task<bool> CanModifyReadyTableAsync(ReadyTable t) =>
+        Task.FromResult(CurrentUserRole == "Admin" && t.Ownership != "خاص");
+
+    /// <summary>مدير النظام لا يعدّل الجداول الخاصة؛ المستفيد لا يعدّل أي جدول بعد إنشائه.</summary>
+    private Task<string?> EnsureReadyTableModifyPermissionAsync(ReadyTable t)
+    {
+        if (CurrentUserRole == "Admin" && t.Ownership == "خاص")
+            return Task.FromResult<string?>("لا يمكن لمدير النظام تعديل جدول جاهز خاص");
+
+        if (CurrentUserRole != "Admin")
+            return Task.FromResult<string?>("غير مصرح بتعديل هذا الجدول");
+
+        return Task.FromResult<string?>(null);
+    }
+
     [HttpPost]
     public async Task<IActionResult> AddReadyTable([FromBody] ReadyTableRequest req)
     {
@@ -157,7 +178,7 @@ public class TablesController : BaseController
             Ownership = ownership,
             ColumnHeaderColor = req.ColumnHeaderColor ?? "",
             IsActive = req.IsActive,
-            CreatedBy = CurrentUserFullName
+            CreatedBy = (CurrentUserFullName ?? CurrentUserName ?? "").Trim()
         };
 
         await _ds.AddReadyTableAsync(table);
@@ -189,24 +210,30 @@ public class TablesController : BaseController
     [HttpPost]
     public async Task<IActionResult> UpdateReadyTable([FromBody] ReadyTableUpdateRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated)
             return Json(new { success = false, message = "غير مصرح" });
 
         var t = await _ds.GetReadyTableByIdAsync(req.Id);
         if (t == null) return Json(new { success = false, message = "الجدول غير موجود" });
 
-        var canEdit = t.CreatedBy == CurrentUserFullName || CurrentUserRole == "Admin";
-        if (!canEdit) return Json(new { success = false, message = "غير مصرح بتعديل هذا الجدول" });
+        var permErr = await EnsureReadyTableModifyPermissionAsync(t);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الجدول مطلوب" });
+
+        var isAdminUser = CurrentUserRole == "Admin";
 
         t.Name = req.Name.Trim();
         t.Description = req.Description?.Trim() ?? "";
         if (req.SortOrder > 0) t.SortOrder = req.SortOrder;
         t.RowCountMode = req.RowCountMode ?? t.RowCountMode;
         t.MaxRows = req.RowCountMode == "مقيد" ? req.MaxRows : null;
-        t.Ownership = "عام";
+        if (isAdminUser)
+            t.Ownership = "عام";
+        else if (!string.IsNullOrWhiteSpace(req.Ownership) && (req.Ownership == "عام" || req.Ownership == "خاص"))
+            t.Ownership = req.Ownership!;
         t.ColumnHeaderColor = req.ColumnHeaderColor ?? t.ColumnHeaderColor;
         t.IsActive = req.IsActive;
         t.UpdatedBy = CurrentUserFullName;
@@ -243,14 +270,15 @@ public class TablesController : BaseController
     [HttpPost]
     public async Task<IActionResult> DeleteReadyTable([FromBody] TableIdRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated)
             return Json(new { success = false, message = "غير مصرح" });
 
         var t = await _ds.GetReadyTableByIdAsync(req.Id);
         if (t == null) return Json(new { success = false, message = "الجدول غير موجود" });
 
-        var canDelete = t.CreatedBy == CurrentUserFullName || CurrentUserRole == "Admin";
-        if (!canDelete) return Json(new { success = false, message = "غير مصرح بحذف هذا الجدول" });
+        var permErr = await EnsureReadyTableModifyPermissionAsync(t);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (await _ds.IsReadyTableLinkedAsync(req.Id))
             return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });

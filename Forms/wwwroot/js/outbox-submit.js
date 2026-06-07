@@ -9,6 +9,7 @@
 
 var obsStep = 1;
 var obsProcedures = [];
+var obsFilteredProcedures = [];
 var obsPickedId = 0;
 var obsPickedData = null;
 var obsFormDef = null;        // { id, name, fieldsJson, sections, fields, rules, titleAppearance }
@@ -76,18 +77,89 @@ async function obsLoadProcedures() {
         return;
     }
     obsProcedures = r.data || [];
+    obsFillCardFilters();
+    obsApplyCardFilters();
+}
+
+function obsFillCardFilters() {
+    var typeSel = document.getElementById('obsFilterType');
+    var procSel = document.getElementById('obsFilterProcedure');
+    if (!typeSel || !procSel) return;
+
+    var types = {};
+    obsProcedures.forEach(function (p) {
+        var tid = p.typeId != null ? p.typeId : p.TypeId;
+        var tname = p.typeName || p.TypeName || '—';
+        if (tid != null) types[String(tid)] = tname;
+    });
+    var typeHtml = '<option value="">نوع الإجراء</option>';
+    Object.keys(types).sort(function (a, b) {
+        return String(types[a]).localeCompare(String(types[b]), 'ar');
+    }).forEach(function (tid) {
+        typeHtml += '<option value="' + obsEscAttr(tid) + '">' + esc(types[tid]) + '</option>';
+    });
+    typeSel.innerHTML = typeHtml;
+
+    obsFillProcedureFilterOptions();
+}
+
+function obsFillProcedureFilterOptions() {
+    var procSel = document.getElementById('obsFilterProcedure');
+    var typeSel = document.getElementById('obsFilterType');
+    if (!procSel) return;
+    var fType = typeSel ? (typeSel.value || '') : '';
+    var list = obsProcedures.filter(function (p) {
+        if (!fType) return true;
+        return String(p.typeId != null ? p.typeId : p.TypeId) === String(fType);
+    });
+    var procHtml = '<option value="">اسم الإجراء</option>';
+    list.slice().sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ar');
+    }).forEach(function (p) {
+        procHtml += '<option value="' + obsEscAttr(String(p.id)) + '">' + esc(p.name || '') + '</option>';
+    });
+    procSel.innerHTML = procHtml;
+}
+
+function obsOnFilterTypeChange() {
+    var procSel = document.getElementById('obsFilterProcedure');
+    if (procSel) procSel.value = '';
+    obsFillProcedureFilterOptions();
+    obsApplyCardFilters();
+}
+
+function obsApplyCardFilters() {
+    var fType = document.getElementById('obsFilterType')?.value || '';
+    var fProc = document.getElementById('obsFilterProcedure')?.value || '';
+    obsFilteredProcedures = obsProcedures.filter(function (p) {
+        if (fType && String(p.typeId != null ? p.typeId : p.TypeId) !== String(fType)) return false;
+        if (fProc && String(p.id) !== String(fProc)) return false;
+        return true;
+    });
     obsRenderCards();
+}
+
+function obsClearCardFilters() {
+    ['obsFilterType', 'obsFilterProcedure'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    obsFillProcedureFilterOptions();
+    obsApplyCardFilters();
 }
 
 function obsRenderCards() {
     var host = document.getElementById('obsCardsHost');
     if (!host) return;
-    if (!obsProcedures.length) {
-        host.innerHTML = '<div class="text-center w-100 py-4" style="grid-column:1/-1;color:var(--gray-500);"><i class="bi bi-inbox" style="font-size:42px;display:block;margin-bottom:6px;color:var(--gray-300);"></i>لا توجد إجراءات عمل معتمدة ومفعّلة حالياً</div>';
+    var list = obsFilteredProcedures;
+    if (!list.length) {
+        var hasAny = obsProcedures.length > 0;
+        host.innerHTML = '<div class="text-center w-100 py-4" style="grid-column:1/-1;color:var(--gray-500);"><i class="bi bi-inbox" style="font-size:42px;display:block;margin-bottom:6px;color:var(--gray-300);"></i>'
+            + (hasAny ? 'لا توجد إجراءات مطابقة للفلتر' : 'لا توجد إجراءات عمل معتمدة ومفعّلة حالياً') + '</div>';
         return;
     }
     var html = '';
-    obsProcedures.forEach(function (p) {
+    list.forEach(function (p) {
         var ic = obsNormBiIcon(p.typeIcon);
         var color = p.typeColor && /^#/.test(p.typeColor) ? p.typeColor : '#25935F';
         var selected = (obsPickedId && Number(obsPickedId) === Number(p.id));
@@ -794,3 +866,6 @@ window.obsPick = obsPick;
 window.obsShowProcDetails = obsShowProcDetails;
 window.obsSubmit = obsSubmit;
 window.obsResetAndStart = obsResetAndStart;
+window.obsOnFilterTypeChange = obsOnFilterTypeChange;
+window.obsApplyCardFilters = obsApplyCardFilters;
+window.obsClearCardFilters = obsClearCardFilters;

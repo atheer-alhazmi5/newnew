@@ -131,7 +131,8 @@ public class WorkProceduresController : BaseController
             p.Code,
             p.Name,
             ProcedureActionTypeName = procTypesAll.FirstOrDefault(t => t.Id == p.ProcedureActionTypeId)?.Name ?? "",
-            WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == p.WorkspaceId)?.Name ?? "",
+            p.UsageFrequency,
+            p.ConfidentialityLevel,
             ProcedureClassification = p.ProcedureClassification,
             OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? "",
             ValidityType = p.ValidityType,
@@ -148,9 +149,7 @@ public class WorkProceduresController : BaseController
 
         var workspacesForFilter = await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll);
         var formDefsForFilter = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true);
-        var orgUnitsForFilter = unitsAll.Where(u => u.IsActive)
-            .OrderBy(u => u.SortOrder)
-            .ToList();
+        var orgUnitsForFilter = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll);
         var execRoles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
         var allowedBenIds = ParseBeneficiaryIdsFromExecutorRoles(execRoles);
         var beneficiaries = await _ds.ListBeneficiariesAsync();
@@ -204,8 +203,7 @@ public class WorkProceduresController : BaseController
             })
             .Where(x => x.beneficiaryIds.Count > 0)
             .ToList();
-        var orgUnits = unitsAll.Where(u => u.IsActive)
-            .OrderBy(u => u.SortOrder)
+        var orgUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll)
             .Select(u => new { u.Id, u.Name, u.ParentId, Level = u.ParentId.HasValue ? "فرعي" : "رئيسي" }).ToList();
 
         var myUnit = unitsAll.FirstOrDefault(u => u.Id == myOrgUnitId);
@@ -404,9 +402,7 @@ public class WorkProceduresController : BaseController
 
         steps = steps.OrderBy(s => s.SortOrder).ToList();
 
-        var orgUnits = unitsAll
-            .Where(u => u.IsActive)
-            .OrderBy(u => u.SortOrder)
+        var orgUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll)
             .Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId })
             .ToList();
 
@@ -534,7 +530,7 @@ public class WorkProceduresController : BaseController
             .ToHashSet();
         var usedFdIds = ParseUsedFormDefinitionIds(p).ToHashSet();
         var fsIds = fsAll.Where(s => s.IsActive).Select(s => s.Id).ToHashSet();
-        var orgUnitIds = unitsAll.Where(u => u.IsActive).Select(u => u.Id).ToHashSet();
+        var orgUnitIds = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll).Select(u => u.Id).ToHashSet();
         var ids = steps.Select(s => s.Id).ToList();
         if (ids.Any(x => x <= 0)) return "معرّف كل خطوة يجب أن يكون أكبر من صفر";
         if (ids.Count != ids.Distinct().Count()) return "معرّفات الخطوات يجب أن تكون فريدة";
@@ -1036,7 +1032,7 @@ public class WorkProceduresController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> ListRelatedProcedures(int? excludeId)
+    public async Task<IActionResult> ListRelatedProcedures(int? excludeId, bool approvedOnly = false)
     {
         if (!IsAuthenticated) return Json(new { success = false });
         var isAdmin = CurrentUserRole == "Admin";
@@ -1047,6 +1043,8 @@ public class WorkProceduresController : BaseController
         var all = await _ds.ListWorkProceduresAsync();
         if (!isAdmin)
             all = all.Where(p => allowedOrgIds.Contains(p.OrganizationalUnitId)).ToList();
+        if (approvedOnly)
+            all = all.Where(p => p.Status == "approved").ToList();
         if (excludeId.HasValue && excludeId.Value > 0)
             all = all.Where(p => p.Id != excludeId.Value).ToList();
 
@@ -1350,8 +1348,14 @@ public class WorkProceduresController : BaseController
         {
             if (string.IsNullOrWhiteSpace(req.ValidityStartDate)) return "تاريخ بداية الصلاحية مطلوب";
             if (string.IsNullOrWhiteSpace(req.ValidityEndDate)) return "تاريخ نهاية الصلاحية مطلوب";
-            if (DateTime.TryParse(req.ValidityEndDate, out var e) && DateTime.TryParse(req.ValidityStartDate, out var st) && e < st)
-                return "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+            if (!DateTime.TryParse(req.ValidityStartDate, out var st))
+                return "تاريخ بداية الصلاحية غير صالح";
+            if (!DateTime.TryParse(req.ValidityEndDate, out var e))
+                return "تاريخ نهاية الصلاحية غير صالح";
+            if (st.Date < DateTime.Today)
+                return "تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم";
+            if (e < st)
+                return "تاريخ النهاية يجب أن يكون بعد تاريخ البداية أو مساوياً له";
         }
         return null;
     }
@@ -1471,7 +1475,7 @@ public class WorkProceduresController : BaseController
 
     private static bool ValidateTargetOrganizationalUnitsActive(List<int> targets, List<OrganizationalUnit> unitsAll)
     {
-        var activeIds = unitsAll.Where(u => u.IsActive).Select(u => u.Id).ToHashSet();
+        var activeIds = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll).Select(u => u.Id).ToHashSet();
         foreach (var t in targets)
         {
             if (t <= 0 || !activeIds.Contains(t)) return false;

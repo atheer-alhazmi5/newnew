@@ -15,6 +15,6 @@ public class SystemFeedback
     public string Performance { get; set; } = "";
     public string TechnicalSupport { get; set; } = "";
     public string? Notes { get; set; }
-    public bool IsPublished { get; set; } = true;
+    public bool IsPublished { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

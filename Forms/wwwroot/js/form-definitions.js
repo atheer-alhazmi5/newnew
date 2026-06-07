@@ -149,6 +149,7 @@ function fdInitOrgUnitFilterTree() {
         const wrap = document.querySelector('.bnf-filter-ou-wrap');
         const panel = document.getElementById('fdFilterOuPanel');
         if (wrap && panel && !panel.classList.contains('d-none') && !wrap.contains(e.target)) fdFilterOuClosePanel();
+        if (!e.target.closest('.fd-workflow-wrap')) fdCloseWorkflowMenus();
     });
 }
 let fdIsAdmin       = false;
@@ -157,6 +158,7 @@ let fdEditId        = null;
 let fdRejectId      = null;
 let fdDeleteId      = null;
 let fdFields        = [];          // working field list
+let fdFieldDragFromId = null;      // drag & drop reorder (field id)
 let fdEditingIdx    = -1;          // -1 = adding, >= 0 = editing field at idx
 let fdCurrentTemplate = null;     // fetched template data for step-3 preview
 let fdStep1State    = null;        // persisted step-1 data across wizard steps
@@ -3401,6 +3403,13 @@ function fdPagerNav(btn, direction) {
 
 if (typeof window !== 'undefined') {
     window.fdPagerNav = fdPagerNav;
+    window.fdCloseWorkflowMenus = fdCloseWorkflowMenus;
+    window.fdToggleWorkflowMenu = fdToggleWorkflowMenu;
+    window.fdOnFieldDragStart = fdOnFieldDragStart;
+    window.fdOnFieldDragEnd = fdOnFieldDragEnd;
+    window.fdOnFieldDragOver = fdOnFieldDragOver;
+    window.fdOnFieldDragLeave = fdOnFieldDragLeave;
+    window.fdOnFieldDrop = fdOnFieldDrop;
 }
 
 // ─── SECTIONS HELPERS ──────────────────────────────────────────────────────
@@ -3431,6 +3440,7 @@ function fdParseFieldsJsonPayload(json) {
 }
 
 function fdSerializeFieldsJson() {
+    fdReindexFieldSortOrders();
     const ta = fdStep1State && fdStep1State.titleAppearance
         ? fdNormalizeTitleAppearance(fdStep1State.titleAppearance)
         : fdDefaultTitleAppearance();
@@ -3457,6 +3467,7 @@ function fdApplyParsedFieldsData(parsed) {
     fdSectionSeq = (ids.length ? Math.max(...ids) : 0) + 1;
     fdFields = parsed.fields || [];
     fdFields.forEach((f, i) => { if (!f.id) f.id = i + 1; });
+    fdReindexFieldSortOrders();
     const validFieldIds = new Set(fdFields.map(f => f.id));
     const validSecIds = new Set(fdSections.map(s => s.id));
     const firstFieldRef = fdFields[0] ? `field:${fdFields[0].id}` : (fdSections[0] ? `section:${fdSections[0].id}` : '');
@@ -3750,7 +3761,7 @@ function fdRenderTable() {
     const tbody = document.getElementById('fdBody');
     if (!tbody) return;
     if (!fdData.length) {
-        tbody.innerHTML = `<tr><td colspan="13"><div class="fd-empty-state"><i class="bi bi-file-earmark-x"></i><p>لا توجد نماذج بعد</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-file-earmark-x"></i><p>لا توجد نماذج بعد</p></div></td></tr>`;
         return;
     }
     tbody.innerHTML = fdData.map((f,i) => {
@@ -3771,10 +3782,8 @@ function fdRenderTable() {
             <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i+1}</td>
             <td style="text-align:center;">${publicIdCell}</td>
             <td style="font-weight:600;">${esc(f.name)}</td>
-            <td>${esc(f.workspaceName)}</td>
             <td>${esc(f.formClassName)}</td>
             <td>${esc(f.formTypeName)}</td>
-            <td>${esc(f.templateName)}</td>
             <td style="text-align:center;">${fdOwnershipBadge(f.ownership)}</td>
             <td style="font-size:13px;">${esc(f.orgUnitName)}</td>
             <td style="text-align:center;">${activeVerCell}</td>
@@ -3798,20 +3807,40 @@ function fdOwnershipBadge(ownership) {
     return `<span class="fd-owner-badge fd-owner-none">—</span>`;
 }
 
+function fdCloseWorkflowMenus() {
+    document.querySelectorAll('.fd-workflow-menu').forEach(m => m.classList.add('d-none'));
+}
+
+function fdToggleWorkflowMenu(id, ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    const menu = document.getElementById('fdWfMenu-' + id);
+    if (!menu) return;
+    const wasOpen = !menu.classList.contains('d-none');
+    fdCloseWorkflowMenus();
+    if (!wasOpen) menu.classList.remove('d-none');
+}
+
 function fdActions(f) {
-    let h = '<div class="d-flex gap-1 justify-content-center flex-wrap">';
+    let h = '<div class="fd-actions-wrap d-flex gap-1 justify-content-center flex-wrap align-items-center">';
     h += `<button class="fd-action-btn fd-action-btn-detail" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`;
     const isApproved = f.status === 'approved';
-    // النموذج المعتمد: لا تعديل ولا حذف — تفاصيل + إصدار نسخة فقط (إضافةً لأزرار اعتماد/رفض عند الانتظار)
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-edit" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`;
+
+    const wfItems = [];
     if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
-        h += `<button class="fd-action-btn fd-action-btn-send" onclick="fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`;
+        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-send" onclick="fdCloseWorkflowMenus();fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال للاعتماد</button>`);
     if (fdIsAdmin && f.status === 'pending') {
-        h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`;
-        h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
+        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-approve" onclick="fdCloseWorkflowMenus();fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد النموذج</button>`);
+        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-reject" onclick="fdCloseWorkflowMenus();fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض النموذج</button>`);
     }
-    h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
+    if (wfItems.length) {
+        h += `<div class="fd-workflow-wrap"><button type="button" class="fd-action-btn fd-action-btn-workflow" onclick="fdToggleWorkflowMenu(${f.id}, event)" title="إرسال واعتماد"><i class="bi bi-send-check"></i></button>`;
+        h += `<div class="fd-workflow-menu d-none" id="fdWfMenu-${f.id}">${wfItems.join('')}</div></div>`;
+    }
+
+    if (!isApproved)
+        h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-delete" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`;
     return h + '</div>';
@@ -3903,7 +3932,7 @@ function fdRenderStep(data) {
             ? `<div></div>`
             : `<button class="fd-cancel-btn" onclick="fdGoStepBack(2)"><i class="bi bi-arrow-right-short"></i> السابق</button>`;
         foot.innerHTML = `${backBtn2}
-        <button class="fd-save-btn send" onclick="fdGoStep3()"><i class="bi bi-arrow-left-short"></i> التالي</button>`;
+        <button class="fd-save-btn send" id="fdStep2NextBtn" onclick="fdGoStep3()" ${fdFields.length ? '' : 'disabled title="أضف حقلًا واحدًا على الأقل"'}><i class="bi bi-arrow-left-short"></i> التالي</button>`;
     } else if (fdStep===3) {
         body.innerHTML = fdStep3Html();
         fdRenderRules();
@@ -3960,6 +3989,9 @@ function fdStep1Html(d) {
             <div class="fd-form-group"><label style="margin-bottom:6px;"></label><div class="form-check" style="padding-top:10px;"><input class="form-check-input" type="checkbox" id="fdFTitleBold" ${ta.bold?'checked':''}><label class="form-check-label small" for="fdFTitleBold">غامق</label></div></div>
             <div class="fd-form-group"><label>حجم خط العنوان (بكسل)</label><input type="number" class="form-control" id="fdFTitleFontPx" min="10" max="48" step="1" value="${Number(ta.fontSizePx)}"></div>
         </div>
+        <div class="fd-form-row">
+            <div class="fd-form-group"><label>لون عنوان النموذج</label><div class="fd-color-picker-wrap"><input type="color" id="fdFTitleColor" value="${esc(ta.color)}" oninput="document.getElementById('fdFTitleColorHex').textContent=this.value"><div class="fd-color-hex" id="fdFTitleColorHex">${esc(ta.color)}</div></div></div>
+        </div>
         <div class="fd-form-row cols-1"><div class="fd-form-group"><label>الوصف العام</label><textarea class="form-control" id="fdFDesc" rows="2" placeholder="وصف مختصر">${esc(d.description||'')}</textarea></div></div>
     </div>
     <div class="fd-section">
@@ -3992,6 +4024,7 @@ function fdStep2Html() {
             <table class="table table-sm mb-0" style="font-size:12.5px;">
                 <thead>
                     <tr>
+                        <th style="width:36px;text-align:center;"></th>
                         <th style="width:60px;text-align:center;">الترتيب</th>
                         <th>نوع الحقل</th>
                         <th>اسم الحقل</th>
@@ -4003,7 +4036,7 @@ function fdStep2Html() {
                     </tr>
                 </thead>
                 <tbody id="fdFieldsBody">
-                    <tr><td colspan="8" class="text-center py-3 text-muted">لا توجد حقول مضافة بعد</td></tr>
+                    <tr><td colspan="9" class="text-center py-3 text-muted">لا توجد حقول مضافة بعد</td></tr>
                 </tbody>
             </table>
         </div>
@@ -4100,7 +4133,7 @@ function fdDisplayLayoutColClass(layout) {
 
 /** مظهر عنوان النموذج داخل المعاينة / التعبئة / الطباعة (محفوظ في fieldsJson → meta.titleAppearance). */
 function fdDefaultTitleAppearance() {
-    return { align: 'right', bold: true, fontSizePx: 17 };
+    return { align: 'right', bold: true, fontSizePx: 17, color: '#111827' };
 }
 
 function fdNormalizeTitleAppearance(raw) {
@@ -4117,6 +4150,8 @@ function fdNormalizeTitleAppearance(raw) {
     let px = parseInt(raw.fontSizePx, 10);
     if (!Number.isFinite(px)) px = d.fontSizePx;
     d.fontSizePx = Math.min(48, Math.max(10, px));
+    const c0 = String(raw.color || '').trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(c0) || /^#[0-9A-Fa-f]{3}$/.test(c0)) d.color = c0;
     return d;
 }
 
@@ -4224,15 +4259,22 @@ function fdBuildWatermarkLayerHtml(tpl) {
 // formDesc  – string
 // fields    – array of field objects
 // interactive – true → render editable inputs (step-3), false → read-only display (details)
-// titleAppearanceOpt – { align:'right'|'center'|'left', bold:boolean, fontSizePx:number } من meta.titleAppearance
+// titleAppearanceOpt – { align:'right'|'center'|'left', bold:boolean, fontSizePx:number, color:string } من meta.titleAppearance
 function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, sectionsOverride, titleAppearanceOpt) {
 
     const sections = (sectionsOverride && sectionsOverride.length) ? sectionsOverride : fdDefaultSections();
+    fields = fdSortFieldsList(fields, sections);
     const hasTpl = !!tplData;
     const ta = fdNormalizeTitleAppearance(titleAppearanceOpt || fdDefaultTitleAppearance());
     const tAlign = ta.align === 'center' ? 'center' : (ta.align === 'left' ? 'left' : 'right');
     const tWeight = ta.bold ? '800' : '400';
     const tSizePx = `${ta.fontSizePx}px`;
+    const tColor = ta.color || '#111827';
+    const titleIntroHtml =
+        `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
+            `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:${tColor};margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
+            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
+        `</div>`;
 
     // ── fields HTML ──────────────────────────────────────────────────────────
     const renderField = f => {
@@ -4356,7 +4398,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
 
     // ── المسار بلا قالب: حاوية بسيطة فقط (بدون رأس/تذييل/خطوط/إطار قالب وهمي) ──
     if (!hasTpl) {
-        return `<div style="background:#fff;padding:24px;direction:rtl;font-style:normal;">${fieldsHtml}</div>`;
+        return `<div style="background:#fff;padding:24px;direction:rtl;font-style:normal;">${titleIntroHtml}${fieldsHtml}</div>`;
     }
 
     // ── template layout (مطابقة إدارة القوالب: لا نفرض لون العلامة على الخط الفاصل، ولا خلفية للتذييل، ونُظهر العلامة المائية) ──
@@ -4385,12 +4427,6 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
     const footerHtml = fd.length
         ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:transparent;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
         : `<div style="padding:10px ${mr}px;background:transparent;color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tplName)}</div>`;
-
-    const titleIntroHtml =
-        `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
-            `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:var(--gray-900);margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
-            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
-        `</div>`;
 
     return `<div style="border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
         ${headerHtml}${headerLineHtml}
@@ -4592,6 +4628,7 @@ async function fdPrefetchBindingCachesForFields() {
 }
 
 function fdGoStep3() {
+    if (!fdFields.length) return showToast('أضف حقلًا واحدًا على الأقل قبل المتابعة', 'error');
     fdSyncRulesAfterFieldChanges();
     fdStep = 3;
     fdRenderStep();
@@ -4757,9 +4794,10 @@ function fdAddField() {
     const isStructural = structuralTypes.has(type);
     const isRequired = !isReadOnly && !isStructural && document.getElementById('fdFieldRequired')?.value === '1';
     const tooltipText = document.getElementById('fdFieldTooltip')?.value?.trim() || '';
-    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder:0, sectionId: secId, propertiesJson:JSON.stringify(props) };
+    const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder: fdNextFieldSortOrder(secId), sectionId: secId, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
     else { fdFields.push(field); showToast('تم إضافة الحقل','success'); }
+    fdReindexFieldSortOrders();
     fdRenderFieldsTable(); fdResetFieldForm();
 }
 
@@ -4807,7 +4845,127 @@ function fdSyncRequiredDisabledFromReadOnly() {
 function fdDeleteField(idx) {
     fdFields.splice(idx,1);
     if(fdEditingIdx===idx) fdResetFieldForm(); else if(fdEditingIdx>idx) fdEditingIdx--;
+    fdReindexFieldSortOrders();
     fdRenderFieldsTable(); fdResetFieldForm();
+}
+
+function fdReindexFieldSortOrders() {
+    fdSections.forEach(sec => {
+        const items = fdFields
+            .map((f, i) => ({ f, i }))
+            .filter(x => (x.f.sectionId || fdSections[0].id) === sec.id)
+            .sort((a, b) => {
+                const sa = a.f.sortOrder != null ? a.f.sortOrder : a.i;
+                const sb = b.f.sortOrder != null ? b.f.sortOrder : b.i;
+                return sa - sb;
+            });
+        items.forEach((x, idx) => { x.f.sortOrder = idx + 1; });
+    });
+}
+
+function fdSortFieldsList(fields, sections) {
+    if (!fields || !fields.length) return fields || [];
+    const secOrder = (sections || fdDefaultSections()).map(s => s.id);
+    return fields.slice().sort((a, b) => {
+        const ai = secOrder.indexOf(a.sectionId || secOrder[0]);
+        const bi = secOrder.indexOf(b.sectionId || secOrder[0]);
+        const sa = ai >= 0 ? ai : 0;
+        const sb = bi >= 0 ? bi : 0;
+        if (sa !== sb) return sa - sb;
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+}
+
+function fdNextFieldSortOrder(secId) {
+    const sid = secId || fdActiveSectionId || (fdSections[0] ? fdSections[0].id : 1);
+    const max = fdFields
+        .filter(f => (f.sectionId || fdSections[0].id) === sid)
+        .reduce((m, f) => Math.max(m, f.sortOrder || 0), 0);
+    return max + 1;
+}
+
+function fdUpdateStep2NextBtn() {
+    const btn = document.getElementById('fdStep2NextBtn');
+    if (!btn) return;
+    const ok = fdFields.length > 0;
+    btn.disabled = !ok;
+    btn.title = ok ? '' : 'أضف حقلًا واحدًا على الأقل';
+}
+
+function fdGetFieldsInSectionOrdered(secId) {
+    const sid = secId || (fdSections[0] ? fdSections[0].id : 1);
+    const fallbackSec = fdSections[0] ? fdSections[0].id : 1;
+    return fdFields
+        .filter(f => (f.sectionId || fallbackSec) === sid)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
+function fdApplyFieldOrderInSection(secId, orderedFields) {
+    orderedFields.forEach((f, i) => { f.sortOrder = i + 1; });
+}
+
+function fdReorderFieldByDrop(fromFieldId, toFieldId, toSectionId) {
+    const moved = fdFields.find(f => f.id === fromFieldId);
+    if (!moved) return false;
+
+    const fallbackSec = fdSections[0] ? fdSections[0].id : 1;
+    const prevSecId = moved.sectionId || fallbackSec;
+    const targetSecId = toSectionId != null ? toSectionId : prevSecId;
+
+    if (prevSecId !== targetSecId) {
+        const prevList = fdGetFieldsInSectionOrdered(prevSecId).filter(f => f.id !== fromFieldId);
+        fdApplyFieldOrderInSection(prevSecId, prevList);
+        moved.sectionId = targetSecId;
+    }
+
+    const ordered = fdGetFieldsInSectionOrdered(targetSecId);
+    const fromPos = ordered.findIndex(f => f.id === fromFieldId);
+    let toPos = toFieldId != null ? ordered.findIndex(f => f.id === toFieldId) : ordered.length - 1;
+    if (toPos < 0) toPos = Math.max(ordered.length - 1, 0);
+
+    const list = ordered.slice();
+    if (fromPos >= 0) list.splice(fromPos, 1);
+    if (fromPos >= 0 && fromPos < toPos) toPos--;
+    list.splice(toPos, 0, moved);
+    moved.sectionId = targetSecId;
+    fdApplyFieldOrderInSection(targetSecId, list);
+    return true;
+}
+
+function fdOnFieldDragStart(ev, fieldId) {
+    fdFieldDragFromId = fieldId;
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', String(fieldId));
+    const row = ev.target && ev.target.closest ? ev.target.closest('.fd-field-data-row') : null;
+    if (row) row.classList.add('fd-field-row-dragging');
+}
+
+function fdOnFieldDragEnd(ev) {
+    fdFieldDragFromId = null;
+    document.querySelectorAll('.fd-field-row-dragging, .fd-field-row-drop-target').forEach(el => {
+        el.classList.remove('fd-field-row-dragging', 'fd-field-row-drop-target');
+    });
+}
+
+function fdOnFieldDragOver(ev) {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    const row = ev.currentTarget;
+    if (row && row.classList.contains('fd-field-data-row')) row.classList.add('fd-field-row-drop-target');
+}
+
+function fdOnFieldDragLeave(ev) {
+    const row = ev.currentTarget;
+    if (row) row.classList.remove('fd-field-row-drop-target');
+}
+
+function fdOnFieldDrop(ev, toFieldId, toSectionId) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const fromId = fdFieldDragFromId;
+    fdOnFieldDragEnd(ev);
+    if (fromId == null || fromId === toFieldId) return;
+    if (fdReorderFieldByDrop(fromId, toFieldId, toSectionId)) fdRenderFieldsTable();
 }
 
 function fdRenderFieldsTable() {
@@ -4817,16 +4975,18 @@ function fdRenderFieldsTable() {
     if(badge) badge.textContent=`${fdFields.length} حقل`;
     const num=document.getElementById('fdFieldNum');
     if(num) num.textContent=String(fdEditingIdx>=0?fdEditingIdx+1:fdFields.length+1);
+    fdUpdateStep2NextBtn();
     if(!body) return;
-    if(!fdFields.length){ body.innerHTML='<tr><td colspan="8" class="text-center py-3 text-muted">لا توجد حقول مضافة بعد</td></tr>'; return; }
+    if(!fdFields.length){ body.innerHTML='<tr><td colspan="9" class="text-center py-3 text-muted">لا توجد حقول مضافة بعد</td></tr>'; return; }
     let html = '';
     let globalIdx = 0;
     fdSections.forEach(sec => {
         const items = [];
         fdFields.forEach((f, origIdx) => { if ((f.sectionId || fdSections[0].id) === sec.id) items.push({ f, origIdx }); });
-        html += `<tr class="fd-sec-row-head"><td colspan="8" style="background:var(--sa-50);color:var(--sa-700);font-weight:700;font-size:12px;padding:8px 12px;border-top:2px solid var(--sa-100);"><i class="bi bi-collection"></i> ${esc(sec.title)} <span style="color:var(--gray-500);font-weight:500;margin-inline-start:6px;">(${items.length})</span></td></tr>`;
+        items.sort((a, b) => (a.f.sortOrder || 0) - (b.f.sortOrder || 0));
+        html += `<tr class="fd-sec-row-head"><td colspan="9" style="background:var(--sa-50);color:var(--sa-700);font-weight:700;font-size:12px;padding:8px 12px;border-top:2px solid var(--sa-100);"><i class="bi bi-collection"></i> ${esc(sec.title)} <span style="color:var(--gray-500);font-weight:500;margin-inline-start:6px;">(${items.length})</span></td></tr>`;
         if (!items.length) {
-            html += `<tr><td colspan="8" class="text-center text-muted py-2" style="font-size:11px;">لا توجد حقول في هذا القسم</td></tr>`;
+            html += `<tr><td colspan="9" class="text-center text-muted py-2" style="font-size:11px;">لا توجد حقول في هذا القسم</td></tr>`;
             return;
         }
         items.forEach(({ f, origIdx }) => {
@@ -4839,7 +4999,11 @@ function fdRenderFieldsTable() {
                 ? '<span class="fd-field-req" style="background:var(--info-100);color:var(--info-700);">نعم</span>'
                 : '<span style="font-size:11px;color:var(--gray-400);">لا</span>';
             const layout = f.displayLayout || 'يمتد عبر كامل الصف (واحد من واحد)';
-            html += `<tr>
+            html += `<tr class="fd-field-data-row" data-field-id="${f.id}" data-orig-idx="${origIdx}" data-section-id="${sec.id}"
+                ondragover="fdOnFieldDragOver(event)" ondragleave="fdOnFieldDragLeave(event)"
+                ondrop="fdOnFieldDrop(event, ${f.id}, ${sec.id})">
+                <td style="text-align:center;"><i class="bi bi-grip-vertical fd-field-drag" draggable="true" title="اسحب لإعادة الترتيب"
+                    ondragstart="fdOnFieldDragStart(event, ${f.id})" ondragend="fdOnFieldDragEnd(event)"></i></td>
                 <td style="text-align:center;font-weight:700;color:var(--gray-500);">${globalIdx}</td>
                 <td>${fdFieldTypeBadgeHtml(f.fieldType)}</td>
                 <td style="font-weight:600;">${esc(f.fieldName)}</td>
@@ -4887,7 +5051,8 @@ function fdCollect1() {
     let fontPx = parseInt(document.getElementById('fdFTitleFontPx')?.value || '17', 10);
     if (!Number.isFinite(fontPx)) fontPx = 17;
     fontPx = Math.min(48, Math.max(10, fontPx));
-    const titleAppearance = fdNormalizeTitleAppearance({ align, bold, fontSizePx: fontPx });
+    const color = document.getElementById('fdFTitleColor')?.value || '#111827';
+    const titleAppearance = fdNormalizeTitleAppearance({ align, bold, fontSizePx: fontPx, color });
     return {
         name:     (document.getElementById('fdFName')?.value||'').trim(),
         desc:     (document.getElementById('fdFDesc')?.value||'').trim(),
@@ -4997,11 +5162,20 @@ async function fdShowDetails(id) {
         const activeBadge = d.isActive
             ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle-fill"></i> مفعّل</span>'
             : '<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle"></i> معطّل</span>';
+        const publicIdVal = d.publicId
+            ? `<span class="fd-publicid-badge">${esc(d.publicId)}</span>`
+            : '<span style="color:var(--gray-400);">—</span>';
+        const activeVerVal = d.activeVersionLabel
+            ? `<span class="fd-activever-badge">${esc(d.activeVersionLabel)}</span>`
+            : '<span style="color:var(--gray-400);">—</span>';
 
         let html = `<div class="fd-section">
             <div class="fd-section-title"><i class="bi bi-info-circle-fill"></i> معلومات النموذج</div>
             <div class="fd-detail-grid">
+                <span class="fd-detail-lbl">المعرف</span><span class="fd-detail-val">${publicIdVal}</span>
                 <span class="fd-detail-lbl">اسم النموذج</span><span class="fd-detail-val" style="font-weight:700;">${esc(d.name)}</span>
+                <span class="fd-detail-lbl">الوصف العام</span><span class="fd-detail-val">${d.description ? esc(d.description) : '<span style="color:var(--gray-400);">—</span>'}</span>
+                <span class="fd-detail-lbl">الإصدار النشط</span><span class="fd-detail-val">${activeVerVal}</span>
                 <span class="fd-detail-lbl">الحالة</span><span class="fd-detail-val">${fdStatusBadge(d.status)}</span>
                 <span class="fd-detail-lbl">التفعيل</span><span class="fd-detail-val">${activeBadge}</span>
                 <span class="fd-detail-lbl">الملكية</span><span class="fd-detail-val">${fdOwnershipBadge(d.ownership)}</span>
@@ -5013,7 +5187,6 @@ async function fdShowDetails(id) {
                     ${tplData ? `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:${tplData.color};display:inline-block;"></span>${esc(tplData.name)}</span>` : (esc(d.templateName) || '<span style="color:var(--gray-400);">—</span>')}
                 </span>
                 <span class="fd-detail-lbl">الوحدة التنظيمية</span><span class="fd-detail-val">${esc(d.orgUnitName)}</span>
-                ${d.description ? `<span class="fd-detail-lbl">الوصف</span><span class="fd-detail-val">${esc(d.description)}</span>` : ''}
             </div>
         </div>`;
 

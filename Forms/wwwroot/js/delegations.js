@@ -55,15 +55,12 @@ function delAddDaysIso(iso, days) {
     return y + '-' + m + '-' + da;
 }
 
-/** تاريخ النهاية يجب أن يكون بعد تاريخ البداية (وليس مساوياً له). */
+/** تاريخ النهاية يجب أن يكون أكبر من تاريخ البداية أو يساويه. */
 function delValidateDates(startDate, endDate) {
     if (!startDate) return 'تاريخ بداية التفويض مطلوب';
     if (!endDate) return 'تاريخ نهاية التفويض مطلوب';
-    if (startDate >= endDate) {
-        if (startDate === endDate) {
-            return 'لا يمكن أن يكون تاريخ البداية مساوياً لتاريخ النهاية. يجب أن يكون تاريخ النهاية بعد تاريخ البداية.';
-        }
-        return 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية. يجب أن يكون تاريخ النهاية أكبر من تاريخ البداية.';
+    if (endDate < startDate) {
+        return 'تاريخ النهاية يجب أن يكون أكبر من تاريخ البداية أو يساويه';
     }
     return null;
 }
@@ -97,12 +94,10 @@ function delConfigureDateConstraints() {
         sd.removeAttribute('max');
         return;
     }
-    var minEnd = delAddDaysIso(start, 1);
-    ed.min = minEnd;
-    if (end) sd.max = delAddDaysIso(end, -1);
+    ed.min = start;
+    if (end) sd.max = end;
     else sd.removeAttribute('max');
-    if (ed.value && ed.value <= start) ed.value = '';
-    if (start && end && start >= end) sd.max = delAddDaysIso(end, -1);
+    if (ed.value && ed.value < start) ed.value = '';
 }
 
 /** @deprecated استخدم delConfigureDateConstraints */

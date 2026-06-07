@@ -213,6 +213,15 @@
 <!-- Panels -->
 <div class="obs-panel" id="obsPanel1">
     <div class="obs-panel-title"><i class="bi bi-grid-3x3-gap-fill"></i> اختر نوع الإجراء</div>
+    <div class="obs-type-filters rt-filters">
+        <select class="rt-filter-select form-select" id="obsFilterType" onchange="obsOnFilterTypeChange()" aria-label="نوع الإجراء">
+            <option value="">نوع الإجراء</option>
+        </select>
+        <select class="rt-filter-select form-select" id="obsFilterProcedure" onchange="obsApplyCardFilters()" aria-label="اسم الإجراء">
+            <option value="">اسم الإجراء</option>
+        </select>
+        <button type="button" class="rt-clear-btn" onclick="obsClearCardFilters()"><i class="bi bi-x-circle"></i> مسح</button>
+    </div>
     <div id="obsCardsHost" class="obs-cards-grid">
         <div class="text-center w-100 py-4" style="grid-column:1/-1;"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
     </div>

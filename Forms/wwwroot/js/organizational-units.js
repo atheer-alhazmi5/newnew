@@ -129,11 +129,11 @@ function ouCompareHierarchy(a, b) {
 function ouFilteredRows() {
     var q = (document.getElementById('ouSearch') && document.getElementById('ouSearch').value || '').trim().toLowerCase();
     var cf = document.getElementById('ouFilterClassification') ? document.getElementById('ouFilterClassification').value : '';
-    var onlyWithManager = document.getElementById('ouFilterDirectManager') && document.getElementById('ouFilterDirectManager').checked;
+    var onlyWithoutManager = document.getElementById('ouFilterDirectManager') && document.getElementById('ouFilterDirectManager').checked;
     return ouRows.filter(function (u) {
         if (q && String(u.name || '').toLowerCase().indexOf(q) === -1) return false;
         if (cf && String(u.classificationId) !== String(cf)) return false;
-        if (onlyWithManager && !(u.hasUnitManager || u.HasUnitManager)) return false;
+        if (onlyWithoutManager && (u.hasUnitManager || u.HasUnitManager)) return false;
         return true;
     });
 }

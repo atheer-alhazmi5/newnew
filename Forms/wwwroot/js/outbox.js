@@ -1,6 +1,6 @@
 'use strict';
 /**
- * صندوق الصادر — قائمة طلبات إجراءات العمل مع الفلاتر، التفاصيل، التحديث، والحذف.
+ * صندوق الصادر — قائمة طلبات إجراءات العمل مع الفلاتر، التفاصيل، والحذف.
  * يستخدم نفس Design System (rt-*, fd-*) المعتمد في النظام.
  */
 
@@ -9,7 +9,6 @@ var obProcedures = [];
 var obProcedureTypes = [];
 var obStages = [];
 var obSelectedDelete = null;
-var obSelectedEdit = null;
 
 function obEscAttr(s) {
     if (s == null) return '';
@@ -163,18 +162,19 @@ function obApplyFilters() {
     var html = '';
     list.forEach(function (it, i) {
         var isClosed = it.statusCategory === 'مغلق';
+        var isNewStage = (it.currentStageName || '').trim() === 'جديد';
         var actions = '<button class="ob-act-btn ob-act-detail" onclick="obShowDetails(' + it.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
-        if (!isClosed) {
-            actions += ' <button class="ob-act-btn ob-act-edit" onclick="obShowEdit(' + it.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+        if (!isClosed && isNewStage) {
+            actions += ' <button class="ob-act-btn ob-act-wf" onclick="obShowWorkflow(' + it.id + ',' + (it.procedureId || 0) + ')" title="سير العمل"><i class="bi bi-diagram-3"></i> سير</button>';
             actions += ' <button class="ob-act-btn ob-act-del" onclick="obAskDelete(' + it.id + ',\'' + obEscAttr(it.requestNumber) + '\')"><i class="bi bi-trash3"></i> حذف</button>';
         }
 
         html += '<tr>'
             + '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (i + 1) + '</td>'
             + '<td><a href="javascript:void(0)" class="ob-req-link" onclick="obShowDetails(' + it.id + ')">' + esc(it.requestNumber || '') + '</a></td>'
+            + '<td>' + obProcTypeChip(it) + '</td>'
             + '<td style="font-weight:600;">' + esc(it.procedureName || '—') + '</td>'
             + '<td style="direction:ltr;text-align:right;color:var(--gray-700);">' + esc(obFmtDate(it.submittedAt)) + '</td>'
-            + '<td>' + obProcTypeChip(it) + '</td>'
             + '<td style="text-align:center;">' + obPriorityBadge(it.priority) + '</td>'
             + '<td style="text-align:center;">' + obCatBadge(it.statusCategory) + '</td>'
             + '<td>' + obStageBadge(it.currentStageName, it.currentStageColor) + '</td>'
@@ -358,12 +358,16 @@ function obShowProcedureDetails(procedureId, outboxRequestId) {
     }
 }
 
+function obShowWorkflow(requestId, procedureId) {
+    if (procedureId) obShowProcedureDetails(procedureId, requestId);
+    else obShowDetails(requestId);
+}
+
 window.obLoad = obLoad;
 window.obApplyFilters = obApplyFilters;
 window.obClearFilters = obClearFilters;
 window.obShowDetails = obShowDetails;
-window.obShowEdit = obShowEdit;
-window.obSubmitEdit = obSubmitEdit;
 window.obAskDelete = obAskDelete;
 window.obSubmitDelete = obSubmitDelete;
 window.obShowProcedureDetails = obShowProcedureDetails;
+window.obShowWorkflow = obShowWorkflow;

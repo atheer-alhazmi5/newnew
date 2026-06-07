@@ -869,7 +869,26 @@ function rtClearFilters() {
     rtRenderTable();
 }
 
-function rtCanEdit(t) { return t.createdBy === rtCurrentUser || rtIsAdmin; }
+function rtNormCreatorName(s) {
+    return String(s || '').replace(/\s+/g, '');
+}
+
+function rtCreatorNamesMatch(createdBy, candidate) {
+    if (!createdBy || !candidate) return false;
+    var a = String(createdBy).trim();
+    var b = String(candidate).trim();
+    if (!a || !b) return false;
+    if (a.toLowerCase() === b.toLowerCase()) return true;
+    return rtNormCreatorName(a).toLowerCase() === rtNormCreatorName(b).toLowerCase();
+}
+
+function rtCanEdit(t) {
+    if (!t) return false;
+    if (typeof t.canModify === 'boolean') return t.canModify;
+    if (typeof t.CanModify === 'boolean') return t.CanModify;
+    if (rtIsAdmin) return t.ownership !== 'خاص';
+    return false;
+}
 
 function rtRenderTable() {
     var badge = document.getElementById('rtCountBadge');
@@ -1408,6 +1427,11 @@ async function rtShowEditModal(id) {
         showToast('معرّف الجدول غير صحيح', 'danger');
         return;
     }
+    var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
+    if (listed && !rtCanEdit(listed)) {
+        showToast('غير مصرح بتعديل هذا الجدول', 'error');
+        return;
+    }
     try {
         var r = await apiFetch('/Tables/GetReadyTableDetails?id=' + encodeURIComponent(id));
         if (!r) { showToast('خطأ في الاتصال بالخادم', 'danger'); return; }
@@ -1735,6 +1759,11 @@ async function rtSubmitEdit() {
 
 /* ===== Delete ===== */
 function rtShowDeleteModal(id, name) {
+    var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
+    if (listed && !rtCanEdit(listed)) {
+        showToast('غير مصرح بتعديل هذا الجدول', 'error');
+        return;
+    }
     document.getElementById('rtDeleteId').value = id;
     document.getElementById('rtDeleteNameLabel').textContent = name;
     document.getElementById('rtDeleteError').classList.add('d-none');

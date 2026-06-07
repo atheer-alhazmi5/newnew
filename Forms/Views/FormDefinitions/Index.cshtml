@@ -50,6 +50,30 @@
 .fd-action-btn-send:hover { background:var(--warning-50); }
 .fd-action-btn-version { border-color:var(--info-600); color:var(--info-600); background:#fff; }
 .fd-action-btn-version:hover { background:var(--info-50); }
+.fd-action-btn-workflow { border-color:var(--warning-600); color:var(--warning-700); background:#fff; min-width:36px; padding:5px 8px; }
+.fd-action-btn-workflow:hover { background:var(--warning-50); }
+.fd-workflow-wrap { position:relative; display:inline-flex; }
+.fd-workflow-menu { position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); min-width:168px; background:#fff; border:1px solid var(--gray-200); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:6px; z-index:20; display:flex; flex-direction:column; gap:4px; }
+.fd-wf-item { display:flex; align-items:center; gap:8px; width:100%; border:none; background:transparent; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; text-align:right; transition:background .12s; }
+.fd-wf-item:hover { background:var(--gray-50); }
+.fd-wf-item.fd-wf-send { color:var(--warning-700); }
+.fd-wf-item.fd-wf-approve { color:var(--success-700); }
+.fd-wf-item.fd-wf-reject { color:var(--error-600); }
+
+/* Title color picker (matches templates) */
+.fd-color-picker-wrap { display:flex; align-items:center; gap:12px; }
+.fd-color-picker-wrap input[type=color] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.fd-color-picker-wrap input[type=color]:hover { border-color:var(--sa-400); }
+.fd-color-picker-wrap input[type=color]::-webkit-color-swatch-wrapper { padding:2px; }
+.fd-color-picker-wrap input[type=color]::-webkit-color-swatch { border-radius:10px; border:none; }
+.fd-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
+
+/* Field drag & drop */
+.fd-field-drag { cursor:grab; color:var(--gray-400); font-size:14px; user-select:none; }
+.fd-field-drag:active { cursor:grabbing; }
+.fd-field-row-dragging { opacity:.45; }
+.fd-field-row-drop-target { background:var(--sa-25) !important; box-shadow:inset 0 0 0 2px var(--sa-300); }
+.fd-save-btn.send:disabled { opacity:.45; cursor:not-allowed; transform:none; }
 
 /* PublicId & active-version badges */
 .fd-publicid-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:8px; font-size:12px; font-weight:700; background:var(--gray-100); color:var(--gray-700); font-family:'Cairo',sans-serif; letter-spacing:.3px; }
@@ -225,10 +249,8 @@
                         <th style="width:50px;text-align:center;">رقم</th>
                         <th style="text-align:center;">المعرف</th>
                         <th>اسم النموذج</th>
-                        <th>مساحة العمل</th>
                         <th>التصنيف</th>
                         <th>النوع</th>
-                        <th>القالب</th>
                         <th style="text-align:center;">الملكية</th>
                         <th>الوحدة التنظيمية</th>
                         <th style="text-align:center;">الإصدار النشط</th>
@@ -238,7 +260,7 @@
                     </tr>
                 </thead>
                 <tbody id="fdBody">
-                    <tr><td colspan="13" class="text-center py-4">
+                    <tr><td colspan="11" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>

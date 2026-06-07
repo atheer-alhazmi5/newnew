@@ -30,21 +30,5 @@
     "CreatedAt": "2026-03-16T19:09:03.3769056+03:00",
     "UpdatedBy": null,
     "UpdatedAt": null
-  },
-  {
-    "Id": 3,
-    "Name": "\u062C\u062F\u0648\u0644 \u0627\u0644\u0643\u0645\u064A\u0627\u062A",
-    "Description": "\u062C\u062F\u0648\u0644 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0648\u0627\u0644\u0645\u0642\u0627\u062F\u064A\u0631",
-    "SortOrder": 3,
-    "RowCountMode": "\u0645\u0642\u064A\u062F",
-    "MaxRows": 100,
-    "OrganizationalUnitId": 3,
-    "Ownership": "\u0639\u0627\u0645",
-    "ColumnHeaderColor": "",
-    "IsActive": true,
-    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
-    "CreatedAt": "2026-03-16T19:09:03.3769418+03:00",
-    "UpdatedBy": null,
-    "UpdatedAt": null
   }
 ]

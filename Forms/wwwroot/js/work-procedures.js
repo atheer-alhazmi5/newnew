@@ -33,6 +33,7 @@ let wpUsedFormPickerExtras = [];
 let wpWfProcedureId = null;
 let wpWfCtx = null;
 let wpWfSteps = [];
+let wpCurrentTab = 1;
 
 let wpOuExpandedOwner = {};
 let wpOuExpandedTarget = {};
@@ -407,7 +408,8 @@ function wpRenderTable() {
             <td style="font-weight:600;">${esc(f.code)}</td>
             <td>${esc(f.name)}</td>
             <td style="font-size:13px;">${patName === '—' ? '<span class="text-muted">—</span>' : esc(patName)}</td>
-            <td>${esc(f.workspaceName)}</td>
+            <td style="text-align:center;font-size:13px;">${esc(f.usageFrequency || f.UsageFrequency || '—')}</td>
+            <td style="text-align:center;font-size:13px;">${esc(f.confidentialityLevel || f.ConfidentialityLevel || '—')}</td>
             <td>${esc(f.procedureClassification)}</td>
             <td style="font-size:13px;">${esc(f.orgUnitName)}</td>
             <td style="text-align:center;">${esc(f.validityType)}</td>
@@ -424,7 +426,6 @@ function wpActions(f) {
     const parts = [];
     const isApproved = f.status === 'approved';
     parts.push(`<button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`);
-    parts.push(`<button type="button" class="fd-action-btn fd-action-btn-flow" onclick="wpShowWorkflow(${f.id})"><i class="bi bi-diagram-3"></i> سير العمل</button>`);
     if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`);
     if (!wpIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
@@ -977,6 +978,178 @@ function wpOnValidityChange() {
     const v = document.getElementById('wpValidityType')?.value || 'دائم';
     const row = document.getElementById('wpValidityDatesRow');
     if (row) row.style.display = v === 'مؤقت' ? '' : 'none';
+    wpConfigureValidityDates();
+}
+
+function wpTodayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function wpConfigureValidityDates() {
+    const v = document.getElementById('wpValidityType')?.value || 'دائم';
+    const sd = document.getElementById('wpValidityStart');
+    const ed = document.getElementById('wpValidityEnd');
+    if (v !== 'مؤقت' || !sd || !ed) return;
+    const today = wpTodayIso();
+    sd.min = today;
+    if (!sd.value || sd.value < today) sd.value = today;
+    ed.min = sd.value || today;
+    if (!ed.value || ed.value < ed.min) ed.value = ed.min;
+    if (!sd.dataset.wpDateWired) {
+        sd.dataset.wpDateWired = '1';
+        sd.addEventListener('change', () => {
+            ed.min = sd.value || today;
+            if (ed.value && ed.value < ed.min) ed.value = ed.min;
+        });
+    }
+}
+
+function wpValidateValidityDates() {
+    const v = document.getElementById('wpValidityType')?.value || 'دائم';
+    if (v !== 'مؤقت') return true;
+    const sd = document.getElementById('wpValidityStart')?.value || '';
+    const ed = document.getElementById('wpValidityEnd')?.value || '';
+    const today = wpTodayIso();
+    if (!sd || !ed) {
+        showToast('تواريخ الصلاحية مطلوبة', 'error');
+        return false;
+    }
+    if (sd < today) {
+        showToast('تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم', 'error');
+        return false;
+    }
+    if (ed < sd) {
+        showToast('تاريخ النهاية يجب أن يكون بعد تاريخ البداية أو مساوياً له', 'error');
+        return false;
+    }
+    return true;
+}
+
+function wpStepBarHtml() {
+    return `<div class="fd-steps" id="wpStepBar" style="margin:-28px -28px 20px;border-top:none;">
+        <div class="fd-step active" id="wpStep1El" role="button" tabindex="0" onclick="wpGoTab(1)"><span class="fd-step-num">1</span> البيانات الأساسية</div>
+        <div class="fd-step" id="wpStep2El" role="button" tabindex="0" onclick="wpGoTab(2)"><span class="fd-step-num">2</span> سير العمل</div>
+    </div>`;
+}
+
+function wpTab2Html() {
+    return `<div class="fd-section wp-wf-tab-panel" style="margin-bottom:0;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="fd-section-title" style="margin:0;padding:0;border:none;"><i class="bi bi-diagram-3"></i> خطوات سير العمل</div>
+            <button type="button" class="btn btn-primary btn-sm" style="border-radius:10px;font-weight:700;" onclick="wpWfShowAddForm()"><i class="bi bi-plus-lg"></i> إضافة خطوة</button>
+        </div>
+        <div class="table-responsive wp-wf-table-wrap">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">الترتيب</th>
+                        <th>الخطوة</th>
+                        <th style="text-align:center;">المكلف</th>
+                        <th>المنفذ</th>
+                        <th>مدة الإنجاز</th>
+                        <th style="text-align:center;">الإرجاع</th>
+                        <th>خطوة الرجوع</th>
+                        <th style="text-align:center;">موافقات متزامنة</th>
+                        <th>النموذج المستخدم</th>
+                        <th>الحالة</th>
+                        <th>قناة الإشعار</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="wpWfBody"><tr><td colspan="12" class="text-center py-3 text-muted">لا توجد خطوات بعد — أضف خطوة لسير العمل</td></tr></tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function wpMountEditShell(formHtml) {
+    const body = document.getElementById('wpEditBody');
+    if (!body) return;
+    body.innerHTML = wpStepBarHtml()
+        + '<div id="wpTab1Pane">' + formHtml + '</div>'
+        + '<div id="wpTab2Pane" style="display:none;">' + wpTab2Html() + '</div>';
+    wpCurrentTab = 1;
+    wpUpdateStepBar();
+    wpRenderEditFooter();
+    wpConfigureValidityDates();
+}
+
+function wpUpdateStepBar() {
+    [1, 2].forEach((n) => {
+        const el = document.getElementById('wpStep' + n + 'El');
+        if (!el) return;
+        el.classList.toggle('active', n === wpCurrentTab);
+        el.classList.toggle('done', n < wpCurrentTab);
+    });
+}
+
+function wpRenderEditFooter() {
+    const foot = document.getElementById('wpEditFoot');
+    if (!foot) return;
+    const primaryLabel = wpIsAdmin
+        ? (wpModeKind === 'version' ? 'نشر الإصدار' : 'نشر الإجراء')
+        : 'إرسال للاعتماد';
+    if (wpCurrentTab === 1) {
+        foot.innerHTML = `<div><button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button></div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="fd-save-btn draft" id="wpVerSaveDraft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
+                <button type="button" class="fd-save-btn send" style="background:var(--info-600);" onclick="wpGoTab(2)"><i class="bi bi-diagram-3"></i> التالي — سير العمل</button>
+            </div>`;
+        wpUpdateVersionSaveButtons();
+        return;
+    }
+    foot.innerHTML = `<div><button type="button" class="fd-cancel-btn" onclick="wpGoTab(1)"><i class="bi bi-arrow-right"></i> رجوع</button></div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="fd-save-btn draft" id="wpVerSaveDraft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
+            <button type="button" class="fd-save-btn send" id="wpVerSaveSend" onclick="wpSave(true)"><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
+        </div>`;
+    wpUpdateVersionSaveButtons();
+}
+
+async function wpEnsureDraftForWorkflow() {
+    if (wpEditId) return true;
+    if (wpModeKind === 'version' && !wpVersionSourceId) {
+        showToast('اختر إجراءً من القائمة قبل المتابعة', 'error');
+        return false;
+    }
+    if (!wpValidateCodeNameUnique()) return false;
+    if (!wpValidateValidityDates()) return false;
+    const payload = wpCollectPayload();
+    if (!payload.procedureActionTypeId) { showToast('نوع الإجراء مطلوب', 'error'); return false; }
+    if (!payload.formTemplateId) { showToast('القالب المستخدم مطلوب', 'error'); return false; }
+    payload.sendForApproval = false;
+    try {
+        const res = await apiFetch('/WorkProcedures/AddWorkProcedure', 'POST', payload);
+        if (res.success && res.id) {
+            wpEditId = res.id;
+            if (wpModeKind === 'create') wpModeKind = 'edit';
+            showToast('تم حفظ مسودة الإجراء — يمكنك الآن ضبط سير العمل', 'success');
+            return true;
+        }
+        showToast(res.message || 'أكمل البيانات الأساسية قبل سير العمل', 'error');
+        return false;
+    } catch {
+        showToast('خطأ في حفظ المسودة', 'error');
+        return false;
+    }
+}
+
+async function wpGoTab(n) {
+    n = Math.max(1, Math.min(2, n));
+    if (n === 2) {
+        const ok = await wpEnsureDraftForWorkflow();
+        if (!ok) return;
+        wpWfProcedureId = wpEditId;
+        await wpWfLoad();
+    }
+    wpCurrentTab = n;
+    const p1 = document.getElementById('wpTab1Pane');
+    const p2 = document.getElementById('wpTab2Pane');
+    if (p1) p1.style.display = n === 1 ? '' : 'none';
+    if (p2) p2.style.display = n === 2 ? '' : 'none';
+    wpUpdateStepBar();
+    wpRenderEditFooter();
 }
 
 async function wpOnWorkspaceChange() {
@@ -1346,7 +1519,7 @@ async function wpShowCreate() {
     document.getElementById('wpEditTitle').textContent = 'إضافة إجراء عمل جديد';
     document.getElementById('wpEditSub').textContent = 'أدخل بيانات الإجراء';
     document.getElementById('wpEditHead').className = 'fd-modal-header create';
-    document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml({}, 'create');
+    wpMountEditShell(wpBuildFormHtml({}, 'create'));
     wpInitFormStaticDds({});
     wpWireProcedureActionTemplatePickers({});
     wpRenderWorkspaceDd(0);
@@ -1358,11 +1531,6 @@ async function wpShowCreate() {
     await wpLoadRelated(null);
     wpInitRelCbDelegation();
     wpRenderAllRelCbs([], [], []);
-    const primaryLabel = wpIsAdmin ? 'نشر الإجراء' : 'إرسال للاعتماد';
-    document.getElementById('wpEditFoot').innerHTML = `<div></div><div class="d-flex gap-2 flex-wrap">
-        <button type="button" class="fd-save-btn draft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
-        <button type="button" class="fd-save-btn send" onclick="wpSave(true)"><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
-    </div>`;
     wpWizModal().show();
 }
 
@@ -1380,14 +1548,14 @@ async function wpShowVersionMode(sourceId) {
     wpOuExpandedTarget = {};
     await wpLoad();
     try {
-        const r = await apiFetch('/WorkProcedures/ListRelatedProcedures');
+        const r = await apiFetch('/WorkProcedures/ListRelatedProcedures?approvedOnly=true');
         wpAllProceduresList = (r && r.success) ? (r.data || []) : [];
     } catch { wpAllProceduresList = []; }
 
     document.getElementById('wpEditTitle').textContent = 'إنشاء إصدار جديد';
-    document.getElementById('wpEditSub').textContent = 'اختر الإجراء المصدر — يُسجَّل تلقائياً برقم إصدار جديد';
+    document.getElementById('wpEditSub').textContent = 'اختر إجراءً معتمداً كمصدر — يُسجَّل تلقائياً برقم إصدار جديد';
     document.getElementById('wpEditHead').className = 'fd-modal-header create';
-    document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml({ _versionSourceId: 0 }, 'version');
+    wpMountEditShell(wpBuildFormHtml({ _versionSourceId: 0 }, 'version'));
     wpInitFormStaticDds({});
     wpWireProcedureActionTemplatePickers({});
     wpRenderWorkspaceDd(0);
@@ -1401,12 +1569,6 @@ async function wpShowVersionMode(sourceId) {
     wpRenderAllRelCbs([], [], []);
     wpWireVersionSourcePicker();
     wpUpdateVersionSaveButtons();
-
-    const primaryLabel = wpIsAdmin ? 'نشر الإصدار' : 'إرسال للاعتماد';
-    document.getElementById('wpEditFoot').innerHTML = `<div></div><div class="d-flex gap-2 flex-wrap">
-        <button type="button" class="fd-save-btn draft" id="wpVerSaveDraft" onclick="wpSave(false)" disabled><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
-        <button type="button" class="fd-save-btn send" id="wpVerSaveSend" onclick="wpSave(true)" disabled><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
-    </div>`;
     wpWizModal().show();
 
     if (sourceId && sourceId > 0) {
@@ -1418,9 +1580,9 @@ async function wpShowVersionMode(sourceId) {
 function wpUpdateVersionSaveButtons() {
     const btnDraft = document.getElementById('wpVerSaveDraft');
     const btnSend = document.getElementById('wpVerSaveSend');
-    const ok = wpModeKind === 'version' && wpVersionSourceId > 0;
-    if (btnDraft) btnDraft.disabled = !ok;
-    if (btnSend) btnSend.disabled = !ok;
+    const ok = wpModeKind !== 'version' || wpVersionSourceId > 0;
+    if (btnDraft) btnDraft.disabled = wpModeKind === 'version' && !ok;
+    if (btnSend) btnSend.disabled = wpModeKind === 'version' && !ok;
 }
 
 function wpVersionSourceItemsAll() {
@@ -1436,7 +1598,7 @@ function wpVersionSourceItemsAll() {
             status: p.status != null ? p.status : (p.Status || ''),
             rootId
         };
-    }).filter((x) => x.id > 0);
+    }).filter((x) => x.id > 0 && x.status === 'approved');
 }
 
 /** يحوّل الرقم في «V12.3» إلى عدد لترتيب الإصدارات تنازلياً. */
@@ -1587,7 +1749,7 @@ async function wpOnVersionSourcePicked(sourceId, isInitial) {
 
         document.getElementById('wpEditSub').textContent = `سيُسجَّل الإصدار الجديد كـ ${wpVersionNextLabel} — جميع الحقول قابلة للتعديل ما عدا «ترميز الإجراء»`;
         const dForForm = Object.assign({}, d, { _versionSourceId: sourceId });
-        document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml(dForForm, 'version');
+        wpMountEditShell(wpBuildFormHtml(dForForm, 'version'));
 
         wpInitFormStaticDds(d);
         wpWireProcedureActionTemplatePickers(d);
@@ -1642,7 +1804,7 @@ async function wpShowEdit(id) {
         document.getElementById('wpEditTitle').textContent = 'تعديل إجراء العمل';
         document.getElementById('wpEditSub').textContent = d.name || '';
         document.getElementById('wpEditHead').className = 'fd-modal-header edit';
-        document.getElementById('wpEditBody').innerHTML = wpBuildFormHtml(d, 'edit');
+        wpMountEditShell(wpBuildFormHtml(d, 'edit'));
         wpInitFormStaticDds(d);
         wpWireProcedureActionTemplatePickers(d);
         wpRenderWorkspaceDd(d.workspaceId || d.WorkspaceId || 0);
@@ -1664,11 +1826,6 @@ async function wpShowEdit(id) {
         await wpLoadRelated(id);
         wpInitRelCbDelegation();
         wpRenderAllRelCbs(prev, next, imp);
-        const primaryLabel = wpIsAdmin ? 'نشر الإجراء' : 'إرسال للاعتماد';
-        document.getElementById('wpEditFoot').innerHTML = `<div></div><div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="fd-save-btn draft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
-            <button type="button" class="fd-save-btn send" onclick="wpSave(true)"><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
-        </div>`;
         wpWizModal().show();
     } catch {
         showToast('خطأ في تحميل البيانات', 'error');
@@ -1777,6 +1934,7 @@ async function wpSave(sendForApproval) {
         return;
     }
     if (!wpValidateCodeNameUnique()) return;
+    if (!wpValidateValidityDates()) return;
     const payload = wpCollectPayload();
     if (!payload.procedureActionTypeId) {
         showToast('نوع الإجراء مطلوب', 'error');
@@ -1954,7 +2112,10 @@ async function wpShowDetails(id) {
                 ${d.rejectionReason ? `<span class="fd-detail-lbl" style="color:var(--error-600);">سبب الرفض</span><span class="fd-detail-val" style="color:var(--error-700);">${esc(d.rejectionReason)}</span>` : ''}
             </div></div>`;
 
-        document.getElementById('wpDetailsBody').innerHTML = html;
+        document.getElementById('wpDetailsBody').innerHTML = html
+            + `<div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                <button type="button" class="fd-action-btn fd-action-btn-flow" onclick="wpShowWorkflow(${id})"><i class="bi bi-diagram-3"></i> سير العمل</button>
+            </div>`;
         wpDetModal().show();
     } catch {
         showToast('خطأ في تحميل التفاصيل', 'error');
@@ -2185,6 +2346,8 @@ function wpWfChannelsLabel(s) {
 function wpWfHideForm() {
     const w = document.getElementById('wpWfFormWrap');
     if (w) w.innerHTML = '';
+    const foot = document.getElementById('wpWfStepModalFoot');
+    if (foot) { foot.innerHTML = ''; foot.style.display = 'none'; }
     try {
         wpWfStepFormModal().hide();
     } catch (e) { /* ignore */ }
@@ -2364,11 +2527,15 @@ function wpWfRenderForm(editId) {
       <textarea class="form-control" id="wpWfNotes" rows="2">${st ? esc(st.notes || '') : ''}</textarea>
     </div>
   </div>
-</div>
-<div class="d-flex gap-2 flex-wrap mt-3 pt-3" style="border-top:1px solid var(--gray-200);">
-  <button type="button" class="btn btn-primary" onclick="wpWfSubmitForm()"><i class="bi bi-check-lg"></i> ${isEdit ? 'حفظ التحديث' : 'إضافة'}</button>
-  <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
 </div>`;
+
+    const foot = document.getElementById('wpWfStepModalFoot');
+    if (foot) {
+        foot.style.display = '';
+        foot.innerHTML = `
+  <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+  <button type="button" class="btn btn-primary" onclick="wpWfSubmitForm()"><i class="bi bi-check-lg"></i> ${isEdit ? 'حفظ التحديث' : 'إضافة'}</button>`;
+    }
 
     // تعبئة قائمة الحالات والنماذج
     wpWfFillSelect('wpWfFormStatus', (wpWfCtx && wpWfCtx.formStatuses) || [], st ? st.formStatusId : null, '—');

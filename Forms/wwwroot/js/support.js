@@ -165,8 +165,9 @@ function spRenderTable(list) {
         if (!closed) {
             if (spIsAdmin) {
                 acts += ' <button type="button" class="sp-act-btn sp-act-edit" onclick="spShowUpdate(' + item.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+            } else {
+                acts += ' <button type="button" class="sp-act-btn sp-act-del" onclick="spShowDelete(' + item.id + ')"><i class="bi bi-trash"></i> حذف</button>';
             }
-            acts += ' <button type="button" class="sp-act-btn sp-act-del" onclick="spShowDelete(' + item.id + ')"><i class="bi bi-trash"></i> حذف</button>';
         }
 
         html += '<tr>';
@@ -315,33 +316,37 @@ async function spShowUpdate(id) {
         return;
     }
     var d = r.data || {};
-    if (sub) sub.textContent = 'رقم الطلب: ' + (d.requestNumber || '—');
-
-    var statusOpts = ['مفتوح', 'مغلق'].map(function (s) {
-        return '<option value="' + s + '"' + (d.status === s ? ' selected' : '') + '>' + s + '</option>';
-    }).join('');
+    if (sub) sub.textContent = 'رقم الطلب: ' + (d.requestNumber || '—') + ' — سيتم إغلاق الطلب بعد إرسال الرد';
 
     host.innerHTML = spBuildDetailHtml(d, false)
         + '<hr style="margin:20px 0;border-color:var(--gray-200);">'
-        + '<div class="mb-3"><label class="form-label">الرد</label>'
-        + '<textarea class="form-control" id="spUpdateResponse" rows="4" placeholder="اكتب ردك على الطلب...">' + spEsc(d.response || '') + '</textarea></div>'
-        + '<div class="mb-0"><label class="form-label">الحالة</label>'
-        + '<select class="form-select" id="spUpdateStatus">' + statusOpts + '</select></div>';
+        + '<div class="mb-0"><label class="form-label">الرد <span class="text-danger">*</span></label>'
+        + '<textarea class="form-control" id="spUpdateResponse" rows="4" placeholder="اكتب ردك على الطلب..." required>' + spEsc(d.response || '') + '</textarea></div>';
 }
 
 async function spSubmitUpdate() {
     if (!spUpdateId) return;
+    var response = (document.getElementById('spUpdateResponse')?.value || '').trim();
+    if (!response) {
+        showToast('الرد مطلوب', 'warning');
+        var ta = document.getElementById('spUpdateResponse');
+        if (ta) {
+            ta.classList.add('is-invalid');
+            ta.focus();
+        }
+        return;
+    }
     var payload = {
         id: spUpdateId,
-        response: document.getElementById('spUpdateResponse')?.value || '',
-        status: document.getElementById('spUpdateStatus')?.value || 'مفتوح'
+        response: response,
+        status: 'مغلق'
     };
     var r = await apiFetch('/Support/UpdateTicket', 'POST', payload);
     if (!r || !r.success) {
         showToast(r?.message || 'تعذّر التحديث', 'danger');
         return;
     }
-    showToast(r.message || 'تم تحديث الطلب', 'success');
+    showToast(r.message || 'تم إغلاق الطلب وإرسال الرد', 'success');
     if (spUpdateModal) spUpdateModal.hide();
     spUpdateId = null;
     await spLoad();

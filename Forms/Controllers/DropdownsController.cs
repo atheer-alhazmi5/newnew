@@ -37,7 +37,7 @@ public class DropdownsController : BaseController
 
         var lists = await _ds.ListDropdownListsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
 
         // لممثل الوحدة: اعرض العامة + خاصة وحدته فقط
         var isAdmin = CurrentUserRole == "Admin";
@@ -260,6 +260,22 @@ public class DropdownsController : BaseController
         return units.Count > 0 ? units.First().Id : 0;
     }
 
+    /// <summary>مدير النظام لا يعدّل القوائم الخاصة؛ ممثل الوحدة يعدّل ما أنشأه أو الخاص بوحدته.</summary>
+    private async Task<string?> EnsureDropdownListModifyPermissionAsync(DropdownList list)
+    {
+        if (CurrentUserRole == "Admin")
+        {
+            if (list.Ownership == "خاص")
+                return "لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة";
+            return null;
+        }
+
+        var myUnitId = await GetCreatorOrgUnitIdAsync();
+        var canEdit = list.CreatedBy == CurrentUserFullName ||
+                      (list.Ownership == "خاص" && list.OrganizationalUnitId == myUnitId);
+        return canEdit ? null : "غير مصرح بتعديل هذه القائمة";
+    }
+
     [HttpPost]
     public async Task<IActionResult> AddDropdownList([FromBody] DropdownListRequest req)
     {
@@ -337,15 +353,11 @@ public class DropdownsController : BaseController
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
-        // صلاحية التعديل: الأدمن أو منشئ القائمة (من نفس الوحدة لممثل الوحدة)
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
         var isAdminUser = CurrentUserRole == "Admin";
-        if (!isAdminUser)
-        {
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canEdit = d.CreatedBy == CurrentUserFullName ||
-                          (d.Ownership == "خاص" && d.OrganizationalUnitId == myUnitId);
-            if (!canEdit) return Json(new { success = false, message = "غير مصرح بتعديل هذه القائمة" });
-        }
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
@@ -386,13 +398,9 @@ public class DropdownsController : BaseController
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
-        if (CurrentUserRole != "Admin")
-        {
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canDel = d.CreatedBy == CurrentUserFullName ||
-                         (d.Ownership == "خاص" && d.OrganizationalUnitId == myUnitId);
-            if (!canDel) return Json(new { success = false, message = "غير مصرح بحذف هذه القائمة" });
-        }
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (await _ds.IsDropdownListLinkedAsync(req.Id))
             return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
@@ -413,13 +421,9 @@ public class DropdownsController : BaseController
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
-        if (CurrentUserRole != "Admin")
-        {
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canEdit = d.CreatedBy == CurrentUserFullName ||
-                          (d.Ownership == "خاص" && d.OrganizationalUnitId == myUnitId);
-            if (!canEdit) return Json(new { success = false, message = "غير مصرح" });
-        }
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         d.LevelNamesJson = req.LevelNamesJson ?? "";
         d.UpdatedAt = DateTime.Now;
@@ -438,13 +442,9 @@ public class DropdownsController : BaseController
         if (list == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
-        if (CurrentUserRole != "Admin")
-        {
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canEdit = list.CreatedBy == CurrentUserFullName ||
-                          (list.Ownership == "خاص" && list.OrganizationalUnitId == myUnitId);
-            if (!canEdit) return Json(new { success = false, message = "غير مصرح" });
-        }
+        var permErr = await EnsureDropdownListModifyPermissionAsync(list);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
@@ -480,15 +480,12 @@ public class DropdownsController : BaseController
             return Json(new { success = false, message = "العنصر غير موجود" });
 
         var ownerList = await _ds.GetDropdownListByIdAsync(item.DropdownListId);
-        if (CurrentUserRole != "Admin")
-        {
-            if (ownerList == null)
-                return Json(new { success = false, message = "القائمة غير موجودة" });
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canEdit = ownerList.CreatedBy == CurrentUserFullName ||
-                          (ownerList.Ownership == "خاص" && ownerList.OrganizationalUnitId == myUnitId);
-            if (!canEdit) return Json(new { success = false, message = "غير مصرح" });
-        }
+        if (ownerList == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        var permErr = await EnsureDropdownListModifyPermissionAsync(ownerList);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
@@ -517,15 +514,12 @@ public class DropdownsController : BaseController
             return Json(new { success = false, message = "العنصر غير موجود" });
 
         var ownerList = await _ds.GetDropdownListByIdAsync(item.DropdownListId);
-        if (CurrentUserRole != "Admin")
-        {
-            if (ownerList == null)
-                return Json(new { success = false, message = "القائمة غير موجودة" });
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            var canDel = ownerList.CreatedBy == CurrentUserFullName ||
-                         (ownerList.Ownership == "خاص" && ownerList.OrganizationalUnitId == myUnitId);
-            if (!canDel) return Json(new { success = false, message = "غير مصرح" });
-        }
+        if (ownerList == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        var permErr = await EnsureDropdownListModifyPermissionAsync(ownerList);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
 
         if (await _ds.IsDropdownItemLinkedAsync(req.Id))
             return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });

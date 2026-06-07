@@ -1,12 +1,12 @@
 'use strict';
 
 var ntAll = [];
-var ntArchiveView = false;
 var ntEditingId = null;
 var ntDeleteId = null;
 var ntFormModal = null;
 var ntDetailModal = null;
 var ntDeleteModal = null;
+var ntMenuDocBound = false;
 
 var ntDefaultColors = { 'عالية': '#fee2e2', 'متوسطة': '#fef9c3', 'منخفضة': '#d1fae5' };
 
@@ -60,32 +60,40 @@ function ntOnColorInput() {
     if (hex) hex.textContent = v;
 }
 
-function ntToggleArchiveView() {
-    ntArchiveView = !ntArchiveView;
-    var btn = document.getElementById('ntBtnArchive');
-    var sub = document.getElementById('ntPageSub');
-    var addBtn = document.getElementById('ntBtnAdd');
-    var statusSel = document.getElementById('ntFilterStatus');
-    if (btn) btn.classList.toggle('is-active', ntArchiveView);
-    if (sub) sub.textContent = ntArchiveView ? 'عرض الملاحظات المؤرشفة' : 'إدارة إجراءات عمل المنظمة';
-    if (addBtn) addBtn.style.display = ntArchiveView ? 'none' : '';
-    if (statusSel) statusSel.value = ntArchiveView ? 'archived' : 'active';
-    ntApplyFilters();
+function ntStripHtml(html) {
+    var d = document.createElement('div');
+    d.innerHTML = html || '';
+    return (d.textContent || d.innerText || '').replace(/\u00a0/g, ' ').trim();
+}
+
+function ntToggleCardMenu(id, ev) {
+    if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+    var menu = document.getElementById('ntMenu-' + id);
+    if (!menu) return;
+    var willOpen = menu.classList.contains('d-none');
+    document.querySelectorAll('.nt-card-menu').forEach(function (m) { m.classList.add('d-none'); });
+    if (willOpen) menu.classList.remove('d-none');
+}
+
+function ntCloseCardMenus() {
+    document.querySelectorAll('.nt-card-menu').forEach(function (m) { m.classList.add('d-none'); });
 }
 
 function ntClearFilters() {
     var s = document.getElementById('ntSearch'); if (s) s.value = '';
     var imp = document.getElementById('ntFilterImportance'); if (imp) imp.value = '';
-    if (!ntArchiveView) {
-        var st = document.getElementById('ntFilterStatus'); if (st) st.value = 'active';
-    }
+    var st = document.getElementById('ntFilterStatus'); if (st) st.value = 'active';
     ntApplyFilters();
 }
 
 function ntApplyFilters() {
     var q = (document.getElementById('ntSearch')?.value || '').trim().toLowerCase();
     var fImp = document.getElementById('ntFilterImportance')?.value || '';
-    var fSt = document.getElementById('ntFilterStatus')?.value || (ntArchiveView ? 'archived' : 'active');
+    var statusEl = document.getElementById('ntFilterStatus');
+    var fSt = statusEl ? statusEl.value : 'active';
 
     var list = ntAll.filter(function (n) {
         if (fSt === 'active' && n.isArchived) return false;
@@ -130,18 +138,23 @@ function ntRenderCards(list) {
             + '<div class="nt-card' + pinCls + '" style="background:' + ntEsc(bg) + ';border-color:' + ntEsc(bg) + ';">'
             +   '<div class="nt-card-top">'
             +     '<div class="nt-card-title">' + ntEsc(n.title) + '</div>'
-            +     '<button type="button" class="nt-pin-btn' + pinBtnCls + '" title="' + (n.isPinned ? 'إلغاء التثبيت' : 'تثبيت') + '" onclick="ntTogglePin(' + n.id + ')"><i class="bi bi-pin-angle' + (n.isPinned ? '-fill' : '') + '"></i></button>'
+            +     '<div class="nt-card-top-actions">'
+            +       '<button type="button" class="nt-pin-btn' + pinBtnCls + '" title="' + (n.isPinned ? 'إلغاء التثبيت' : 'تثبيت') + '" onclick="ntTogglePin(' + n.id + ')"><i class="bi bi-pin-angle' + (n.isPinned ? '-fill' : '') + '"></i></button>'
+            +       '<div class="nt-card-menu-wrap">'
+            +         '<button type="button" class="nt-menu-btn" title="إجراءات" onclick="ntToggleCardMenu(' + n.id + ', event)"><i class="bi bi-three-dots-vertical"></i></button>'
+            +         '<div class="nt-card-menu d-none" id="ntMenu-' + n.id + '">'
+            +           '<button type="button" class="nt-act-btn nt-act-detail" title="تفاصيل" onclick="ntCloseCardMenus(); ntShowDetail(' + n.id + ')"><i class="bi bi-eye"></i></button>'
+            +           '<button type="button" class="nt-act-btn nt-act-edit" title="تعديل" onclick="ntCloseCardMenus(); ntShowEditModal(' + n.id + ')"><i class="bi bi-pencil"></i></button>'
+            +           '<button type="button" class="nt-act-btn nt-act-archive" title="' + (n.isArchived ? 'استعادة' : 'أرشفة') + '" onclick="ntCloseCardMenus(); ntToggleArchive(' + n.id + ')"><i class="bi bi-' + (n.isArchived ? 'arrow-counterclockwise' : 'archive') + '"></i></button>'
+            +           '<button type="button" class="nt-act-btn nt-act-delete" title="حذف" onclick="ntCloseCardMenus(); ntShowDeleteModal(' + n.id + ')"><i class="bi bi-trash"></i></button>'
+            +         '</div>'
+            +       '</div>'
+            +     '</div>'
             +   '</div>'
             +   '<span class="nt-importance-pill ' + ntImportanceClass(n.importance) + '">' + ntEsc(ntImportanceLabel(n.importance)) + '</span>'
             +   '<div class="nt-card-dates">'
             +     '<span><i class="bi bi-calendar-plus"></i> الإنشاء: <span style="direction:ltr;display:inline-block;">' + ntEsc(n.createdAt) + '</span></span>'
             +     '<span><i class="bi bi-pencil-square"></i> التحديث: <span style="direction:ltr;display:inline-block;">' + ntEsc(n.updatedAt) + '</span></span>'
-            +   '</div>'
-            +   '<div class="nt-card-actions">'
-            +     '<button type="button" class="nt-act-btn nt-act-detail" onclick="ntShowDetail(' + n.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>'
-            +     '<button type="button" class="nt-act-btn nt-act-edit" onclick="ntShowEditModal(' + n.id + ')"><i class="bi bi-pencil"></i> تعديل</button>'
-            +     '<button type="button" class="nt-act-btn nt-act-archive" onclick="ntToggleArchive(' + n.id + ')" title="' + (n.isArchived ? 'استعادة' : 'أرشفة') + '"><i class="bi bi-' + (n.isArchived ? 'arrow-counterclockwise' : 'archive') + '"></i> ' + (n.isArchived ? 'استعادة' : 'أرشفة') + '</button>'
-            +     '<button type="button" class="nt-act-btn nt-act-delete" onclick="ntShowDeleteModal(' + n.id + ')"><i class="bi bi-trash"></i> حذف</button>'
             +   '</div>'
             + '</div>';
     }).join('');
@@ -150,7 +163,7 @@ function ntRenderCards(list) {
 function ntResetForm() {
     ntEditingId = null;
     var t = document.getElementById('ntTitle'); if (t) t.value = '';
-    var ed = document.getElementById('ntEditor'); if (ed) ed.innerHTML = '';
+    var ed = document.getElementById('ntEditor'); if (ed) { ed.innerHTML = ''; ed.classList.remove('is-invalid'); }
     var imp = document.getElementById('ntImportance'); if (imp) imp.value = 'متوسطة';
     var pin = document.getElementById('ntPinCheck'); if (pin) pin.checked = false;
     ntOnImportanceChange();
@@ -208,13 +221,24 @@ function ntShowDeleteModal(id) {
 
 async function ntSaveNote() {
     var title = (document.getElementById('ntTitle')?.value || '').trim();
+    var contentHtml = document.getElementById('ntEditor')?.innerHTML || '';
+    var editor = document.getElementById('ntEditor');
     if (!title) {
         if (typeof showToast === 'function') showToast('عنوان الملاحظة مطلوب', 'warning');
         return;
     }
+    if (!ntStripHtml(contentHtml)) {
+        if (typeof showToast === 'function') showToast('نص الملاحظة مطلوب', 'warning');
+        if (editor) {
+            editor.classList.add('is-invalid');
+            editor.focus();
+        }
+        return;
+    }
+    if (editor) editor.classList.remove('is-invalid');
     var payload = {
         title: title,
-        contentHtml: document.getElementById('ntEditor')?.innerHTML || '',
+        contentHtml: contentHtml,
         importance: document.getElementById('ntImportance')?.value || 'متوسطة',
         color: document.getElementById('ntColor')?.value || '',
         isPinned: !!document.getElementById('ntPinCheck')?.checked
@@ -266,6 +290,10 @@ async function ntToggleArchive(id) {
 
 function ntInit() {
     ntDefaultColors = { 'عالية': '#fee2e2', 'متوسطة': '#fef9c3', 'منخفضة': '#d1fae5' };
+    if (!ntMenuDocBound) {
+        document.addEventListener('click', ntCloseCardMenus);
+        ntMenuDocBound = true;
+    }
     ntLoad();
 }
 
@@ -278,7 +306,8 @@ window.ntSaveNote = ntSaveNote;
 window.ntConfirmDelete = ntConfirmDelete;
 window.ntTogglePin = ntTogglePin;
 window.ntToggleArchive = ntToggleArchive;
-window.ntToggleArchiveView = ntToggleArchiveView;
+window.ntToggleCardMenu = ntToggleCardMenu;
+window.ntCloseCardMenus = ntCloseCardMenus;
 window.ntApplyFilters = ntApplyFilters;
 window.ntClearFilters = ntClearFilters;
 window.ntEditorCmd = ntEditorCmd;

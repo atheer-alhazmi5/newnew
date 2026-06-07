@@ -9,6 +9,20 @@ var seForm = { overall: '', ease: '', design: '', performance: '', support: '' }
 
 var sePickedLabelMap = { ease: 'sePickedEase', design: 'sePickedDesign', performance: 'sePickedPerformance', support: 'sePickedSupport' };
 
+function seProp(row, camel, pascal) {
+    if (!row) return undefined;
+    if (row[camel] !== undefined && row[camel] !== null) return row[camel];
+    return row[pascal];
+}
+
+function seRowPublished(row) {
+    return !!seProp(row, 'isPublished', 'IsPublished');
+}
+
+function seRowId(row) {
+    return seProp(row, 'id', 'Id');
+}
+
 function seEsc(s) {
     if (s == null) return '';
     var d = document.createElement('div');
@@ -245,10 +259,17 @@ function seRenderOverallChart(payload) {
     });
 }
 
+function sePublishStatusBadge(isPublished) {
+    if (isPublished) {
+        return '<span class="se-publish-badge se-publish-badge-on"><i class="bi bi-check-circle-fill"></i> منشور</span>';
+    }
+    return '<span class="se-publish-badge se-publish-badge-off"><i class="bi bi-hourglass-split"></i> بانتظار النشر</span>';
+}
+
 function seRenderTable(rows) {
     var body = document.getElementById('seBody');
     if (!body) return;
-    var colSpan = seIsAdmin ? 11 : 10;
+    var colSpan = seIsAdmin ? 12 : 10;
 
     if (!rows || !rows.length) {
         body.innerHTML = '<tr><td colspan="' + colSpan + '"><div class="se-empty"><i class="bi bi-inbox" style="font-size:40px;color:var(--gray-300);display:block;margin-bottom:8px;"></i><p>لا توجد تقييمات بعد</p></div></td></tr>';
@@ -256,24 +277,32 @@ function seRenderTable(rows) {
     }
 
     body.innerHTML = rows.map(function (r, i) {
+        var published = seRowPublished(r);
+        var rowId = seRowId(r);
+        var rowCls = seIsAdmin && !published ? ' class="se-row-unpublished"' : '';
         var html = ''
-            + '<tr>'
+            + '<tr' + rowCls + '>'
             + '<td>' + (i + 1) + '</td>'
-            + '<td style="font-weight:700;">' + seEsc(r.submitterName || '—') + '</td>'
-            + '<td>' + seEsc(r.organizationalUnitName || '—') + '</td>'
-            + '<td style="direction:ltr;">' + seEsc(r.createdAt || '—') + '</td>'
-            + '<td>' + seRatingBadge(r.overallRating) + '</td>'
-            + '<td>' + seRatingBadge(r.easeOfUse) + '</td>'
-            + '<td>' + seRatingBadge(r.design) + '</td>'
-            + '<td>' + seRatingBadge(r.performance) + '</td>'
-            + '<td>' + seRatingBadge(r.technicalSupport) + '</td>'
-            + '<td class="se-notes-cell">' + seEsc(r.notes || '—') + '</td>';
+            + '<td style="font-weight:700;">' + seEsc(seProp(r, 'submitterName', 'SubmitterName') || '—') + '</td>'
+            + '<td>' + seEsc(seProp(r, 'organizationalUnitName', 'OrganizationalUnitName') || '—') + '</td>'
+            + '<td style="direction:ltr;">' + seEsc(seProp(r, 'createdAt', 'CreatedAt') || '—') + '</td>'
+            + '<td>' + seRatingBadge(seProp(r, 'overallRating', 'OverallRating')) + '</td>'
+            + '<td>' + seRatingBadge(seProp(r, 'easeOfUse', 'EaseOfUse')) + '</td>'
+            + '<td>' + seRatingBadge(seProp(r, 'design', 'Design')) + '</td>'
+            + '<td>' + seRatingBadge(seProp(r, 'performance', 'Performance')) + '</td>'
+            + '<td>' + seRatingBadge(seProp(r, 'technicalSupport', 'TechnicalSupport')) + '</td>'
+            + '<td class="se-notes-cell">' + seEsc(seProp(r, 'notes', 'Notes') || '—') + '</td>';
 
         if (seIsAdmin) {
-            var pubCls = r.isPublished ? 'se-publish-on' : 'se-publish-off';
-            var pubLbl = r.isPublished ? 'منشور' : 'غير منشور';
-            var pubIcon = r.isPublished ? 'bi-eye-fill' : 'bi-eye-slash';
-            html += '<td><button type="button" class="se-publish-btn ' + pubCls + '" onclick="seTogglePublish(' + r.id + ')"><i class="bi ' + pubIcon + '"></i> ' + pubLbl + '</button></td>';
+            html += '<td>' + sePublishStatusBadge(published) + '</td>'
+                + '<td><div class="se-admin-actions">'
+                + '<button type="button" class="se-action-icon se-action-icon-publish" title="نشر"'
+                + (published ? ' disabled' : '')
+                + ' onclick="seSetPublish(' + rowId + ', true)"><i class="bi bi-send-check-fill"></i></button>'
+                + '<button type="button" class="se-action-icon se-action-icon-stop" title="إيقاف النشر"'
+                + (!published ? ' disabled' : '')
+                + ' onclick="seSetPublish(' + rowId + ', false)"><i class="bi bi-pause-circle-fill"></i></button>'
+                + '</div></td>';
         }
         html += '</tr>';
         return html;
@@ -282,7 +311,7 @@ function seRenderTable(rows) {
 
 async function seLoad() {
     var body = document.getElementById('seBody');
-    var colSpan = seIsAdmin ? 11 : 10;
+    var colSpan = seIsAdmin ? 12 : 10;
     if (body) body.innerHTML = '<tr><td colspan="' + colSpan + '" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>';
 
     var r = await apiFetch('/SystemEvaluation/GetEvaluations');
@@ -291,7 +320,9 @@ async function seLoad() {
         return;
     }
 
-    seCanSubmit = r.canSubmit !== false;
+    if (r.isAdmin != null || r.IsAdmin != null) seIsAdmin = !!(r.isAdmin ?? r.IsAdmin);
+    var canSubmit = r.canSubmit ?? r.CanSubmit;
+    seCanSubmit = canSubmit !== false;
     seUpdateSubmitUi();
 
     seDestroyCharts();
@@ -300,15 +331,19 @@ async function seLoad() {
     seRenderTable(r.data || []);
 }
 
-async function seTogglePublish(id) {
+async function seSetPublish(id, publish) {
     if (!seIsAdmin) return;
-    var r = await apiFetch('/SystemEvaluation/TogglePublish', 'POST', { id: id });
+    var r = await apiFetch('/SystemEvaluation/SetPublish', 'POST', { id: id, publish: !!publish });
     if (!r || !r.success) {
         if (typeof showToast === 'function') showToast(r?.message || 'تعذّر تحديث حالة النشر', 'error');
         return;
     }
-    if (typeof showToast === 'function') showToast(r.isPublished ? 'تم نشر التقييم' : 'تم إلغاء نشر التقييم', 'success');
+    if (typeof showToast === 'function') showToast(r.message || (publish ? 'تم نشر التقييم' : 'تم إيقاف نشر التقييم'), 'success');
     await seLoad();
+}
+
+async function seTogglePublish(id) {
+    await seSetPublish(id, true);
 }
 
 function seInit() {
@@ -321,5 +356,6 @@ window.seOpenEvaluateModal = seOpenEvaluateModal;
 window.sePickOverall = sePickOverall;
 window.sePickDim = sePickDim;
 window.seSubmitFeedback = seSubmitFeedback;
+window.seSetPublish = seSetPublish;
 window.seTogglePublish = seTogglePublish;
 window.seLoad = seLoad;

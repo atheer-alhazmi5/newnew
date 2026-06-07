@@ -42,8 +42,8 @@ public class SupportController : BaseController
         var all = await _ds.ListSupportTicketsAsync();
         var visible = isAdmin ? all : all.Where(t => t.SubmittedById == CurrentUserId).ToList();
 
-        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
-        orgUnits = orgUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ThenBy(u => u.Name).ToList();
+        var orgUnits = await _ds.ListActiveOrganizationalUnitsAsync();
+        orgUnits = orgUnits.OrderBy(u => u.SortOrder).ThenBy(u => u.Name).ToList();
 
         return Json(new
         {
@@ -116,18 +116,17 @@ public class SupportController : BaseController
             return Json(new { success = false, message = "لا يمكن تحديث طلب مغلق" });
 
         var response = (req.Response ?? "").Trim();
+        if (string.IsNullOrEmpty(response))
+            return Json(new { success = false, message = "الرد مطلوب" });
+
         t.Response = response;
-        t.Status = DataService.NormalizeSupportStatus(req.Status);
-        if (!string.IsNullOrEmpty(response))
-        {
-            t.Status = "مفتوح";
-            t.RespondedById = CurrentUserId;
-            t.RespondedByName = CurrentUserFullName;
-        }
+        t.Status = "مغلق";
+        t.RespondedById = CurrentUserId;
+        t.RespondedByName = CurrentUserFullName;
 
         await _ds.UpdateSupportTicketAsync(t);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث طلب دعم فني", "SupportTicket", t.Id.ToString(), t.RequestNumber));
-        return Json(new { success = true, message = "تم تحديث الطلب", data = MapTicket(t) });
+        return Json(new { success = true, message = "تم إغلاق الطلب وإرسال الرد", data = MapTicket(t) });
     }
 
     [HttpPost]
@@ -189,7 +188,7 @@ public class SupportController : BaseController
         => CurrentUserRole == "Admin" || t.SubmittedById == CurrentUserId;
 
     private bool CanDelete(SupportTicket t)
-        => CurrentUserRole == "Admin" || t.SubmittedById == CurrentUserId;
+        => CurrentUserRole != "Admin" && t.SubmittedById == CurrentUserId;
 
     private static string? ValidateCreate(SupportTicketCreateRequest req)
     {

@@ -1,11 +1,17 @@
 using FormsSystem.Data;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── SERVICESss────────────────────────────────────────────────────────────────
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        opt.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 
 //JSON file-based data store (no EF Core / NuGet required)
 builder.Services.AddSingleton<AppDbContext>();

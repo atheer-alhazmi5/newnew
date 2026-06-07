@@ -18,9 +18,6 @@
     display:flex; gap:10px; flex-wrap:wrap; flex-shrink:0;
 }
 .nt-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
-.nt-archive-btn { border-radius:12px; padding:10px 24px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:#fff; border:2px solid var(--gray-300); color:var(--gray-700); cursor:pointer; font-family:'Cairo',sans-serif; transition:all .15s; }
-.nt-archive-btn:hover { background:var(--gray-50); border-color:var(--gray-400); }
-.nt-archive-btn.is-active { background:var(--sa-50); border-color:var(--sa-400); color:var(--sa-800); }
 .nt-search-box { position:relative; flex:1 1 260px; max-width:400px; }
 .nt-search-box input { padding-right:42px; border-radius:12px; border:2px solid var(--gray-200); font-size:14px; height:44px; }
 .nt-search-box input:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.12); }
@@ -32,12 +29,13 @@
     background:#fff; border:1px solid var(--gray-200); border-radius:14px;
     padding:16px 18px; display:flex; flex-direction:column; gap:10px;
     box-shadow:var(--shadow); transition:box-shadow .15s, transform .15s;
-    position:relative; min-height:180px;
+    position:relative; min-height:150px;
 }
 .nt-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
 .nt-card.is-pinned { border-width:2px; }
 .nt-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
 .nt-card-title { font-weight:800; font-size:15px; color:var(--gray-900); flex:1; min-width:0; word-break:break-word; }
+.nt-card-top-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
 .nt-pin-btn {
     width:32px; height:32px; border-radius:8px; border:2px solid var(--gray-200);
     background:#fff; color:var(--gray-400); cursor:pointer; flex-shrink:0;
@@ -45,14 +43,26 @@
 }
 .nt-pin-btn:hover { border-color:var(--gold-600); color:var(--gold-600); background:var(--gold-50,#fffbeb); }
 .nt-pin-btn.is-pinned { border-color:var(--gold-600); color:var(--gold-700); background:#fef3c7; }
+.nt-card-menu-wrap { position:relative; }
+.nt-menu-btn {
+    width:32px; height:32px; border-radius:8px; border:2px solid var(--gray-200);
+    background:#fff; color:var(--gray-500); cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; font-size:16px; transition:all .15s;
+}
+.nt-menu-btn:hover { border-color:var(--gray-400); color:var(--gray-800); background:var(--gray-50); }
+.nt-card-menu {
+    position:absolute; top:calc(100% + 6px); left:0; z-index:30;
+    display:flex; align-items:center; gap:4px; padding:6px;
+    background:#fff; border:1px solid var(--gray-200); border-radius:10px;
+    box-shadow:0 10px 28px rgba(0,0,0,.12);
+}
 .nt-importance-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; align-self:flex-start; }
 .nt-importance-high { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
 .nt-importance-med { background:#fef9c3; color:#b45309; border:1px solid #fde047; }
 .nt-importance-low { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
 .nt-card-dates { font-size:12px; color:var(--gray-500); display:flex; flex-direction:column; gap:3px; margin-top:auto; }
 .nt-card-dates span { display:flex; align-items:center; gap:5px; }
-.nt-card-actions { display:flex; gap:6px; flex-wrap:wrap; padding-top:10px; border-top:1px dashed var(--gray-200); margin-top:4px; }
-.nt-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.nt-act-btn { min-width:32px; width:32px; height:32px; border-radius:8px; font-weight:700; padding:0; font-size:14px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
 .nt-act-detail { border-color:var(--info-500); color:var(--info-500); }
 .nt-act-detail:hover { background:var(--info-50); }
 .nt-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
@@ -85,6 +95,7 @@
     font-size:14px; line-height:1.75; background:#fff;
 }
 .nt-editor:focus { outline:none; border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
+.nt-editor.is-invalid { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.12); }
 .nt-detail-content { padding:14px 16px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:12px; font-size:14px; line-height:1.85; max-height:320px; overflow-y:auto; }
 .required-star { color:#ef4444; margin-right:4px; }
 </style>
@@ -96,9 +107,6 @@
             <p class="nt-page-sub" id="ntPageSub">إدارة إجراءات عمل المنظمة</p>
         </div>
         <div class="nt-header-actions">
-            <button type="button" class="nt-archive-btn" id="ntBtnArchive" onclick="ntToggleArchiveView()">
-                <i class="bi bi-archive"></i> أرشيف
-            </button>
             <button type="button" class="btn btn-primary nt-add-btn" id="ntBtnAdd" onclick="ntShowAddModal()">
                 <i class="bi bi-plus-lg"></i> إضافة ملاحظة
             </button>
@@ -120,7 +128,7 @@
     <select class="rt-filter-select form-select" id="ntFilterStatus" onchange="ntApplyFilters()" style="max-width:160px;height:44px;" aria-label="الحالة">
         <option value="active">نشطة</option>
         <option value="archived">مؤرشفة</option>
-        <option value="">الكل</option>
+        <option value="all">الكل</option>
     </select>
     <button type="button" class="nt-clear-btn" onclick="ntClearFilters()"><i class="bi bi-arrow-counterclockwise"></i> إعادة تعيين</button>
 </div>
@@ -144,7 +152,7 @@
                     <input type="text" class="form-control" id="ntTitle" maxlength="200" placeholder="مثال: تنبيه">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">نص الملاحظة</label>
+                    <label class="form-label">نص الملاحظة <span class="required-star">*</span></label>
                     <div class="nt-editor-toolbar">
                         <button type="button" title="عريض" onclick="ntEditorCmd('bold')"><i class="bi bi-type-bold"></i></button>
                         <button type="button" title="مائل" onclick="ntEditorCmd('italic')"><i class="bi bi-type-italic"></i></button>

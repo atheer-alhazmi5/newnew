@@ -26,11 +26,26 @@
 .se-rating-low { background:#ffedd5; color:#c2410c; border:1px solid #fdba74; }
 .se-rating-verylow { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
 .se-notes-cell { max-width:220px; text-align:right !important; white-space:pre-wrap; word-break:break-word; color:var(--gray-700); }
+.se-publish-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-weight:700; font-size:11.5px; white-space:nowrap; }
+.se-publish-badge-on { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
+.se-publish-badge-off { background:var(--warning-100); color:var(--warning-700); border:1px solid var(--warning-200); }
 .se-publish-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 12px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:#fff; }
 .se-publish-on { border-color:var(--success-500); color:var(--success-600); }
 .se-publish-on:hover { background:var(--success-50); }
 .se-publish-off { border-color:var(--gray-300); color:var(--gray-600); }
 .se-publish-off:hover { background:var(--gray-50); }
+.se-admin-actions { display:inline-flex; gap:6px; align-items:center; justify-content:center; }
+.se-action-icon {
+    width:34px; height:34px; border-radius:8px; border:2px solid transparent;
+    display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; background:#fff; font-size:16px; transition:all .15s;
+}
+.se-action-icon:disabled { opacity:.35; cursor:not-allowed; }
+.se-action-icon-publish { border-color:var(--success-500); color:var(--success-600); }
+.se-action-icon-publish:hover:not(:disabled) { background:var(--success-50); }
+.se-action-icon-stop { border-color:var(--error-500); color:var(--error-600); }
+.se-action-icon-stop:hover:not(:disabled) { background:var(--error-50); }
+.se-row-unpublished td { background:#fffbeb; }
 .se-empty { text-align:center; padding:40px 20px; color:var(--gray-500); }
 .se-modal .modal-content { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .se-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
@@ -165,12 +180,13 @@
                         <th>الملاحظات / الرأي الإضافي</th>
                         @if (isAdmin)
                         {
-                            <th style="width:110px;">النشر</th>
+                            <th style="width:120px;">حالة النشر</th>
+                            <th style="width:100px;">الإجراءات</th>
                         }
                     </tr>
                 </thead>
                 <tbody id="seBody">
-                    <tr><td colspan="@(isAdmin ? 11 : 10)" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="@(isAdmin ? 12 : 10)" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -184,7 +200,7 @@
             <div class="se-modal-header">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
                 <h5 class="se-modal-title">تقييم النظام</h5>
-                <div class="se-modal-subtitle">شاركنا رأيك في النظام — التقييم مرة واحدة فقط</div>
+                <div class="se-modal-subtitle">شاركنا رأيك في النظام — التقييم مرة واحدة فقط، ويُعرض بعد موافقة مدير النظام</div>
             </div>
             <div class="se-modal-body">
                 <div class="se-form-section">

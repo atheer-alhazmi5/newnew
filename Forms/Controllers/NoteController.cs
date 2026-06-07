@@ -144,7 +144,17 @@ public class NoteController : BaseController
     {
         if (string.IsNullOrWhiteSpace(req.Title)) return "عنوان الملاحظة مطلوب";
         if (req.Title.Trim().Length > 200) return "عنوان الملاحظة طويل جداً";
+        if (IsNoteContentEmpty(req.ContentHtml)) return "نص الملاحظة مطلوب";
         return null;
+    }
+
+    private static bool IsNoteContentEmpty(string? contentHtml)
+    {
+        if (string.IsNullOrWhiteSpace(contentHtml)) return true;
+        var text = System.Text.RegularExpressions.Regex.Replace(contentHtml, "<[^>]+>", " ")
+            .Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase)
+            .Trim();
+        return string.IsNullOrWhiteSpace(text);
     }
 
     private static object MapNote(UserNote n) => new

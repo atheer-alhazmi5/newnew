@@ -79,10 +79,10 @@
 .ob-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:#fff; }
 .ob-act-detail { border-color:var(--info-500); color:var(--info-500); }
 .ob-act-detail:hover { background:var(--info-50); }
-.ob-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
-.ob-act-edit:hover { background:var(--sa-50); }
 .ob-act-del { border-color:var(--error-500); color:var(--error-500); }
 .ob-act-del:hover { background:var(--error-50); }
+.ob-act-wf { border-color:var(--gray-500); color:var(--gray-600); }
+.ob-act-wf:hover { background:var(--gray-50); }
 
 .ob-empty { text-align:center; padding:48px 16px; color:var(--gray-400); }
 .ob-empty i { font-size:48px; display:block; margin-bottom:10px; color:var(--gray-300); }
@@ -178,9 +178,9 @@
                     <tr>
                         <th style="width:50px;text-align:center;">ت</th>
                         <th>رقم الطلب</th>
+                        <th>نوع الإجراء</th>
                         <th>اسم الإجراء</th>
                         <th>تاريخ تقديم الطلب</th>
-                        <th>نوع الإجراء</th>
                         <th style="text-align:center;">الأولوية</th>
                         <th style="text-align:center;">تصنيف الحالة</th>
                         <th>الحالة / المرحلة</th>
@@ -210,26 +210,6 @@
             </div>
             <div class="ob-modal-footer">
                 <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إغلاق</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- مودال تحديث الطلب -->
-<div class="modal fade" id="obEditModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content ob-modal">
-            <div class="ob-modal-header edit">
-                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="ob-modal-title">تحديث الطلب</h5>
-                <div class="ob-modal-subtitle" id="obEditSub">تعديل بيانات الطلب الحالي</div>
-            </div>
-            <div class="ob-modal-body" id="obEditBody"></div>
-            <div class="ob-modal-footer" style="justify-content:space-between;">
-                <button type="button" class="rt-clear-btn" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" style="border-radius:10px;padding:10px 28px;font-weight:700;" onclick="obSubmitEdit()">
-                    <i class="bi bi-check2-circle"></i> حفظ التحديث
-                </button>
             </div>
         </div>
     </div>

@@ -135,9 +135,7 @@ public class FormDefinitionsController : BaseController
             .OrderBy(t => t.Name)
             .Select(t => new { id = t.Id, name = t.Name })
             .ToList();
-        var orgUnitFilters = units
-            .OrderBy(u => u.SortOrder)
-            .ThenBy(u => u.Name)
+        var orgUnitFilters = DataService.FilterEffectivelyActiveOrganizationalUnits(units)
             .Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
             .ToList();
 
@@ -199,13 +197,19 @@ public class FormDefinitionsController : BaseController
 
         var tpl = templates.FirstOrDefault(t => t.Id == f.TemplateId);
         var hasSnapshot = !string.IsNullOrWhiteSpace(f.TemplateHeaderJsonSnapshot) || !string.IsNullOrWhiteSpace(f.TemplateFooterJsonSnapshot);
+        var versions = await _ds.ListFormDefinitionVersionsAsync(f.Id);
+        var activeVersion = versions.FirstOrDefault(v => v.IsActive);
+        var latestVersion = versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
 
         return Json(new
         {
             success = true,
             data = new
             {
-                f.Id, f.Name, f.Description, f.Ownership,
+                f.Id,
+                PublicId = string.IsNullOrWhiteSpace(f.PublicId) ? "" : f.PublicId,
+                ActiveVersionLabel = activeVersion?.VersionName ?? latestVersion?.VersionName ?? "",
+                f.Name, f.Description, f.Ownership,
                 f.FormClassId, f.FormTypeId, f.WorkspaceId, f.TemplateId,
                 f.OrganizationalUnitId, f.Status, f.IsActive,
                 f.FieldsJson, f.RejectionReason,

@@ -11,8 +11,6 @@ var ddlFilterOuExpanded = {};
 var ddlHierItems = [];
 var ddlHierLevelNames = [];
 var ddlHierLevelCount = 2;
-var ddlHierCurrentLevel = 1;
-
 /** الأدمن: الملكية «عام» إلزامية. ممثل الوحدة: يختار عام/خاص بحرية. */
 function ddlApplyOwnershipUi() {
     var pubC = document.getElementById('ddlCreateOwnershipPublic');
@@ -30,6 +28,17 @@ function ddlApplyOwnershipUi() {
         if (pubE) pubE.disabled = false;
         if (privE) privE.disabled = false;
     }
+}
+
+/** مدير النظام لا يعدّل القوائم الخاصة؛ ممثل الوحدة يعدّل ما أنشأه أو الخاص بوحدته. */
+function ddlCanModifyList(d) {
+    if (!d) return false;
+    if (ddlIsAdmin && d.ownership === 'خاص') return false;
+    if (ddlIsAdmin) return true;
+    var createdBy = (d.createdBy || '').trim();
+    if (createdBy && ddlCurrentUser && createdBy === ddlCurrentUser) return true;
+    if (d.ownership === 'خاص' && ddlCurrentOrgUnitId > 0 && d.organizationalUnitId === ddlCurrentOrgUnitId) return true;
+    return false;
 }
 
 /** تعطيل حقول نوع القائمة عند التحديث فقط */
@@ -274,6 +283,7 @@ function ddlRenderTable() {
         var ownershipClass = d.ownership === 'عام' ? 'ddl-badge-public' : 'ddl-badge-private';
         var statusClass = d.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
         var statusText = d.isActive ? 'مفعل' : 'معطل';
+        var canModify = ddlCanModifyList(d);
 
         html += '<tr>' +
             '<td style="text-align:center;font-weight:800;">' + (idx + 1) + '</td>' +
@@ -286,10 +296,12 @@ function ddlRenderTable() {
             '<td style="text-align:center;">' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
                     '<button class="ddl-action-btn ddl-action-btn-detail" onclick="ddlShowDetails(' + d.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
-                '</div>' +
+                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>';
+        if (canModify) {
+            html += '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
+                    '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>';
+        }
+        html += '</div>' +
             '</td>' +
             '</tr>';
     });
@@ -444,17 +456,17 @@ async function ddlLoadItems(listId) {
         var tableWrap = document.getElementById('ddlItemsTableWrap');
         var listType = document.getElementById('ddlItemsListType').value;
         var isSubList = listType === 'قائمة فرعية';
-        var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-        var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+        var listData = ddlAll.find(function (x) { return x.id === listId; });
+        var canModify = ddlCanModifyList(listData);
 
         var addBtn = document.getElementById('ddlAddItemBtn');
-        if (addBtn) addBtn.style.display = isCreator ? '' : 'none';
+        if (addBtn) addBtn.style.display = canModify ? '' : 'none';
 
         var theadRow = tableWrap.querySelector('thead tr');
         if (isSubList) {
-            theadRow.innerHTML = '<th>#</th><th>عنصر القائمة المستقلة</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (isCreator ? '<th>الإجراءات</th>' : '');
+            theadRow.innerHTML = '<th>#</th><th>عنصر القائمة المستقلة</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (canModify ? '<th>الإجراءات</th>' : '');
         } else {
-            theadRow.innerHTML = '<th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (isCreator ? '<th>الإجراءات</th>' : '');
+            theadRow.innerHTML = '<th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (canModify ? '<th>الإجراءات</th>' : '');
         }
 
         if (r && r.success && r.data && r.data.length > 0) {
@@ -470,7 +482,7 @@ async function ddlLoadItems(listId) {
                     '<td>' + esc(item.description || '') + '</td>' +
                     '<td><span class="ddl-color-circle" style="background:' + esc(item.color || '#25935F') + ';"></span></td>' +
                     '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
-                if (isCreator) {
+                if (canModify) {
                     html += '<td><button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ' +
                         '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteItem(' + item.id + ')">حذف</button></td>';
                 }
@@ -711,10 +723,12 @@ async function ddlLoadHierItems(listId) {
     document.getElementById('ddlHierItemsSection').style.display = '';
     document.getElementById('ddlHierAddForm').style.display = 'none';
 
-    var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-    var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+    var listData = ddlAll.find(function (x) { return x.id === listId; });
+    var canModify = ddlCanModifyList(listData);
     var addBtn = document.getElementById('ddlHierAddBtn');
-    if (addBtn) addBtn.style.display = isCreator ? '' : 'none';
+    if (addBtn) addBtn.style.display = canModify ? '' : 'none';
+    var editNamesBtn = document.getElementById('ddlHierEditLevelNamesBtn');
+    if (editNamesBtn) editNamesBtn.style.display = canModify ? '' : 'none';
 
     ddlRenderHierLevelBadges();
     ddlRenderHierLevelTabs();
@@ -780,8 +794,9 @@ function ddlSelectHierLevel(levelNum) {
 function ddlRenderHierTree() {
     var treeWrap = document.getElementById('ddlHierTreeWrap');
     var emptyEl = document.getElementById('ddlHierEmpty');
-    var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-    var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+    var listId = parseInt(document.getElementById('ddlItemsListId').value, 10);
+    var listData = ddlAll.find(function (x) { return x.id === listId; });
+    var canModify = ddlCanModifyList(listData);
 
     if (ddlHierItems.length === 0) {
         treeWrap.innerHTML = '';
@@ -794,11 +809,11 @@ function ddlRenderHierTree() {
     emptyEl.style.display = 'none';
 
     var tree = ddlBuildTree(ddlHierItems);
-    var rows = ddlRenderTreeRows(tree, 0, isCreator);
+    var rows = ddlRenderTreeRows(tree, 0, canModify);
 
     var html = '<table class="ddl-tree-table"><thead><tr>' +
         '<th style="text-align:right;">العنصر</th><th>المستوى</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' +
-        (isCreator ? '<th>الإجراءات</th>' : '') +
+        (canModify ? '<th>الإجراءات</th>' : '') +
         '</tr></thead><tbody>' + rows + '</tbody></table>';
 
     treeWrap.innerHTML = html;
@@ -820,7 +835,7 @@ function ddlBuildTree(items) {
     return roots.map(buildNode);
 }
 
-function ddlRenderTreeRows(nodes, depth, isCreator) {
+function ddlRenderTreeRows(nodes, depth, canModify) {
     var html = '';
     nodes.forEach(function (node) {
         var item = node.item;
@@ -838,7 +853,7 @@ function ddlRenderTreeRows(nodes, depth, isCreator) {
             '<td><span class="ddl-color-circle" style="background:' + esc(item.color || '#25935F') + ';"></span></td>' +
             '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
 
-        if (isCreator) {
+        if (canModify) {
             html += '<td>' +
                 '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ' +
                 '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteHierItem(' + item.id + ')">حذف</button>' +
@@ -847,7 +862,7 @@ function ddlRenderTreeRows(nodes, depth, isCreator) {
         html += '</tr>';
 
         if (node.children.length > 0) {
-            html += ddlRenderTreeRows(node.children, depth + 1, isCreator);
+            html += ddlRenderTreeRows(node.children, depth + 1, canModify);
         }
     });
     return html;
@@ -1232,6 +1247,10 @@ async function ddlShowEditModal(id) {
         if (r && r.success) d = r.data;
     }
     if (!d) return;
+    if (!ddlCanModifyList(d)) {
+        showToast('لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة', 'error');
+        return;
+    }
 
     document.getElementById('ddlEditId').value = d.id;
     document.getElementById('ddlEditName').value = d.name || '';
@@ -1318,6 +1337,11 @@ async function ddlSubmitEdit() {
 
 // ─── Delete Modal ────────────────────────────────────────────────────────────
 function ddlShowDeleteModal(id, name) {
+    var d = ddlAll.find(function (x) { return x.id === id; });
+    if (!ddlCanModifyList(d)) {
+        showToast('لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة', 'error');
+        return;
+    }
     document.getElementById('ddlDeleteId').value = id;
     document.getElementById('ddlDeleteNameLabel').textContent = name || '';
     document.getElementById('ddlDeleteError').classList.add('d-none');

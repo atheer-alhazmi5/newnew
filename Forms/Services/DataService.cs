@@ -1102,7 +1102,58 @@ public class DataService
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
 
     public Task<List<OrganizationalUnit>> ListActiveOrganizationalUnitsAsync()
-        => Task.FromResult(_db.OrganizationalUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList());
+        => Task.FromResult(FilterEffectivelyActiveOrganizationalUnits(_db.OrganizationalUnits));
+
+    /// <summary>وحدة نشطة فقط إذا كانت مفعّلة وجميع أسلافها مفعّلين.</summary>
+    public static bool IsOrganizationalUnitEffectivelyActive(OrganizationalUnit unit, IReadOnlyDictionary<int, OrganizationalUnit> byId)
+    {
+        if (!unit.IsActive) return false;
+        var walk = unit.ParentId;
+        while (walk is > 0)
+        {
+            if (!byId.TryGetValue(walk.Value, out var parent)) return false;
+            if (!parent.IsActive) return false;
+            walk = parent.ParentId;
+        }
+        return true;
+    }
+
+    public static List<OrganizationalUnit> FilterEffectivelyActiveOrganizationalUnits(IEnumerable<OrganizationalUnit> units)
+    {
+        var list = units.ToList();
+        var byId = list.ToDictionary(u => u.Id);
+        return list
+            .Where(u => IsOrganizationalUnitEffectivelyActive(u, byId))
+            .OrderBy(u => u.SortOrder)
+            .ThenBy(u => u.Name, StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false))
+            .ToList();
+    }
+
+    public Task CascadeDeactivateOrganizationalUnitDescendantsAsync(int unitId, string? updatedBy, DateTime updatedAt)
+    {
+        var list = _db.OrganizationalUnits.ToList();
+        var changed = false;
+
+        void Walk(int parentId)
+        {
+            foreach (var child in list.Where(u => u.ParentId == parentId))
+            {
+                if (child.IsActive)
+                {
+                    child.IsActive = false;
+                    child.UpdatedBy = updatedBy ?? "";
+                    child.UpdatedAt = updatedAt;
+                    changed = true;
+                }
+                Walk(child.Id);
+            }
+        }
+
+        Walk(unitId);
+        if (changed)
+            _db.SaveOrganizationalUnits(list);
+        return Task.CompletedTask;
+    }
 
     public Task<OrganizationalUnit?> GetOrganizationalUnitByIdAsync(int id)
         => Task.FromResult(_db.OrganizationalUnits.FirstOrDefault(u => u.Id == id));
@@ -1192,9 +1243,31 @@ public class DataService
     public Task RecalculateOrganizationalUnitHierarchyAsync()
     {
         var list = _db.OrganizationalUnits.ToList();
+        SyncInactiveOrganizationalUnitDescendants(list);
         ApplyOrganizationalUnitHierarchyPaths(list);
         _db.SaveOrganizationalUnits(list);
         return Task.CompletedTask;
+    }
+
+    /// <summary>يضمن تعطيل جميع التابعين لأي وحدة معطّلة (إصلاح البيانات القديمة).</summary>
+    private static void SyncInactiveOrganizationalUnitDescendants(List<OrganizationalUnit> list)
+    {
+        var now = DateTime.Now;
+        foreach (var root in list.Where(u => !u.IsActive))
+            DeactivateDescendantsInMemory(list, root.Id, now);
+    }
+
+    private static void DeactivateDescendantsInMemory(List<OrganizationalUnit> list, int parentId, DateTime updatedAt)
+    {
+        foreach (var child in list.Where(u => u.ParentId == parentId))
+        {
+            if (child.IsActive)
+            {
+                child.IsActive = false;
+                child.UpdatedAt = updatedAt;
+            }
+            DeactivateDescendantsInMemory(list, child.Id, updatedAt);
+        }
     }
 
     private static bool SameOrgUnitParent(OrganizationalUnit u, int? parentId)
@@ -2534,6 +2607,7 @@ public class DataService
         var list = _db.SystemFeedbacks;
         item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
         if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
+        item.IsPublished = false;
         list.Add(item);
         _db.SaveSystemFeedbacks(list);
         return Task.FromResult(item);

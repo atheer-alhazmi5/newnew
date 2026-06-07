@@ -33,12 +33,14 @@ public class SystemEvaluationController : BaseController
         var isAdmin = CurrentUserRole == "Admin";
         var all = await _ds.ListSystemFeedbacksAsync();
         var myFeedback = await _ds.GetSystemFeedbackByUserIdAsync(CurrentUserId);
+        var published = all.Where(f => f.IsPublished).ToList();
+        var visible = isAdmin ? all : published;
 
         var levels = DataService.SystemFeedbackRatingLevels;
         var dimensions = new[] { "سهولة الاستخدام", "التصميم", "سرعة الأداء", "الدعم الفني" };
 
         int CountDim(string dim, string level)
-            => all.Count(f => GetDimensionRating(f, dim) == level);
+            => published.Count(f => GetDimensionRating(f, dim) == level);
 
         var detailStats = dimensions.Select(dim => new
         {
@@ -46,8 +48,8 @@ public class SystemEvaluationController : BaseController
             counts = levels.ToDictionary(l => l, l => CountDim(dim, l))
         }).ToList();
 
-        var overallCounts = levels.ToDictionary(l => l, l => all.Count(f => f.OverallRating == l));
-        var totalOverall = all.Count;
+        var overallCounts = levels.ToDictionary(l => l, l => published.Count(f => f.OverallRating == l));
+        var totalOverall = published.Count;
         var overallPercents = levels.ToDictionary(
             l => l,
             l => totalOverall == 0 ? 0.0 : Math.Round(overallCounts[l] * 100.0 / totalOverall, 1));
@@ -63,21 +65,21 @@ public class SystemEvaluationController : BaseController
             detailStats,
             overallCounts,
             overallPercents,
-            totalCount = all.Count,
-            data = all.Select((f, idx) => new
+            totalCount = published.Count,
+            data = visible.Select((f, idx) => new
             {
-                f.Id,
-                RowNum = idx + 1,
-                f.SubmitterName,
-                f.OrganizationalUnitName,
-                CreatedAt = f.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-                f.OverallRating,
-                f.EaseOfUse,
-                f.Design,
-                f.Performance,
-                f.TechnicalSupport,
-                f.Notes,
-                f.IsPublished
+                id = f.Id,
+                rowNum = idx + 1,
+                submitterName = f.SubmitterName,
+                organizationalUnitName = f.OrganizationalUnitName,
+                createdAt = f.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                overallRating = f.OverallRating,
+                easeOfUse = f.EaseOfUse,
+                design = f.Design,
+                performance = f.Performance,
+                technicalSupport = f.TechnicalSupport,
+                notes = f.Notes,
+                isPublished = f.IsPublished
             })
         });
     }
@@ -124,14 +126,40 @@ public class SystemEvaluationController : BaseController
             Performance = perf,
             TechnicalSupport = support,
             Notes = (req.Notes ?? "").Trim(),
-            IsPublished = true,
+            IsPublished = false,
             CreatedAt = DateTime.UtcNow
         };
 
         await _ds.AddSystemFeedbackAsync(row);
         await _ds.AddAuditLogAsync(BuildAuditEntry("إرسال تقييم نظام", "SystemFeedback", row.Id.ToString(), user.FullName));
 
-        return Json(new { success = true, message = "شكراً لتقييمك! تم إرسال رأيك بنجاح." });
+        return Json(new { success = true, message = "شكراً لتقييمك!" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetPublish([FromBody] SystemFeedbackPublishRequest req)
+    {
+        if (!IsAuthenticated || CurrentUserRole != "Admin")
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var item = await _ds.GetSystemFeedbackByIdAsync(req.Id);
+        if (item == null)
+            return Json(new { success = false, message = "غير موجود" });
+
+        item.IsPublished = req.Publish;
+        await _ds.UpdateSystemFeedbackAsync(item);
+        await _ds.AddAuditLogAsync(BuildAuditEntry(
+            req.Publish ? "نشر تقييم نظام" : "إيقاف نشر تقييم نظام",
+            "SystemFeedback",
+            req.Id.ToString(),
+            item.SubmitterName));
+
+        return Json(new
+        {
+            success = true,
+            isPublished = item.IsPublished,
+            message = req.Publish ? "تم نشر التقييم" : "تم إيقاف نشر التقييم"
+        });
     }
 
     [HttpPost]
@@ -144,15 +172,7 @@ public class SystemEvaluationController : BaseController
         if (item == null)
             return Json(new { success = false, message = "غير موجود" });
 
-        await _ds.ToggleSystemFeedbackPublishAsync(req.Id);
-        var updated = await _ds.GetSystemFeedbackByIdAsync(req.Id);
-        await _ds.AddAuditLogAsync(BuildAuditEntry(
-            updated!.IsPublished ? "نشر تقييم نظام" : "إلغاء نشر تقييم نظام",
-            "SystemFeedback",
-            req.Id.ToString(),
-            item.SubmitterName));
-
-        return Json(new { success = true, isPublished = updated!.IsPublished });
+        return await SetPublish(new SystemFeedbackPublishRequest { Id = req.Id, Publish = !item.IsPublished });
     }
 
     private static string GetDimensionRating(SystemFeedback f, string dim) => dim switch
@@ -177,6 +197,12 @@ public class SystemEvaluationController : BaseController
 public class SystemFeedbackIdRequest
 {
     public int Id { get; set; }
+}
+
+public class SystemFeedbackPublishRequest
+{
+    public int Id { get; set; }
+    public bool Publish { get; set; }
 }
 
 public class SystemFeedbackSubmitRequest

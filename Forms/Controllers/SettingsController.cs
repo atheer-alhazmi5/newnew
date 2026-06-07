@@ -66,7 +66,7 @@ public class SettingsController : BaseController
                 l.OperatingSystem,
                 CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
             }),
-            organizationalUnits = orgUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder)
+            organizationalUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(orgUnits)
                 .Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
             beneficiaries = beneficiaries.Where(b => b.IsActive)
                 .Select(b => new { b.Id, b.FullName, b.NationalId, b.OrganizationalUnitId }).ToList()
@@ -1299,7 +1299,9 @@ public class SettingsController : BaseController
                 UpdatedAt = u.UpdatedAt.HasValue ? u.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : ""
             }),
             classifications = activeClassifications.Select(c => new { c.Id, c.Name, c.Color }).ToList(),
-            mainUnits = units.Where(u => u.IsActive && !u.ParentId.HasValue).Select(u => new { u.Id, u.Name }).ToList()
+            mainUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units)
+                .Where(u => !u.ParentId.HasValue)
+                .Select(u => new { u.Id, u.Name }).ToList()
         });
     }
 
@@ -1377,11 +1379,16 @@ public class SettingsController : BaseController
             unit.SortOrder = await _ds.GetNextOrganizationalUnitSiblingSortOrderAsync(newParentId, req.Id);
 
         await _ds.UpdateOrganizationalUnitAsync(unit);
+        if (!req.IsActive)
+            await _ds.CascadeDeactivateOrganizationalUnitDescendantsAsync(unit.Id, unit.UpdatedBy, unit.UpdatedAt ?? DateTime.Now);
         await _ds.RecalculateOrganizationalUnitHierarchyAsync();
 
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث وحدة تنظيمية", "OrganizationalUnit", unit.Id.ToString(), unit.Name));
 
-        return Json(new { success = true, message = "تم تحديث الوحدة بنجاح" });
+        var msg = req.IsActive
+            ? "تم تحديث الوحدة بنجاح"
+            : "تم تحديث الوحدة وتعطيل جميع الوحدات التابعة لها";
+        return Json(new { success = true, message = msg });
     }
 
     [HttpPost]
@@ -1416,7 +1423,7 @@ public class SettingsController : BaseController
 
         var list = await _ds.ListBeneficiariesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
         return Json(new
         {
             success = true,
@@ -2072,7 +2079,7 @@ public class SettingsController : BaseController
         var list = await _ds.ListDelegationsAsync();
         var bens = await _ds.ListBeneficiariesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
 
         var benById = bens.ToDictionary(b => b.Id);
         var unitById = units.ToDictionary(u => u.Id);
@@ -2368,7 +2375,7 @@ public class SettingsController : BaseController
         DateTime start, end;
         try { start = ParseDelegationDate(req.StartDate!); } catch { return "تاريخ البداية غير صالح"; }
         try { end = ParseDelegationDate(req.EndDate!); } catch { return "تاريخ النهاية غير صالح"; }
-        if (end <= start) return "تاريخ النهاية يجب أن يكون بعد تاريخ البداية";
+        if (end < start) return "تاريخ النهاية يجب أن يكون أكبر من تاريخ البداية أو يساويه";
 
         var bens = await _ds.ListBeneficiariesAsync();
         var dor = bens.FirstOrDefault(b => b.Id == req.DelegatorBeneficiaryId);

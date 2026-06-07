@@ -8,7 +8,7 @@ namespace FormsSystem.Controllers;
 /// <summary>
 /// صندوق الصادر — إدارة الطلبات المرتبطة بإجراءات العمل (WorkProcedure).
 /// يدعم تقديم طلب جديد عبر معالج خطوات (Stepper)، حساب المرحلة الحالية وSLA،
-/// وعرض/تحديث/حذف الطلبات.
+/// وعرض/حذف الطلبات.
 /// </summary>
 public class OutboxController : BaseController
 {
@@ -597,6 +597,13 @@ public class OutboxController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         if (string.Equals(r.StatusCategory, "مغلق", StringComparison.Ordinal))
             return Json(new { success = false, message = "لا يمكن حذف طلب مغلق" });
+
+        var statuses = await _ds.ListFormStatusesAsync();
+        var fs = r.CurrentFormStatusId.HasValue
+            ? statuses.FirstOrDefault(s => s.Id == r.CurrentFormStatusId.Value)
+            : null;
+        if (fs == null || !string.Equals(fs.Name?.Trim(), "جديد", StringComparison.Ordinal))
+            return Json(new { success = false, message = "لا يمكن حذف الطلب إلا في مرحلة «جديد»" });
 
         await _ds.DeleteOutboxRequestAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف طلب", "OutboxRequest", r.Id.ToString(), r.RequestNumber));
