@@ -9,6 +9,8 @@ public class TablesController : BaseController
     private readonly DataService _ds;
     private readonly UiHelperService _ui;
 
+    private const string ReadyTableNameDuplicateMessage = "اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.";
+
     public TablesController(DataService ds, UiHelperService ui)
     {
         _ds = ds;
@@ -60,6 +62,7 @@ public class TablesController : BaseController
         var result = new List<object>();
         foreach (var t in filteredList)
         {
+            var actions = GetReadyTableActions(t);
             result.Add(new
             {
                 t.Id, t.Name, t.Description, t.SortOrder,
@@ -69,7 +72,9 @@ public class TablesController : BaseController
                 t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
                 CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),
-                CanModify = await CanModifyReadyTableAsync(t)
+                CanEdit = actions.CanEdit,
+                CanDelete = actions.CanDelete,
+                CanViewDetails = actions.CanViewDetails
             });
         }
 
@@ -126,19 +131,45 @@ public class TablesController : BaseController
         return units.Count > 0 ? units.First().Id : 0;
     }
 
-    private Task<bool> CanModifyReadyTableAsync(ReadyTable t) =>
-        Task.FromResult(CurrentUserRole == "Admin" && t.Ownership != "خاص");
+    private static bool IsTableCreator(ReadyTable t, string? currentUserFullName, string? currentUserName)
+    {
+        var createdBy = (t.CreatedBy ?? "").Trim();
+        var user = (currentUserFullName ?? currentUserName ?? "").Trim();
+        if (string.IsNullOrEmpty(createdBy) || string.IsNullOrEmpty(user)) return false;
+        if (string.Equals(createdBy, user, StringComparison.OrdinalIgnoreCase)) return true;
+        return string.Equals(createdBy.Replace(" ", ""), user.Replace(" ", ""), StringComparison.OrdinalIgnoreCase);
+    }
 
-    /// <summary>مدير النظام لا يعدّل الجداول الخاصة؛ المستفيد لا يعدّل أي جدول بعد إنشائه.</summary>
+    private (bool CanEdit, bool CanDelete, bool CanViewDetails) GetReadyTableActions(ReadyTable t)
+    {
+        var isAdmin = CurrentUserRole == "Admin";
+        var isCreator = IsTableCreator(t, CurrentUserFullName, CurrentUserName);
+
+        if (isCreator)
+            return (true, true, true);
+
+        if (isAdmin && t.Ownership == "عام")
+            return (true, true, true);
+
+        if (isAdmin)
+            return (false, false, false);
+
+        return (false, false, true);
+    }
+
     private Task<string?> EnsureReadyTableModifyPermissionAsync(ReadyTable t)
     {
-        if (CurrentUserRole == "Admin" && t.Ownership == "خاص")
-            return Task.FromResult<string?>("لا يمكن لمدير النظام تعديل جدول جاهز خاص");
+        if (IsTableCreator(t, CurrentUserFullName, CurrentUserName))
+            return Task.FromResult<string?>(null);
 
-        if (CurrentUserRole != "Admin")
-            return Task.FromResult<string?>("غير مصرح بتعديل هذا الجدول");
+        if (CurrentUserRole == "Admin")
+        {
+            if (t.Ownership == "خاص")
+                return Task.FromResult<string?>("لا يمكن لمدير النظام تعديل جدول جاهز خاص");
+            return Task.FromResult<string?>(null);
+        }
 
-        return Task.FromResult<string?>(null);
+        return Task.FromResult<string?>("غير مصرح بتعديل هذا الجدول");
     }
 
     [HttpPost]
@@ -149,6 +180,10 @@ public class TablesController : BaseController
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الجدول مطلوب" });
+
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsReadyTableNameDuplicateAsync(trimmedName))
+            return Json(new { success = false, message = ReadyTableNameDuplicateMessage });
 
         var isAdminUser = CurrentUserRole == "Admin";
         string ownership;
@@ -169,7 +204,7 @@ public class TablesController : BaseController
 
         var table = new ReadyTable
         {
-            Name = req.Name.Trim(),
+            Name = trimmedName,
             Description = req.Description?.Trim() ?? "",
             SortOrder = nextOrder,
             RowCountMode = req.RowCountMode ?? "مفتوح",
@@ -223,9 +258,13 @@ public class TablesController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الجدول مطلوب" });
 
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsReadyTableNameDuplicateAsync(trimmedName, req.Id))
+            return Json(new { success = false, message = ReadyTableNameDuplicateMessage });
+
         var isAdminUser = CurrentUserRole == "Admin";
 
-        t.Name = req.Name.Trim();
+        t.Name = trimmedName;
         t.Description = req.Description?.Trim() ?? "";
         if (req.SortOrder > 0) t.SortOrder = req.SortOrder;
         t.RowCountMode = req.RowCountMode ?? t.RowCountMode;

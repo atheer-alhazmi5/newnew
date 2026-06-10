@@ -4252,6 +4252,30 @@ function fdBuildWatermarkLayerHtml(tpl) {
     return `<div class="fd-form-wm-layer" aria-hidden="true" style="pointer-events:none;position:absolute;inset:0;background-image:${bgUrl};background-repeat:${wmRep};background-position:${wmPos};background-size:${wmSize};opacity:${wmOp};z-index:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>`;
 }
 
+function fdTplZoneBackgroundStyle(tpl, zone) {
+    const isHeader = zone === 'header';
+    const color = String(isHeader
+        ? (tpl?.headerBackgroundColor ?? tpl?.HeaderBackgroundColor ?? '')
+        : (tpl?.footerBackgroundColor ?? tpl?.FooterBackgroundColor ?? '')).trim();
+    const img = String(isHeader
+        ? (tpl?.headerBackgroundImageUrl ?? tpl?.HeaderBackgroundImageUrl ?? '')
+        : (tpl?.footerBackgroundImageUrl ?? tpl?.FooterBackgroundImageUrl ?? '')).trim();
+    const defaultBg = isHeader ? '#fff' : 'transparent';
+    const styles = [];
+    if (img) {
+        const bgUrl = fdCssBgImageUrl(img);
+        if (bgUrl) {
+            styles.push(`background-image:${bgUrl}`);
+            styles.push('background-size:cover');
+            styles.push('background-position:center');
+            styles.push('background-repeat:no-repeat');
+        }
+    }
+    if (color) styles.push(`background-color:${color}`);
+    else if (!img) styles.push(`background-color:${defaultBg}`);
+    return styles.join(';');
+}
+
 // ─── SHARED FORM PREVIEW BUILDER ─────────────────────────────────────────────
 // Renders Header + Body (fields) + Footer from a real saved template object.
 // tplData   – object with headerJson/footerJson/color/margins (or null = fallback)
@@ -4416,17 +4440,19 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
     const showHeadLine = !!(tpl.showHeaderLine ?? tpl.ShowHeaderLine);
     const showFootLine = !!(tpl.showFooterLine ?? tpl.ShowFooterLine);
     const wmLayer = fdBuildWatermarkLayerHtml(tpl);
+    const headerBgStyle = fdTplZoneBackgroundStyle(tpl, 'header');
+    const footerBgStyle = fdTplZoneBackgroundStyle(tpl, 'footer');
 
     const headerHtml = hd.length
-        ? `<div style="display:grid;grid-template-columns:repeat(${hd.length},1fr);min-height:52px;align-items:center;padding:10px ${mr}px;background:#fff;">${hd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-        : `<div style="padding:12px ${mr}px;background:#fff;color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tplName)}</div>`;
+        ? `<div style="display:grid;grid-template-columns:repeat(${hd.length},1fr);min-height:52px;align-items:center;padding:10px ${mr}px;${headerBgStyle};-webkit-print-color-adjust:exact;print-color-adjust:exact;">${hd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
+        : `<div style="padding:12px ${mr}px;${headerBgStyle};color:var(--gray-300);font-size:12px;text-align:center;font-style:normal;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><i class="bi bi-layout-text-window-reverse" style="font-size:18px;display:block;margin-bottom:3px;"></i>${esc(tplName)}</div>`;
 
     const headerLineHtml = showHeadLine ? `<div style="height:2px;background:${headerDividerCss};"></div>` : '';
     const footerLineHtml = showFootLine ? `<div style="height:1px;background:${headerDividerCss};"></div>` : '';
 
     const footerHtml = fd.length
-        ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;background:transparent;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
-        : `<div style="padding:10px ${mr}px;background:transparent;color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;">${esc(tplName)}</div>`;
+        ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;${footerBgStyle};-webkit-print-color-adjust:exact;print-color-adjust:exact;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
+        : `<div style="padding:10px ${mr}px;${footerBgStyle};color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(tplName)}</div>`;
 
     return `<div style="border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
         ${headerHtml}${headerLineHtml}

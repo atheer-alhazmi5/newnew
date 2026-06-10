@@ -84,7 +84,7 @@ function tpRenderTable() {
             <td><span class="tp-color-swatch" style="background:${t.color};"></span></td>
             <td>
                 <label class="tp-toggle">
-                    <input type="checkbox" ${t.isActive ? 'checked' : ''} onchange="tpToggleActive(${t.id})">
+                    <input type="checkbox" ${t.isActive ? 'checked' : ''} onchange="tpToggleActive(this, ${t.id})">
                     <span class="tp-slider"></span>
                 </label>
             </td>
@@ -120,9 +120,182 @@ function tpClearFilters() {
 }
 
 /* ── Toggle Active ───────────────────────────────────────────── */
-async function tpToggleActive(id) {
-    await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id });
-    tpLoad();
+function tpSyncDeactivateReasonVisibility() {
+    const isActive = document.getElementById('tpwIsActive').checked;
+    const wrap = document.getElementById('tpwDeactivateReasonWrap');
+    const reason = document.getElementById('tpwDeactivateReason');
+    if (!wrap || !reason) return;
+    if (isActive) {
+        wrap.classList.add('d-none');
+        reason.value = '';
+    } else {
+        wrap.classList.remove('d-none');
+    }
+}
+
+function tpValidateDeactivateReason() {
+    if (document.getElementById('tpwIsActive').checked) return null;
+    if (!(document.getElementById('tpwDeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
+
+async function tpToggleActive(checkbox, id) {
+    if (!checkbox.checked) {
+        checkbox.checked = true;
+        const tpl = tpAllData.find(x => x.id === id);
+        document.getElementById('tpDeactivateId').value = id;
+        document.getElementById('tpDeactivateReason').value = '';
+        document.getElementById('tpDeactivateName').textContent = tpl ? (tpl.name || '') : '';
+        new bootstrap.Modal(document.getElementById('tpDeactivateModal')).show();
+        return;
+    }
+    const r = await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id, deactivateReason: '' });
+    if (r && r.success) tpLoad();
+    else {
+        checkbox.checked = false;
+        tpShowValidationMessage((r && r.message) || 'خطأ');
+    }
+}
+
+async function tpSubmitDeactivate() {
+    const id = parseInt(document.getElementById('tpDeactivateId').value, 10);
+    const reason = (document.getElementById('tpDeactivateReason').value || '').trim();
+    if (!reason) {
+        tpShowValidationMessage('سبب التعطيل مطلوب عند اختيار حالة معطل');
+        return;
+    }
+    const r = await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id, deactivateReason: reason });
+    if (r && r.success) {
+        bootstrap.Modal.getInstance(document.getElementById('tpDeactivateModal'))?.hide();
+        tpLoad();
+        if (typeof showToast === 'function') showToast(r.message || 'تم تعطيل القالب', 'success');
+    } else {
+        tpShowValidationMessage((r && r.message) || 'خطأ');
+    }
+}
+
+/* ── Zone background helpers ─────────────────────────────────── */
+function tpZoneBackgroundStyle(color, imageUrl, defaultColor) {
+    const styles = [];
+    const c = (color || '').trim();
+    const img = (imageUrl || '').trim();
+    if (img) {
+        styles.push(`background-image:url('${escHtml(img)}')`);
+        styles.push('background-size:cover');
+        styles.push('background-position:center');
+        styles.push('background-repeat:no-repeat');
+    }
+    if (c) styles.push(`background-color:${c}`);
+    else if (!img && defaultColor) styles.push(`background-color:${defaultColor}`);
+    return styles.join(';');
+}
+
+function tpGetHeaderBgColor() {
+    return (document.getElementById('tpwHeaderBgColor')?.value || '').trim();
+}
+
+function tpGetFooterBgColor() {
+    return (document.getElementById('tpwFooterBgColor')?.value || '').trim();
+}
+
+function tpGetHeaderBgImage() {
+    return (document.getElementById('tpwHeaderBgImageUrl')?.value || '').trim();
+}
+
+function tpGetFooterBgImage() {
+    return (document.getElementById('tpwFooterBgImageUrl')?.value || '').trim();
+}
+
+function tpSetHeaderBgColor(value) {
+    const hidden = document.getElementById('tpwHeaderBgColor');
+    if (hidden) hidden.value = value || '';
+    tpUpdatePreview('header');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpSetFooterBgColor(value) {
+    const hidden = document.getElementById('tpwFooterBgColor');
+    if (hidden) hidden.value = value || '';
+    tpUpdatePreview('footer');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpClearHeaderBgColor() {
+    const hidden = document.getElementById('tpwHeaderBgColor');
+    const picker = document.getElementById('tpwHeaderBgColorPicker');
+    if (hidden) hidden.value = '';
+    if (picker) picker.value = '#ffffff';
+    tpUpdatePreview('header');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpClearFooterBgColor() {
+    const hidden = document.getElementById('tpwFooterBgColor');
+    const picker = document.getElementById('tpwFooterBgColorPicker');
+    if (hidden) hidden.value = '';
+    if (picker) picker.value = '#ffffff';
+    tpUpdatePreview('footer');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpSetZoneBgImage(zone, url) {
+    const safeUrl = (url || '').trim();
+    const urlInput = document.getElementById(zone === 'header' ? 'tpwHeaderBgImageUrl' : 'tpwFooterBgImageUrl');
+    const preview = document.getElementById(zone === 'header' ? 'tpwHeaderBgPreview' : 'tpwFooterBgPreview');
+    const empty = document.getElementById(zone === 'header' ? 'tpwHeaderBgEmpty' : 'tpwFooterBgEmpty');
+    const removeBtn = document.getElementById(zone === 'header' ? 'tpwHeaderBgRemoveBtn' : 'tpwFooterBgRemoveBtn');
+    if (urlInput) urlInput.value = safeUrl;
+    if (preview) {
+        if (safeUrl) {
+            preview.src = safeUrl;
+            preview.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            if (empty) empty.style.display = '';
+        }
+    }
+    if (removeBtn) removeBtn.style.display = safeUrl ? 'inline-flex' : 'none';
+    tpUpdatePreview(zone);
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+async function tpUploadZoneBg(zone, input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 5_000_000) { alert('حجم الملف يتجاوز 5MB'); input.value = ''; return; }
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/Templates/UploadTemplateImage', { method: 'POST', body: form });
+    const j = await r.json();
+    input.value = '';
+    if (!j.success) { alert(j.message || 'فشل رفع الصورة'); return; }
+    tpSetZoneBgImage(zone, j.url);
+}
+
+function tpRemoveZoneBg(zone) {
+    tpSetZoneBgImage(zone, '');
+}
+
+function tpInitZoneBackgrounds(headerColor, headerImage, footerColor, footerImage) {
+    const hColor = (headerColor || '').trim();
+    const fColor = (footerColor || '').trim();
+    const hHidden = document.getElementById('tpwHeaderBgColor');
+    const hPicker = document.getElementById('tpwHeaderBgColorPicker');
+    const fHidden = document.getElementById('tpwFooterBgColor');
+    const fPicker = document.getElementById('tpwFooterBgColorPicker');
+    if (hHidden) hHidden.value = hColor;
+    if (hPicker) hPicker.value = hColor || '#ffffff';
+    if (fHidden) fHidden.value = fColor;
+    if (fPicker) fPicker.value = fColor || '#ffffff';
+    tpSetZoneBgImage('header', headerImage || '');
+    tpSetZoneBgImage('footer', footerImage || '');
+}
+
+function tpResetZoneBackgrounds() {
+    tpInitZoneBackgrounds('', '', '', '');
 }
 
 /* ═══════════ WIZARD ═══════════════════════════════════════════ */
@@ -140,6 +313,8 @@ function tpShowCreateModal() {
     document.getElementById('tpwColor').value = '#25935F';
     document.getElementById('tpwColorHex').textContent = '#25935F';
     document.getElementById('tpwIsActive').checked = true;
+    document.getElementById('tpwDeactivateReason').value = '';
+    tpSyncDeactivateReasonVisibility();
     document.getElementById('tpwMarginTop').value = 20;
     document.getElementById('tpwMarginBottom').value = 20;
     document.getElementById('tpwMarginRight').value = 20;
@@ -149,6 +324,8 @@ function tpShowCreateModal() {
     document.getElementById('tpwShowHeaderLine').checked = true;
     document.getElementById('tpwShowFooterLine').checked = true;
     tpSetWatermark('');
+
+    tpResetZoneBackgrounds();
 
     tpHeaderData = [tpDefaultSection(16, true)];
     tpFooterData = [tpDefaultSection(12, false)];
@@ -180,6 +357,8 @@ async function tpShowEditModal(id) {
     document.getElementById('tpwColor').value = t.color;
     document.getElementById('tpwColorHex').textContent = t.color;
     document.getElementById('tpwIsActive').checked = t.isActive;
+    document.getElementById('tpwDeactivateReason').value = String(t.deactivateReason || t.DeactivateReason || '').trim();
+    tpSyncDeactivateReasonVisibility();
     document.getElementById('tpwMarginTop').value = t.marginTop;
     document.getElementById('tpwMarginBottom').value = t.marginBottom;
     document.getElementById('tpwMarginRight').value = t.marginRight;
@@ -189,6 +368,13 @@ async function tpShowEditModal(id) {
     document.getElementById('tpwShowHeaderLine').checked = t.showHeaderLine;
     document.getElementById('tpwShowFooterLine').checked = t.showFooterLine;
     tpSetWatermark(t.watermarkUrl || t.WatermarkUrl || '');
+
+    tpInitZoneBackgrounds(
+        t.headerBackgroundColor || t.HeaderBackgroundColor || '',
+        t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl || '',
+        t.footerBackgroundColor || t.FooterBackgroundColor || '',
+        t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl || ''
+    );
 
     try { tpHeaderData = JSON.parse(t.headerJson); } catch { tpHeaderData = [tpDefaultSection(16, true)]; }
     try { tpFooterData = JSON.parse(t.footerJson); } catch { tpFooterData = [tpDefaultSection(12, false)]; }
@@ -222,6 +408,8 @@ function tpNextStep() {
     if (tpCurrentStep === 0) {
         const name = document.getElementById('tpwName').value.trim();
         if (!name) { tpShowValidationMessage('اسم القالب مطلوب'); return; }
+        const deactivateErr = tpValidateDeactivateReason();
+        if (deactivateErr) { tpShowValidationMessage(deactivateErr); return; }
     }
     if (tpCurrentStep < TP_TOTAL_STEPS - 1) {
         tpCollectCurrentSections();
@@ -455,8 +643,12 @@ function tpCollectZone(zone) {
 function tpUpdatePreview(zone) {
     const data = zone === 'header' ? tpHeaderData : tpFooterData;
     const previewEl = document.getElementById(zone === 'header' ? 'tpHeaderPreview' : 'tpFooterPreview');
-    previewEl.style.gridTemplateColumns = `repeat(${data.length}, 1fr)`;
+    if (!previewEl) return;
     const dir = document.getElementById('tpwPageDirection')?.value || 'RTL';
+    const bgStyle = zone === 'header'
+        ? tpZoneBackgroundStyle(tpGetHeaderBgColor(), tpGetHeaderBgImage(), '#fff')
+        : tpZoneBackgroundStyle(tpGetFooterBgColor(), tpGetFooterBgImage(), 'transparent');
+    previewEl.style.cssText = `display:grid;gap:0;min-height:${zone === 'header' ? '60px' : '40px'};padding:${zone === 'header' ? '12px 16px' : '10px 16px'};align-items:center;grid-template-columns:repeat(${data.length}, 1fr);${bgStyle}`;
     previewEl.innerHTML = data.map(sec => tpRenderPreviewSection(sec, dir)).join('');
 }
 
@@ -495,6 +687,8 @@ function tpBuildFullPreview() {
     const ml = document.getElementById('tpwMarginLeft').value;
     const dir = document.getElementById('tpwPageDirection').value;
     const wmUrl = (document.getElementById('tpwWatermarkUrl')?.value || '').trim();
+    const headerBg = tpZoneBackgroundStyle(tpGetHeaderBgColor(), tpGetHeaderBgImage(), '#fff');
+    const footerBg = tpZoneBackgroundStyle(tpGetFooterBgColor(), tpGetFooterBgImage(), 'transparent');
 
     let html = `<div style="position:relative;direction:${dir.toLowerCase()};padding:${mt}px ${mr}px ${mb}px ${ml}px;min-height:320px;">`;
 
@@ -505,7 +699,7 @@ function tpBuildFullPreview() {
     html += '<div style="position:relative;">';
 
     // Header
-    html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;">`;
+    html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;${headerBg}">`;
     tpHeaderData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
     if (showHL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
@@ -517,7 +711,7 @@ function tpBuildFullPreview() {
 
     if (showFL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
     // Footer
-    html += `<div style="display:grid;grid-template-columns:repeat(${tpFooterData.length},1fr);min-height:40px;align-items:center;">`;
+    html += `<div style="display:grid;grid-template-columns:repeat(${tpFooterData.length},1fr);min-height:40px;align-items:center;${footerBg}">`;
     tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
 
@@ -575,16 +769,24 @@ async function tpSubmitWizard() {
     tpCollectCurrentSections();
     const name = document.getElementById('tpwName').value.trim();
     if (!name) { alert('اسم القالب مطلوب'); tpGoToStep(0); return; }
+    const deactivateErr = tpValidateDeactivateReason();
+    if (deactivateErr) { tpShowValidationMessage(deactivateErr); tpGoToStep(0); return; }
 
+    const isActive = document.getElementById('tpwIsActive').checked;
     const payload = {
         name,
         description: document.getElementById('tpwDescription').value.trim(),
         color: document.getElementById('tpwColor').value,
-        isActive: document.getElementById('tpwIsActive').checked,
+        isActive,
+        deactivateReason: isActive ? '' : document.getElementById('tpwDeactivateReason').value.trim(),
         headerSections: tpHeaderData.length,
         footerSections: tpFooterData.length,
         headerJson: JSON.stringify(tpHeaderData),
+        headerBackgroundColor: tpGetHeaderBgColor(),
+        headerBackgroundImageUrl: tpGetHeaderBgImage(),
         footerJson: JSON.stringify(tpFooterData),
+        footerBackgroundColor: tpGetFooterBgColor(),
+        footerBackgroundImageUrl: tpGetFooterBgImage(),
         marginTop: parseInt(document.getElementById('tpwMarginTop').value) || 20,
         marginBottom: parseInt(document.getElementById('tpwMarginBottom').value) || 20,
         marginRight: parseInt(document.getElementById('tpwMarginRight').value) || 20,
@@ -636,6 +838,17 @@ async function tpShowDetails(id) {
     const deletedAtDisp = (t.deletedAtDisplay || t.DeletedAtDisplay || '').trim();
     const createdByDisp = (t.createdByDisplay || t.CreatedByDisplay || t.createdBy || t.CreatedBy || '').trim();
     const updatedByDisp = (t.updatedByDisplay || t.UpdatedByDisplay || t.updatedBy || t.UpdatedBy || '').trim();
+    const deactivateReason = t.deactivateReason || t.DeactivateReason || '';
+    const headerBg = tpZoneBackgroundStyle(
+        t.headerBackgroundColor || t.HeaderBackgroundColor || '',
+        t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl || '',
+        '#fff'
+    );
+    const footerBg = tpZoneBackgroundStyle(
+        t.footerBackgroundColor || t.FooterBackgroundColor || '',
+        t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl || '',
+        'transparent'
+    );
 
     let html = `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-info-circle-fill"></i> البيانات الأساسية</div>
@@ -644,6 +857,9 @@ async function tpShowDetails(id) {
             <div class="tp-detail-label">الوصف</div><div class="tp-detail-value">${escHtml(t.description) || '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">اللون</div><div class="tp-detail-value"><span class="tp-color-swatch" style="background:${t.color};"></span> ${t.color}</div>
             <div class="tp-detail-label">الحالة</div><div class="tp-detail-value">${t.isActive ? '<span class="tp-badge-active">مفعل</span>' : '<span class="tp-badge-inactive">معطل</span>'}</div>
+            ${!t.isActive && String(deactivateReason).trim() ? `<div class="tp-detail-label">سبب التعطيل</div><div class="tp-detail-value">${escHtml(String(deactivateReason).trim())}</div>` : ''}
+            <div class="tp-detail-label">خلفية الرأس</div><div class="tp-detail-value">${(t.headerBackgroundColor || t.HeaderBackgroundColor) ? escHtml(t.headerBackgroundColor || t.HeaderBackgroundColor) + ' ' : ''}${(t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl) ? `<img src="${escHtml(t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl)}" alt="" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">خلفية التذييل</div><div class="tp-detail-value">${(t.footerBackgroundColor || t.FooterBackgroundColor) ? escHtml(t.footerBackgroundColor || t.FooterBackgroundColor) + ' ' : ''}${(t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl) ? `<img src="${escHtml(t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl)}" alt="" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">اتجاه الصفحة</div><div class="tp-detail-value">${t.pageDirection}</div>
             <div class="tp-detail-label">حجم الورق</div><div class="tp-detail-value">${t.pageSize}</div>
             <div class="tp-detail-label">الهوامش</div><div class="tp-detail-value">أعلى: ${t.marginTop}mm | أسفل: ${t.marginBottom}mm | يمين: ${t.marginRight}mm | يسار: ${t.marginLeft}mm</div>
@@ -667,7 +883,7 @@ async function tpShowDetails(id) {
             <div style="position:relative;direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;min-height:320px;">
                 ${wmUrlDet ? `<div class="tp-wm-bg"><img src="${escHtml(wmUrlDet)}" alt="watermark" style="opacity:${wmOpDet.toFixed(2)};"></div>` : ''}
                 <div style="position:relative;">
-                    <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;">
+                    <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;${headerBg}">
                         ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
                     </div>
                     ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
@@ -675,7 +891,7 @@ async function tpShowDetails(id) {
                         <div style="text-align:center;"><i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:8px;"></i> محتوى النموذج</div>
                     </div>
                     ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
-                    <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;">
+                    <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;${footerBg}">
                         ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
                     </div>
                 </div>
@@ -725,5 +941,7 @@ async function tpSubmitDelete() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const activeEl = document.getElementById('tpwIsActive');
+    if (activeEl) activeEl.addEventListener('change', tpSyncDeactivateReasonVisibility);
     tpLoad();
 });

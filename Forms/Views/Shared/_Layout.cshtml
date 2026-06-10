@@ -227,8 +227,9 @@
 <style>
 .sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s ease; }
 .sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:min(560px,96vw);width:100%;max-height:min(90vh,720px);display:flex;flex-direction:column;animation:slideUp .3s ease; }
-.sys-popup-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff;flex-shrink:0; }
-.sys-popup-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-head-ad      { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-head-alert   { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff;flex-shrink:0; }
+.sys-popup-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:18px 22px;color:#fff;flex-shrink:0; }
 .sys-popup-body { background:#fff;padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
 .sys-popup-body p { word-break:break-word; }
 .sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid var(--gray-100); }
@@ -273,8 +274,8 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         const el = document.createElement('div');
         el.className = 'sys-popup-overlay';
 
-        const headCls   = p.category === 'تنبيه' ? 'sys-popup-head-alert' : 'sys-popup-head-ad';
-        const catBiIcon = p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill';
+        const headCls   = p.category === 'تحذير' ? 'sys-popup-head-warning' : (p.category === 'تنبيه' ? 'sys-popup-head-alert' : 'sys-popup-head-ad');
+        const catBiIcon = p.category === 'تحذير' ? 'bi-exclamation-octagon-fill' : (p.category === 'تنبيه' ? 'bi-exclamation-triangle-fill' : 'bi-megaphone-fill');
         const mediaUrl = (p.attachmentUrl && (typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl)) || '';
 
         let bodyHtml = '';

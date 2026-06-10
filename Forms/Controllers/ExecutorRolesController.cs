@@ -75,6 +75,7 @@ public class ExecutorRolesController : BaseController
             r.Id, r.Name, r.Description, r.Ownership,
             r.OrgUnitIds, r.ExecutorIds, r.Color,
             r.SortOrder, r.IsActive,
+            DeactivateReason = r.DeactivateReason ?? "",
             OrgUnitNames = ResolveNames(r.OrgUnitIds, ouMap),
             ExecutorNames = ResolveNames(r.ExecutorIds, benMap),
             ExecutorCount = string.IsNullOrWhiteSpace(r.ExecutorIds) ? 0 : r.ExecutorIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Length,
@@ -140,6 +141,7 @@ public class ExecutorRolesController : BaseController
                 r.Id, r.Name, r.Description, r.Ownership,
                 r.OrgUnitIds, r.ExecutorIds, r.Color,
                 r.SortOrder, r.IsActive,
+                DeactivateReason = r.DeactivateReason ?? "",
                 OrgUnitNames = Resolve(r.OrgUnitIds, ouMap),
                 ExecutorNames = Resolve(r.ExecutorIds, benMap),
                 ExecutorDetailRows = executorDetailRows,
@@ -161,6 +163,10 @@ public class ExecutorRolesController : BaseController
         if (!HasAtLeastOneExecutorId(req.ExecutorIds))
             return Json(new { success = false, message = "يجب اختيار المنفذين" });
 
+        var deactivateErr = ValidateExecutorRoleDeactivateReason(req.IsActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
+
         var all = await _ds.ListExecutorRolesAsync();
         var trimmedName = req.Name.Trim();
         if (all.Any(x => string.Equals((x.Name ?? "").Trim(), trimmedName, StringComparison.Ordinal)))
@@ -178,6 +184,7 @@ public class ExecutorRolesController : BaseController
             Color = req.Color ?? "#25935F",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
+            DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim(),
             CreatedBy = CurrentUserFullName
         };
 
@@ -204,6 +211,10 @@ public class ExecutorRolesController : BaseController
         if (!HasAtLeastOneExecutorId(req.ExecutorIds))
             return Json(new { success = false, message = "يجب اختيار المنفذين" });
 
+        var deactivateErr = ValidateExecutorRoleDeactivateReason(req.IsActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
+
         r.Name = trimmedName;
         r.Description = req.Description?.Trim() ?? "";
         r.Ownership = req.Ownership ?? r.Ownership;
@@ -212,6 +223,7 @@ public class ExecutorRolesController : BaseController
         r.Color = req.Color ?? r.Color;
         if (req.SortOrder > 0) r.SortOrder = req.SortOrder;
         r.IsActive = req.IsActive;
+        r.DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim();
         r.UpdatedBy = CurrentUserFullName;
         r.UpdatedAt = DateTime.UtcNow;
 
@@ -238,7 +250,7 @@ public class ExecutorRolesController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> ToggleExecutorRole([FromBody] ExecutorRoleIdRequest req)
+    public async Task<IActionResult> ToggleExecutorRole([FromBody] ExecutorRoleToggleRequest req)
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin")
             return Json(new { success = false, message = "غير مصرح" });
@@ -246,11 +258,28 @@ public class ExecutorRolesController : BaseController
         var r = await _ds.GetExecutorRoleByIdAsync(req.Id);
         if (r == null) return Json(new { success = false, message = "الدور غير موجود" });
 
-        r.IsActive = !r.IsActive;
+        var newActive = !r.IsActive;
+        if (!newActive)
+        {
+            var deactivateErr = ValidateExecutorRoleDeactivateReason(false, req.DeactivateReason);
+            if (deactivateErr != null)
+                return Json(new { success = false, message = deactivateErr });
+        }
+
+        r.IsActive = newActive;
+        r.DeactivateReason = newActive ? "" : (req.DeactivateReason ?? "").Trim();
         r.UpdatedBy = CurrentUserFullName;
         r.UpdatedAt = DateTime.UtcNow;
         await _ds.UpdateExecutorRoleAsync(r);
         return Json(new { success = true, message = r.IsActive ? "تم تفعيل الدور" : "تم تعطيل الدور", isActive = r.IsActive });
+    }
+
+    private static string? ValidateExecutorRoleDeactivateReason(bool isActive, string? deactivateReason)
+    {
+        if (isActive) return null;
+        if (string.IsNullOrWhiteSpace(deactivateReason))
+            return "سبب التعطيل مطلوب عند اختيار حالة معطل";
+        return null;
     }
 }
 
@@ -263,6 +292,7 @@ public class ExecutorRoleRequest
     public string? ExecutorIds { get; set; }
     public string? Color { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? DeactivateReason { get; set; }
 }
 
 public class ExecutorRoleUpdateRequest : ExecutorRoleRequest
@@ -274,4 +304,10 @@ public class ExecutorRoleUpdateRequest : ExecutorRoleRequest
 public class ExecutorRoleIdRequest
 {
     public int Id { get; set; }
+}
+
+public class ExecutorRoleToggleRequest
+{
+    public int Id { get; set; }
+    public string? DeactivateReason { get; set; }
 }

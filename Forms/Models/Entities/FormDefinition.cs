@@ -17,7 +17,11 @@ public class FormDefinition
     public string TemplateNameSnapshot { get; set; } = "";
     public string TemplateColorSnapshot { get; set; } = "";
     public string TemplateHeaderJsonSnapshot { get; set; } = "[]";
+    public string TemplateHeaderBackgroundColorSnapshot { get; set; } = "";
+    public string TemplateHeaderBackgroundImageUrlSnapshot { get; set; } = "";
     public string TemplateFooterJsonSnapshot { get; set; } = "[]";
+    public string TemplateFooterBackgroundColorSnapshot { get; set; } = "";
+    public string TemplateFooterBackgroundImageUrlSnapshot { get; set; } = "";
     public int TemplateMarginTopSnapshot { get; set; } = 20;
     public int TemplateMarginBottomSnapshot { get; set; } = 20;
     public int TemplateMarginRightSnapshot { get; set; } = 20;

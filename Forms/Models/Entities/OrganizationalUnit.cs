@@ -9,6 +9,8 @@ public class OrganizationalUnit
     public string Level { get; set; } = "رئيسي"; // رئيسي | فرعي
     public int? ParentId { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>سبب التعطيل عندما يكون <see cref="IsActive"/> false.</summary>
+    public string DeactivateReason { get; set; } = "";
     /// <summary>ترتيب الأخوة ضمن نفس الأب (1-based).</summary>
     public int SortOrder { get; set; }
     /// <summary>مسار هرمي للعرض، مثل 1 أو 1،1 أو 1،2.</summary>

@@ -43,6 +43,32 @@ function erBenIsUnitManager(b) {
     return false;
 }
 
+function erSyncDeactivateReasonVisibility(mode) {
+    var prefix = mode === 'c' ? 'erc' : 'ere';
+    var active = document.getElementById(prefix + 'IsActive');
+    var wrap = document.getElementById(prefix + 'DeactivateReasonWrap');
+    var reason = document.getElementById(prefix + 'DeactivateReason');
+    if (!active || !wrap) return;
+    if (active.checked) {
+        wrap.classList.add('d-none');
+        if (reason) {
+            reason.removeAttribute('required');
+            reason.classList.remove('is-invalid');
+        }
+    } else {
+        wrap.classList.remove('d-none');
+        if (reason) reason.setAttribute('required', 'required');
+    }
+}
+
+function erValidateDeactivateReason(mode) {
+    var prefix = mode === 'c' ? 'erc' : 'ere';
+    if (document.getElementById(prefix + 'IsActive').checked) return null;
+    if (!(document.getElementById(prefix + 'DeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
+
 /* ─── Data Loading ──────────────────────────────────────────── */
 async function erLoad() {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoles');
@@ -77,7 +103,7 @@ function erRenderTable(data) {
             + '<td style="text-align:center;">' + ownerBadge + '</td>'
             + '<td style="text-align:center;">' + execDisplay + '</td>'
             + '<td style="text-align:center;"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span></td>'
-            + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(' + r.id + ')"><span class="er-slider"></span></label></td>'
+            + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(this,' + r.id + ')"><span class="er-slider"></span></label></td>'
             + '<td style="text-align:center;">'
             + '<div class="er-action-cell-inner">'
             + '<button type="button" class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>'
@@ -202,10 +228,40 @@ function erRenderFilterOuTreePanel() {
 }
 
 /* ─── Toggle Active ─────────────────────────────────────────── */
-async function erToggleActive(id) {
-    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id });
+async function erToggleActive(checkbox, id) {
+    if (!checkbox.checked) {
+        checkbox.checked = true;
+        var role = erRoles.find(function (r) { return r.id === id; });
+        document.getElementById('erDeactivateId').value = id;
+        document.getElementById('erDeactivateReason').value = '';
+        document.getElementById('erDeactivateName').textContent = role ? (role.name || '') : '';
+        new bootstrap.Modal(document.getElementById('erDeactivateModal')).show();
+        return;
+    }
+    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id, deactivateReason: '' });
     if (res && res.success) { await erLoad(); erApplyFilters(); }
-    else erShowAlertMessage((res && res.message) || 'خطأ');
+    else {
+        checkbox.checked = false;
+        erShowAlertMessage((res && res.message) || 'خطأ');
+    }
+}
+
+async function erSubmitDeactivate() {
+    var id = parseInt(document.getElementById('erDeactivateId').value, 10);
+    var reason = (document.getElementById('erDeactivateReason').value || '').trim();
+    if (!reason) {
+        erShowAlertMessage('سبب التعطيل مطلوب عند اختيار حالة معطل');
+        return;
+    }
+    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id, deactivateReason: reason });
+    if (res && res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('erDeactivateModal'))?.hide();
+        await erLoad();
+        erApplyFilters();
+        if (typeof showToast === 'function') showToast(res.message || 'تم تعطيل الدور', 'success');
+    } else {
+        erShowAlertMessage((res && res.message) || 'خطأ');
+    }
 }
 
 /* ─── Org Unit Tree ─────────────────────────────────────────── */
@@ -439,6 +495,8 @@ function erShowCreateModal() {
     document.getElementById('ercColor').value = '#25935F';
     document.getElementById('ercColorHex').textContent = '#25935F';
     document.getElementById('ercIsActive').checked = true;
+    document.getElementById('ercDeactivateReason').value = '';
+    erSyncDeactivateReasonVisibility('c');
     document.getElementById('ercDescription').value = '';
     erSelectedOuIdsC = [];
     erSelectedExecIdsC = [];
@@ -457,11 +515,15 @@ async function erSubmitCreate() {
     if (!erSelectedOuIdsC.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
     if (!erSelectedExecIdsC.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
 
+    var deactivateErr = erValidateDeactivateReason('c');
+    if (deactivateErr) { erShowAlertMessage(deactivateErr); return; }
+
     if (erRoles.some(function (role) { return (role.name || '').trim() === name; })) {
         erShowAlertMessage('اسم الدور موجود مسبقاً');
         return;
     }
 
+    var isActive = document.getElementById('ercIsActive').checked;
     var res = await apiFetch('/ExecutorRoles/AddExecutorRole', 'POST', {
         name: name,
         description: document.getElementById('ercDescription').value.trim(),
@@ -469,7 +531,8 @@ async function erSubmitCreate() {
         orgUnitIds: erSelectedOuIdsC.join(','),
         executorIds: erSelectedExecIdsC.join(','),
         color: document.getElementById('ercColor').value,
-        isActive: document.getElementById('ercIsActive').checked
+        isActive: isActive,
+        deactivateReason: isActive ? '' : document.getElementById('ercDeactivateReason').value.trim()
     });
 
     if (res && res.success) {
@@ -493,6 +556,8 @@ async function erShowEditModal(id) {
     document.getElementById('ereColor').value = r.color;
     document.getElementById('ereColorHex').textContent = r.color;
     document.getElementById('ereIsActive').checked = r.isActive;
+    document.getElementById('ereDeactivateReason').value = String(r.deactivateReason || r.DeactivateReason || '').trim();
+    erSyncDeactivateReasonVisibility('e');
     document.getElementById('ereSortOrder').value = r.sortOrder;
     document.getElementById('ereDescription').value = r.description || '';
 
@@ -513,11 +578,15 @@ async function erSubmitEdit() {
     if (!erSelectedOuIdsE.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
     if (!erSelectedExecIdsE.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
 
+    var deactivateErr = erValidateDeactivateReason('e');
+    if (deactivateErr) { erShowAlertMessage(deactivateErr); return; }
+
     if (erRoles.some(function (role) { return role.id !== id && (role.name || '').trim() === name; })) {
         erShowAlertMessage('اسم الدور موجود مسبقاً');
         return;
     }
 
+    var isActive = document.getElementById('ereIsActive').checked;
     var res = await apiFetch('/ExecutorRoles/UpdateExecutorRole', 'POST', {
         id: id,
         name: name,
@@ -527,7 +596,8 @@ async function erSubmitEdit() {
         executorIds: erSelectedExecIdsE.join(','),
         color: document.getElementById('ereColor').value,
         sortOrder: parseInt(document.getElementById('ereSortOrder').value) || 1,
-        isActive: document.getElementById('ereIsActive').checked
+        isActive: isActive,
+        deactivateReason: isActive ? '' : document.getElementById('ereDeactivateReason').value.trim()
     });
 
     if (res && res.success) {
@@ -551,6 +621,7 @@ async function erShowDetails(id) {
         ? '<span class="er-badge-ownership er-badge-exclusive"><i class="bi bi-lock-fill"></i> حصري</span>'
         : '<span class="er-badge-ownership er-badge-nonexclusive"><i class="bi bi-unlock-fill"></i> غير حصري</span>';
 
+    var deactivateReason = r.deactivateReason || r.DeactivateReason || '';
     document.getElementById('erDetailsBody').innerHTML =
         '<div class="er-detail-grid">'
         + '<div class="er-detail-label">رقم الدور</div><div class="er-detail-value">' + r.id + '</div>'
@@ -561,6 +632,9 @@ async function erShowDetails(id) {
         + '<div class="er-detail-label">الترتيب</div><div class="er-detail-value">' + r.sortOrder + '</div>'
         + '<div class="er-detail-label">اللون</div><div class="er-detail-value"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span> ' + erEsc(r.color) + '</div>'
         + '<div class="er-detail-label">الحالة</div><div class="er-detail-value">' + statusBadge + '</div>'
+        + (!r.isActive && deactivateReason
+            ? '<div class="er-detail-label">سبب التعطيل</div><div class="er-detail-value">' + erEsc(deactivateReason) + '</div>'
+            : '')
         + '<div class="er-detail-label">أنشئ بواسطة</div><div class="er-detail-value">' + (erEsc(r.createdBy) || '—') + '</div>'
         + '<div class="er-detail-label">تاريخ الإنشاء</div><div class="er-detail-value">' + (r.createdAt || '—') + '</div>'
         + '<div class="er-detail-label">آخر تعديل بواسطة</div><div class="er-detail-value">' + (erEsc(r.updatedBy) || '—') + '</div>'
@@ -657,5 +731,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    var ercActive = document.getElementById('ercIsActive');
+    var ereActive = document.getElementById('ereIsActive');
+    if (ercActive) ercActive.addEventListener('change', function () { erSyncDeactivateReasonVisibility('c'); });
+    if (ereActive) ereActive.addEventListener('change', function () { erSyncDeactivateReasonVisibility('e'); });
     erLoad();
 });

@@ -68,6 +68,19 @@
 .sw-legend-footer span { color:var(--gray-500); font-weight:700; }
 @@media(max-width:1100px){ .sw-legend { grid-template-columns:repeat(2,1fr); } }
 @@media(max-width:600px){ .sw-legend { grid-template-columns:1fr; } }
+
+/* شجرة الوحدة التنظيمية (فلتر) */
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; cursor:pointer; }
+.bnf-ou-tree-row:hover { background:var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background:var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none !important; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
+.bnf-ou-tree-exp:active { transform:scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.bnf-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
 </style>
 
 <div class="sw-page-header">
@@ -145,7 +158,7 @@
 </div>
 <div class="sw-legend-footer">التقييم يعتمد على: <span>نوع النشاط</span> · <span>عدد المحاولات</span> · <span>مصدر الـ IP</span> · <span>آخر 15 دقيقة</span></div>
 
-<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
     <div class="rt-search-box" style="min-width:220px;max-width:300px;">
         <i class="bi bi-search rt-search-icon"></i>
         <input type="text" class="form-control" id="swFilterSearch" placeholder="ابحث بالاسم / الوحدة التنظيمية..." autocomplete="off">
@@ -158,9 +171,13 @@
         <option value="حساب معطل">المستخدم معطل (الحساب غير مفعل)</option>
         <option value="محاولة اختراق">محاولات الاختراق</option>
     </select>
-    <select class="rt-filter-select form-select" id="swFilterUnit">
-        <option value="">الوحدة التنظيمية  </option>
-    </select>
+    <div class="bnf-ou-tree-wrap position-relative" style="min-width:200px;max-width:280px;">
+        <input type="hidden" id="swFilterOrgUnit" value="">
+        <button type="button" class="rt-filter-select form-select bnf-ou-tree-trigger text-end w-100" id="swFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="swFilterOuLabel">الوحدة التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="swFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+    </div>
     <input type="date" class="form-control rt-filter-text" id="swFilterFrom" title="من تاريخ" style="min-width:150px;max-width:170px;">
     <input type="date" class="form-control rt-filter-text" id="swFilterTo" title="إلى تاريخ" style="min-width:150px;max-width:170px;">
     <div class="d-flex gap-2 align-items-center" style="flex-shrink:0;">
@@ -206,6 +223,8 @@
 <script>
 let swAllData = [];
 let swFiltered = [];
+let swOrgUnits = [];
+let swFilterOuExpanded = {};
 let swPage = 1;
 const swPerPage = 20;
 
@@ -227,24 +246,142 @@ async function swLoad() {
     var r = await apiFetch('/Settings/GetSystemWarnings');
     if (!r || !r.success) return;
     swAllData = r.data || [];
-
-    var unitSel = document.getElementById('swFilterUnit');
-    (r.organizationalUnits || []).forEach(function(u) {
-        var o = document.createElement('option');
-        o.value = u.name;
-        o.textContent = u.name;
-        unitSel.appendChild(o);
-    });
+    swOrgUnits = r.organizationalUnits || [];
+    swSyncFilterOuTreeLabel();
 
     swFiltered = swAllData.slice();
     document.getElementById('swCountNum').textContent = swFiltered.length;
     swRender();
 }
 
+function swOuUnitId(u) { return u.id != null ? u.id : u.Id; }
+function swOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
+function swOuSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
+function swOuName(u) { return u.name != null ? u.name : (u.Name || ''); }
+
+function swOuBuildTreeMap() {
+    var ids = {};
+    swOrgUnits.forEach(function (u) { ids[swOuUnitId(u)] = true; });
+    var byParent = {};
+    swOrgUnits.forEach(function (u) {
+        var pk = (swOuParentId(u) != null && swOuParentId(u) !== '' && ids[swOuParentId(u)]) ? String(swOuParentId(u)) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = swOuSortOrder(a);
+            var sb = swOuSortOrder(b);
+            return sa !== sb ? sa - sb : swOuName(a).localeCompare(swOuName(b), 'ar');
+        });
+    });
+    return byParent;
+}
+
+function swRenderFilterOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var uid = swOuUnitId(u);
+        var idStr = String(uid);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = sel === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + uid + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + swEsc(swOuName(u)) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += swRenderFilterOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function swFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    swOrgUnits.forEach(function (u) { map[swOuUnitId(u)] = u; });
+    var u = map[selectId];
+    while (u) {
+        var pid = swOuParentId(u);
+        if (pid == null || pid === '' || !map[pid]) break;
+        swFilterOuExpanded[String(pid)] = true;
+        u = map[pid];
+    }
+}
+
+function swRenderFilterOuTreePanel() {
+    var panel = document.getElementById('swFilterOuPanel');
+    if (!panel) return;
+    if (!swOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = swOuBuildTreeMap();
+    var selectedId = document.getElementById('swFilterOrgUnit') ? document.getElementById('swFilterOrgUnit').value : '';
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += swRenderFilterOuTreeRows(byParent, '', 0, selectedId, swFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function swFilterOuTogglePanel() {
+    var panel = document.getElementById('swFilterOuPanel');
+    var trig = document.getElementById('swFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = document.getElementById('swFilterOrgUnit') ? document.getElementById('swFilterOrgUnit').value : '';
+        if (cur) swFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        swRenderFilterOuTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function swFilterOuClosePanel() {
+    var panel = document.getElementById('swFilterOuPanel');
+    var trig = document.getElementById('swFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function swSyncFilterOuTreeLabel() {
+    var hid = document.getElementById('swFilterOrgUnit');
+    var lab = document.getElementById('swFilterOuLabel');
+    if (!hid || !lab) return;
+    if (hid.value) {
+        var uid = parseInt(hid.value, 10);
+        var u = swOrgUnits.find(function (x) { return swOuUnitId(x) === uid; });
+        lab.textContent = u ? swOuName(u) : 'الوحدة التنظيمية';
+    } else {
+        lab.textContent = 'الوحدة التنظيمية';
+    }
+}
+
+function swSelectedUnitName() {
+    var hid = document.getElementById('swFilterOrgUnit');
+    if (!hid || !hid.value) return '';
+    var uid = parseInt(hid.value, 10);
+    var u = swOrgUnits.find(function (x) { return swOuUnitId(x) === uid; });
+    return u ? swOuName(u) : '';
+}
+
 function swApplyFilters() {
     var search = (document.getElementById('swFilterSearch').value || '').trim().toLowerCase();
     var type = document.getElementById('swFilterType').value;
-    var unit = document.getElementById('swFilterUnit').value;
+    var unitName = swSelectedUnitName();
     var from = document.getElementById('swFilterFrom').value;
     var to = document.getElementById('swFilterTo').value;
 
@@ -254,7 +391,7 @@ function swApplyFilters() {
             if (haystack.indexOf(search) === -1) return false;
         }
         if (type && d.warningType !== type) return false;
-        if (unit && d.organizationalUnit !== unit) return false;
+        if (unitName && d.organizationalUnit !== unitName) return false;
         if (from && d.date < from) return false;
         if (to && d.date > to) return false;
         return true;
@@ -268,7 +405,11 @@ function swApplyFilters() {
 function swClearFilters() {
     document.getElementById('swFilterSearch').value = '';
     document.getElementById('swFilterType').value = '';
-    document.getElementById('swFilterUnit').value = '';
+    var ouHid = document.getElementById('swFilterOrgUnit');
+    if (ouHid) ouHid.value = '';
+    swFilterOuExpanded = {};
+    swSyncFilterOuTreeLabel();
+    swFilterOuClosePanel();
     document.getElementById('swFilterFrom').value = '';
     document.getElementById('swFilterTo').value = '';
     swFiltered = swAllData.slice();
@@ -352,6 +493,42 @@ function swGoPage(p) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    var swFilterOuTrigger = document.getElementById('swFilterOuTrigger');
+    var swFilterOuPanel = document.getElementById('swFilterOuPanel');
+    if (swFilterOuTrigger && swFilterOuPanel) {
+        swFilterOuTrigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            swFilterOuTogglePanel();
+        });
+        swFilterOuPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    swFilterOuExpanded[eid] = !swFilterOuExpanded[eid];
+                    swRenderFilterOuTreePanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (!row || !row.hasAttribute('data-id')) return;
+            var idAttr = row.getAttribute('data-id');
+            var hid = document.getElementById('swFilterOrgUnit');
+            if (hid) hid.value = idAttr === null ? '' : String(idAttr);
+            swSyncFilterOuTreeLabel();
+            swFilterOuClosePanel();
+            swRenderFilterOuTreePanel();
+            swApplyFilters();
+        });
+        document.addEventListener('click', function (e) {
+            var wrap = document.querySelector('.bnf-ou-tree-wrap');
+            var panel = document.getElementById('swFilterOuPanel');
+            if (!wrap || !panel || panel.classList.contains('d-none')) return;
+            if (!wrap.contains(e.target)) swFilterOuClosePanel();
+        });
+    }
     swLoad();
     document.getElementById('swFilterSearch').addEventListener('input', function() { swApplyFilters(); });
 });

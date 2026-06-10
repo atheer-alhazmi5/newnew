@@ -229,7 +229,11 @@ public class FormDefinitionsController : BaseController
                     Name = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot) ? f.TemplateNameSnapshot : (tpl?.Name ?? ""),
                     Color = !string.IsNullOrWhiteSpace(f.TemplateColorSnapshot) ? f.TemplateColorSnapshot : (tpl?.Color ?? "#14573A"),
                     HeaderJson = string.IsNullOrWhiteSpace(f.TemplateHeaderJsonSnapshot) ? "[]" : f.TemplateHeaderJsonSnapshot,
+                    HeaderBackgroundColor = f.TemplateHeaderBackgroundColorSnapshot ?? "",
+                    HeaderBackgroundImageUrl = f.TemplateHeaderBackgroundImageUrlSnapshot ?? "",
                     FooterJson = string.IsNullOrWhiteSpace(f.TemplateFooterJsonSnapshot) ? "[]" : f.TemplateFooterJsonSnapshot,
+                    FooterBackgroundColor = f.TemplateFooterBackgroundColorSnapshot ?? "",
+                    FooterBackgroundImageUrl = f.TemplateFooterBackgroundImageUrlSnapshot ?? "",
                     HeaderSections = 0,
                     FooterSections = 0,
                     MarginTop = f.TemplateMarginTopSnapshot,
@@ -244,7 +248,10 @@ public class FormDefinitionsController : BaseController
                 } : (tpl == null ? null : new
                 {
                     tpl.Id, tpl.Name, tpl.Color,
-                    tpl.HeaderJson, tpl.FooterJson,
+                    tpl.HeaderJson,
+                    tpl.HeaderBackgroundColor, tpl.HeaderBackgroundImageUrl,
+                    tpl.FooterJson,
+                    tpl.FooterBackgroundColor, tpl.FooterBackgroundImageUrl,
                     tpl.HeaderSections, tpl.FooterSections,
                     tpl.MarginTop, tpl.MarginBottom, tpl.MarginRight, tpl.MarginLeft,
                     tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine,
@@ -570,7 +577,11 @@ public class FormDefinitionsController : BaseController
         f.TemplateNameSnapshot = "";
         f.TemplateColorSnapshot = "#14573A";
         f.TemplateHeaderJsonSnapshot = "[]";
+        f.TemplateHeaderBackgroundColorSnapshot = "";
+        f.TemplateHeaderBackgroundImageUrlSnapshot = "";
         f.TemplateFooterJsonSnapshot = "[]";
+        f.TemplateFooterBackgroundColorSnapshot = "";
+        f.TemplateFooterBackgroundImageUrlSnapshot = "";
         f.TemplateMarginTopSnapshot = 20;
         f.TemplateMarginBottomSnapshot = 20;
         f.TemplateMarginRightSnapshot = 20;
@@ -585,7 +596,11 @@ public class FormDefinitionsController : BaseController
         f.TemplateNameSnapshot = t.Name ?? "";
         f.TemplateColorSnapshot = t.Color ?? "#14573A";
         f.TemplateHeaderJsonSnapshot = string.IsNullOrWhiteSpace(t.HeaderJson) ? "[]" : t.HeaderJson;
+        f.TemplateHeaderBackgroundColorSnapshot = t.HeaderBackgroundColor ?? "";
+        f.TemplateHeaderBackgroundImageUrlSnapshot = t.HeaderBackgroundImageUrl ?? "";
         f.TemplateFooterJsonSnapshot = string.IsNullOrWhiteSpace(t.FooterJson) ? "[]" : t.FooterJson;
+        f.TemplateFooterBackgroundColorSnapshot = t.FooterBackgroundColor ?? "";
+        f.TemplateFooterBackgroundImageUrlSnapshot = t.FooterBackgroundImageUrl ?? "";
         f.TemplateMarginTopSnapshot = t.MarginTop;
         f.TemplateMarginBottomSnapshot = t.MarginBottom;
         f.TemplateMarginRightSnapshot = t.MarginRight;
@@ -687,6 +702,8 @@ public class FormDefinitionsController : BaseController
             {
                 t.Id, t.Name, t.Color,
                 t.HeaderJson, t.FooterJson,
+                t.HeaderBackgroundColor, t.HeaderBackgroundImageUrl,
+                t.FooterBackgroundColor, t.FooterBackgroundImageUrl,
                 t.HeaderSections, t.FooterSections,
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.ShowHeaderLine, t.ShowFooterLine,

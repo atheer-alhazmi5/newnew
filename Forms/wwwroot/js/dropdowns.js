@@ -3,10 +3,15 @@ var ddlFiltered = [];
 var ddlOrgUnits = [];
 var ddlIndependentLists = [];
 var ddlParentListItemsCache = [];
+var ddlItemsAllCache = [];
+var ddlHierItemsAllCache = [];
 var ddlCurrentUser = '';
 var ddlIsAdmin = false;
 var ddlCurrentOrgUnitId = 0;
 var ddlFilterOuExpanded = {};
+
+var DDL_LIST_NAME_DUP_MSG = 'اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.';
+var DDL_ITEM_TEXT_DUP_MSG = 'اسم العنصر موجود مسبقًا، يرجى إدخال اسم مختلف.';
 
 var ddlHierItems = [];
 var ddlHierLevelNames = [];
@@ -39,6 +44,30 @@ function ddlCanModifyList(d) {
     if (createdBy && ddlCurrentUser && createdBy === ddlCurrentUser) return true;
     if (d.ownership === 'خاص' && ddlCurrentOrgUnitId > 0 && d.organizationalUnitId === ddlCurrentOrgUnitId) return true;
     return false;
+}
+
+function ddlIsDuplicateListName(name, excludeId) {
+    var norm = (name || '').trim();
+    if (!norm) return false;
+    return ddlAll.some(function (d) {
+        if (excludeId && d.id === excludeId) return false;
+        return (d.name || '').trim() === norm;
+    });
+}
+
+function ddlIsDuplicateItemText(text, excludeId) {
+    var norm = (text || '').trim();
+    if (!norm) return false;
+    var listType = document.getElementById('ddlItemsListType')?.value || '';
+    var cache = listType === 'قائمة هرمية' ? ddlHierItemsAllCache : ddlItemsAllCache;
+    return cache.some(function (i) {
+        if (excludeId && i.id === excludeId) return false;
+        return (i.itemText || '').trim() === norm;
+    });
+}
+
+function ddlIsListLinkedToForm(listData) {
+    return !!(listData && (listData.isLinkedToForm === true || listData.IsLinkedToForm === true));
 }
 
 /** تعطيل حقول نوع القائمة عند التحديث فقط */
@@ -298,8 +327,10 @@ function ddlRenderTable() {
                     '<button class="ddl-action-btn ddl-action-btn-detail" onclick="ddlShowDetails(' + d.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
                     '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>';
         if (canModify) {
-            html += '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>';
+            if (!ddlIsListLinkedToForm(d)) {
+                html += '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+            }
+            html += '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>';
         }
         html += '</div>' +
             '</td>' +
@@ -354,6 +385,11 @@ async function ddlSubmitCreate() {
     var name = document.getElementById('ddlCreateName').value.trim();
     if (!name) {
         errEl.textContent = 'اسم القائمة المنسدلة مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ddlIsDuplicateListName(name)) {
+        errEl.textContent = DDL_LIST_NAME_DUP_MSG;
         errEl.classList.remove('d-none');
         return;
     }
@@ -437,7 +473,7 @@ async function ddlLoadParentListItems(parentListId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + parentListId);
         if (r && r.success) {
-            ddlParentListItemsCache = r.data || [];
+            ddlParentListItemsCache = (r.data || []).filter(function (item) { return item.isActive; });
             var sel = document.getElementById('ddlItemParentItemId');
             var html = '<option value="">-- اختر عنصر القائمة المستقلة --</option>';
             ddlParentListItemsCache.forEach(function (item) {
@@ -458,6 +494,7 @@ async function ddlLoadItems(listId) {
         var isSubList = listType === 'قائمة فرعية';
         var listData = ddlAll.find(function (x) { return x.id === listId; });
         var canModify = ddlCanModifyList(listData);
+        var canEditItems = canModify && !ddlIsListLinkedToForm(listData);
 
         var addBtn = document.getElementById('ddlAddItemBtn');
         if (addBtn) addBtn.style.display = canModify ? '' : 'none';
@@ -469,9 +506,12 @@ async function ddlLoadItems(listId) {
             theadRow.innerHTML = '<th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (canModify ? '<th>الإجراءات</th>' : '');
         }
 
-        if (r && r.success && r.data && r.data.length > 0) {
+        ddlItemsAllCache = (r && r.success && r.data) ? (r.data || []) : [];
+        var activeItems = ddlItemsAllCache.filter(function (item) { return item.isActive; });
+
+        if (r && r.success && activeItems.length > 0) {
             var html = '';
-            r.data.forEach(function (item, idx) {
+            activeItems.forEach(function (item, idx) {
                 var statusClass = item.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
                 html += '<tr>';
                 html += '<td>' + (idx + 1) + '</td>';
@@ -483,8 +523,12 @@ async function ddlLoadItems(listId) {
                     '<td><span class="ddl-color-circle" style="background:' + esc(item.color || '#25935F') + ';"></span></td>' +
                     '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
                 if (canModify) {
-                    html += '<td><button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ' +
-                        '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteItem(' + item.id + ')">حذف</button></td>';
+                    var safeItemName = esc(item.itemText || '').replace(/'/g, "\\'");
+                    html += '<td>';
+                    if (canEditItems) {
+                        html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ';
+                    }
+                    html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeItemName + '\')">حذف</button></td>';
                 }
                 html += '</tr>';
             });
@@ -544,6 +588,11 @@ async function ddlSubmitNormalItem() {
 
     if (!itemText) {
         errEl.textContent = 'العنصر مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ddlIsDuplicateItemText(itemText)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
         errEl.classList.remove('d-none');
         return;
     }
@@ -617,6 +666,11 @@ async function ddlSubmitUpdateItem(id) {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateItemText(itemText, id)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
     var body = {
         id: id,
         itemText: itemText,
@@ -637,15 +691,36 @@ async function ddlSubmitUpdateItem(id) {
     }
 }
 
-async function ddlDeleteItem(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
-    var listId = parseInt(document.getElementById('ddlItemsListId').value);
+async function ddlDeleteItem(id, name) {
+    ddlShowDeleteItemModal(id, name);
+}
+
+function ddlShowDeleteItemModal(id, name) {
+    document.getElementById('ddlDeleteItemId').value = id;
+    document.getElementById('ddlDeleteItemNameLabel').textContent = name || '';
+    document.getElementById('ddlDeleteItemError').classList.add('d-none');
+    new bootstrap.Modal(document.getElementById('ddlDeleteItemModal')).show();
+}
+
+async function ddlSubmitDeleteItem() {
+    var id = parseInt(document.getElementById('ddlDeleteItemId').value, 10);
+    var errEl = document.getElementById('ddlDeleteItemError');
+    errEl.classList.add('d-none');
+    var listId = parseInt(document.getElementById('ddlItemsListId').value, 10);
+    var listType = document.getElementById('ddlItemsListType').value || '';
+
     var r = await apiFetch('/Dropdowns/DeleteDropdownItem', 'POST', { id: id });
     if (r && r.success) {
+        bootstrap.Modal.getInstance(document.getElementById('ddlDeleteItemModal')).hide();
         showToast(r.message, 'success');
-        ddlLoadItems(listId);
+        if (listType === 'قائمة هرمية') {
+            await ddlLoadHierItems(listId);
+        } else {
+            ddlLoadItems(listId);
+        }
     } else {
-        showToast((r && r.message) || 'حدث خطأ', 'danger');
+        errEl.textContent = (r && r.message) || 'حدث خطأ';
+        errEl.classList.remove('d-none');
     }
 }
 
@@ -715,8 +790,10 @@ async function ddlSaveLevelNames() {
 async function ddlLoadHierItems(listId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + listId);
-        ddlHierItems = (r && r.success) ? (r.data || []) : [];
+        ddlHierItemsAllCache = (r && r.success) ? (r.data || []) : [];
+        ddlHierItems = ddlHierItemsAllCache.filter(function (item) { return item.isActive; });
     } catch (e) {
+        ddlHierItemsAllCache = [];
         ddlHierItems = [];
     }
 
@@ -725,6 +802,7 @@ async function ddlLoadHierItems(listId) {
 
     var listData = ddlAll.find(function (x) { return x.id === listId; });
     var canModify = ddlCanModifyList(listData);
+    var canEditItems = canModify && !ddlIsListLinkedToForm(listData);
     var addBtn = document.getElementById('ddlHierAddBtn');
     if (addBtn) addBtn.style.display = canModify ? '' : 'none';
     var editNamesBtn = document.getElementById('ddlHierEditLevelNamesBtn');
@@ -732,7 +810,7 @@ async function ddlLoadHierItems(listId) {
 
     ddlRenderHierLevelBadges();
     ddlRenderHierLevelTabs();
-    ddlRenderHierTree();
+    ddlRenderHierTree(canEditItems);
 }
 
 function ddlRenderHierLevelBadges() {
@@ -791,12 +869,15 @@ function ddlSelectHierLevel(levelNum) {
     }
 }
 
-function ddlRenderHierTree() {
+function ddlRenderHierTree(canEditItems) {
     var treeWrap = document.getElementById('ddlHierTreeWrap');
     var emptyEl = document.getElementById('ddlHierEmpty');
     var listId = parseInt(document.getElementById('ddlItemsListId').value, 10);
     var listData = ddlAll.find(function (x) { return x.id === listId; });
     var canModify = ddlCanModifyList(listData);
+    if (canEditItems === undefined) {
+        canEditItems = canModify && !ddlIsListLinkedToForm(listData);
+    }
 
     if (ddlHierItems.length === 0) {
         treeWrap.innerHTML = '';
@@ -809,7 +890,7 @@ function ddlRenderHierTree() {
     emptyEl.style.display = 'none';
 
     var tree = ddlBuildTree(ddlHierItems);
-    var rows = ddlRenderTreeRows(tree, 0, canModify);
+    var rows = ddlRenderTreeRows(tree, 0, canModify, canEditItems);
 
     var html = '<table class="ddl-tree-table"><thead><tr>' +
         '<th style="text-align:right;">العنصر</th><th>المستوى</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' +
@@ -835,7 +916,7 @@ function ddlBuildTree(items) {
     return roots.map(buildNode);
 }
 
-function ddlRenderTreeRows(nodes, depth, canModify) {
+function ddlRenderTreeRows(nodes, depth, canModify, canEditItems) {
     var html = '';
     nodes.forEach(function (node) {
         var item = node.item;
@@ -854,15 +935,18 @@ function ddlRenderTreeRows(nodes, depth, canModify) {
             '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
 
         if (canModify) {
-            html += '<td>' +
-                '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ' +
-                '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteHierItem(' + item.id + ')">حذف</button>' +
+            var safeHierItemName = esc(item.itemText || '').replace(/'/g, "\\'");
+            html += '<td>';
+            if (canEditItems) {
+                html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ';
+            }
+            html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeHierItemName + '\')">حذف</button>' +
                 '</td>';
         }
         html += '</tr>';
 
         if (node.children.length > 0) {
-            html += ddlRenderTreeRows(node.children, depth + 1, canModify);
+            html += ddlRenderTreeRows(node.children, depth + 1, canModify, canEditItems);
         }
     });
     return html;
@@ -980,6 +1064,11 @@ async function ddlSubmitHierItem() {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateItemText(itemText)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
 
     var body = {
         dropdownListId: listId,
@@ -1071,6 +1160,11 @@ async function ddlSubmitUpdateHierItem(id) {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateItemText(itemText, id)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
 
     var body = {
         id: id,
@@ -1092,16 +1186,8 @@ async function ddlSubmitUpdateHierItem(id) {
     }
 }
 
-async function ddlDeleteHierItem(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
-    var listId = parseInt(document.getElementById('ddlItemsListId').value);
-    var r = await apiFetch('/Dropdowns/DeleteDropdownItem', 'POST', { id: id });
-    if (r && r.success) {
-        showToast(r.message, 'success');
-        await ddlLoadHierItems(listId);
-    } else {
-        showToast((r && r.message) || 'حدث خطأ', 'danger');
-    }
+async function ddlDeleteHierItem(id, name) {
+    ddlShowDeleteItemModal(id, name);
 }
 
 // ─── Details Modal ───────────────────────────────────────────────────────────
@@ -1251,6 +1337,10 @@ async function ddlShowEditModal(id) {
         showToast('لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة', 'error');
         return;
     }
+    if (ddlIsListLinkedToForm(d)) {
+        showToast('لا يمكن تعديل قائمة منسدلة مرتبطة بنموذج', 'error');
+        return;
+    }
 
     document.getElementById('ddlEditId').value = d.id;
     document.getElementById('ddlEditName').value = d.name || '';
@@ -1309,6 +1399,11 @@ async function ddlSubmitEdit() {
     var name = document.getElementById('ddlEditName').value.trim();
     if (!name) {
         errEl.textContent = 'اسم القائمة مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ddlIsDuplicateListName(name, id)) {
+        errEl.textContent = DDL_LIST_NAME_DUP_MSG;
         errEl.classList.remove('d-none');
         return;
     }

@@ -9,6 +9,7 @@
 .pn-b-draft     { background:var(--gray-100);color:var(--gray-600); }
 .pn-b-ad        { background:#ECFDF3;color:#067647; }
 .pn-b-alert     { background:#FEFCE8;color:#854D0E; }
+.pn-b-warning   { background:#FEF2F2;color:#B42318; }
 .pn-b-text      { background:#F4F3FF;color:#5925DC; }
 .pn-b-image     { background:#EFF8FF;color:#175CD3; }
 .pn-b-video     { background:#FDF4FF;color:#7E22CE; }
@@ -72,9 +73,10 @@
 .pn-ou-tree-spacer { width:18px;flex-shrink:0; }
 .pn-ou-tree-children { padding-right:20px;display:none; }
 .pn-ou-tree-node.expanded > .pn-ou-tree-children { display:block; }
-/* Preview modal — إعلان = green, تنبيه = yellow */
-.pn-prev-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
-.pn-prev-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
+/* Preview modal — إعلان = green, تنبيه = yellow, تحذير = red */
+.pn-prev-head-ad      { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
+.pn-prev-head-alert   { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
+.pn-prev-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:16px 20px; }
 .pn-preview-img   { width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px; }
 .pn-preview-video { width:100%;border-radius:8px;margin-top:10px; }
 .pn-action-btn-viewers { border-color:var(--gray-500);color:var(--gray-700);background:#fff; }
@@ -109,6 +111,7 @@
         <option value="">التصنيف</option>
         <option value="إعلان">إعلان</option>
         <option value="تنبيه">تنبيه</option>
+        <option value="تحذير">تحذير</option>
     </select>
     <select class="rt-filter-select form-select" id="pnFilterContentType" style="min-width:190px;max-width:220px;" onchange="pnFilter()">
         <option value="">نوع المحتوى </option>
@@ -170,6 +173,7 @@
                             <option value="">— اختر —</option>
                             <option value="إعلان">إعلان</option>
                             <option value="تنبيه">تنبيه</option>
+                            <option value="تحذير">تحذير</option>
                         </select>
                         <div class="text-danger mt-1" id="pnCategoryErr" style="font-size:12px;display:none;">مطلوب</div>
                     </div>
@@ -473,22 +477,20 @@ function pnAllDeptIds() {
     return pnAllDepts.map(d => d.id ?? d.Id);
 }
 function pnSetTargetingUiLocked(locked) {
-    const banner = document.getElementById('pnPublicTargetBanner');
-    const uBtn = document.getElementById('pnUsersSelectAllBtn');
-    const dBtn = document.getElementById('pnDeptsSelectAllBtn');
-    const footnotes = document.querySelectorAll('.pn-target-footnote-dashboard');
-    if (banner) banner.style.display = locked ? 'block' : 'none';
-    if (uBtn) uBtn.disabled = locked;
-    if (dBtn) dBtn.disabled = locked;
-    footnotes.forEach(f => { f.style.display = locked ? 'none' : 'flex'; });
-    document.querySelectorAll('.pn-user-cb, .pn-dept-cb').forEach(c => { c.disabled = locked; });
-    ['pnUsersList', 'pnDeptsList'].forEach(id => {
-        const l = document.getElementById(id);
-        if (!l) return;
-        l.style.opacity = locked ? '0.75' : '';
-        l.style.pointerEvents = locked ? 'none' : '';
-    });
-    document.querySelectorAll('.pn-dept-group-head').forEach(h => { h.style.pointerEvents = locked ? 'none' : ''; });
+    const usersSec = document.getElementById('pnTargetUsersSection');
+    const deptsSec = document.getElementById('pnTargetDeptsSection');
+    if (usersSec) usersSec.style.display = locked ? 'none' : '';
+    if (deptsSec) deptsSec.style.display = locked ? 'none' : '';
+}
+function pnCatBadgeClass(cat) {
+    if (cat === 'تنبيه') return 'pn-b-alert';
+    if (cat === 'تحذير') return 'pn-b-warning';
+    return 'pn-b-ad';
+}
+function pnPreviewHeaderClass(cat) {
+    if (cat === 'تنبيه') return 'pn-prev-head-alert';
+    if (cat === 'تحذير') return 'pn-prev-head-warning';
+    return 'pn-prev-head-ad';
 }
 function pnApplyInitialDisplayLocationRules(selectedUserIds, selectedDeptIds) {
     const loc = document.getElementById('pnDisplayLocation').value;
@@ -526,7 +528,7 @@ const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
 const CT_ICONS   = { text:'bi-file-text', image:'bi-image', video:'bi-camera-video-fill' };
 const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };
 const PER_LABELS = { permanent:'دائم', specific:'فترة محددة', once:'مرة واحدة' };
-const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill' };
+const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill', 'تحذير':'bi-exclamation-octagon-fill' };
 
 function pnTodayIso() {
     const n = new Date();
@@ -548,10 +550,7 @@ function pnValidateDates(startDate, endDate) {
     if (!endDate) return 'تاريخ النهاية مطلوب';
     if (startDate < today) return 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
     if (endDate < today) return 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ اليوم';
-    if (endDate <= startDate) {
-        if (startDate === endDate) return 'لا يمكن أن يكون تاريخ البداية مساوياً لتاريخ النهاية. يجب أن يكون تاريخ النهاية بعد تاريخ البداية.';
-        return 'تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية. يجب أن يكون تاريخ النهاية أكبر من تاريخ البداية.';
-    }
+    if (endDate < startDate) return 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية';
     return null;
 }
 function pnConfigureDateFields() {
@@ -562,10 +561,10 @@ function pnConfigureDateFields() {
     sd.min = today;
     const start = (sd.value || '').trim();
     if (start) {
-        ed.min = pnAddDaysIso(start, 1);
+        ed.min = start;
         ed.max = '';
-        sd.max = (ed.value || '').trim() ? pnAddDaysIso(ed.value.trim(), -1) : '';
-        if (ed.value && ed.value <= start) ed.value = '';
+        sd.max = (ed.value || '').trim() || '';
+        if (ed.value && ed.value < start) ed.value = '';
     } else {
         ed.min = today;
         sd.removeAttribute('max');
@@ -653,7 +652,7 @@ function pnRender() {
         const num     = start + i + 1;
         const stCls   = d.status === 'published' ? 'pn-b-published' : 'pn-b-draft';
         const stLbl   = d.status === 'published' ? 'منشور' : 'مسودة';
-        const catCls  = d.category === 'إعلان' ? 'pn-b-ad' : 'pn-b-alert';
+        const catCls  = pnCatBadgeClass(d.category);
         const catIcon = CAT_ICON[d.category] || 'bi-bell';
         const ctCls   = CT_CLS[d.contentType] || 'pn-b-text';
         const ctIcon  = CT_ICONS[d.contentType] || 'bi-file-text';
@@ -983,7 +982,7 @@ function pnOpenPreview() {
 
     // Header bg
     const header = document.getElementById('pnPreviewHeader');
-    header.className = cat === 'تنبيه' ? 'pn-prev-head-alert' : 'pn-prev-head-ad';
+    header.className = pnPreviewHeaderClass(cat);
 
     // Category label with BI icon
     const catIconName = CAT_ICON[cat] || 'bi-bell';

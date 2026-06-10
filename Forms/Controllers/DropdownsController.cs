@@ -9,6 +9,9 @@ public class DropdownsController : BaseController
     private readonly DataService _ds;
     private readonly UiHelperService _ui;
 
+    private const string DropdownListNameDuplicateMessage = "اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.";
+    private const string DropdownItemTextDuplicateMessage = "اسم العنصر موجود مسبقًا، يرجى إدخال اسم مختلف.";
+
     public DropdownsController(DataService ds, UiHelperService ui)
     {
         _ds = ds;
@@ -62,24 +65,30 @@ public class DropdownsController : BaseController
         if (orgUnitId.HasValue && orgUnitId.Value > 0)
             lists = lists.Where(l => l.OrganizationalUnitId == orgUnitId.Value).ToList();
 
-        var result = lists.Select(l => new
+        var result = new List<object>();
+        foreach (var l in lists.OrderBy(x => x.SortOrder))
         {
-            l.Id,
-            l.Name,
-            l.Description,
-            l.SortOrder,
-            l.ListType,
-            l.SelectionType,
-            l.Ownership,
-            l.OrganizationalUnitId,
-            OrganizationalUnitName = units.FirstOrDefault(u => u.Id == l.OrganizationalUnitId)?.Name ?? "",
-            l.IsActive,
-            l.ParentListId,
-            l.LevelCount,
-            l.LevelNamesJson,
-            l.CreatedBy,
-            CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd")
-        }).OrderBy(x => x.SortOrder).ToList();
+            var isLinkedToForm = await _ds.IsDropdownListUsedInFormsAsync(l.Id);
+            result.Add(new
+            {
+                l.Id,
+                l.Name,
+                l.Description,
+                l.SortOrder,
+                l.ListType,
+                l.SelectionType,
+                l.Ownership,
+                l.OrganizationalUnitId,
+                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == l.OrganizationalUnitId)?.Name ?? "",
+                l.IsActive,
+                l.ParentListId,
+                l.LevelCount,
+                l.LevelNamesJson,
+                l.CreatedBy,
+                CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd"),
+                IsLinkedToForm = isLinkedToForm
+            });
+        }
 
         return Json(new
         {
@@ -97,7 +106,7 @@ public class DropdownsController : BaseController
     {
         if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
-        var lists = await _ds.ListIndependentDropdownListsAsync();
+        var lists = await _ds.ListIndependentDropdownListsAsync(activeOnly: true);
         // لممثل الوحدة: فلتر العامة + الخاصة لوحدته فقط
         if (CurrentUserRole != "Admin")
         {
@@ -285,6 +294,10 @@ public class DropdownsController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
 
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsDropdownListNameDuplicateAsync(trimmedName))
+            return Json(new { success = false, message = DropdownListNameDuplicateMessage });
+
         if (string.IsNullOrWhiteSpace(req.ListType))
             return Json(new { success = false, message = "نوع القائمة المنسدلة مطلوب" });
         if (req.ListType != "قائمة مستقلة" && req.ListType != "قائمة فرعية" && req.ListType != "قائمة هرمية")
@@ -292,6 +305,13 @@ public class DropdownsController : BaseController
 
         if (req.ListType == "قائمة فرعية" && (!req.ParentListId.HasValue || req.ParentListId.Value <= 0))
             return Json(new { success = false, message = "القائمة المستقلة مطلوبة للقائمة الفرعية" });
+
+        if (req.ListType == "قائمة فرعية" && req.ParentListId.HasValue)
+        {
+            var parentList = await _ds.GetDropdownListByIdAsync(req.ParentListId.Value);
+            if (parentList == null || parentList.ListType != "قائمة مستقلة" || !parentList.IsActive)
+                return Json(new { success = false, message = "يجب اختيار قائمة مستقلة مفعلة" });
+        }
 
         if (req.ListType == "قائمة هرمية")
         {
@@ -323,7 +343,7 @@ public class DropdownsController : BaseController
 
         var d = new DropdownList
         {
-            Name = req.Name.Trim(),
+            Name = trimmedName,
             Description = req.Description?.Trim() ?? "",
             SortOrder = nextOrder,
             Ownership = ownership,
@@ -357,12 +377,19 @@ public class DropdownsController : BaseController
         if (permErr != null)
             return Json(new { success = false, message = permErr });
 
+        if (await _ds.IsDropdownListUsedInFormsAsync(d.Id))
+            return Json(new { success = false, message = "لا يمكن تعديل قائمة منسدلة مرتبطة بنموذج" });
+
         var isAdminUser = CurrentUserRole == "Admin";
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
 
-        d.Name = req.Name.Trim();
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsDropdownListNameDuplicateAsync(trimmedName, req.Id))
+            return Json(new { success = false, message = DropdownListNameDuplicateMessage });
+
+        d.Name = trimmedName;
         d.Description = req.Description?.Trim() ?? "";
 
         // الملكية: الأدمن = عام إجباري، ممثل الوحدة يُسمح له باختيار عام أو خاص
@@ -449,13 +476,17 @@ public class DropdownsController : BaseController
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
 
+        var trimmedItemText = req.ItemText.Trim();
+        if (await _ds.IsDropdownItemTextDuplicateAsync(req.DropdownListId, trimmedItemText))
+            return Json(new { success = false, message = DropdownItemTextDuplicateMessage });
+
         var items = await _ds.ListDropdownItemsByListIdAsync(req.DropdownListId);
         var nextOrder = items.Count > 0 ? items.Max(i => i.SortOrder) + 1 : 1;
 
         var item = new DropdownItem
         {
             DropdownListId = req.DropdownListId,
-            ItemText = req.ItemText.Trim(),
+            ItemText = trimmedItemText,
             Description = req.Description?.Trim() ?? "",
             Color = req.Color ?? "#25935F",
             IsActive = req.IsActive,
@@ -487,10 +518,17 @@ public class DropdownsController : BaseController
         if (permErr != null)
             return Json(new { success = false, message = permErr });
 
+        if (await _ds.IsDropdownListUsedInFormsAsync(ownerList.Id))
+            return Json(new { success = false, message = "لا يمكن تعديل عناصر قائمة منسدلة مرتبطة بنموذج" });
+
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
 
-        item.ItemText = req.ItemText.Trim();
+        var trimmedItemText = req.ItemText.Trim();
+        if (await _ds.IsDropdownItemTextDuplicateAsync(item.DropdownListId, trimmedItemText, req.Id))
+            return Json(new { success = false, message = DropdownItemTextDuplicateMessage });
+
+        item.ItemText = trimmedItemText;
         item.Description = req.Description?.Trim() ?? "";
         item.Color = req.Color ?? item.Color;
         item.IsActive = req.IsActive;

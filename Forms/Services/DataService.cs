@@ -845,6 +845,26 @@ public class DataService
         => Task.FromResult(_db.FormDefinitions.Any(f =>
             FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "readyTableId", "ReadyTableId", tableId)));
 
+    public Task<bool> IsReadyTableNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = name.Trim();
+        var duplicate = _db.ReadyTables.Any(t =>
+            string.Equals(t.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || t.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task<bool> IsDropdownListUsedInFormsAsync(int listId)
+    {
+        if (_db.FormDefinitions.Any(f =>
+                FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.ReadyTableFields.Any(rf =>
+                PropertiesJsonReferencesNumericId(rf.PropertiesJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        return Task.FromResult(false);
+    }
+
     public Task<bool> IsDropdownListLinkedAsync(int listId)
     {
         if (_db.FormDefinitions.Any(f =>
@@ -856,6 +876,25 @@ public class DataService
         if (_db.DropdownLists.Any(d => d.ParentListId == listId))
             return Task.FromResult(true);
         return Task.FromResult(false);
+    }
+
+    public Task<bool> IsDropdownListNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = name.Trim();
+        var duplicate = _db.DropdownLists.Any(d =>
+            string.Equals(d.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || d.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task<bool> IsDropdownItemTextDuplicateAsync(int listId, string itemText, int? excludeId = null)
+    {
+        var n = itemText.Trim();
+        var duplicate = _db.DropdownItems.Any(i =>
+            i.DropdownListId == listId &&
+            string.Equals(i.ItemText.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || i.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
     }
 
     public Task<bool> IsDropdownItemLinkedAsync(int itemId)
@@ -1562,8 +1601,13 @@ public class DataService
     public Task<DropdownList?> GetDropdownListByIdAsync(int id)
         => Task.FromResult(_db.DropdownLists.FirstOrDefault(d => d.Id == id));
 
-    public Task<List<DropdownList>> ListIndependentDropdownListsAsync()
-        => Task.FromResult(_db.DropdownLists.Where(d => d.ListType == "قائمة مستقلة").OrderBy(d => d.SortOrder).ToList());
+    public Task<List<DropdownList>> ListIndependentDropdownListsAsync(bool activeOnly = false)
+    {
+        var query = _db.DropdownLists.Where(d => d.ListType == "قائمة مستقلة");
+        if (activeOnly)
+            query = query.Where(d => d.IsActive);
+        return Task.FromResult(query.OrderBy(d => d.SortOrder).ToList());
+    }
 
     public Task<DropdownList> AddDropdownListAsync(DropdownList d)
     {
@@ -1725,6 +1769,9 @@ public class DataService
 
     public Task<List<AuditLog>> ListAllAuditLogsAsync()
         => Task.FromResult(_db.AuditLogs.OrderByDescending(a => a.CreatedAt).ToList());
+
+    public Task<AuditLog?> GetAuditLogByIdAsync(int id)
+        => Task.FromResult(_db.AuditLogs.FirstOrDefault(a => a.Id == id));
 
     // ─── LOGIN ATTEMPTS ──────────────────────────────────────────────────────
     public Task<LoginAttempt> AddLoginAttemptAsync(LoginAttempt a)

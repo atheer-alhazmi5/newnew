@@ -37,6 +37,52 @@
 .ou-on { background:#dcf5e8; color:#0f9f5c; }
 .ou-off { background:#fde8e8; color:#ef4444; }
 .required-star { color:#ef4444; margin-right:4px; }
+.ou-filter-switches-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 28px;
+    margin-inline-start: auto;
+    flex-shrink: 0;
+}
+.ou-filter-switch-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    min-height: 44px;
+}
+.ou-filter-switch-item .form-check.form-switch {
+    padding: 0;
+    margin: 0;
+    min-height: auto;
+    display: inline-flex;
+    align-items: center;
+}
+.ou-filter-switch-item .form-check-input {
+    float: none;
+    margin: 0;
+    flex-shrink: 0;
+    width: 2.5em;
+    height: 1.25em;
+    cursor: pointer;
+}
+.ou-filter-switch-item .ou-filter-switch-label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    line-height: 1.4;
+}
+@@media (max-width: 991px) {
+    .ou-filter-switches-row {
+        flex-wrap: wrap;
+        width: 100%;
+        margin-inline-start: 0;
+        gap: 16px 28px;
+    }
+}
 </style>
 
 <div class="bnf-settings-page">
@@ -58,10 +104,18 @@
         <select class="form-select rt-filter-select" id="ouFilterClassification" style="min-width:200px;">
             <option value="">كل التصنيفات</option>
         </select>
-        <div class="d-flex gap-3 align-items-center flex-wrap ms-auto">
-            <div class="form-check form-switch d-flex align-items-center gap-2" style="min-height:44px;padding:0 4px;">
-                <input class="form-check-input" type="checkbox" id="ouFilterDirectManager" style="cursor:pointer;">
-                <label class="form-check-label fw-bold" for="ouFilterDirectManager" style="font-size:13px;cursor:pointer;white-space:nowrap;">بدون مدير</label>
+        <div class="ou-filter-switches-row">
+            <div class="ou-filter-switch-item">
+                <label class="ou-filter-switch-label" for="ouFilterDirectManager">بدون مدير</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="ouFilterDirectManager">
+                </div>
+            </div>
+            <div class="ou-filter-switch-item">
+                <label class="ou-filter-switch-label" for="ouFilterUnitRepresentative">بدون ممثل وحدة تنظيمية</label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="ouFilterUnitRepresentative">
+                </div>
             </div>
             <button type="button" class="rt-clear-btn rt-clear-btn-icon" id="ouClearFilters" onclick="ouClearFilters()" title="مسح " aria-label="مسح ">
                 <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
@@ -80,13 +134,14 @@
                             <th>التصنيف</th>
                             <th>الوحدة الرئيسية</th>
                             <th style="width:88px;text-align:center;">عدد المنسوبين</th>
+                            <th>ممثل الوحدة التنظيمية</th>
                             <th>مدير الوحدة التنظيمية</th>
                             <th style="width:100px;">التفعيل</th>
                             <th style="min-width:280px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="ouBody">
-                        <tr><td colspan="8" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                        <tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -119,6 +174,10 @@
                 <div class="form-check form-switch mb-2">
                     <input class="form-check-input" type="checkbox" id="ouIsActive" checked>
                     <label class="form-check-label" for="ouIsActive">الوحدة مفعّلة</label>
+                </div>
+                <div class="mt-2 w-100 d-none" id="ouDeactivateReasonWrap">
+                    <label class="form-label small fw-semibold" for="ouDeactivateReason">سبب التعطيل<span class="required-star">*</span></label>
+                    <textarea class="form-control" id="ouDeactivateReason" rows="2" maxlength="1000" placeholder="أدخل سبب تعطيل الوحدة (إلزامي)"></textarea>
                 </div>
                 <div id="ouError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>

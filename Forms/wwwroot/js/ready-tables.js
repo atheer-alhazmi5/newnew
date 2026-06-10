@@ -1,5 +1,6 @@
 /* ===== Ready Tables JS (Index Page) ===== */
 var rtAllData = [], rtFilteredData = [], rtOrgUnits = [], rtCurrentUser = '', rtIsAdmin = false;
+var RT_TABLE_NAME_DUP_MSG = 'اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var rtcFields = [], rtcEditingIndex = -1;
 var rtFilterOuExpanded = {};
 
@@ -197,6 +198,18 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"chipSelect", options:["0","1","2","3","4"], defaultValue:"0" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "عملة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"currency", label:"العملة", type:"select", options:["ر.س","$","€","£","د.إ","د.ك","د.ب","د.أ","ج.م"] },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"minValue", label:"الحد الأدنى", type:"number" },
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"chipSelect", options:["0","1","2","3","4"], defaultValue:"2" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "قائمة منسدلة": { props: [
@@ -270,19 +283,22 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" }
+        { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "التقييم بالنجوم": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },
         { key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },
-        { key:"defaultValue", label:"القيمة التلقائية", type:"number" }
+        { key:"defaultValue", label:"القيمة التلقائية", type:"number" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "التقييم بالأرقام": { props: [
         { key:"lowRatingText", label:"نص أقل تقييم", type:"text" },
         { key:"highRatingText", label:"نص أعلى تقييم", type:"text" },
         { key:"minRating", label:"أقل قيمة", type:"number" },
-        { key:"maxRating", label:"أعلى قيمة", type:"number" }
+        { key:"maxRating", label:"أعلى قيمة", type:"number" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "جدول بيانات": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -558,9 +574,37 @@ function rtApplyPropsSpecialEditors(type, idPrefix, propsObj) {
         if (p.type === 'optionList') {
             rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po, p.key, p.perOptionOther);
         }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips(idPrefix, p.key, po[p.key] != null ? po[p.key] : p.defaultValue);
+        }
     });
     rtApplyFileTypesFromProps(idPrefix, po);
     if (type === 'صورة عرض') rtWireDisplayImageProp(idPrefix, 'imageUrl');
+}
+
+function rtSelectDecimalChip(btn, idPrefix, key) {
+    var group = btn && btn.parentElement;
+    if (!group) return;
+    var val = btn.getAttribute('data-value');
+    var hid = document.getElementById(idPrefix + '_' + key);
+    if (hid) hid.value = val;
+    group.querySelectorAll('.rt-prop-chip').forEach(function (c) {
+        c.classList.toggle('is-active', c === btn);
+    });
+}
+
+function rtSyncDecimalChips(idPrefix, key, val) {
+    var defVal = '0';
+    var hid = document.getElementById(idPrefix + '_' + key);
+    if (hid) {
+        hid.value = (val != null && val !== '') ? String(val) : defVal;
+        defVal = hid.value;
+    }
+    var group = document.getElementById(idPrefix + '_' + key + '_chips');
+    if (!group) return;
+    group.querySelectorAll('.rt-prop-chip').forEach(function (c) {
+        c.classList.toggle('is-active', c.getAttribute('data-value') === defVal);
+    });
 }
 
 /** ربط إرفاق صورة «صورة عرض» (نفس منطق النماذج المستخدمة). */
@@ -632,6 +676,19 @@ function rtBuildSinglePropHtml(p, idPrefix) {
             h += '<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="' + ft.ext + '" id="' + cid + '"><label class="form-check-label" for="' + cid + '" style="font-size:12.5px;">' + ft.label + '</label></div>';
         });
         return h + '</div></div>';
+    }
+    if (p.type === 'chipSelect') {
+        var chipFid = idPrefix + '_' + p.key;
+        var colClassChip = p.col || 'col-md-6 col-sm-6 mb-3';
+        var defChip = (p.defaultValue != null && p.defaultValue !== '') ? String(p.defaultValue) : '0';
+        var chipOpts = p.options || ['0', '1', '2', '3', '4'];
+        var chipsHtml = chipOpts.map(function (opt) {
+            var active = opt === defChip ? ' is-active' : '';
+            return '<button type="button" class="rt-prop-chip' + active + '" data-value="' + rtEscAttr(opt) + '" onclick="rtSelectDecimalChip(this,\'' + idPrefix + '\',\'' + p.key + '\')">' + opt + '</button>';
+        }).join('');
+        return '<div class="' + colClassChip + '"><label class="d-block" style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;">' + p.label + '</label>' +
+            '<input type="hidden" id="' + chipFid + '" value="' + rtEscAttr(defChip) + '">' +
+            '<div class="rt-prop-chip-group" id="' + chipFid + '_chips" role="group" aria-label="' + rtEscAttr(p.label) + '">' + chipsHtml + '</div></div>';
     }
     var fid = idPrefix + '_' + p.key;
     var colClass = p.col || 'col-md-4 col-sm-6 mb-3';
@@ -882,12 +939,26 @@ function rtCreatorNamesMatch(createdBy, candidate) {
     return rtNormCreatorName(a).toLowerCase() === rtNormCreatorName(b).toLowerCase();
 }
 
+function rtIsDuplicateTableName(name, excludeId) {
+    var n = (name || '').trim().toLowerCase();
+    if (!n) return false;
+    return rtAllData.some(function (t) {
+        if (excludeId != null && t.id === excludeId) return false;
+        return ((t.name || '').trim().toLowerCase() === n);
+    });
+}
+
+function rtGetTableActions(t) {
+    if (!t) return { canEdit: false, canDelete: false, canViewDetails: false };
+    return {
+        canEdit: typeof t.canEdit === 'boolean' ? t.canEdit : (typeof t.CanEdit === 'boolean' ? t.CanEdit : false),
+        canDelete: typeof t.canDelete === 'boolean' ? t.canDelete : (typeof t.CanDelete === 'boolean' ? t.CanDelete : false),
+        canViewDetails: typeof t.canViewDetails === 'boolean' ? t.canViewDetails : (typeof t.CanViewDetails === 'boolean' ? t.CanViewDetails : false)
+    };
+}
+
 function rtCanEdit(t) {
-    if (!t) return false;
-    if (typeof t.canModify === 'boolean') return t.canModify;
-    if (typeof t.CanModify === 'boolean') return t.CanModify;
-    if (rtIsAdmin) return t.ownership !== 'خاص';
-    return false;
+    return rtGetTableActions(t).canEdit;
 }
 
 function rtRenderTable() {
@@ -915,9 +986,14 @@ function rtRenderTable() {
         html += '<td style="text-align:center;"><span class="' + actClass + '">' + actLabel + '</span></td>';
         html += '<td style="text-align:center;white-space:nowrap;">';
         html += '<div style="display:inline-flex;gap:4px;align-items:center;justify-content:center;">';
-        html += '<button class="rt-action-btn rt-action-btn-detail" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
-        if (rtCanEdit(t)) {
+        var actions = rtGetTableActions(t);
+        if (actions.canViewDetails) {
+            html += '<button class="rt-action-btn rt-action-btn-detail" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
+        }
+        if (actions.canEdit) {
             html += '<button class="rt-action-btn rt-action-btn-edit" onclick="rtShowEditModal(' + t.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+        }
+        if (actions.canDelete) {
             html += '<button class="rt-action-btn rt-action-btn-delete" onclick="rtShowDeleteModal(' + t.id + ',\'' + (t.name||'').replace(/'/g,"\\'") + '\')"><i class="bi bi-trash"></i> حذف</button>';
         }
         html += '</div></td></tr>';
@@ -939,7 +1015,7 @@ function rtShowCreateModal() {
     rtcResetColumnHeaderColorUI();
     rtcResetFieldForm();
     document.getElementById('rtcFieldsSection').style.display = 'none';
-    document.getElementById('rtcFieldsBody').innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>';
+    document.getElementById('rtcFieldsBody').innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>';
     document.getElementById('rtcFieldsCount').textContent = '0';
     document.getElementById('rtcCreateError').classList.add('d-none');
     var pi = document.getElementById('rtcPreviewInline');
@@ -1013,6 +1089,11 @@ function rtcCollectProps() {
             if (mx) result.maxFileSize = mx.value;
             return;
         }
+        if (p.type === 'chipSelect') {
+            var chipEl = document.getElementById('rtcProp_' + p.key);
+            if (chipEl) result[p.key] = chipEl.value;
+            return;
+        }
         var el = document.getElementById('rtcProp_' + p.key);
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
@@ -1033,6 +1114,10 @@ function rtcSetProps(type, propsObj) {
             var mx = document.getElementById('rtcProp_maxFileSize');
             if (mn && po.minFileSize !== undefined && po.minFileSize !== null) mn.value = po.minFileSize;
             if (mx && po.maxFileSize !== undefined && po.maxFileSize !== null) mx.value = po.maxFileSize;
+            return;
+        }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips('rtcProp', p.key, po[p.key]);
             return;
         }
         var el = document.getElementById('rtcProp_' + p.key);
@@ -1058,7 +1143,8 @@ function rtcAddField() {
         if (!rl || !String(rl.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtcCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:'', propertiesJson:JSON.stringify(props) };
+    var tooltipVal = (document.getElementById('rtcFieldTooltip') && document.getElementById('rtcFieldTooltip').value || '').trim();
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:tooltipVal, propertiesJson:JSON.stringify(props) };
     if (rtcEditingIndex >= 0) { rtcFields[rtcEditingIndex] = field; rtcEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtcFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtcResetFieldForm();
     rtcRenderFieldsTable();
@@ -1073,6 +1159,8 @@ function rtcResetFieldForm() {
     if (fname) fname.value = '';
     var req = document.getElementById('rtcFieldRequired');
     if (req) req.value = '1';
+    var tip = document.getElementById('rtcFieldTooltip');
+    if (tip) tip.value = '';
     var area = document.getElementById('rtcPropsArea');
     if (area) area.style.display = 'none';
     var fields = document.getElementById('rtcPropsFields');
@@ -1089,6 +1177,8 @@ function rtcEditField(idx) {
     document.getElementById('rtcFieldType').value = f.fieldType;
     document.getElementById('rtcFieldName').value = f.fieldName;
     document.getElementById('rtcFieldRequired').value = f.isRequired ? '1' : '0';
+    var tipEl = document.getElementById('rtcFieldTooltip');
+    if (tipEl) tipEl.value = f.tooltipText || '';
     document.getElementById('rtcFieldNum').textContent = (idx + 1).toString();
     rtcOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtcSetProps(f.fieldType, p); } catch(e) {}
@@ -1109,12 +1199,13 @@ function rtcRenderFieldsTable() {
     var fn = document.getElementById('rtcFieldNum');
     if (fn) fn.textContent = (rtcEditingIndex >= 0 ? rtcEditingIndex + 1 : rtcFields.length + 1).toString();
     if (!body) return;
-    if (rtcFields.length === 0) { body.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
+    if (rtcFields.length === 0) { body.innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
     var html = '';
     rtcFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        var tipText = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText.replace(/"/g,'&quot;') + '">' + tipText + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1145,6 +1236,12 @@ function rtcGetPropsSummaryCreate(f) {
 async function rtcSubmitTable() {
     var name = document.getElementById('rtcName').value.trim();
     if (!name) { showToast('يرجى إدخال اسم الجدول', 'danger'); return; }
+    if (rtIsDuplicateTableName(name)) {
+        var dupErr = document.getElementById('rtcCreateError');
+        dupErr.textContent = RT_TABLE_NAME_DUP_MSG;
+        dupErr.classList.remove('d-none');
+        return;
+    }
     var rowMode = document.querySelector('input[name="rtcRowMode"]:checked').value;
     var maxRows = rowMode === 'مقيد' ? parseInt(document.getElementById('rtcMaxRows').value, 10) : null;
     if (rowMode === 'مقيد' && (!maxRows || maxRows < 1)) { showToast('يرجى تحديد عدد الصفوف', 'danger'); return; }
@@ -1540,6 +1637,11 @@ function rtEditCollectProps() {
             if (mx) result.maxFileSize = mx.value;
             return;
         }
+        if (p.type === 'chipSelect') {
+            var chipEl2 = document.getElementById('rtEditProp_' + p.key);
+            if (chipEl2) result[p.key] = chipEl2.value;
+            return;
+        }
         var el = document.getElementById('rtEditProp_' + p.key);
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
@@ -1560,6 +1662,10 @@ function rtEditSetProps(type, propsObj) {
             var mx = document.getElementById('rtEditProp_maxFileSize');
             if (mn && po.minFileSize !== undefined && po.minFileSize !== null) mn.value = po.minFileSize;
             if (mx && po.maxFileSize !== undefined && po.maxFileSize !== null) mx.value = po.maxFileSize;
+            return;
+        }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips('rtEditProp', p.key, po[p.key]);
             return;
         }
         var el = document.getElementById('rtEditProp_' + p.key);
@@ -1585,7 +1691,8 @@ function rtEditAddField() {
         if (!rl2 || !String(rl2.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
     }
     var props = rtEditCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:'', propertiesJson:JSON.stringify(props) };
+    var tooltipVal2 = (document.getElementById('rtEditFieldTooltip') && document.getElementById('rtEditFieldTooltip').value || '').trim();
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:tooltipVal2, propertiesJson:JSON.stringify(props) };
     if (rtEditEditingIndex >= 0) { rtEditFields[rtEditEditingIndex] = field; rtEditEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtEditFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtEditResetFieldForm();
     rtEditRenderFieldsTable();
@@ -1600,6 +1707,8 @@ function rtEditResetFieldForm() {
     if (fname) fname.value = '';
     var req = document.getElementById('rtEditFieldRequired');
     if (req) req.value = '1';
+    var tip2 = document.getElementById('rtEditFieldTooltip');
+    if (tip2) tip2.value = '';
     var area = document.getElementById('rtEditPropsArea');
     if (area) area.style.display = 'none';
     var fields = document.getElementById('rtEditPropsFields');
@@ -1616,6 +1725,8 @@ function rtEditEditField(idx) {
     document.getElementById('rtEditFieldType').value = f.fieldType;
     document.getElementById('rtEditFieldName').value = f.fieldName;
     document.getElementById('rtEditFieldRequired').value = f.isRequired ? '1' : '0';
+    var tipEdit = document.getElementById('rtEditFieldTooltip');
+    if (tipEdit) tipEdit.value = f.tooltipText || '';
     document.getElementById('rtEditFieldNum').textContent = (idx + 1).toString();
     rtEditOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtEditSetProps(f.fieldType, p); } catch(e) {}
@@ -1636,12 +1747,13 @@ function rtEditRenderFieldsTable() {
     var fn = document.getElementById('rtEditFieldNum');
     if (fn) fn.textContent = (rtEditEditingIndex >= 0 ? rtEditEditingIndex + 1 : rtEditFields.length + 1).toString();
     if (!body) { console.warn('rtEditFieldsBody not found'); return; }
-    if (rtEditFields.length === 0) { body.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
+    if (rtEditFields.length === 0) { body.innerHTML = '<tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>'; return; }
     var html = '';
     rtEditFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        var tipText2 = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText2.replace(/"/g,'&quot;') + '">' + tipText2 + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1719,6 +1831,11 @@ async function rtSubmitEdit() {
     var name = document.getElementById('rtEditName').value.trim();
     var errEl = document.getElementById('rtEditError');
     if (!name) { errEl.textContent = 'اسم الجدول مطلوب'; errEl.classList.remove('d-none'); return; }
+    if (rtIsDuplicateTableName(name, id)) {
+        errEl.textContent = RT_TABLE_NAME_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
     var rowMode = document.querySelector('input[name="rtEditRowMode"]:checked').value;
     if (rowMode === 'مقيد') {
         var maxRows = parseInt(document.getElementById('rtEditMaxRows').value, 10);
@@ -1760,8 +1877,8 @@ async function rtSubmitEdit() {
 /* ===== Delete ===== */
 function rtShowDeleteModal(id, name) {
     var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
-    if (listed && !rtCanEdit(listed)) {
-        showToast('غير مصرح بتعديل هذا الجدول', 'error');
+    if (listed && !rtGetTableActions(listed).canDelete) {
+        showToast('غير مصرح بحذف هذا الجدول', 'error');
         return;
     }
     document.getElementById('rtDeleteId').value = id;

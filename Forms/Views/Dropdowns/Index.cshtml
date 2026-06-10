@@ -474,6 +474,28 @@
     </div>
 </div>
 
+<!-- Delete Item Modal -->
+<div class="modal fade" id="ddlDeleteItemModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title">حذف عنصر القائمة</h5>
+            </div>
+            <div class="bnf-modal-body text-center">
+                <input type="hidden" id="ddlDeleteItemId">
+                <p style="font-weight:700;font-size:16px;margin-top:8px;color:var(--gray-800);">هل أنت متأكد من حذف هذا العنصر؟</p>
+                <p style="font-size:14px;color:var(--gray-500);" id="ddlDeleteItemNameLabel"></p>
+                <div id="ddlDeleteItemError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
+            </div>
+            <div class="bnf-modal-footer" style="justify-content:center;">
+                <button type="button" class="bnf-save-btn" style="background:var(--error-600);" onclick="ddlSubmitDeleteItem()">نعم، حذف</button>
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script src="~/js/dropdowns.js?v=@DateTime.Now.Ticks"></script>
 }

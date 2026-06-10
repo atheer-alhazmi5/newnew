@@ -10,6 +10,30 @@ var ouRows = [];
 var ouClassifications = [];
 var ouEditingId = null;
 
+function ouSyncDeactivateReasonVisibility() {
+    var active = document.getElementById('ouIsActive');
+    var wrap = document.getElementById('ouDeactivateReasonWrap');
+    var reason = document.getElementById('ouDeactivateReason');
+    if (!active || !wrap) return;
+    if (active.checked) {
+        wrap.classList.add('d-none');
+        if (reason) {
+            reason.removeAttribute('required');
+            reason.classList.remove('is-invalid');
+        }
+    } else {
+        wrap.classList.remove('d-none');
+        if (reason) reason.setAttribute('required', 'required');
+    }
+}
+
+function ouValidateDeactivateReason() {
+    if (document.getElementById('ouIsActive').checked) return null;
+    if (!(document.getElementById('ouDeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
+
 function ouExcludedIdsForParentPicker(editUnitId) {
     if (!editUnitId) return {};
     var byParent = {};
@@ -77,7 +101,7 @@ async function ouLoad() {
         var r = await apiFetch('/Settings/GetOrganizationalUnits');
         if (!r || !r.success) {
             document.getElementById('ouBody').innerHTML =
-                '<tr><td colspan="8" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
+                '<tr><td colspan="9" class="text-center py-4 text-danger">غير مصرح أو خطأ في التحميل</td></tr>';
             return;
         }
         ouRows = r.data || [];
@@ -87,7 +111,7 @@ async function ouLoad() {
         ouRenderTable();
     } catch (e) {
         document.getElementById('ouBody').innerHTML =
-            '<tr><td colspan="8" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
+            '<tr><td colspan="9" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
     }
 }
 
@@ -108,9 +132,11 @@ function ouClearFilters() {
     var search = document.getElementById('ouSearch');
     var cls = document.getElementById('ouFilterClassification');
     var mgr = document.getElementById('ouFilterDirectManager');
+    var rep = document.getElementById('ouFilterUnitRepresentative');
     if (search) search.value = '';
     if (cls) cls.value = '';
     if (mgr) mgr.checked = false;
+    if (rep) rep.checked = false;
     ouRenderTable();
 }
 
@@ -130,10 +156,12 @@ function ouFilteredRows() {
     var q = (document.getElementById('ouSearch') && document.getElementById('ouSearch').value || '').trim().toLowerCase();
     var cf = document.getElementById('ouFilterClassification') ? document.getElementById('ouFilterClassification').value : '';
     var onlyWithoutManager = document.getElementById('ouFilterDirectManager') && document.getElementById('ouFilterDirectManager').checked;
+    var onlyWithoutRepresentative = document.getElementById('ouFilterUnitRepresentative') && document.getElementById('ouFilterUnitRepresentative').checked;
     return ouRows.filter(function (u) {
         if (q && String(u.name || '').toLowerCase().indexOf(q) === -1) return false;
         if (cf && String(u.classificationId) !== String(cf)) return false;
         if (onlyWithoutManager && (u.hasUnitManager || u.HasUnitManager)) return false;
+        if (onlyWithoutRepresentative && (u.hasUnitRepresentative || u.HasUnitRepresentative)) return false;
         return true;
     });
 }
@@ -143,7 +171,7 @@ function ouRenderTable() {
     if (!body) return;
     var list = ouFilteredRows();
     if (!list.length) {
-        body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
         return;
     }
     list.sort(ouCompareHierarchy);
@@ -153,6 +181,10 @@ function ouRenderTable() {
         var badgeColor = cls && cls.color ? cls.color : '#25935F';
         var parentNm = u.parentName ? ouEsc(u.parentName) : '<span class="text-muted">—</span>';
         var mc = u.memberCount != null ? u.memberCount : (u.MemberCount != null ? u.MemberCount : 0);
+        var repNm = u.unitRepresentativeName || u.UnitRepresentativeName || '';
+        var repCell = repNm
+            ? '<span style="font-size:12px;font-weight:600;">' + ouEsc(repNm) + '</span>'
+            : '<span class="text-warning" style="font-size:12px;font-weight:700;">بدون ممثل</span>';
         var mgrNm = u.unitManagerName || u.UnitManagerName || '';
         var mgrCell = mgrNm
             ? '<span style="font-size:12px;font-weight:600;">' + ouEsc(mgrNm) + '</span>'
@@ -167,6 +199,7 @@ function ouRenderTable() {
             '<td><span class="badge rounded-pill" style="background:' + badgeColor + ';font-size:11px;">' + ouEsc(u.classificationName || '') + '</span></td>' +
             '<td style="font-size:12px;">' + parentNm + '</td>' +
             '<td style="text-align:center;font-weight:700;">' + mc + '</td>' +
+            '<td style="font-size:12px;max-width:220px;">' + repCell + '</td>' +
             '<td style="font-size:12px;max-width:220px;">' + mgrCell + '</td>' +
             '<td style="text-align:center;">' + activePill + '</td>' +
             '<td style="white-space:nowrap;text-align:center;">' +
@@ -191,6 +224,10 @@ function ouShowDetails(id) {
     var lev = u.level || u.Level || '';
     var parentNm = u.parentName || '';
     var mc = u.memberCount != null ? u.memberCount : (u.MemberCount != null ? u.MemberCount : 0);
+    var repNm = u.unitRepresentativeName || u.UnitRepresentativeName || '';
+    var repHtml = repNm
+        ? ouEsc(repNm)
+        : '<span class="text-warning fw-semibold">بدون ممثل مسجّل لهذه الوحدة</span>';
     var mgrNm = u.unitManagerName || u.UnitManagerName || '';
     var mgrHtml = mgrNm
         ? ouEsc(mgrNm)
@@ -201,6 +238,7 @@ function ouShowDetails(id) {
     }
 
     var activeTxt = u.isActive !== false ? 'مفعّلة' : 'معطّلة';
+    var deactivateReason = u.deactivateReason || u.DeactivateReason || '';
     var members = u.members || u.Members || [];
     var membersBlock = '';
     if (members.length) {
@@ -228,9 +266,13 @@ function ouShowDetails(id) {
         detailRow('نوع الوحدة في الهيكل', ouEsc(lev || '—')) +
         detailRow('الوحدة التنظيمية الرئيسية', parentNm ? ouEsc(parentNm) : '<span class="text-muted">وحدة رئيسية (جذر)</span>') +
         detailRow('عدد المنسوبين', '<strong>' + mc + '</strong> مستفيد مرتبط بالوحدة التنظيمية') +
+        detailRow('ممثل الوحدة التنظيمية', repHtml) +
         detailRow('مدير الوحدة التنظيمية', mgrHtml) +
         detailRow('الترتيب', ouEsc(u.orderPath || u.OrderPath || '—')) +
         detailRow('التفعيل', ouEsc(activeTxt)) +
+        (u.isActive === false && deactivateReason
+            ? detailRow('سبب التعطيل', ouEsc(deactivateReason))
+            : '') +
         membersBlock +
         detailRow('أنشئ بواسطة', ouEsc(u.createdBy || '—')) +
         detailRow('تاريخ الإنشاء', ouEsc(u.createdAt || u.CreatedAt || '—')) +
@@ -246,6 +288,8 @@ function ouShowAddModal() {
     document.getElementById('ouName').value = '';
     document.getElementById('ouClassificationId').value = '';
     document.getElementById('ouIsActive').checked = true;
+    document.getElementById('ouDeactivateReason').value = '';
+    ouSyncDeactivateReasonVisibility();
     ouFillParentSelect();
     document.getElementById('ouParentId').value = '';
     document.getElementById('ouError').classList.add('d-none');
@@ -260,6 +304,8 @@ function ouEdit(id) {
     document.getElementById('ouName').value = u.name || '';
     document.getElementById('ouClassificationId').value = String(u.classificationId || '');
     document.getElementById('ouIsActive').checked = u.isActive !== false;
+    document.getElementById('ouDeactivateReason').value = String(u.deactivateReason || u.DeactivateReason || '').trim();
+    ouSyncDeactivateReasonVisibility();
     ouFillParentSelect();
     var pid = u.parentId != null ? u.parentId : u.ParentId;
     document.getElementById('ouParentId').value = pid ? String(pid) : '';
@@ -295,6 +341,16 @@ async function ouSave() {
         return;
     }
 
+    var deactivateErr = ouValidateDeactivateReason();
+    if (deactivateErr) {
+        errEl.textContent = deactivateErr;
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    var isActive = document.getElementById('ouIsActive').checked;
+    var deactivateReason = isActive ? '' : document.getElementById('ouDeactivateReason').value.trim();
+
     try {
         if (ouEditingId) {
             var r = await apiFetch('/Settings/UpdateOrganizationalUnit', 'POST', {
@@ -302,7 +358,8 @@ async function ouSave() {
                 name: name,
                 classificationId: cid,
                 parentId: parentId,
-                isActive: document.getElementById('ouIsActive').checked
+                isActive: isActive,
+                deactivateReason: deactivateReason
             });
             if (r.success) {
                 bootstrap.Modal.getInstance(document.getElementById('ouModal')).hide();
@@ -317,7 +374,8 @@ async function ouSave() {
                 name: name,
                 classificationId: cid,
                 parentId: parentId,
-                isActive: document.getElementById('ouIsActive').checked
+                isActive: isActive,
+                deactivateReason: deactivateReason
             });
             if (r2.success) {
                 bootstrap.Modal.getInstance(document.getElementById('ouModal')).hide();
@@ -366,8 +424,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var s = document.getElementById('ouSearch');
     var f = document.getElementById('ouFilterClassification');
     var m = document.getElementById('ouFilterDirectManager');
+    var r = document.getElementById('ouFilterUnitRepresentative');
+    var active = document.getElementById('ouIsActive');
     if (s) s.addEventListener('input', function () { ouRenderTable(); });
     if (f) f.addEventListener('change', function () { ouRenderTable(); });
     if (m) m.addEventListener('change', function () { ouRenderTable(); });
+    if (r) r.addEventListener('change', function () { ouRenderTable(); });
+    if (active) active.addEventListener('change', ouSyncDeactivateReasonVisibility);
     ouLoad();
 });

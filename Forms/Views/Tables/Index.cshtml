@@ -86,6 +86,10 @@
 .rt-hdr-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
 .rt-field-badge-req { background:#dcf5e8; color:#0f9f5c; padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
 .rt-field-badge-opt { background:var(--gray-100); color:var(--gray-500); padding:3px 10px; border-radius:999px; font-weight:700; font-size:11px; }
+.rt-prop-chip-group { display:flex; flex-wrap:wrap; gap:8px; }
+.rt-prop-chip { border:2px solid var(--gray-200); background:#fff; color:var(--gray-700); border-radius:999px; padding:6px 14px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s ease; min-width:36px; text-align:center; }
+.rt-prop-chip:hover { border-color:var(--sa-300); background:var(--sa-25); color:var(--sa-700); }
+.rt-prop-chip.is-active { border-color:var(--sa-600); background:var(--sa-600); color:#fff; box-shadow:0 2px 8px rgba(37,147,95,.25); }
 .rt-page-wrap { width:100%; max-width:100%; }
 .rt-field-subname { font-size:11px; color:var(--gray-400); font-weight:600; margin-top:4px; line-height:1.4; }
 /* الدوار الرقمي — مطابق لشكله داخل النماذج المستخدمة (fd-spinner-group) */
@@ -291,6 +295,7 @@
                                         <th>نوع الحقل<span class="required-star">*</span></th>
                                         <th>اسم الحقل<span class="required-star">*</span></th>
                                         <th>الحقل إلزامي</th>
+                                        <th>نص التلميح</th>
                                         <th>الخصائص الإضافية</th>
                                         <th>الإجراء</th>
                                     </tr>
@@ -308,6 +313,7 @@
                                                 <option value="نص طويل">نص طويل</option>
                                                 <option value="فقرة">فقرة</option>
                                                 <option value="رقم">رقم</option>
+                                                <option value="عملة">عملة</option>
                                                 <option value="قائمة منسدلة">قائمة منسدلة</option>
                                                 <option value="قائمة اختيار الواحد">قائمة اختيار الواحد</option>
                                                 <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
@@ -330,6 +336,7 @@
                                                 <option value="0">لا</option>
                                             </select>
                                         </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtcFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
                                         <td id="rtcPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
                                         <td><button class="rt-add-field-btn" onclick="rtcAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
                                     </tr>
@@ -349,12 +356,13 @@
                                         <th>نوع الحقل</th>
                                         <th>اسم الحقل</th>
                                         <th>إلزامي</th>
+                                        <th>نص التلميح</th>
                                         <th>الخصائص</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rtcFieldsBody">
-                                    <tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -484,6 +492,7 @@
                                         <th>نوع الحقل<span class="required-star">*</span></th>
                                         <th>اسم الحقل<span class="required-star">*</span></th>
                                         <th>الحقل إلزامي</th>
+                                        <th>نص التلميح</th>
                                         <th>الخصائص الإضافية</th>
                                         <th>الإجراء</th>
                                     </tr>
@@ -501,6 +510,7 @@
                                                 <option value="نص طويل">نص طويل</option>
                                                 <option value="فقرة">فقرة</option>
                                                 <option value="رقم">رقم</option>
+                                                <option value="عملة">عملة</option>
                                                 <option value="قائمة منسدلة">قائمة منسدلة</option>
                                                 <option value="قائمة اختيار الواحد">قائمة اختيار الواحد</option>
                                                 <option value="قائمة اختيار متعدد">قائمة اختيار متعدد</option>
@@ -523,6 +533,7 @@
                                                 <option value="0">لا</option>
                                             </select>
                                         </td>
+                                        <td><input type="text" class="form-control form-control-sm" id="rtEditFieldTooltip" placeholder="نص التلميح" style="min-width:120px;"></td>
                                         <td id="rtEditPropsCell"><span class="text-muted" style="font-size:11px;">اختر نوع الحقل أولاً</span></td>
                                         <td><button class="rt-add-field-btn" onclick="rtEditAddField()"><i class="bi bi-plus-lg"></i> إضافة</button></td>
                                     </tr>
@@ -542,12 +553,13 @@
                                         <th>نوع الحقل</th>
                                         <th>اسم الحقل</th>
                                         <th>إلزامي</th>
+                                        <th>نص التلميح</th>
                                         <th>الخصائص</th>
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rtEditFieldsBody">
-                                    <tr><td colspan="6" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
+                                    <tr><td colspan="7" class="text-muted text-center py-3">لا توجد حقول مضافة بعد</td></tr>
                                 </tbody>
                             </table>
                         </div>

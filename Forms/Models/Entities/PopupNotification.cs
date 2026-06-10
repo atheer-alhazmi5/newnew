@@ -6,7 +6,7 @@ public class PopupNotification
     public string Title         { get; set; } = "";
     public string TitleFontSize { get; set; } = "18";   
     public string TitleColor    { get; set; } = "#1F2A37";
-    public string Category      { get; set; } = "";     // إعلان | تنبيه
+    public string Category      { get; set; } = "";     // إعلان | تنبيه | تحذير
     public string ContentType   { get; set; } = "";     
     public string TextContent   { get; set; } = "";
     public string AttachmentUrl { get; set; } = "";     

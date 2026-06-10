@@ -47,6 +47,22 @@
 .al-filt-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
 .al-filt-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
 .al-filt-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
+.al-action-link { border:none; cursor:pointer; font-family:inherit; transition:transform .12s,opacity .12s; }
+.al-action-link:hover { opacity:.88; transform:scale(1.03); }
+.al-detail-section { margin-bottom:18px; }
+.al-detail-section-title { font-size:12px; font-weight:700; color:var(--sa-700); text-transform:uppercase; letter-spacing:.4px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.al-detail-section-title::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+.al-detail-grid { display:grid; gap:0; }
+.al-detail-row { display:flex; gap:12px; padding:9px 0; border-bottom:1px solid var(--gray-100); align-items:flex-start; }
+.al-detail-row:last-child { border-bottom:none; }
+.al-detail-label { min-width:140px; font-size:12px; font-weight:700; color:var(--gray-500); flex-shrink:0; }
+.al-detail-value { flex:1; font-size:13px; color:var(--gray-800); text-align:right; word-break:break-word; }
+.al-op-badge-add { background:#EFF8FF; color:#175CD3; }
+.al-op-badge-update { background:#FFF6ED; color:#B93815; }
+.al-op-badge-delete { background:#FEF3F2; color:#B42318; }
+.al-op-badge-status { background:#F4F3FF; color:#5925DC; }
+.al-op-badge-other { background:var(--gray-100); color:var(--gray-700); }
+.al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius:10px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
 </style>
 
 <!-- Header -->
@@ -138,6 +154,26 @@
 
 <div class="al-pagination" id="alPagination"></div>
 
+<!-- تفاصيل العملية -->
+<div class="modal fade" id="alDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--sa-700);border-radius:16px 16px 0 0;padding:16px 22px;">
+                <h5 class="modal-title" style="color:#fff;font-weight:700;font-size:15px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-info-circle-fill"></i> <span id="alDetailModalTitle">تفاصيل العملية</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;max-height:75vh;overflow-y:auto;" id="alDetailBody">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:14px 22px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
 let alAllData = [];
@@ -147,6 +183,15 @@ let alBeneficiaries = [];
 let alFilterOuExpanded = {};
 let alPage = 1;
 const alPerPage = 20;
+let alDetailModal;
+
+const alOpBadgeMap = {
+    add: 'al-op-badge-add',
+    update: 'al-op-badge-update',
+    delete: 'al-op-badge-delete',
+    status: 'al-op-badge-status',
+    other: 'al-op-badge-other'
+};
 
 function alOuUnitId(u) { return u.id != null ? u.id : u.Id; }
 function alOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
@@ -438,7 +483,7 @@ function alRender() {
             <td style="font-family:'Consolas',monospace;font-size:12px;">${esc(d.nationalId || '—')}</td>
             <td style="font-weight:600;text-align:right;">${esc(d.userName || '—')}</td>
             <td style="text-align:right;">${esc(d.organizationalUnit || '—')}</td>
-            <td><span class="al-badge ${badgeCls}"><i class="bi ${actionIcon}"></i> ${esc(d.action)}</span></td>
+            <td><button type="button" class="al-badge al-action-link ${badgeCls}" onclick="alShowDetail(${d.id})" title="عرض تفاصيل العملية"><i class="bi ${actionIcon}"></i> ${esc(d.action)}</button></td>
             <td style="font-size:12px;color:var(--gray-600);direction:ltr;">${esc(d.createdAt)}</td>
             <td><i class="bi ${browserIcon}" style="margin-left:4px;color:var(--gray-500);"></i>${esc(d.browser || '—')}</td>
             <td><span class="al-ip">${esc(d.ipAddress || '—')}</span></td>
@@ -483,6 +528,62 @@ function alGoPage(p) {
     alPage = p;
     alRender();
     document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function alDetailRow(label, val) {
+    return `<div class="al-detail-row"><div class="al-detail-label">${esc(label)}</div><div class="al-detail-value">${val}</div></div>`;
+}
+
+async function alShowDetail(id) {
+    if (!alDetailModal) alDetailModal = new bootstrap.Modal(document.getElementById('alDetailModal'));
+    const body = document.getElementById('alDetailBody');
+    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>';
+    alDetailModal.show();
+
+    const r = await apiFetch('/Settings/GetAuditLogDetail?id=' + encodeURIComponent(id));
+    if (!r || !r.success) {
+        body.innerHTML = `<div class="alert alert-danger mb-0">${esc(r?.message || 'تعذّر تحميل التفاصيل')}</div>`;
+        return;
+    }
+
+    const d = r.data;
+    const opCls = alOpBadgeMap[d.operationType] || alOpBadgeMap.other;
+    document.getElementById('alDetailModalTitle').textContent = d.action || 'تفاصيل العملية';
+
+    let html = '';
+    if (d.entityNote) {
+        html += `<div class="al-detail-note"><i class="bi bi-info-circle"></i> ${esc(d.entityNote)}</div>`;
+    }
+
+    html += `<div class="al-detail-section"><div class="al-detail-section-title"><i class="bi bi-lightning-fill"></i> ملخص العملية</div><div class="al-detail-grid">`;
+    html += alDetailRow('نوع العملية', `<span class="al-badge ${opCls}">${esc(d.operationTypeLabel || '—')}</span>`);
+    html += alDetailRow('العملية', esc(d.action || '—'));
+    html += alDetailRow('نوع العنصر', esc(d.entityTypeLabel || d.entityType || '—'));
+    if (d.entityId) html += alDetailRow('معرف العنصر', esc(d.entityId));
+    if (d.details) html += alDetailRow('ملخص إضافي', esc(d.details));
+    html += '</div></div>';
+
+    html += `<div class="al-detail-section"><div class="al-detail-section-title"><i class="bi bi-person-fill"></i> المنفِّذ</div><div class="al-detail-grid">`;
+    html += alDetailRow('اسم المستفيد', esc(d.userName || '—'));
+    html += alDetailRow('رقم الهوية', esc(d.nationalId || '—'));
+    html += alDetailRow('الوحدة التنظيمية', esc(d.organizationalUnit || '—'));
+    html += alDetailRow('تاريخ ووقت العملية', `<span style="direction:ltr;unicode-bidi:plaintext;">${esc(d.createdAt || '—')}</span>`);
+    html += '</div></div>';
+
+    html += `<div class="al-detail-section"><div class="al-detail-section-title"><i class="bi bi-pc-display"></i> بيانات الجلسة</div><div class="al-detail-grid">`;
+    html += alDetailRow('المتصفح', esc(d.browser || '—'));
+    html += alDetailRow('عنوان IP', `<span class="al-ip">${esc(d.ipAddress || '—')}</span>`);
+    html += alDetailRow('نظام التشغيل', esc(d.operatingSystem || '—'));
+    html += '</div></div>';
+
+    const fields = d.fields || [];
+    if (fields.length) {
+        html += `<div class="al-detail-section"><div class="al-detail-section-title"><i class="bi bi-database-fill"></i> بيانات العملية</div><div class="al-detail-grid">`;
+        fields.forEach(f => { html += alDetailRow(f.label, esc(f.value || '—')); });
+        html += '</div></div>';
+    }
+
+    body.innerHTML = html;
 }
 
 function esc(s) {
@@ -542,6 +643,10 @@ if (alFilterOuTrigger && alFilterOuPanel) {
     });
 }
 
-alLoad();
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('alDetailModal');
+    if (el) alDetailModal = new bootstrap.Modal(el);
+    alLoad();
+});
 </script>
 }

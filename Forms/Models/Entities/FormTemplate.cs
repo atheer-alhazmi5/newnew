@@ -7,10 +7,15 @@ public class FormTemplate
     public string Description { get; set; } = "";
     public string Color { get; set; } = "#25935F";
     public bool IsActive { get; set; } = true;
+    public string DeactivateReason { get; set; } = "";
 
     // Header & Footer stored as JSON strings
     public string HeaderJson { get; set; } = "[]";
+    public string HeaderBackgroundColor { get; set; } = "";
+    public string HeaderBackgroundImageUrl { get; set; } = "";
     public string FooterJson { get; set; } = "[]";
+    public string FooterBackgroundColor { get; set; } = "";
+    public string FooterBackgroundImageUrl { get; set; } = "";
     public int HeaderSections { get; set; } = 1;
     public int FooterSections { get; set; } = 1;
 

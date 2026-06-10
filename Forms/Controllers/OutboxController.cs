@@ -320,7 +320,11 @@ public class OutboxController : BaseController
                 Name = !string.IsNullOrWhiteSpace(fd.TemplateNameSnapshot) ? fd.TemplateNameSnapshot : (tpl?.Name ?? ""),
                 Color = !string.IsNullOrWhiteSpace(fd.TemplateColorSnapshot) ? fd.TemplateColorSnapshot : (tpl?.Color ?? "#14573A"),
                 HeaderJson = string.IsNullOrWhiteSpace(fd.TemplateHeaderJsonSnapshot) ? "[]" : fd.TemplateHeaderJsonSnapshot,
+                HeaderBackgroundColor = fd.TemplateHeaderBackgroundColorSnapshot ?? "",
+                HeaderBackgroundImageUrl = fd.TemplateHeaderBackgroundImageUrlSnapshot ?? "",
                 FooterJson = string.IsNullOrWhiteSpace(fd.TemplateFooterJsonSnapshot) ? "[]" : fd.TemplateFooterJsonSnapshot,
+                FooterBackgroundColor = fd.TemplateFooterBackgroundColorSnapshot ?? "",
+                FooterBackgroundImageUrl = fd.TemplateFooterBackgroundImageUrlSnapshot ?? "",
                 MarginTop = fd.TemplateMarginTopSnapshot,
                 MarginBottom = fd.TemplateMarginBottomSnapshot,
                 MarginRight = fd.TemplateMarginRightSnapshot,
@@ -338,6 +342,8 @@ public class OutboxController : BaseController
             {
                 tpl.Id, tpl.Name, tpl.Color,
                 tpl.HeaderJson, tpl.FooterJson,
+                tpl.HeaderBackgroundColor, tpl.HeaderBackgroundImageUrl,
+                tpl.FooterBackgroundColor, tpl.FooterBackgroundImageUrl,
                 tpl.MarginTop, tpl.MarginBottom, tpl.MarginRight, tpl.MarginLeft,
                 tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine,
                 tpl.WatermarkUrl, tpl.WatermarkOpacity
