@@ -63,6 +63,7 @@ public class TablesController : BaseController
         foreach (var t in filteredList)
         {
             var actions = GetReadyTableActions(t);
+            var isLinkedToForm = await _ds.IsReadyTableLinkedAsync(t.Id);
             result.Add(new
             {
                 t.Id, t.Name, t.Description, t.SortOrder,
@@ -72,9 +73,10 @@ public class TablesController : BaseController
                 t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
                 CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),
-                CanEdit = actions.CanEdit,
+                CanEdit = actions.CanEdit && !isLinkedToForm,
                 CanDelete = actions.CanDelete,
-                CanViewDetails = actions.CanViewDetails
+                CanViewDetails = actions.CanViewDetails,
+                IsLinkedToForm = isLinkedToForm
             });
         }
 
@@ -254,6 +256,9 @@ public class TablesController : BaseController
         var permErr = await EnsureReadyTableModifyPermissionAsync(t);
         if (permErr != null)
             return Json(new { success = false, message = permErr });
+
+        if (await _ds.IsReadyTableLinkedAsync(req.Id))
+            return Json(new { success = false, message = "لا يمكن تعديل جدول مستخدم في أحد النماذج" });
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الجدول مطلوب" });

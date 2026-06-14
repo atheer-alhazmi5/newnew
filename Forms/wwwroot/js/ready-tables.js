@@ -948,10 +948,16 @@ function rtIsDuplicateTableName(name, excludeId) {
     });
 }
 
+function rtIsTableLinkedToForm(t) {
+    return !!(t && (t.isLinkedToForm === true || t.IsLinkedToForm === true));
+}
+
 function rtGetTableActions(t) {
     if (!t) return { canEdit: false, canDelete: false, canViewDetails: false };
+    var canEdit = typeof t.canEdit === 'boolean' ? t.canEdit : (typeof t.CanEdit === 'boolean' ? t.CanEdit : false);
+    if (rtIsTableLinkedToForm(t)) canEdit = false;
     return {
-        canEdit: typeof t.canEdit === 'boolean' ? t.canEdit : (typeof t.CanEdit === 'boolean' ? t.CanEdit : false),
+        canEdit: canEdit,
         canDelete: typeof t.canDelete === 'boolean' ? t.canDelete : (typeof t.CanDelete === 'boolean' ? t.CanDelete : false),
         canViewDetails: typeof t.canViewDetails === 'boolean' ? t.canViewDetails : (typeof t.CanViewDetails === 'boolean' ? t.CanViewDetails : false)
     };
@@ -1525,6 +1531,10 @@ async function rtShowEditModal(id) {
         return;
     }
     var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
+    if (listed && rtIsTableLinkedToForm(listed)) {
+        showToast('لا يمكن تعديل جدول مستخدم في أحد النماذج', 'error');
+        return;
+    }
     if (listed && !rtCanEdit(listed)) {
         showToast('غير مصرح بتعديل هذا الجدول', 'error');
         return;

@@ -473,11 +473,11 @@ async function ddlLoadParentListItems(parentListId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + parentListId);
         if (r && r.success) {
-            ddlParentListItemsCache = (r.data || []).filter(function (item) { return item.isActive; });
+            ddlParentListItemsCache = (r.data || []);
             var sel = document.getElementById('ddlItemParentItemId');
             var html = '<option value="">-- اختر عنصر القائمة المستقلة --</option>';
             ddlParentListItemsCache.forEach(function (item) {
-                html += '<option value="' + item.id + '">' + esc(item.itemText) + '</option>';
+                html += '<option value="' + item.id + '">' + esc(item.itemText) + (item.isActive ? '' : ' (معطل)') + '</option>';
             });
             sel.innerHTML = html;
         }
@@ -507,13 +507,12 @@ async function ddlLoadItems(listId) {
         }
 
         ddlItemsAllCache = (r && r.success && r.data) ? (r.data || []) : [];
-        var activeItems = ddlItemsAllCache.filter(function (item) { return item.isActive; });
 
-        if (r && r.success && activeItems.length > 0) {
+        if (r && r.success && ddlItemsAllCache.length > 0) {
             var html = '';
-            activeItems.forEach(function (item, idx) {
+            ddlItemsAllCache.forEach(function (item, idx) {
                 var statusClass = item.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
-                html += '<tr>';
+                html += '<tr' + (item.isActive ? '' : ' class="ddl-item-row-inactive"') + '>';
                 html += '<td>' + (idx + 1) + '</td>';
                 if (isSubList) {
                     html += '<td style="font-weight:700;color:var(--sa-700);">' + esc(item.parentItemText || '—') + '</td>';
@@ -791,7 +790,7 @@ async function ddlLoadHierItems(listId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + listId);
         ddlHierItemsAllCache = (r && r.success) ? (r.data || []) : [];
-        ddlHierItems = ddlHierItemsAllCache.filter(function (item) { return item.isActive; });
+        ddlHierItems = ddlHierItemsAllCache.slice();
     } catch (e) {
         ddlHierItemsAllCache = [];
         ddlHierItems = [];
@@ -925,7 +924,7 @@ function ddlRenderTreeRows(nodes, depth, canModify, canEditItems) {
         var levelName = ddlHierLevelNames[item.levelNumber - 1] || ddlHierLevelNames[(depth < ddlHierLevelNames.length ? depth : ddlHierLevelNames.length - 1)] || '';
         var prefix = depth > 0 ? '└ ' : '';
 
-        html += '<tr>' +
+        html += '<tr' + (item.isActive ? '' : ' class="ddl-item-row-inactive"') + '>' +
             '<td style="padding-right:' + (12 + indent) + 'px;font-weight:' + (depth === 0 ? '800' : '600') + ';">' +
                 '<span style="color:var(--gray-400);font-family:monospace;">' + prefix + '</span>' + esc(item.itemText) +
             '</td>' +
@@ -1026,7 +1025,7 @@ function ddlPopulateHierParentDropdown(level) {
 
     var html = '<option value="">-- اختر --</option>';
     items.forEach(function (item) {
-        html += '<option value="' + item.id + '">' + esc(item.itemText) + '</option>';
+        html += '<option value="' + item.id + '">' + esc(item.itemText) + (item.isActive ? '' : ' (معطل)') + '</option>';
     });
     sel.innerHTML = html;
 }

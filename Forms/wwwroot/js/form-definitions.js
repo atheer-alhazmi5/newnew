@@ -155,6 +155,7 @@ let fdIsAdmin       = false;
 let fdStep          = 1;
 let fdEditId        = null;
 let fdRejectId      = null;
+let fdApproveId     = null;
 let fdDeleteId      = null;
 let fdFields        = [];          // working field list
 let fdFieldDragFromId = null;      // drag & drop reorder (field id)
@@ -3693,6 +3694,7 @@ function fdGetPropsSummary(f) {
 const fdWizModal  = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('fdWizardModal'));
 const fdDetModal  = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('fdDetailsModal'));
 const fdRejModal  = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('fdRejectModal'));
+const fdApprModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('fdApproveModal'));
 const fdDelModal  = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('fdDeleteModal'));
 
 // ─── LOAD / RENDER TABLE ──────────────────────────────────────────────────────
@@ -3817,7 +3819,7 @@ function fdActions(f) {
     if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-send" onclick="fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`;
     if (fdIsAdmin && f.status === 'pending') {
-        h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`;
+        h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdShowApprove(${f.id},'${esc(f.name)}')"><i class="bi bi-check-lg"></i> اعتماد</button>`;
         h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
     }
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
@@ -5182,15 +5184,21 @@ async function fdSendApproval(id) {
     if (!confirm('إرسال للاعتماد؟')) return;
     try { const r=await apiFetch('/FormDefinitions/SubmitForApproval','POST',{id}); if(r.success){showToast('تم الإرسال','success');fdLoad();} else showToast(r.message,'error'); } catch { showToast('خطأ','error'); }
 }
-async function fdApprove(id) {
-    if (!confirm('اعتماد النموذج؟')) return;
+function fdShowApprove(id, name) {
+    fdApproveId = id;
+    document.getElementById('fdApproveName').textContent = name;
+    document.getElementById('fdApproveSub').textContent = `النموذج: ${name}`;
+    fdApprModal().show();
+}
+async function fdSubmitApprove() {
     try {
-        const r = await apiFetch('/FormDefinitions/ApproveFormDefinition','POST',{id});
+        const r = await apiFetch('/FormDefinitions/ApproveFormDefinition', 'POST', { id: fdApproveId });
         if (r.success) {
-            showToast('تم اعتماد النموذج بنجاح. يمكنك الآن التحكم بتفعيله من عمود التفعيل.','success');
+            showToast('تم اعتماد النموذج بنجاح. يمكنك الآن التحكم بتفعيله من عمود التفعيل.', 'success');
+            fdApprModal().hide();
             fdLoad();
-        } else showToast(r.message,'error');
-    } catch { showToast('خطأ','error'); }
+        } else showToast(r.message, 'error');
+    } catch { showToast('خطأ', 'error'); }
 }
 function fdShowReject(id,name) { fdRejectId=id; document.getElementById('fdRejectSub').textContent=`النموذج: ${name}`; document.getElementById('fdRejectReason').value=''; fdRejModal().show(); }
 async function fdSubmitReject() {

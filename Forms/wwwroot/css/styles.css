@@ -482,6 +482,21 @@ a {
     white-space: nowrap;
 }
 
+.sidebar-label {
+    cursor: default;
+    pointer-events: none;
+}
+
+    .sidebar-label:hover {
+        color: var(--gray-500);
+        background: transparent;
+    }
+
+        .sidebar-label:hover .sidebar-icon {
+            background: var(--gray-100);
+            color: var(--gray-400);
+        }
+
 /* Sidebar Expandable Group */
 .sidebar-group {
     position: relative;

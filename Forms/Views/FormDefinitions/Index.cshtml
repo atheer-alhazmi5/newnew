@@ -11,6 +11,7 @@
 .fd-modal-header.edit    { background:var(--sa-800); }
 .fd-modal-header.details { background:var(--info-700); }
 .fd-modal-header.danger  { background:var(--error-600); }
+.fd-modal-header.success { background:var(--success-600); }
 .fd-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
 .fd-modal-header .btn-close-x:hover { color:#fff; }
 .fd-modal-title    { color:#fff; font-weight:800; font-size:20px; margin:0; }
@@ -393,6 +394,31 @@
             </div>
             <div class="fd-modal-footer" style="justify-content:center;gap:10px;">
                 <button type="button" class="fd-save-btn" style="background:var(--error-600);" id="fdSectionDeleteOk"><i class="bi bi-trash3"></i> حذف</button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- =================== APPROVE MODAL =================== -->
+<div class="modal fade" id="fdApproveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header success">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تأكيد الاعتماد</h5>
+                <div class="fd-modal-subtitle" id="fdApproveSub">سيتم اعتماد النموذج ويمكنك التحكم بتفعيله لاحقاً</div>
+            </div>
+            <div class="fd-modal-body">
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">
+                    هل أنت متأكد من اعتماد النموذج <strong id="fdApproveName"></strong>؟
+                </p>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--success-600);" onclick="fdSubmitApprove()">
+                    <i class="bi bi-check-lg"></i> اعتماد
+                </button>
                 <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>

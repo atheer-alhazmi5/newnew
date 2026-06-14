@@ -5,6 +5,67 @@ var dashLoaded = { summary: false, profile: false, delegations: false, audit: fa
 var dashDelAll = [];
 var dashDelMeId = null;
 var dashAlAll = [];
+var dashAlDetailModal = null;
+
+var dashAlBadgeMap = {
+    'تسجيل دخول': 'dash-al-badge-login',
+    'تسجيل خروج': 'dash-al-badge-logout',
+    'إضافة مستخدم': 'dash-al-badge-add',
+    'إضافة مستفيد': 'dash-al-badge-add',
+    'إضافة وحدة تنظيمية': 'dash-al-badge-add',
+    'إضافة تصنيف': 'dash-al-badge-add',
+    'إضافة صنف نموذج': 'dash-al-badge-add',
+    'إضافة نوع نموذج': 'dash-al-badge-add',
+    'إضافة حالة نموذج': 'dash-al-badge-add',
+    'إضافة جدول جاهز': 'dash-al-badge-add',
+    'إضافة قائمة منسدلة': 'dash-al-badge-add',
+    'تفعيل مستخدم': 'dash-al-badge-activate',
+    'تعطيل مستخدم': 'dash-al-badge-deactivate',
+    'تعديل دور مستخدم': 'dash-al-badge-role',
+    'تحديث مستفيد': 'dash-al-badge-edit',
+    'تحديث وحدة تنظيمية': 'dash-al-badge-edit',
+    'تحديث تصنيف': 'dash-al-badge-edit',
+    'تحديث صنف نموذج': 'dash-al-badge-edit',
+    'تحديث نوع نموذج': 'dash-al-badge-edit',
+    'تحديث حالة نموذج': 'dash-al-badge-edit',
+    'تحديث جدول جاهز': 'dash-al-badge-edit',
+    'تحديث قائمة منسدلة': 'dash-al-badge-edit',
+    'حذف مستفيد': 'dash-al-badge-delete',
+    'حذف وحدة تنظيمية': 'dash-al-badge-delete',
+    'حذف تصنيف': 'dash-al-badge-delete',
+    'حذف صنف نموذج': 'dash-al-badge-delete',
+    'حذف نوع نموذج': 'dash-al-badge-delete',
+    'حذف حالة نموذج': 'dash-al-badge-delete',
+    'حذف جدول جاهز': 'dash-al-badge-delete',
+    'حذف قائمة منسدلة': 'dash-al-badge-delete',
+    'إرسال نموذج': 'dash-al-badge-add',
+    'تعبئة نموذج': 'dash-al-badge-edit',
+    'اعتماد نموذج': 'dash-al-badge-activate',
+    'حفظ التأشير والتوقيع': 'dash-al-badge-edit'
+};
+
+var dashAlIconMap = {
+    'تسجيل دخول': 'bi-box-arrow-in-right',
+    'تسجيل خروج': 'bi-box-arrow-left',
+    'إضافة': 'bi-plus-circle',
+    'تفعيل': 'bi-check-circle',
+    'تعطيل': 'bi-slash-circle',
+    'تعديل': 'bi-pencil-square',
+    'تحديث': 'bi-pencil-square',
+    'حذف': 'bi-trash',
+    'إرسال': 'bi-send',
+    'تعبئة': 'bi-pencil',
+    'اعتماد': 'bi-check2-circle',
+    'حفظ': 'bi-check-lg'
+};
+
+var dashAlOpBadgeMap = {
+    add: 'dash-al-op-badge-add',
+    update: 'dash-al-op-badge-update',
+    delete: 'dash-al-op-badge-delete',
+    status: 'dash-al-op-badge-status',
+    other: 'dash-al-op-badge-other'
+};
 
 function dashEsc(s) {
     if (typeof esc === 'function') return esc(s);
@@ -41,7 +102,80 @@ function dashSelectTab(name) {
 }
 
 function dashInit() {
+    var modalEl = document.getElementById('dashAlDetailModal');
+    if (modalEl) dashAlDetailModal = bootstrap.Modal.getOrCreateInstance(modalEl);
     dashLoadSummary();
+}
+
+function dashAlGetActionIcon(action) {
+    var act = action || '';
+    for (var key in dashAlIconMap) {
+        if (Object.prototype.hasOwnProperty.call(dashAlIconMap, key) && act.indexOf(key) === 0) {
+            return dashAlIconMap[key];
+        }
+    }
+    return 'bi-activity';
+}
+
+function dashAlDetailRow(label, val) {
+    return '<div class="dash-al-detail-row"><div class="dash-al-detail-label">' + dashEsc(label) + '</div><div class="dash-al-detail-value">' + val + '</div></div>';
+}
+
+async function dashAlShowDetail(id) {
+    if (!dashAlDetailModal) {
+        var modalEl = document.getElementById('dashAlDetailModal');
+        if (!modalEl) return;
+        dashAlDetailModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    }
+    var body = document.getElementById('dashAlDetailBody');
+    if (body) body.innerHTML = '<div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>';
+    dashAlDetailModal.show();
+
+    var r = await apiFetch('/Settings/GetAuditLogDetail?id=' + encodeURIComponent(id));
+    if (!r || !r.success) {
+        if (body) body.innerHTML = '<div class="alert alert-danger mb-0">' + dashEsc(r && r.message ? r.message : 'تعذّر تحميل التفاصيل') + '</div>';
+        return;
+    }
+
+    var d = r.data;
+    var opCls = dashAlOpBadgeMap[d.operationType] || dashAlOpBadgeMap.other;
+    var titleEl = document.getElementById('dashAlDetailModalTitle');
+    if (titleEl) titleEl.textContent = d.action || 'تفاصيل العملية';
+
+    var html = '';
+    if (d.entityNote) {
+        html += '<div class="dash-al-detail-note"><i class="bi bi-info-circle"></i> ' + dashEsc(d.entityNote) + '</div>';
+    }
+
+    html += '<div class="dash-al-detail-section"><div class="dash-al-detail-section-title"><i class="bi bi-lightning-fill"></i> ملخص العملية</div><div class="dash-al-detail-grid">';
+    html += dashAlDetailRow('نوع العملية', '<span class="' + opCls + '">' + dashEsc(d.operationTypeLabel || '—') + '</span>');
+    html += dashAlDetailRow('العملية', dashEsc(d.action || '—'));
+    html += dashAlDetailRow('نوع العنصر', dashEsc(d.entityTypeLabel || d.entityType || '—'));
+    if (d.entityId) html += dashAlDetailRow('معرف العنصر', dashEsc(d.entityId));
+    if (d.details) html += dashAlDetailRow('ملخص إضافي', dashEsc(d.details));
+    html += '</div></div>';
+
+    html += '<div class="dash-al-detail-section"><div class="dash-al-detail-section-title"><i class="bi bi-person-fill"></i> المنفِّذ</div><div class="dash-al-detail-grid">';
+    html += dashAlDetailRow('اسم المستفيد', dashEsc(d.userName || '—'));
+    html += dashAlDetailRow('رقم الهوية', dashEsc(d.nationalId || '—'));
+    html += dashAlDetailRow('الوحدة التنظيمية', dashEsc(d.organizationalUnit || '—'));
+    html += dashAlDetailRow('تاريخ ووقت العملية', '<span style="direction:ltr;unicode-bidi:plaintext;">' + dashEsc(d.createdAt || '—') + '</span>');
+    html += '</div></div>';
+
+    html += '<div class="dash-al-detail-section"><div class="dash-al-detail-section-title"><i class="bi bi-pc-display"></i> بيانات الجلسة</div><div class="dash-al-detail-grid">';
+    html += dashAlDetailRow('المتصفح', dashEsc(d.browser || '—'));
+    html += dashAlDetailRow('عنوان IP', '<span class="dash-al-ip">' + dashEsc(d.ipAddress || '—') + '</span>');
+    html += dashAlDetailRow('نظام التشغيل', dashEsc(d.operatingSystem || '—'));
+    html += '</div></div>';
+
+    var fields = d.fields || [];
+    if (fields.length) {
+        html += '<div class="dash-al-detail-section"><div class="dash-al-detail-section-title"><i class="bi bi-database-fill"></i> بيانات العملية</div><div class="dash-al-detail-grid">';
+        fields.forEach(function (f) { html += dashAlDetailRow(f.label, dashEsc(f.value || '—')); });
+        html += '</div></div>';
+    }
+
+    if (body) body.innerHTML = html;
 }
 
 function dashSetKpi(valId, barId, val, maxVal) {
@@ -505,9 +639,9 @@ function dashDelFiltered() {
         if (type === 'delegatee' && !isDelegatee) return false;
 
         if (org) {
-            var ou = isDelegator
+            var ou = (type === 'delegatee' || (!type && isDelegatee && !isDelegator))
                 ? (d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '')
-                : (d.delegateeOrgUnitName || d.DelegateeOrgUnitName || '');
+                : (d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '');
             if (ou !== org) return false;
         }
         if (st && (d.statusCode || d.StatusCode || '').toLowerCase() !== st) return false;
@@ -536,8 +670,8 @@ function dashDelRenderTable(bodyId, rows, mode) {
             person = d.delegateeName || d.DelegateeName || '—';
             ou = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '—';
         } else {
-            person = d.delegateeName || d.DelegateeName || '—';
-            ou = d.delegateeOrgUnitName || d.DelegateeOrgUnitName || '—';
+            person = d.delegatorName || d.DelegatorName || '—';
+            ou = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '—';
         }
 
         html += '<tr>'
@@ -627,9 +761,15 @@ function dashAlApplyFilters() {
         return;
     }
     body.innerHTML = filtered.map(function (row, idx) {
+        var action = row.action || '—';
+        var badgeCls = dashAlBadgeMap[action] || 'dash-al-badge-default';
+        var actionIcon = dashAlGetActionIcon(action);
+        var actionCell = row.id
+            ? '<button type="button" class="dash-al-badge dash-al-action-link ' + badgeCls + '" onclick="dashAlShowDetail(' + row.id + ')" title="عرض تفاصيل العملية"><i class="bi ' + actionIcon + '"></i> ' + dashEsc(action) + '</button>'
+            : '<span class="dash-al-badge ' + badgeCls + '">' + dashEsc(action) + '</span>';
         return '<tr>'
             + '<td>' + (idx + 1) + '</td>'
-            + '<td><span class="dash-al-badge">' + dashEsc(row.action || '—') + '</span></td>'
+            + '<td>' + actionCell + '</td>'
             + '<td dir="ltr">' + dashEsc(row.createdAt || '—') + '</td>'
             + '<td>' + dashEsc(row.browser || '—') + '</td>'
             + '<td><span class="dash-al-ip">' + dashEsc(row.ipAddress || '—') + '</span></td>'
@@ -658,6 +798,7 @@ async function dashLoadAudit() {
     dashLoaded.audit = true;
     dashAlAll = (r.data || []).map(function (x) {
         return {
+            id: x.id != null ? x.id : x.Id,
             action: x.action || x.Action,
             createdAt: x.createdAt || x.CreatedAt,
             browser: x.browser || x.Browser,

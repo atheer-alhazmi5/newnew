@@ -102,3 +102,7 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/form_definition_versions.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/procedure_action_types.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/outbox_requests.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/support_tickets.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/system_feedbacks.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/user_guide_items.json
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net8.0/Data/user_notes.json

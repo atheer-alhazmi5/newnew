@@ -58,6 +58,31 @@
 .dash-table tbody td { vertical-align:middle; font-size:13px; padding:12px 14px; text-align:center; border-bottom:1px solid var(--gray-100); }
 .dash-table tbody tr:hover { background:var(--sa-25); }
 .dash-al-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; background:var(--gray-100); color:var(--gray-700); }
+.dash-al-action-link { border:none; cursor:pointer; font-family:inherit; transition:transform .12s,opacity .12s; }
+.dash-al-action-link:hover { opacity:.88; transform:scale(1.03); }
+.dash-al-badge-login { background:#ECFDF3; color:#067647; }
+.dash-al-badge-logout { background:#FEF3F2; color:#B42318; }
+.dash-al-badge-add { background:#EFF8FF; color:#175CD3; }
+.dash-al-badge-activate { background:#ECFDF3; color:#067647; }
+.dash-al-badge-deactivate { background:#FFF6ED; color:#B93815; }
+.dash-al-badge-role { background:#F4F3FF; color:#5925DC; }
+.dash-al-badge-edit { background:#FFF6ED; color:#B93815; }
+.dash-al-badge-delete { background:#FEF3F2; color:#B42318; }
+.dash-al-badge-default { background:var(--gray-100); color:var(--gray-700); }
+.dash-al-detail-section { margin-bottom:18px; }
+.dash-al-detail-section-title { font-size:12px; font-weight:700; color:var(--sa-700); text-transform:uppercase; letter-spacing:.4px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.dash-al-detail-section-title::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+.dash-al-detail-grid { display:grid; gap:0; }
+.dash-al-detail-row { display:flex; gap:12px; padding:9px 0; border-bottom:1px solid var(--gray-100); align-items:flex-start; }
+.dash-al-detail-row:last-child { border-bottom:none; }
+.dash-al-detail-label { min-width:140px; font-size:12px; font-weight:700; color:var(--gray-500); flex-shrink:0; }
+.dash-al-detail-value { flex:1; font-size:13px; color:var(--gray-800); text-align:right; word-break:break-word; }
+.dash-al-op-badge-add { background:#EFF8FF; color:#175CD3; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.dash-al-op-badge-update { background:#FFF6ED; color:#B93815; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.dash-al-op-badge-delete { background:#FEF3F2; color:#B42318; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.dash-al-op-badge-status { background:#F4F3FF; color:#5925DC; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.dash-al-op-badge-other { background:var(--gray-100); color:var(--gray-700); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.dash-al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius:10px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
 .dash-al-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
 .dash-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
 .dash-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
@@ -198,7 +223,7 @@
                 <h3 class="dash-section-title"><i class="bi bi-person-plus"></i> جدول مفوض له</h3>
                 <div class="card"><div class="card-body p-0"><div class="table-responsive">
                     <table class="table mb-0 dash-table"><thead><tr>
-                        <th style="width:50px;">ت</th><th>المرجع</th><th>المفوض له</th><th>الوحدة التنظيمية</th>
+                        <th style="width:50px;">ت</th><th>المرجع</th><th>المفوِّض</th><th>الوحدة التنظيمية</th>
                         <th>تاريخ البداية</th><th>تاريخ النهاية</th><th>سبب التفويض</th><th>المدة</th><th>الحالة</th>
                     </tr></thead><tbody id="dashDelDelegateeBody"><tr><td colspan="9" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr></tbody></table>
                 </div></div></div>
@@ -223,6 +248,26 @@
                     <th style="width:100px;">المتصفح</th><th style="width:130px;">عنوان IP</th><th style="width:120px;">نظام التشغيل</th>
                 </tr></thead><tbody id="dashAlBody"><tr><td colspan="6" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr></tbody></table>
             </div></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- تفاصيل العملية -->
+<div class="modal fade" id="dashAlDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--sa-700);border-radius:16px 16px 0 0;padding:16px 22px;">
+                <h5 class="modal-title" style="color:#fff;font-weight:700;font-size:15px;margin:0;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-info-circle-fill"></i> <span id="dashAlDetailModalTitle">تفاصيل العملية</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:22px;max-height:75vh;overflow-y:auto;" id="dashAlDetailBody">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:14px 22px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+            </div>
         </div>
     </div>
 </div>

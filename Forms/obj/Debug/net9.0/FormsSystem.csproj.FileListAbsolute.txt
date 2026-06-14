@@ -120,7 +120,6 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/FormsSystem.pdb
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/FormsSystem.genruntimeconfig.cache
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/ref/FormsSystem.dll
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/hz1aygsx0c-py16bmjgs1.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/system_feedbacks.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/support_tickets.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/user_notes.json
@@ -137,7 +136,8 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/rjd8yijjgf-ob65gwldix.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/br0nqy2wd4-51iaetbq35.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/gjgkpj3jc9-t1k3y050ji.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/bwwacshbdq-lxrfkf5rv8.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/p6oak9fj2v-9r8tz7epq1.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/z5w1pf0w5g-m2f0hw2ncj.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/kh6s4bfqim-4ggg92m3h9.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/hz1aygsx0c-hcfgb1hlex.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/kh6s4bfqim-7pjdxuvvq9.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/bwwacshbdq-r253p5dn81.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/z5w1pf0w5g-xopr5sbs9k.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/p6oak9fj2v-5nk0r6lq1e.gz

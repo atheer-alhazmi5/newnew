@@ -77,12 +77,15 @@ public class SettingsController : BaseController
     [HttpGet]
     public async Task<IActionResult> GetAuditLogDetail(int id)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated)
             return Json(new { success = false, message = "غير مصرح" });
 
         var log = await _ds.GetAuditLogByIdAsync(id);
         if (log == null)
             return Json(new { success = false, message = "السجل غير موجود" });
+
+        if (CurrentUserRole != "Admin" && log.UserId != CurrentUserId)
+            return Json(new { success = false, message = "غير مصرح" });
 
         var users = await _ds.ListUsersAsync();
         var nidByUserId = BuildNationalIdByUserId(users);
