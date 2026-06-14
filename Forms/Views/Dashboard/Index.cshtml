@@ -1,6 +1,6 @@
 @{
-    ViewBag.Title = "لوحة التحكم";
-    ViewBag.PageName = "لوحة التحكم";
+    ViewBag.Title = "لوحة المعلومات";
+    ViewBag.PageName = "لوحة المعلومات";
 }
 
 <style>
@@ -59,19 +59,26 @@
 .dash-table tbody tr:hover { background:var(--sa-25); }
 .dash-al-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; background:var(--gray-100); color:var(--gray-700); }
 .dash-al-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
-.dash-date-input { height:44px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; padding:8px 12px; font-family:'Cairo',sans-serif; }
+.dash-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
+.dash-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
+.dash-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
+.dash-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); }
+.dash-attach-preview-wrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+.dash-sign-section { margin-top:8px; padding-top:20px; border-top:1px solid var(--gray-200); }
+.dash-sign-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+.dash-sign-locked-note { font-size:12px; color:var(--gray-500); margin-bottom:12px; }
 @@media (max-width:992px) {
     .dash-chart-row { grid-template-columns:1fr; }
     .dash-profile-grid { grid-template-columns:1fr; }
     .dash-tab { min-width:120px; font-size:12px; padding:12px 8px; }
 }
 @@media (max-width:768px) {
-    .dash-fields { grid-template-columns:1fr; }
+    .dash-sign-grid { grid-template-columns:1fr; }
 }
 </style>
 
 <div class="dash-header">
-    <h2 class="page-title mb-0">لوحة التحكم</h2>
+    <h2 class="page-title mb-0">لوحة المعلومات</h2>
     <p class="dash-subtitle">مرحباً بك، @ViewBag.UserFullName — إدارة ملفك الشخصي ومتابعة نشاطك</p>
 </div>
 
@@ -79,7 +86,6 @@
     <div class="dash-tabs" id="dashTabs">
         <button type="button" class="dash-tab active" data-tab="summary" onclick="dashSelectTab('summary')"><i class="bi bi-speedometer2"></i> الملخص العام</button>
         <button type="button" class="dash-tab" data-tab="profile" onclick="dashSelectTab('profile')"><i class="bi bi-person-badge"></i> البيانات الأساسية</button>
-        <button type="button" class="dash-tab" data-tab="notifications" onclick="dashSelectTab('notifications')"><i class="bi bi-bell"></i> الإشعارات والتنبيهات</button>
         <button type="button" class="dash-tab" data-tab="delegations" onclick="dashSelectTab('delegations')"><i class="bi bi-arrow-left-right"></i> التفويضات</button>
         <button type="button" class="dash-tab" data-tab="audit" onclick="dashSelectTab('audit')"><i class="bi bi-clock-history"></i> سجل العمليات</button>
     </div>
@@ -88,7 +94,7 @@
     <div class="dash-panel active" id="dashPanelSummary">
         <div class="dash-panel-inner">
             <div class="row g-4 mb-2">
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="kpi-card" data-color="green">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
@@ -101,7 +107,7 @@
                         <div class="kpi-progress"><div class="kpi-progress-bar" id="dashKpiInboxBar" style="width:0%;background:var(--sa-500);"></div></div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="kpi-card" data-color="gold">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
@@ -114,20 +120,7 @@
                         <div class="kpi-progress"><div class="kpi-progress-bar" id="dashKpiOutboxBar" style="width:0%;background:var(--gold-500);"></div></div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="kpi-card" data-color="blue">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <div class="kpi-label">الإشعارات والتنبيهات</div>
-                                <div class="kpi-value" style="color:var(--info-700);" id="dashKpiNotif">0</div>
-                                <div class="kpi-sub">إجمالي</div>
-                            </div>
-                            <div class="kpi-icon" style="background:var(--info-100);color:var(--info-600);"><i class="bi bi-bell-fill"></i></div>
-                        </div>
-                        <div class="kpi-progress"><div class="kpi-progress-bar" id="dashKpiNotifBar" style="width:0%;background:var(--info-500);"></div></div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="kpi-card" data-color="green">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
@@ -162,14 +155,7 @@
         </div>
     </div>
 
-    <!-- 3: الإشعارات -->
-    <div class="dash-panel" id="dashPanelNotifications">
-        <div class="dash-panel-inner">
-            <div class="dash-soon"><i class="bi bi-bell"></i><h4>قريباً</h4></div>
-        </div>
-    </div>
-
-    <!-- 4: التفويضات -->
+    <!-- 3: التفويضات -->
     <div class="dash-panel" id="dashPanelDelegations">
         <div class="dash-panel-inner">
             <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
@@ -220,7 +206,7 @@
         </div>
     </div>
 
-    <!-- 5: سجل العمليات -->
+    <!-- 4: سجل العمليات -->
     <div class="dash-panel" id="dashPanelAudit">
         <div class="dash-panel-inner">
             <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">

@@ -124,7 +124,6 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/system_feedbacks.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/support_tickets.json
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/user_notes.json
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/kh6s4bfqim-bjgkkzmxmi.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/5i8wribs59-lu7hhy59pd.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/6iyas3euxo-vd3hifmq04.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/bin/Debug/net9.0/Data/user_guide_items.json
@@ -138,6 +137,7 @@
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/rjd8yijjgf-ob65gwldix.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/br0nqy2wd4-51iaetbq35.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/gjgkpj3jc9-t1k3y050ji.gz
-/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/z5w1pf0w5g-ufq8snr4mf.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/bwwacshbdq-lxrfkf5rv8.gz
 /Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/p6oak9fj2v-9r8tz7epq1.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/z5w1pf0w5g-m2f0hw2ncj.gz
+/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/obj/Debug/net9.0/compressed/kh6s4bfqim-4ggg92m3h9.gz

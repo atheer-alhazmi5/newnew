@@ -149,7 +149,6 @@ function fdInitOrgUnitFilterTree() {
         const wrap = document.querySelector('.bnf-filter-ou-wrap');
         const panel = document.getElementById('fdFilterOuPanel');
         if (wrap && panel && !panel.classList.contains('d-none') && !wrap.contains(e.target)) fdFilterOuClosePanel();
-        if (!e.target.closest('.fd-workflow-wrap')) fdCloseWorkflowMenus();
     });
 }
 let fdIsAdmin       = false;
@@ -3403,8 +3402,6 @@ function fdPagerNav(btn, direction) {
 
 if (typeof window !== 'undefined') {
     window.fdPagerNav = fdPagerNav;
-    window.fdCloseWorkflowMenus = fdCloseWorkflowMenus;
-    window.fdToggleWorkflowMenu = fdToggleWorkflowMenu;
     window.fdOnFieldDragStart = fdOnFieldDragStart;
     window.fdOnFieldDragEnd = fdOnFieldDragEnd;
     window.fdOnFieldDragOver = fdOnFieldDragOver;
@@ -3807,19 +3804,6 @@ function fdOwnershipBadge(ownership) {
     return `<span class="fd-owner-badge fd-owner-none">—</span>`;
 }
 
-function fdCloseWorkflowMenus() {
-    document.querySelectorAll('.fd-workflow-menu').forEach(m => m.classList.add('d-none'));
-}
-
-function fdToggleWorkflowMenu(id, ev) {
-    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-    const menu = document.getElementById('fdWfMenu-' + id);
-    if (!menu) return;
-    const wasOpen = !menu.classList.contains('d-none');
-    fdCloseWorkflowMenus();
-    if (!wasOpen) menu.classList.remove('d-none');
-}
-
 function fdActions(f) {
     let h = '<div class="fd-actions-wrap d-flex gap-1 justify-content-center flex-wrap align-items-center">';
     h += `<button class="fd-action-btn fd-action-btn-detail" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`;
@@ -3827,20 +3811,15 @@ function fdActions(f) {
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-edit" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`;
 
-    const wfItems = [];
-    if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
-        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-send" onclick="fdCloseWorkflowMenus();fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال للاعتماد</button>`);
-    if (fdIsAdmin && f.status === 'pending') {
-        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-approve" onclick="fdCloseWorkflowMenus();fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد النموذج</button>`);
-        wfItems.push(`<button type="button" class="fd-wf-item fd-wf-reject" onclick="fdCloseWorkflowMenus();fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض النموذج</button>`);
-    }
-    if (wfItems.length) {
-        h += `<div class="fd-workflow-wrap"><button type="button" class="fd-action-btn fd-action-btn-workflow" onclick="fdToggleWorkflowMenu(${f.id}, event)" title="إرسال واعتماد"><i class="bi bi-send-check"></i></button>`;
-        h += `<div class="fd-workflow-menu d-none" id="fdWfMenu-${f.id}">${wfItems.join('')}</div></div>`;
-    }
-
-    if (!isApproved)
+    if (isApproved)
         h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
+
+    if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
+        h += `<button class="fd-action-btn fd-action-btn-send" onclick="fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`;
+    if (fdIsAdmin && f.status === 'pending') {
+        h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`;
+        h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
+    }
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn fd-action-btn-delete" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`;
     return h + '</div>';
@@ -3922,6 +3901,7 @@ function fdRenderStep(data) {
 
     if (fdStep===1) {
         body.innerHTML = fdStep1Html(data);
+        fdWireTitleAppearanceControls();
         foot.innerHTML = `<div></div><div class="d-flex gap-2"><button class="fd-save-btn send" onclick="fdGoStep2()"><i class="bi bi-arrow-left-short"></i> التالي</button></div>`;
     } else if (fdStep===2) {
         body.innerHTML = fdStep2Html();
@@ -3984,15 +3964,29 @@ function fdStep1Html(d) {
             <div class="fd-form-group"><label><span class="required-star">*</span> اسم النموذج</label><input type="text" class="form-control" id="fdFName" value="${esc(d.name||'')}" placeholder="مثال: نموذج طلب إجازة"></div>
             <div class="fd-form-group"><label><span class="required-star">*</span> الملكية</label><select class="form-select" id="fdFOwnership"><option value="عام" ${ow==='عام'?'selected':''}>عام</option><option value="خاص" ${ow==='خاص'?'selected':''}>خاص</option></select></div>
         </div>
-        <div class="fd-form-row">
-            <div class="fd-form-group"><label>محاذاة عنوان النموذج في المعاينة</label><select class="form-select" id="fdFTitleAlign"><option value="right" ${alR}>يمين</option><option value="center" ${alC}>وسط</option><option value="left" ${alL}>يسار</option></select></div>
-            <div class="fd-form-group"><label style="margin-bottom:6px;"></label><div class="form-check" style="padding-top:10px;"><input class="form-check-input" type="checkbox" id="fdFTitleBold" ${ta.bold?'checked':''}><label class="form-check-label small" for="fdFTitleBold">غامق</label></div></div>
-            <div class="fd-form-group"><label>حجم خط العنوان (بكسل)</label><input type="number" class="form-control" id="fdFTitleFontPx" min="10" max="48" step="1" value="${Number(ta.fontSizePx)}"></div>
-        </div>
-        <div class="fd-form-row">
-            <div class="fd-form-group"><label>لون عنوان النموذج</label><div class="fd-color-picker-wrap"><input type="color" id="fdFTitleColor" value="${esc(ta.color)}" oninput="document.getElementById('fdFTitleColorHex').textContent=this.value"><div class="fd-color-hex" id="fdFTitleColorHex">${esc(ta.color)}</div></div></div>
-        </div>
         <div class="fd-form-row cols-1"><div class="fd-form-group"><label>الوصف العام</label><textarea class="form-control" id="fdFDesc" rows="2" placeholder="وصف مختصر">${esc(d.description||'')}</textarea></div></div>
+    </div>
+    <div class="fd-section">
+        <div class="fd-section-title"><i class="bi bi-type"></i> تنسيق عنوان النموذج</div>
+        <div class="fd-title-sec-card">
+            <div class="fd-title-sec-head">مظهر العنوان في المعاينة والطباعة</div>
+            <div class="fd-title-sec-body">
+                <div class="fd-title-sec-controls">
+                    <select class="form-select tp-mini-select" id="fdFTitleAlign">
+                        <option value="right" ${alR}>يمين</option>
+                        <option value="center" ${alC}>وسط</option>
+                        <option value="left" ${alL}>يسار</option>
+                    </select>
+                    <select class="form-select tp-mini-select" id="fdFTitleFontPx">${fdTitleFontSizeOptions(ta.fontSizePx)}</select>
+                    <input type="color" class="tp-mini-color" id="fdFTitleColor" value="${esc(ta.color)}" title="لون الخط">
+                    <label class="fd-title-bold-lbl"><input type="checkbox" id="fdFTitleBold" ${ta.bold?'checked':''}> غامق</label>
+                </div>
+                <div class="fd-title-preview-wrap">
+                    <div class="fd-title-preview-label">معاينة</div>
+                    <div class="fd-title-preview-box" id="fdTitlePreview"></div>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="fd-section">
         <div class="fd-section-title"><i class="bi bi-tags-fill"></i> التصنيف والنوع والقالب</div>
@@ -4133,7 +4127,51 @@ function fdDisplayLayoutColClass(layout) {
 
 /** مظهر عنوان النموذج داخل المعاينة / التعبئة / الطباعة (محفوظ في fieldsJson → meta.titleAppearance). */
 function fdDefaultTitleAppearance() {
-    return { align: 'right', bold: true, fontSizePx: 17, color: '#111827' };
+    return { align: 'right', bold: true, fontSizePx: 16, color: '#111827' };
+}
+
+const FD_TITLE_FONT_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 22, 24];
+
+function fdTitleFontSizeOptions(selectedPx) {
+    const sel = Number(selectedPx) || 16;
+    const pick = FD_TITLE_FONT_SIZES.includes(sel) ? sel : 16;
+    return FD_TITLE_FONT_SIZES.map(function (s) {
+        return `<option value="${s}" ${s === pick ? 'selected' : ''}>${s}px</option>`;
+    }).join('');
+}
+
+function fdReadTitleAppearanceFromDom() {
+    const align = document.getElementById('fdFTitleAlign')?.value || 'right';
+    const boldEl = document.getElementById('fdFTitleBold');
+    const bold = boldEl ? !!boldEl.checked : true;
+    let fontPx = parseInt(document.getElementById('fdFTitleFontPx')?.value || '16', 10);
+    if (!Number.isFinite(fontPx)) fontPx = 16;
+    if (!FD_TITLE_FONT_SIZES.includes(fontPx)) {
+        fontPx = FD_TITLE_FONT_SIZES.reduce(function (best, cur) {
+            return Math.abs(cur - fontPx) < Math.abs(best - fontPx) ? cur : best;
+        }, 16);
+    }
+    const color = document.getElementById('fdFTitleColor')?.value || '#111827';
+    return fdNormalizeTitleAppearance({ align: align, bold: bold, fontSizePx: fontPx, color: color });
+}
+
+function fdUpdateTitlePreview() {
+    const preview = document.getElementById('fdTitlePreview');
+    if (!preview) return;
+    const ta = fdReadTitleAppearanceFromDom();
+    const name = (document.getElementById('fdFName')?.value || '').trim() || 'اسم النموذج';
+    const tAlign = ta.align === 'center' ? 'center' : (ta.align === 'left' ? 'left' : 'right');
+    preview.innerHTML = `<div style="font-size:${ta.fontSizePx}px;font-weight:${ta.bold ? '700' : '400'};color:${ta.color};text-align:${tAlign};width:100%;line-height:1.5;">${esc(name)}</div>`;
+}
+
+function fdWireTitleAppearanceControls() {
+    ['fdFTitleAlign', 'fdFTitleFontPx', 'fdFTitleColor', 'fdFTitleBold', 'fdFName'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', fdUpdateTitlePreview);
+        if (id === 'fdFName' || id === 'fdFTitleColor') el.addEventListener('input', fdUpdateTitlePreview);
+    });
+    fdUpdateTitlePreview();
 }
 
 function fdNormalizeTitleAppearance(raw) {
@@ -4149,7 +4187,12 @@ function fdNormalizeTitleAppearance(raw) {
     else if (raw.bold === true || raw.bold === 'true' || raw.bold === '1' || raw.bold === 1) d.bold = true;
     let px = parseInt(raw.fontSizePx, 10);
     if (!Number.isFinite(px)) px = d.fontSizePx;
-    d.fontSizePx = Math.min(48, Math.max(10, px));
+    if (!FD_TITLE_FONT_SIZES.includes(px)) {
+        px = FD_TITLE_FONT_SIZES.reduce(function (best, cur) {
+            return Math.abs(cur - px) < Math.abs(best - px) ? cur : best;
+        }, d.fontSizePx);
+    }
+    d.fontSizePx = px;
     const c0 = String(raw.color || '').trim();
     if (/^#[0-9A-Fa-f]{6}$/.test(c0) || /^#[0-9A-Fa-f]{3}$/.test(c0)) d.color = c0;
     return d;
@@ -4291,13 +4334,13 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
     const hasTpl = !!tplData;
     const ta = fdNormalizeTitleAppearance(titleAppearanceOpt || fdDefaultTitleAppearance());
     const tAlign = ta.align === 'center' ? 'center' : (ta.align === 'left' ? 'left' : 'right');
-    const tWeight = ta.bold ? '800' : '400';
+    const tWeight = ta.bold ? '700' : '400';
     const tSizePx = `${ta.fontSizePx}px`;
     const tColor = ta.color || '#111827';
     const titleIntroHtml =
         `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
-            `<h5 style="font-size:${tSizePx};font-weight:${tWeight};color:${tColor};margin:0 0 4px;font-style:normal;text-align:${tAlign};">${esc(formName)}</h5>` +
-            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};">${esc(formDesc)}</p>` : '') +
+            `<div style="font-size:${tSizePx};font-weight:${tWeight};color:${tColor};margin:0 0 4px;line-height:1.5;text-align:${tAlign};width:100%;">${esc(formName)}</div>` +
+            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};line-height:1.5;">${esc(formDesc)}</p>` : '') +
         `</div>`;
 
     // ── fields HTML ──────────────────────────────────────────────────────────
@@ -5071,14 +5114,7 @@ function fdResetFieldForm() {
 
 // ─── COLLECT STEP 1 DATA ──────────────────────────────────────────────────────
 function fdCollect1() {
-    const align = document.getElementById('fdFTitleAlign')?.value || 'right';
-    const boldEl = document.getElementById('fdFTitleBold');
-    const bold = boldEl ? !!boldEl.checked : true;
-    let fontPx = parseInt(document.getElementById('fdFTitleFontPx')?.value || '17', 10);
-    if (!Number.isFinite(fontPx)) fontPx = 17;
-    fontPx = Math.min(48, Math.max(10, fontPx));
-    const color = document.getElementById('fdFTitleColor')?.value || '#111827';
-    const titleAppearance = fdNormalizeTitleAppearance({ align, bold, fontSizePx: fontPx, color });
+    const titleAppearance = fdReadTitleAppearanceFromDom();
     return {
         name:     (document.getElementById('fdFName')?.value||'').trim(),
         desc:     (document.getElementById('fdFDesc')?.value||'').trim(),

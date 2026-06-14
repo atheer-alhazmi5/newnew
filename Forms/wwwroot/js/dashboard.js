@@ -27,7 +27,6 @@ function dashSelectTab(name) {
     var map = {
         summary: 'dashPanelSummary',
         profile: 'dashPanelProfile',
-        notifications: 'dashPanelNotifications',
         delegations: 'dashPanelDelegations',
         audit: 'dashPanelAudit'
     };
@@ -61,10 +60,9 @@ async function dashLoadSummary() {
 
     dashLoaded.summary = true;
     var c = r.cards || {};
-    var maxCard = Math.max(c.inbox || 0, c.outbox || 0, c.notifications || 0, c.delegations || 0, 1);
+    var maxCard = Math.max(c.inbox || 0, c.outbox || 0, c.delegations || 0, 1);
     dashSetKpi('dashKpiInbox', 'dashKpiInboxBar', c.inbox || 0, maxCard);
     dashSetKpi('dashKpiOutbox', 'dashKpiOutboxBar', c.outbox || 0, maxCard);
-    dashSetKpi('dashKpiNotif', 'dashKpiNotifBar', c.notifications || 0, maxCard);
     dashSetKpi('dashKpiDel', 'dashKpiDelBar', c.delegations || 0, maxCard);
 
     dashRenderStatusChart(r.chart || {});
@@ -140,15 +138,23 @@ async function dashLoadProfile() {
     dashLoaded.profile = true;
 
     var p = r.profile || {};
+    var canEditSign = !!r.canEditEndorsementSignature;
     var photo = p.photoUrl
         ? '<img src="' + dashEsc(dashResolveUrl(p.photoUrl)) + '" alt="">'
         : '<i class="bi bi-person-fill"></i>';
 
     function signHtml(type, file) {
-        if (file) return '<img src="' + dashEsc(dashResolveUrl(file)) + '" alt="">';
+        if (file) {
+            var src = file.indexOf('data:') === 0 ? file : dashResolveUrl(file);
+            if (file.indexOf('data:image') === 0 || (!file.startsWith('data:') && /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(file)))
+                return '<img src="' + dashEsc(src) + '" alt="">';
+            return '<span class="badge bg-secondary">PDF</span>';
+        }
         if (type) return '<span class="text-muted">' + dashEsc(type) + '</span>';
         return '<span class="text-muted">—</span>';
     }
+
+    var signSectionHtml = dashBuildSignSectionHtml(p, canEditSign, signHtml);
 
     var roles = r.executorRoles || [];
     var rolesHtml = '';
@@ -172,10 +178,7 @@ async function dashLoadProfile() {
         + '<div class="lbl">البريد الإلكتروني</div><div class="val" dir="ltr" style="text-align:right;">' + dashEsc(p.email || '—') + '</div>'
         + '<div class="lbl">الهوية الوطنية</div><div class="val" dir="ltr" style="text-align:right;">' + dashEsc(p.nationalId || '—') + '</div>'
         + '</div>'
-        + '<div class="dash-sign-label"><i class="bi bi-pen"></i> التأشير</div>'
-        + '<div class="dash-sign-box">' + signHtml(p.endorsementType, p.endorsementFile) + '</div>'
-        + '<div class="dash-sign-label"><i class="bi bi-vector-pen"></i> التوقيع</div>'
-        + '<div class="dash-sign-box">' + signHtml(p.signatureType, p.signatureFile) + '</div>'
+        + signSectionHtml
         + '</div></div>'
         + '<div style="margin-top:28px;">'
         + '<h3 class="dash-section-title"><i class="bi bi-person-badge"></i> قائمة الأدوار التنفيذية</h3>'
@@ -184,6 +187,272 @@ async function dashLoadProfile() {
         + '<th style="width:50px;">ت</th><th>الدور</th><th>الوصف</th><th>الملكية</th>'
         + '</tr></thead><tbody>' + rolesHtml + '</tbody></table>'
         + '</div></div></div></div>';
+
+    if (canEditSign) {
+        var endTypeEl = document.getElementById('dashEndorsementType');
+        var sigTypeEl = document.getElementById('dashSignatureType');
+        if (endTypeEl) endTypeEl.value = 'مرفق';
+        if (sigTypeEl) sigTypeEl.value = 'مرفق';
+        dashWireSignSection();
+    }
+}
+
+function dashBuildSignSectionHtml(p, canEdit, signHtmlFn) {
+    if (canEdit) {
+        return '<div class="dash-sign-section">'
+            + '<div class="dash-sign-label"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
+            + '<p class="dash-sign-locked-note"><i class="bi bi-info-circle"></i> يمكن إضافة التأشير والتوقيع مرة واحدة فقط؛ بعد الحفظ لا يمكن تعديلهما.</p>'
+            + '<div class="dash-sign-grid">'
+            + '<div>'
+            + '<label class="form-label">التأشير</label>'
+            + '<select class="form-select" id="dashEndorsementType"><option value="مرفق">مرفق (صورة أو PDF)</option><option value="التوقيع بالقلم">التوقيع بالقلم</option></select>'
+            + '<div id="dashEndorsementFileWrap" class="mt-2"><label class="form-label small">رفع ملف التأشير</label>'
+            + '<input type="file" class="form-control" id="dashEndorsementFile" accept="image/*,.pdf">'
+            + '<div id="dashEndorsementPreview" class="dash-attach-preview-wrap mt-2" style="display:none;"></div></div>'
+            + '<div id="dashEndorsementCanvasWrap" class="mt-2" style="display:none;"><label class="form-label small">التوقيع الإلكتروني للتأشير</label>'
+            + '<div class="dash-sign-canvas-wrap"><canvas id="dashEndorsementCanvas" class="dash-sign-canvas" width="280" height="120"></canvas>'
+            + '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="dashClearCanvas(\'dashEndorsementCanvas\')">مسح</button></div></div>'
+            + '</div>'
+            + '<div>'
+            + '<label class="form-label">التوقيع</label>'
+            + '<select class="form-select" id="dashSignatureType"><option value="مرفق">مرفق (صورة أو PDF)</option><option value="التوقيع بالقلم">التوقيع بالقلم</option></select>'
+            + '<div id="dashSignatureFileWrap" class="mt-2"><label class="form-label small">رفع ملف التوقيع</label>'
+            + '<input type="file" class="form-control" id="dashSignatureFile" accept="image/*,.pdf">'
+            + '<div id="dashSignaturePreview" class="dash-attach-preview-wrap mt-2" style="display:none;"></div></div>'
+            + '<div id="dashSignatureCanvasWrap" class="mt-2" style="display:none;"><label class="form-label small">التوقيع الإلكتروني</label>'
+            + '<div class="dash-sign-canvas-wrap"><canvas id="dashSignatureCanvas" class="dash-sign-canvas" width="280" height="120"></canvas>'
+            + '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="dashClearCanvas(\'dashSignatureCanvas\')">مسح</button></div></div>'
+            + '</div></div>'
+            + '<div class="mt-3"><button type="button" class="btn btn-primary" id="dashSaveSignBtn" onclick="dashSaveEndorsementSignature()"><i class="bi bi-check-lg"></i> حفظ التأشير والتوقيع</button></div>'
+            + '<div id="dashSignError" class="alert alert-danger d-none mt-3" style="font-size:13px;"></div>'
+            + '</div>';
+    }
+
+    return '<div class="dash-sign-section dash-sign-section-locked">'
+        + '<div class="dash-sign-label"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
+
+        + '<div class="dash-sign-grid">'
+        + '<div><div class="dash-sign-label" style="margin-top:0;font-size:13px;"><i class="bi bi-pen"></i> التأشير</div>'
+        + '<div class="dash-sign-box">' + signHtmlFn(p.endorsementType, p.endorsementFile) + '</div></div>'
+        + '<div><div class="dash-sign-label" style="margin-top:0;font-size:13px;"><i class="bi bi-vector-pen"></i> التوقيع</div>'
+        + '<div class="dash-sign-box">' + signHtmlFn(p.signatureType, p.signatureFile) + '</div></div>'
+        + '</div></div>';
+}
+
+function dashWireSignSection() {
+    var endType = document.getElementById('dashEndorsementType');
+    var sigType = document.getElementById('dashSignatureType');
+    var endFile = document.getElementById('dashEndorsementFile');
+    var sigFile = document.getElementById('dashSignatureFile');
+    if (endType) endType.addEventListener('change', dashToggleEndorsement);
+    if (sigType) sigType.addEventListener('change', dashToggleSignature);
+    if (endFile) endFile.addEventListener('change', function (e) {
+        dashHandleFileUpload(e, 'dashEndorsementFile', 'dashEndorsementPreview');
+    });
+    if (sigFile) sigFile.addEventListener('change', function (e) {
+        dashHandleFileUpload(e, 'dashSignatureFile', 'dashSignaturePreview');
+    });
+    dashInitSignatureCanvas('dashEndorsementCanvas');
+    dashInitSignatureCanvas('dashSignatureCanvas');
+    dashToggleEndorsement();
+    dashToggleSignature();
+}
+
+function dashToggleEndorsement() {
+    var type = document.getElementById('dashEndorsementType');
+    var fileWrap = document.getElementById('dashEndorsementFileWrap');
+    var canvasWrap = document.getElementById('dashEndorsementCanvasWrap');
+    if (!type || !fileWrap || !canvasWrap) return;
+    if (type.value === 'مرفق') {
+        fileWrap.style.display = 'block';
+        canvasWrap.style.display = 'none';
+        var endFile = document.getElementById('dashEndorsementFile');
+        var endPreview = document.getElementById('dashEndorsementPreview');
+        if (endFile) endFile.value = '';
+        if (endPreview) endPreview.style.display = 'none';
+        dashClearCanvas('dashEndorsementCanvas');
+    } else {
+        fileWrap.style.display = 'none';
+        canvasWrap.style.display = 'block';
+        dashClearCanvas('dashEndorsementCanvas');
+    }
+}
+
+function dashToggleSignature() {
+    var type = document.getElementById('dashSignatureType');
+    var fileWrap = document.getElementById('dashSignatureFileWrap');
+    var canvasWrap = document.getElementById('dashSignatureCanvasWrap');
+    if (!type || !fileWrap || !canvasWrap) return;
+    if (type.value === 'مرفق') {
+        fileWrap.style.display = 'block';
+        canvasWrap.style.display = 'none';
+        var sigFile = document.getElementById('dashSignatureFile');
+        var sigPreview = document.getElementById('dashSignaturePreview');
+        if (sigFile) sigFile.value = '';
+        if (sigPreview) sigPreview.style.display = 'none';
+        dashClearCanvas('dashSignatureCanvas');
+    } else {
+        fileWrap.style.display = 'none';
+        canvasWrap.style.display = 'block';
+        dashClearCanvas('dashSignatureCanvas');
+    }
+}
+
+function dashHandleFileUpload(e, inputId, previewId) {
+    var f = e.target.files && e.target.files[0];
+    var input = document.getElementById(inputId);
+    var preview = document.getElementById(previewId);
+    if (!input || !preview) return;
+    if (f) {
+        var r = new FileReader();
+        r.onload = function () {
+            input.dataset.base64 = r.result;
+            if (f.type.indexOf('image') === 0) {
+                preview.innerHTML = '<img src="' + r.result + '" class="dash-attach-preview" alt="">';
+            } else {
+                preview.innerHTML = '<span class="badge bg-secondary">PDF</span>';
+            }
+            preview.style.display = 'flex';
+        };
+        r.readAsDataURL(f);
+    } else {
+        input.dataset.base64 = '';
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+    }
+}
+
+function dashInitSignatureCanvas(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    var drawing = false;
+    var lastX = 0, lastY = 0;
+
+    function getPos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
+        var clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        var clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    }
+    function start(e) { e.preventDefault(); drawing = true; var p = getPos(e); lastX = p.x; lastY = p.y; }
+    function draw(e) {
+        e.preventDefault();
+        if (!drawing) return;
+        var p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        lastX = p.x; lastY = p.y;
+    }
+    function end(e) { e.preventDefault(); drawing = false; }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseout', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', end, { passive: false });
+}
+
+function dashClearCanvas(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function dashGetCanvasDataUrl(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    return canvas ? canvas.toDataURL('image/png') : '';
+}
+
+function dashIsCanvasEmpty(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return true;
+    var ctx = canvas.getContext('2d');
+    var px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    for (var i = 3; i < px.length; i += 4) {
+        if (px[i] > 0) return false;
+    }
+    return true;
+}
+
+function dashGetEndorsementData() {
+    var typeEl = document.getElementById('dashEndorsementType');
+    if (!typeEl) return '';
+    if (typeEl.value === 'مرفق') {
+        var inp = document.getElementById('dashEndorsementFile');
+        return (inp && inp.dataset.base64) ? inp.dataset.base64 : '';
+    }
+    return dashGetCanvasDataUrl('dashEndorsementCanvas');
+}
+
+function dashGetSignatureData() {
+    var typeEl = document.getElementById('dashSignatureType');
+    if (!typeEl) return '';
+    if (typeEl.value === 'مرفق') {
+        var inp = document.getElementById('dashSignatureFile');
+        return (inp && inp.dataset.base64) ? inp.dataset.base64 : '';
+    }
+    return dashGetCanvasDataUrl('dashSignatureCanvas');
+}
+
+async function dashSaveEndorsementSignature() {
+    var errEl = document.getElementById('dashSignError');
+    var btn = document.getElementById('dashSaveSignBtn');
+    if (errEl) errEl.classList.add('d-none');
+
+    var endorsementType = document.getElementById('dashEndorsementType')?.value || 'مرفق';
+    var signatureType = document.getElementById('dashSignatureType')?.value || 'مرفق';
+    var endorsementFile = dashGetEndorsementData();
+    var signatureFile = dashGetSignatureData();
+
+    if (!String(endorsementFile || '').trim()) {
+        if (errEl) { errEl.textContent = endorsementType === 'مرفق' ? 'يرجى رفع ملف التأشير' : 'يرجى رسم التأشير'; errEl.classList.remove('d-none'); }
+        return;
+    }
+    if (endorsementType === 'التوقيع بالقلم' && dashIsCanvasEmpty('dashEndorsementCanvas')) {
+        if (errEl) { errEl.textContent = 'يرجى رسم التأشير'; errEl.classList.remove('d-none'); }
+        return;
+    }
+    if (!String(signatureFile || '').trim()) {
+        if (errEl) { errEl.textContent = signatureType === 'مرفق' ? 'يرجى رفع ملف التوقيع' : 'يرجى رسم التوقيع'; errEl.classList.remove('d-none'); }
+        return;
+    }
+    if (signatureType === 'التوقيع بالقلم' && dashIsCanvasEmpty('dashSignatureCanvas')) {
+        if (errEl) { errEl.textContent = 'يرجى رسم التوقيع'; errEl.classList.remove('d-none'); }
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    try {
+        var r = await apiFetch('/Dashboard/SaveMyEndorsementSignature', 'POST', {
+            endorsementType: endorsementType,
+            endorsementFile: endorsementFile,
+            signatureType: signatureType,
+            signatureFile: signatureFile
+        });
+        if (r && r.success) {
+            if (typeof showToast === 'function') showToast(r.message || 'تم الحفظ', 'success');
+            dashLoaded.profile = false;
+            await dashLoadProfile();
+        } else if (errEl) {
+            errEl.textContent = (r && r.message) || 'تعذّر الحفظ';
+            errEl.classList.remove('d-none');
+        }
+    } catch (e) {
+        if (errEl) { errEl.textContent = 'خطأ في الاتصال'; errEl.classList.remove('d-none'); }
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 function dashDelStatusLabel(code) {

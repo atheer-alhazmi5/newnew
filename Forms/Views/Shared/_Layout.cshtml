@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
 
         if (role == "Admin")
         {
-            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة التحكم", PathPrefix = "/Dashboard" });
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة المعلومات", PathPrefix = "/Dashboard" });
             items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
             items.Add(new SidebarItem { Url = "/WorkProcedures/Index", Icon = "bi-diagram-3-fill", Label = "إجراءات العمل", PathPrefix = "/WorkProcedures" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         // ممثل الوحدة التنظيمية: جميع الأقسام ما عدا الإعدادات العامة
         if (role == "Employee")
         {
-            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة القيادة", PathPrefix = "/Dashboard" });
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة المعلومات", PathPrefix = "/Dashboard" });
             items.Add(new SidebarItem { Url = "/FormDefinitions/Index", Icon = "bi-file-earmark-check-fill", Label = "النماذج المستخدمة", PathPrefix = "/FormDefinitions" });
             items.Add(new SidebarItem { Url = "/WorkProcedures/Index", Icon = "bi-diagram-3-fill", Label = "إجراءات العمل", PathPrefix = "/WorkProcedures" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
@@ -417,10 +417,10 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             return items;
         }
 
-        // مدير الوحدة التنظيمية: لوحة القيادة + صندوق الوارد + صندوق الصادر
+        // مدير الوحدة التنظيمية: لوحة المعلومات + صندوق الوارد + صندوق الصادر
         if (role == "Manager")
         {
-            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة القيادة", PathPrefix = "/Dashboard" });
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة المعلومات", PathPrefix = "/Dashboard" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
             items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send-fill", Label = "صندوق الصادر", PathPrefix = "/Outbox" });
             items.Add(new SidebarItem { Url = "/SystemEvaluation/Index", Icon = "bi-star-fill", Label = "تقييم النظام", PathPrefix = "/SystemEvaluation" });
@@ -428,10 +428,10 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
             return items;
         }
 
-        // موظف: لوحة القيادة + صندوق الوارد + صندوق الصادر
+        // موظف: لوحة المعلومات + صندوق الوارد + صندوق الصادر
         if (role == "Staff")
         {
-            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة القيادة", PathPrefix = "/Dashboard" });
+            items.Add(new SidebarItem { Url = "/Dashboard/Index", Icon = "bi-speedometer2", Label = "لوحة المعلومات", PathPrefix = "/Dashboard" });
             items.Add(new SidebarItem { Url = "/Inbox/Index", Icon = "bi-inbox-fill", Label = "صندوق الوارد", PathPrefix = "/Inbox" });
             items.Add(new SidebarItem { Url = "/Outbox/Index", Icon = "bi-send-fill", Label = "صندوق الصادر", PathPrefix = "/Outbox" });
             items.Add(new SidebarItem { Url = "/SystemEvaluation/Index", Icon = "bi-star-fill", Label = "تقييم النظام", PathPrefix = "/SystemEvaluation" });

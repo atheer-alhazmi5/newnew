@@ -16,8 +16,8 @@ public class DashboardController : BaseController
         var auth = RequireAuth();
         if (auth != null) return auth;
         SetViewBagUser(_ui);
-        ViewBag.PageName = "لوحة التحكم";
-        ViewBag.Title = "لوحة التحكم";
+        ViewBag.PageName = "لوحة المعلومات";
+        ViewBag.Title = "لوحة المعلومات";
         return View();
     }
 
@@ -66,6 +66,9 @@ public class DashboardController : BaseController
         var depts = await _ds.ListDepartmentsAsync();
         var orgUnitName = ResolveOrgUnitName(user.DepartmentId, beneficiary?.OrganizationalUnitId, depts, orgUnits);
         var roleInUnit = beneficiary?.RoleDisplayTable ?? user.RoleLabel;
+        var canEditEndorsementSignature = beneficiary != null
+            && string.IsNullOrWhiteSpace(beneficiary.EndorsementFile)
+            && string.IsNullOrWhiteSpace(beneficiary.SignatureFile);
 
         var executorRoles = beneficiary != null
             ? await _ds.ListExecutorRolesForBeneficiaryAsync(beneficiary.Id)
@@ -88,6 +91,7 @@ public class DashboardController : BaseController
                 signatureType = beneficiary?.SignatureType ?? "",
                 signatureFile = beneficiary?.SignatureFile ?? ""
             },
+            canEditEndorsementSignature,
             executorRoles = executorRoles.Select((r, idx) => new
             {
                 rowNum = idx + 1,
@@ -96,6 +100,48 @@ public class DashboardController : BaseController
                 r.Ownership
             }).ToList()
         });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SaveMyEndorsementSignature([FromBody] SaveMyEndorsementSignatureRequest req)
+    {
+        if (!IsAuthenticated)
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var user = await _ds.GetUserByIdAsync(CurrentUserId);
+        if (user == null)
+            return Json(new { success = false, message = "تعذّر تحميل بيانات المستخدم" });
+
+        var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+        if (beneficiary == null)
+            return Json(new { success = false, message = "لا يوجد سجل مستفيد مرتبط بحسابك" });
+
+        if (!string.IsNullOrWhiteSpace(beneficiary.EndorsementFile) || !string.IsNullOrWhiteSpace(beneficiary.SignatureFile))
+            return Json(new { success = false, message = "تم حفظ التأشير والتوقيع مسبقاً ولا يمكن تعديلهما" });
+
+        var endorsementType = (req.EndorsementType ?? "").Trim();
+        var signatureType = (req.SignatureType ?? "").Trim();
+        if (endorsementType != "مرفق" && endorsementType != "التوقيع بالقلم")
+            return Json(new { success = false, message = "نوع التأشير غير صالح" });
+        if (signatureType != "مرفق" && signatureType != "التوقيع بالقلم")
+            return Json(new { success = false, message = "نوع التوقيع غير صالح" });
+
+        var endorsementFile = (req.EndorsementFile ?? "").Trim();
+        var signatureFile = (req.SignatureFile ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(endorsementFile))
+            return Json(new { success = false, message = "التأشير مطلوب" });
+        if (string.IsNullOrWhiteSpace(signatureFile))
+            return Json(new { success = false, message = "التوقيع مطلوب" });
+
+        beneficiary.EndorsementType = endorsementType;
+        beneficiary.EndorsementFile = endorsementFile;
+        beneficiary.SignatureType = signatureType;
+        beneficiary.SignatureFile = signatureFile;
+
+        await _ds.UpdateBeneficiaryAsync(beneficiary);
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حفظ التأشير والتوقيع", "Beneficiary", beneficiary.Id.ToString(), beneficiary.FullName));
+
+        return Json(new { success = true, message = "تم حفظ التأشير والتوقيع بنجاح" });
     }
 
     [HttpGet]
@@ -133,4 +179,12 @@ public class DashboardController : BaseController
         var ou = orgUnits.FirstOrDefault(x => x.Id == ouId.Value);
         return ou?.Name?.Trim() ?? "";
     }
+}
+
+public class SaveMyEndorsementSignatureRequest
+{
+    public string? EndorsementType { get; set; }
+    public string? EndorsementFile { get; set; }
+    public string? SignatureType { get; set; }
+    public string? SignatureFile { get; set; }
 }

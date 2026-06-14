@@ -50,15 +50,22 @@
 .fd-action-btn-send:hover { background:var(--warning-50); }
 .fd-action-btn-version { border-color:var(--info-600); color:var(--info-600); background:#fff; }
 .fd-action-btn-version:hover { background:var(--info-50); }
-.fd-action-btn-workflow { border-color:var(--warning-600); color:var(--warning-700); background:#fff; min-width:36px; padding:5px 8px; }
-.fd-action-btn-workflow:hover { background:var(--warning-50); }
-.fd-workflow-wrap { position:relative; display:inline-flex; }
-.fd-workflow-menu { position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); min-width:168px; background:#fff; border:1px solid var(--gray-200); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:6px; z-index:20; display:flex; flex-direction:column; gap:4px; }
-.fd-wf-item { display:flex; align-items:center; gap:8px; width:100%; border:none; background:transparent; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; text-align:right; transition:background .12s; }
-.fd-wf-item:hover { background:var(--gray-50); }
-.fd-wf-item.fd-wf-send { color:var(--warning-700); }
-.fd-wf-item.fd-wf-approve { color:var(--success-700); }
-.fd-wf-item.fd-wf-reject { color:var(--error-600); }
+
+/* تنسيق عنوان النموذج — مطابق لإعداد الرأس في إدارة القوالب */
+.tp-mini-select { width:auto !important; font-size:12px !important; padding:6px 14px 6px 34px !important; border-radius:8px !important; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23666' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3E%3C/svg%3E") !important; background-repeat:no-repeat !important; background-position:left 10px center !important; background-size:11px !important; min-height:unset !important; height:auto !important; line-height:1.4 !important; text-align:right !important; appearance:none !important; -webkit-appearance:none !important; border:2px solid var(--gray-200); font-family:'Cairo',sans-serif; }
+.tp-mini-color { width:30px; height:30px; padding:2px; border:2px solid var(--gray-200); border-radius:8px; cursor:pointer; background:#fff; flex-shrink:0; }
+.tp-mini-color:hover { border-color:var(--sa-400); }
+.tp-mini-color::-webkit-color-swatch-wrapper { padding:0; }
+.tp-mini-color::-webkit-color-swatch { border:none; border-radius:6px; }
+.fd-title-sec-card { border:2px solid var(--gray-200); border-radius:12px; padding:14px; background:#fff; }
+.fd-title-sec-head { font-weight:700; font-size:13px; color:var(--sa-700); margin-bottom:10px; }
+.fd-title-sec-body { display:flex; flex-direction:column; gap:12px; }
+.fd-title-sec-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.fd-title-bold-lbl { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; cursor:pointer; margin:0; white-space:nowrap; }
+.fd-title-bold-lbl input { accent-color:var(--sa-600); width:16px; height:16px; }
+.fd-title-preview-wrap { border:2px solid var(--gray-200); border-radius:12px; overflow:hidden; background:#fff; }
+.fd-title-preview-label { font-size:11px; font-weight:700; color:var(--gray-500); padding:8px 12px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); }
+.fd-title-preview-box { min-height:52px; padding:12px 16px; display:flex; align-items:center; }
 
 /* Title color picker (matches templates) */
 .fd-color-picker-wrap { display:flex; align-items:center; gap:12px; }

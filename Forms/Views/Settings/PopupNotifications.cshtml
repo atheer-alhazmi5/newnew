@@ -295,7 +295,7 @@
                     <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
                     <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
                         <option value="landing">صفحة البداية (Landing)</option>
-                        <option value="dashboard">لوحة التحكم</option>
+                        <option value="dashboard">لوحة المعلومات</option>
                         <option value="login">صفحة تسجيل الدخول</option>
                     </select>
                 </div>
@@ -523,7 +523,7 @@ function pnOnDisplayLocationChange() {
     pnLastDisplayLocation = loc;
 }
 
-const LOC_LABELS = { landing:'صفحة البداية (Landing)', dashboard:'لوحة التحكم', login:'صفحة تسجيل الدخول' };
+const LOC_LABELS = { landing:'صفحة البداية (Landing)', dashboard:'لوحة المعلومات', login:'صفحة تسجيل الدخول' };
 const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
 const CT_ICONS   = { text:'bi-file-text', image:'bi-image', video:'bi-camera-video-fill' };
 const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };

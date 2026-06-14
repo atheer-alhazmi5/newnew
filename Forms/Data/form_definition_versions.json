@@ -167,5 +167,18 @@
     "CreatedAt": "2026-05-17T09:38:12.940954+03:00",
     "UpdatedBy": null,
     "UpdatedAt": null
+  },
+  {
+    "Id": 14,
+    "FormDefinitionId": 13,
+    "VersionNumber": 1,
+    "VersionName": "V:1.0",
+    "FieldsJson": "{\u0022sections\u0022:[{\u0022id\u0022:1,\u0022title\u0022:\u0022\u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0648\u0644\u0022}],\u0022fields\u0022:[{\u0022id\u0022:1781418274916,\u0022fieldType\u0022:\u0022\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0022,\u0022fieldName\u0022:\u0022\u0627\u062A\u0022,\u0022isRequired\u0022:true,\u0022isReadOnly\u0022:false,\u0022subName\u0022:\u0022\u0022,\u0022placeholder\u0022:\u0022\u0022,\u0022tooltipText\u0022:\u0022\u0022,\u0022displayLayout\u0022:\u0022\u0022,\u0022sortOrder\u0022:1,\u0022sectionId\u0022:1,\u0022propertiesJson\u0022:\u0022{\\\u0022subName\\\u0022:\\\u0022\\\u0022,\\\u0022defaultValue\\\u0022:\\\u0022\\\u0022,\\\u0022placeholder\\\u0022:\\\u0022\\\u0022,\\\u0022widthPx\\\u0022:\\\u0022\\\u0022,\\\u0022minLength\\\u0022:\\\u0022\\\u0022,\\\u0022maxLength\\\u0022:\\\u0022\\\u0022,\\\u0022readOnly\\\u0022:false}\u0022}],\u0022rules\u0022:[],\u0022meta\u0022:{\u0022titleAppearance\u0022:{\u0022align\u0022:\u0022right\u0022,\u0022bold\u0022:true,\u0022fontSizePx\u0022:16,\u0022color\u0022:\u0022#111827\u0022}}}",
+    "Status": "draft",
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-06-14T09:24:42.322042+03:00",
+    "UpdatedBy": null,
+    "UpdatedAt": null
   }
 ]
