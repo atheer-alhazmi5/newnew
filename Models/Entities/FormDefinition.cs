@@ -3,10 +3,13 @@ namespace FormsSystem.Models.Entities;
 public class FormDefinition
 {
     public int Id { get; set; }
+    /// <summary>المعرف المعروض للنموذج (FRM-0001 .. FRM-9999) — يُولّد تلقائياً عند الإنشاء.</summary>
+    public string PublicId { get; set; } = "";
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string Ownership { get; set; } = "عام"; // عام | خاص
-    public int CategoryId { get; set; }      // التصنيف التنظيمي
+    public int CategoryId { get; set; }      // قديم — للتوافق مع بيانات JSON السابقة
+    public int FormClassId { get; set; }      // أصناف النماذج (FormClass)
     public int FormTypeId { get; set; }       // نوع النموذج (FormSection)
     public int WorkspaceId { get; set; }
     public int TemplateId { get; set; }
@@ -14,7 +17,11 @@ public class FormDefinition
     public string TemplateNameSnapshot { get; set; } = "";
     public string TemplateColorSnapshot { get; set; } = "";
     public string TemplateHeaderJsonSnapshot { get; set; } = "[]";
+    public string TemplateHeaderBackgroundColorSnapshot { get; set; } = "";
+    public string TemplateHeaderBackgroundImageUrlSnapshot { get; set; } = "";
     public string TemplateFooterJsonSnapshot { get; set; } = "[]";
+    public string TemplateFooterBackgroundColorSnapshot { get; set; } = "";
+    public string TemplateFooterBackgroundImageUrlSnapshot { get; set; } = "";
     public int TemplateMarginTopSnapshot { get; set; } = 20;
     public int TemplateMarginBottomSnapshot { get; set; } = 20;
     public int TemplateMarginRightSnapshot { get; set; } = 20;

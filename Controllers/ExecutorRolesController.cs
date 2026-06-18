@@ -15,6 +15,14 @@ public class ExecutorRolesController : BaseController
         _ui = ui;
     }
 
+    private static bool HasAtLeastOneExecutorId(string? executorIds)
+    {
+        if (string.IsNullOrWhiteSpace(executorIds)) return false;
+        foreach (var p in executorIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (int.TryParse(p, out var n) && n > 0) return true;
+        return false;
+    }
+
     public IActionResult Index()
     {
         var auth = RequireAuth();
@@ -67,6 +75,7 @@ public class ExecutorRolesController : BaseController
             r.Id, r.Name, r.Description, r.Ownership,
             r.OrgUnitIds, r.ExecutorIds, r.Color,
             r.SortOrder, r.IsActive,
+            DeactivateReason = r.DeactivateReason ?? "",
             OrgUnitNames = ResolveNames(r.OrgUnitIds, ouMap),
             ExecutorNames = ResolveNames(r.ExecutorIds, benMap),
             ExecutorCount = string.IsNullOrWhiteSpace(r.ExecutorIds) ? 0 : r.ExecutorIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Length,
@@ -79,7 +88,7 @@ public class ExecutorRolesController : BaseController
             success = true,
             data = result,
             organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder, u.Level }).ToList(),
-            beneficiaries = beneficiaries.Where(b => b.IsActive).Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId }).ToList()
+            beneficiaries = beneficiaries.Where(b => b.IsActive).Select(b => new { b.Id, FullName = b.FullName, b.OrganizationalUnitId, b.IsUnitManager, RoleDisplay = b.RoleDisplay ?? "" }).ToList()
         });
     }
 
@@ -105,6 +114,25 @@ public class ExecutorRolesController : BaseController
                 .Where(n => !string.IsNullOrEmpty(n)));
         }
 
+        var executorIdList = (r.ExecutorIds ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => int.TryParse(s, out var n) ? n : (int?)null)
+            .Where(n => n.HasValue)
+            .Select(n => n!.Value)
+            .ToList();
+
+        var executorDetailRows = new List<object>();
+        var rowNum = 1;
+        foreach (var bid in executorIdList)
+        {
+            var ben = bens.FirstOrDefault(b => b.Id == bid);
+            var fn = ben?.FullName ?? "—";
+            var ouN = "—";
+            if (ben?.OrganizationalUnitId is int ouid && ouMap.TryGetValue(ouid, out var ouNm))
+                ouN = ouNm;
+            executorDetailRows.Add(new { index = rowNum++, executorName = fn, organizationalUnitName = ouN });
+        }
+
         return Json(new
         {
             success = true,
@@ -113,8 +141,10 @@ public class ExecutorRolesController : BaseController
                 r.Id, r.Name, r.Description, r.Ownership,
                 r.OrgUnitIds, r.ExecutorIds, r.Color,
                 r.SortOrder, r.IsActive,
+                DeactivateReason = r.DeactivateReason ?? "",
                 OrgUnitNames = Resolve(r.OrgUnitIds, ouMap),
                 ExecutorNames = Resolve(r.ExecutorIds, benMap),
+                ExecutorDetailRows = executorDetailRows,
                 r.CreatedBy, CreatedAt = r.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 r.UpdatedBy, UpdatedAt = r.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
             }
@@ -130,13 +160,23 @@ public class ExecutorRolesController : BaseController
             return Json(new { success = false, message = "اسم الدور مطلوب" });
         if (string.IsNullOrWhiteSpace(req.OrgUnitIds))
             return Json(new { success = false, message = "يجب اختيار الوحدة التنظيمية" });
+        if (!HasAtLeastOneExecutorId(req.ExecutorIds))
+            return Json(new { success = false, message = "يجب اختيار المنفذين" });
+
+        var deactivateErr = ValidateExecutorRoleDeactivateReason(req.IsActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
 
         var all = await _ds.ListExecutorRolesAsync();
+        var trimmedName = req.Name.Trim();
+        if (all.Any(x => string.Equals((x.Name ?? "").Trim(), trimmedName, StringComparison.Ordinal)))
+            return Json(new { success = false, message = "اسم الدور موجود مسبقاً" });
+
         var nextOrder = all.Count > 0 ? all.Max(r => r.SortOrder) + 1 : 1;
 
         var role = new ExecutorRole
         {
-            Name = req.Name.Trim(),
+            Name = trimmedName,
             Description = req.Description?.Trim() ?? "",
             Ownership = req.Ownership ?? "حصري",
             OrgUnitIds = req.OrgUnitIds ?? "",
@@ -144,6 +184,7 @@ public class ExecutorRolesController : BaseController
             Color = req.Color ?? "#25935F",
             SortOrder = nextOrder,
             IsActive = req.IsActive,
+            DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim(),
             CreatedBy = CurrentUserFullName
         };
 
@@ -163,7 +204,18 @@ public class ExecutorRolesController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم الدور مطلوب" });
 
-        r.Name = req.Name.Trim();
+        var allRoles = await _ds.ListExecutorRolesAsync();
+        var trimmedName = req.Name.Trim();
+        if (allRoles.Any(x => x.Id != req.Id && string.Equals((x.Name ?? "").Trim(), trimmedName, StringComparison.Ordinal)))
+            return Json(new { success = false, message = "اسم الدور موجود مسبقاً" });
+        if (!HasAtLeastOneExecutorId(req.ExecutorIds))
+            return Json(new { success = false, message = "يجب اختيار المنفذين" });
+
+        var deactivateErr = ValidateExecutorRoleDeactivateReason(req.IsActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
+
+        r.Name = trimmedName;
         r.Description = req.Description?.Trim() ?? "";
         r.Ownership = req.Ownership ?? r.Ownership;
         r.OrgUnitIds = req.OrgUnitIds ?? r.OrgUnitIds;
@@ -171,6 +223,7 @@ public class ExecutorRolesController : BaseController
         r.Color = req.Color ?? r.Color;
         if (req.SortOrder > 0) r.SortOrder = req.SortOrder;
         r.IsActive = req.IsActive;
+        r.DeactivateReason = req.IsActive ? "" : (req.DeactivateReason ?? "").Trim();
         r.UpdatedBy = CurrentUserFullName;
         r.UpdatedAt = DateTime.UtcNow;
 
@@ -188,13 +241,16 @@ public class ExecutorRolesController : BaseController
         var r = await _ds.GetExecutorRoleByIdAsync(req.Id);
         if (r == null) return Json(new { success = false, message = "الدور غير موجود" });
 
+        if (await _ds.IsExecutorRoleLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
+
         await _ds.DeleteExecutorRoleAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف دور منفذ", "ExecutorRole", req.Id.ToString(), r.Name));
         return Json(new { success = true, message = "تم حذف الدور بنجاح" });
     }
 
     [HttpPost]
-    public async Task<IActionResult> ToggleExecutorRole([FromBody] ExecutorRoleIdRequest req)
+    public async Task<IActionResult> ToggleExecutorRole([FromBody] ExecutorRoleToggleRequest req)
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin")
             return Json(new { success = false, message = "غير مصرح" });
@@ -202,11 +258,28 @@ public class ExecutorRolesController : BaseController
         var r = await _ds.GetExecutorRoleByIdAsync(req.Id);
         if (r == null) return Json(new { success = false, message = "الدور غير موجود" });
 
-        r.IsActive = !r.IsActive;
+        var newActive = !r.IsActive;
+        if (!newActive)
+        {
+            var deactivateErr = ValidateExecutorRoleDeactivateReason(false, req.DeactivateReason);
+            if (deactivateErr != null)
+                return Json(new { success = false, message = deactivateErr });
+        }
+
+        r.IsActive = newActive;
+        r.DeactivateReason = newActive ? "" : (req.DeactivateReason ?? "").Trim();
         r.UpdatedBy = CurrentUserFullName;
         r.UpdatedAt = DateTime.UtcNow;
         await _ds.UpdateExecutorRoleAsync(r);
         return Json(new { success = true, message = r.IsActive ? "تم تفعيل الدور" : "تم تعطيل الدور", isActive = r.IsActive });
+    }
+
+    private static string? ValidateExecutorRoleDeactivateReason(bool isActive, string? deactivateReason)
+    {
+        if (isActive) return null;
+        if (string.IsNullOrWhiteSpace(deactivateReason))
+            return "سبب التعطيل مطلوب عند اختيار حالة معطل";
+        return null;
     }
 }
 
@@ -219,6 +292,7 @@ public class ExecutorRoleRequest
     public string? ExecutorIds { get; set; }
     public string? Color { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? DeactivateReason { get; set; }
 }
 
 public class ExecutorRoleUpdateRequest : ExecutorRoleRequest
@@ -230,4 +304,10 @@ public class ExecutorRoleUpdateRequest : ExecutorRoleRequest
 public class ExecutorRoleIdRequest
 {
     public int Id { get; set; }
+}
+
+public class ExecutorRoleToggleRequest
+{
+    public int Id { get; set; }
+    public string? DeactivateReason { get; set; }
 }

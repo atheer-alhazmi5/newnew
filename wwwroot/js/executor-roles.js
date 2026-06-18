@@ -1,32 +1,82 @@
 /*  Executor Roles – Client Logic  */
 var erRoles = [], erOrgUnits = [], erBeneficiaries = [];
+var erFilterOuExpanded = {};
 var erOuExpandedC = {}, erOuExpandedE = {};
 var erSelectedOuIdsC = [], erSelectedOuIdsE = [];
 var erSelectedExecIdsC = [], erSelectedExecIdsE = [];
 
 function erEsc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+/** عرض رسالة تحقق/خطأ بنفس أسلوب مودالات النظام (بديل alert). المحتوى النصي يُمرَّر كما هو. */
+function erShowAlertMessage(msg) {
+    var textEl = document.getElementById('erAlertModalMessage');
+    if (textEl) textEl.textContent = msg != null ? String(msg) : '';
+    var modalEl = document.getElementById('erAlertModal');
+    if (!modalEl) return;
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (!inst) inst = new bootstrap.Modal(modalEl);
+    inst.show();
+}
+
+/** جدول تفاصيل المنفذين (ت / المنفذ / الوحدة التنظيمية) */
+function erBuildExecutorDetailsTableHtml(r) {
+    var rows = r.executorDetailRows || r.ExecutorDetailRows || [];
+    var body = '';
+    if (!rows.length) {
+        body = '<tr><td colspan="3" class="text-center text-muted" style="padding:14px;">—</td></tr>';
+    } else {
+        rows.forEach(function (row) {
+            var idx = row.index != null ? row.index : row.Index;
+            var en = row.executorName != null ? row.executorName : row.ExecutorName;
+            var ou = row.organizationalUnitName != null ? row.organizationalUnitName : row.OrganizationalUnitName;
+            body += '<tr><td style="text-align:center;font-weight:700;width:52px;">' + erEsc(String(idx)) + '</td><td>' + erEsc(en) + '</td><td>' + erEsc(ou) + '</td></tr>';
+        });
+    }
+    return '<div class="er-detail-exec-table-wrap"><table class="table table-bordered er-detail-exec-table mb-0" dir="rtl"><thead><tr><th scope="col">ت</th><th scope="col">المنفذ</th><th scope="col">الوحدة التنظيمية</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
+function erBenIsUnitManager(b) {
+    if (!b) return false;
+    if (b.isUnitManager === true || b.IsUnitManager === true) return true;
+    var rd = String(b.roleDisplay || b.RoleDisplay || '');
+    if (rd.indexOf('مدير وحدة') >= 0 || rd.indexOf('مدير الوحدة') >= 0) return true;
+    return false;
+}
+
+function erSyncDeactivateReasonVisibility(mode) {
+    var prefix = mode === 'c' ? 'erc' : 'ere';
+    var active = document.getElementById(prefix + 'IsActive');
+    var wrap = document.getElementById(prefix + 'DeactivateReasonWrap');
+    var reason = document.getElementById(prefix + 'DeactivateReason');
+    if (!active || !wrap) return;
+    if (active.checked) {
+        wrap.classList.add('d-none');
+        if (reason) {
+            reason.removeAttribute('required');
+            reason.classList.remove('is-invalid');
+        }
+    } else {
+        wrap.classList.remove('d-none');
+        if (reason) reason.setAttribute('required', 'required');
+    }
+}
+
+function erValidateDeactivateReason(mode) {
+    var prefix = mode === 'c' ? 'erc' : 'ere';
+    if (document.getElementById(prefix + 'IsActive').checked) return null;
+    if (!(document.getElementById(prefix + 'DeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
+
 /* ─── Data Loading ──────────────────────────────────────────── */
 async function erLoad() {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoles');
-    if (!res || !res.success) { document.getElementById('erBody').innerHTML = '<tr><td colspan="9" class="er-empty-state"><i class="bi bi-exclamation-circle"></i><p>خطأ في تحميل البيانات</p></td></tr>'; return; }
+    if (!res || !res.success) { document.getElementById('erBody').innerHTML = '<tr><td colspan="8" class="er-empty-state"><i class="bi bi-exclamation-circle"></i><p>خطأ في تحميل البيانات</p></td></tr>'; return; }
     erRoles = res.data || [];
     erOrgUnits = res.organizationalUnits || [];
     erBeneficiaries = res.beneficiaries || [];
-    erPopulateFilterOrgUnits();
     erRenderTable(erRoles);
-}
-
-function erPopulateFilterOrgUnits() {
-    var sel = document.getElementById('erFilterOrgUnit');
-    var val = sel.value;
-    sel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
-    erOrgUnits.forEach(function(u) {
-        var indent = '';
-        for (var i = 0; i < (u.level || 0); i++) indent += '\u00A0\u00A0';
-        sel.innerHTML += '<option value="' + u.id + '">' + indent + erEsc(u.name) + '</option>';
-    });
-    sel.value = val;
 }
 
 /* ─── Table Rendering ───────────────────────────────────────── */
@@ -35,7 +85,7 @@ function erRenderTable(data) {
     if (badge) badge.textContent = '(' + data.length + ')';
     var body = document.getElementById('erBody');
     if (!data.length) {
-        body.innerHTML = '<tr><td colspan="9" class="er-empty-state"><i class="bi bi-person-badge"></i><p>لا توجد أدوار منفذين</p></td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="er-empty-state"><i class="bi bi-person-badge"></i><p>لا توجد أدوار منفذين</p></td></tr>';
         return;
     }
     var html = '';
@@ -47,19 +97,19 @@ function erRenderTable(data) {
             ? '<span title="' + erEsc(r.executorNames) + '" style="cursor:help;">' + r.executorCount + ' منفذ</span>'
             : '<span class="text-muted">—</span>';
         html += '<tr>'
-            + '<td style="text-align:center;font-weight:700;">' + r.id + '</td>'
+            + '<td style="text-align:center;font-weight:700;">' + r.sortOrder + '</td>'
             + '<td style="text-align:right;font-weight:600;">' + erEsc(r.name) + '</td>'
             + '<td style="text-align:right;font-size:12px;color:var(--gray-500);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + erEsc(r.description) + '">' + (r.description || '—') + '</td>'
             + '<td style="text-align:center;">' + ownerBadge + '</td>'
             + '<td style="text-align:center;">' + execDisplay + '</td>'
-            + '<td style="text-align:center;">' + r.sortOrder + '</td>'
             + '<td style="text-align:center;"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span></td>'
-            + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(' + r.id + ')"><span class="er-slider"></span></label></td>'
+            + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(this,' + r.id + ')"><span class="er-slider"></span></label></td>'
             + '<td style="text-align:center;">'
-            + '<button class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')" title="تفاصيل"><i class="bi bi-eye-fill"></i></button> '
-            + '<button class="er-action-btn er-action-btn-edit" onclick="erShowEditModal(' + r.id + ')" title="تعديل"><i class="bi bi-pencil-fill"></i></button> '
-            + '<button class="er-action-btn er-action-btn-delete" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')" title="حذف"><i class="bi bi-trash3-fill"></i></button>'
-            + '</td></tr>';
+            + '<div class="er-action-cell-inner">'
+            + '<button type="button" class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>'
+            + '<button type="button" class="er-action-btn er-action-btn-edit" onclick="erShowEditModal(' + r.id + ')"><i class="bi bi-pencil-fill"></i> تحديث</button>'
+            + '<button type="button" class="er-action-btn er-action-btn-delete" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')"><i class="bi bi-trash3-fill"></i> حذف</button>'
+            + '</div></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -68,7 +118,7 @@ function erRenderTable(data) {
 function erApplyFilters() {
     var search = (document.getElementById('erSearchInput').value || '').trim().toLowerCase();
     var ownership = document.getElementById('erFilterOwnership').value;
-    var orgUnit = document.getElementById('erFilterOrgUnit').value;
+    var orgUnit = (document.getElementById('erFilterOrgUnit') && document.getElementById('erFilterOrgUnit').value) || '';
     var active = document.getElementById('erFilterActive').value;
     var filtered = erRoles.filter(function(r) {
         if (search && !(r.name || '').toLowerCase().includes(search) && !(r.description || '').toLowerCase().includes(search)) return false;
@@ -84,30 +134,154 @@ function erApplyFilters() {
 function erClearFilters() {
     document.getElementById('erSearchInput').value = '';
     document.getElementById('erFilterOwnership').value = '';
-    document.getElementById('erFilterOrgUnit').value = '';
+    var ouHid = document.getElementById('erFilterOrgUnit');
+    if (ouHid) ouHid.value = '';
+    var ouLab = document.getElementById('erFilterOuLabel');
+    if (ouLab) ouLab.textContent = 'الوحدة التنظيمية';
+    erFilterOuExpanded = {};
     document.getElementById('erFilterActive').value = '';
     erRenderTable(erRoles);
 }
 
+function erFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    erOrgUnits.forEach(function (u) { map[erOuUnitId(u)] = u; });
+    var u = map[selectId];
+    while (u) {
+        var pid = erOuParentId(u);
+        if (pid == null || pid === '' || !map[pid]) break;
+        erFilterOuExpanded[String(pid)] = true;
+        u = map[pid];
+    }
+}
+
+function erFilterOuTogglePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    var trig = document.getElementById('erFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = (document.getElementById('erFilterOrgUnit') || {}).value;
+        if (cur) erFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        erRenderFilterOuTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function erFilterOuClosePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    var trig = document.getElementById('erFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function erOuUnitId(u) { return u.id != null ? u.id : u.Id; }
+function erOuParentId(u) { return u.parentId != null ? u.parentId : u.ParentId; }
+function erOuSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
+function erOuName(u) { return u.name != null ? u.name : (u.Name || ''); }
+
+function erRenderFilterOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var uid = erOuUnitId(u);
+        var idStr = String(uid);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = sel === idStr ? ' is-selected' : '';
+        html += '<div class="er-filt-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + uid + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="er-filt-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="er-filt-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="er-filt-ou-tree-name flex-grow-1">' + erEsc(erOuName(u)) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += erRenderFilterOuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function erRenderFilterOuTreePanel() {
+    var panel = document.getElementById('erFilterOuPanel');
+    if (!panel) return;
+    if (!erOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = erOuBuildTreeMap();
+    var selectedId = (document.getElementById('erFilterOrgUnit') || {}).value;
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="er-filt-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="er-filt-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="er-filt-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += erRenderFilterOuTreeRows(byParent, '', 0, selectedId, erFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
 /* ─── Toggle Active ─────────────────────────────────────────── */
-async function erToggleActive(id) {
-    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id });
+async function erToggleActive(checkbox, id) {
+    if (!checkbox.checked) {
+        checkbox.checked = true;
+        var role = erRoles.find(function (r) { return r.id === id; });
+        document.getElementById('erDeactivateId').value = id;
+        document.getElementById('erDeactivateReason').value = '';
+        document.getElementById('erDeactivateName').textContent = role ? (role.name || '') : '';
+        new bootstrap.Modal(document.getElementById('erDeactivateModal')).show();
+        return;
+    }
+    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id, deactivateReason: '' });
     if (res && res.success) { await erLoad(); erApplyFilters(); }
-    else alert((res && res.message) || 'خطأ');
+    else {
+        checkbox.checked = false;
+        erShowAlertMessage((res && res.message) || 'خطأ');
+    }
+}
+
+async function erSubmitDeactivate() {
+    var id = parseInt(document.getElementById('erDeactivateId').value, 10);
+    var reason = (document.getElementById('erDeactivateReason').value || '').trim();
+    if (!reason) {
+        erShowAlertMessage('سبب التعطيل مطلوب عند اختيار حالة معطل');
+        return;
+    }
+    var res = await apiFetch('/ExecutorRoles/ToggleExecutorRole', 'POST', { id: id, deactivateReason: reason });
+    if (res && res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('erDeactivateModal'))?.hide();
+        await erLoad();
+        erApplyFilters();
+        if (typeof showToast === 'function') showToast(res.message || 'تم تعطيل الدور', 'success');
+    } else {
+        erShowAlertMessage((res && res.message) || 'خطأ');
+    }
 }
 
 /* ─── Org Unit Tree ─────────────────────────────────────────── */
 function erOuBuildTreeMap() {
     var ids = {};
-    erOrgUnits.forEach(function(u) { ids[u.id] = true; });
+    erOrgUnits.forEach(function (u) { ids[erOuUnitId(u)] = true; });
     var byParent = {};
-    erOrgUnits.forEach(function(u) {
-        var pk = (u.parentId && ids[u.parentId]) ? String(u.parentId) : '';
+    erOrgUnits.forEach(function (u) {
+        var p = erOuParentId(u);
+        var pk = (p != null && p !== '' && ids[p]) ? String(p) : '';
         if (!byParent[pk]) byParent[pk] = [];
         byParent[pk].push(u);
     });
-    Object.keys(byParent).forEach(function(k) {
-        byParent[k].sort(function(a,b) { return (a.sortOrder||0) - (b.sortOrder||0); });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = erOuSortOrder(a);
+            var sb = erOuSortOrder(b);
+            if (sa !== sb) return sa - sb;
+            return erOuName(a).localeCompare(erOuName(b), 'ar');
+        });
     });
     return byParent;
 }
@@ -115,22 +289,24 @@ function erOuBuildTreeMap() {
 function erOuRenderRows(byParent, parentKey, depth, selectedIds, expandedMap, multiSelect) {
     var rows = byParent[parentKey] || [];
     var html = '';
-    rows.forEach(function(u) {
-        var idStr = String(u.id);
-        var hasChildren = !!byParent[idStr];
+    rows.forEach(function (u) {
+        var uid = erOuUnitId(u);
+        var idStr = String(uid);
+        var childList = byParent[idStr] || [];
+        var hasChildren = childList.length > 0;
         var expanded = !!expandedMap[idStr];
-        var isSelected = selectedIds.indexOf(u.id) >= 0;
+        var isSelected = selectedIds.indexOf(uid) >= 0;
         var selClass = isSelected ? ' selected' : '';
-        html += '<div class="er-ou-tree-row' + selClass + '" data-ou-id="' + u.id + '" style="padding-right:' + (10 + depth * 18) + 'px;">';
+        html += '<div class="er-ou-tree-row' + selClass + '" data-ou-id="' + uid + '" style="padding-right:' + (10 + depth * 18) + 'px;">';
         if (hasChildren) {
             html += '<span class="er-ou-tree-exp" data-exp="' + idStr + '"><i class="bi bi-' + (expanded ? 'dash' : 'plus') + '-lg" style="font-size:.7rem;"></i></span>';
         } else {
             html += '<span class="er-ou-tree-exp-spacer"></span>';
         }
         if (multiSelect) {
-            html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' style="accent-color:var(--sa-600);width:15px;height:15px;cursor:pointer;" data-ou-check="' + u.id + '">';
+            html += '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' style="accent-color:var(--sa-600);width:15px;height:15px;cursor:pointer;" data-ou-check="' + uid + '">';
         }
-        html += '<span class="er-ou-tree-name">' + erEsc(u.name) + '</span></div>';
+        html += '<span class="er-ou-tree-name">' + erEsc(erOuName(u)) + '</span></div>';
         if (hasChildren && expanded) {
             html += erOuRenderRows(byParent, idStr, depth + 1, selectedIds, expandedMap, multiSelect);
         }
@@ -175,7 +351,9 @@ function erUpdateOuLabel(mode) {
         return;
     }
     var names = [];
-    erOrgUnits.forEach(function(u) { if (selectedIds.indexOf(u.id) >= 0) names.push(u.name); });
+    erOrgUnits.forEach(function (u) {
+        if (selectedIds.indexOf(erOuUnitId(u)) >= 0) names.push(erOuName(u));
+    });
     labelEl.textContent = names.join('، ');
     labelEl.style.color = 'var(--gray-800)';
 }
@@ -244,12 +422,13 @@ function erRenderExecutors(mode) {
     }
 
     var ouMap = {};
-    erOrgUnits.forEach(function(u) { ouMap[u.id] = u.name; });
+    erOrgUnits.forEach(function (u) { ouMap[erOuUnitId(u)] = erOuName(u); });
 
     var grouped = {};
     erBeneficiaries.forEach(function(b) {
-        if (selectedOuIds.indexOf(b.organizationalUnitId) < 0) return;
-        var dept = ouMap[b.organizationalUnitId] || 'أخرى';
+        var ouId = b.organizationalUnitId != null ? b.organizationalUnitId : b.OrganizationalUnitId;
+        if (selectedOuIds.indexOf(ouId) < 0) return;
+        var dept = ouMap[ouId] || 'أخرى';
         if (!grouped[dept]) grouped[dept] = [];
         grouped[dept].push(b);
     });
@@ -263,7 +442,7 @@ function erRenderExecutors(mode) {
 
     var cleanedExecIds = [];
     var allBenIds = [];
-    keys.forEach(function(k) { grouped[k].forEach(function(b) { allBenIds.push(b.id); }); });
+    keys.forEach(function(k) { grouped[k].forEach(function(b) { allBenIds.push(b.id != null ? b.id : b.Id); }); });
     selectedExecIds.forEach(function(id) { if (allBenIds.indexOf(id) >= 0) cleanedExecIds.push(id); });
     if (mode === 'c') erSelectedExecIdsC = cleanedExecIds; else erSelectedExecIdsE = cleanedExecIds;
 
@@ -272,8 +451,13 @@ function erRenderExecutors(mode) {
         html += '<div class="er-exec-dept-head"><i class="bi bi-building"></i> ' + erEsc(dept) + ' (' + grouped[dept].length + ')</div>';
         html += '<div class="er-exec-dept-items">';
         grouped[dept].forEach(function(b) {
-            var checked = cleanedExecIds.indexOf(b.id) >= 0 ? ' checked' : '';
-            html += '<label class="er-exec-item"><input type="' + inputType + '" name="' + inputName + '" value="' + b.id + '"' + checked + ' onchange="erExecChanged(\'' + mode + '\',' + b.id + ',this)"> ' + erEsc(b.fullName) + '</label>';
+            var bid = b.id != null ? b.id : b.Id;
+            var checked = cleanedExecIds.indexOf(bid) >= 0 ? ' checked' : '';
+            var isMgr = erBenIsUnitManager(b);
+            var mgrCls = isMgr ? ' er-exec-item-manager' : '';
+            var badge = isMgr ? '<span class="er-exec-mgr-badge">مدير وحده تنظيمية</span>' : '';
+            var fn = b.fullName || b.FullName || '';
+            html += '<label class="er-exec-item' + mgrCls + '"><input type="' + inputType + '" name="' + inputName + '" value="' + bid + '"' + checked + ' onchange="erExecChanged(\'' + mode + '\',' + bid + ',this)"> <span>' + erEsc(fn) + '</span>' + badge + '</label>';
         });
         html += '</div>';
     });
@@ -311,6 +495,8 @@ function erShowCreateModal() {
     document.getElementById('ercColor').value = '#25935F';
     document.getElementById('ercColorHex').textContent = '#25935F';
     document.getElementById('ercIsActive').checked = true;
+    document.getElementById('ercDeactivateReason').value = '';
+    erSyncDeactivateReasonVisibility('c');
     document.getElementById('ercDescription').value = '';
     erSelectedOuIdsC = [];
     erSelectedExecIdsC = [];
@@ -325,9 +511,19 @@ function erShowCreateModal() {
 
 async function erSubmitCreate() {
     var name = document.getElementById('ercName').value.trim();
-    if (!name) { alert('اسم الدور مطلوب'); return; }
-    if (!erSelectedOuIdsC.length) { alert('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!name) { erShowAlertMessage('اسم الدور مطلوب'); return; }
+    if (!erSelectedOuIdsC.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!erSelectedExecIdsC.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
 
+    var deactivateErr = erValidateDeactivateReason('c');
+    if (deactivateErr) { erShowAlertMessage(deactivateErr); return; }
+
+    if (erRoles.some(function (role) { return (role.name || '').trim() === name; })) {
+        erShowAlertMessage('اسم الدور موجود مسبقاً');
+        return;
+    }
+
+    var isActive = document.getElementById('ercIsActive').checked;
     var res = await apiFetch('/ExecutorRoles/AddExecutorRole', 'POST', {
         name: name,
         description: document.getElementById('ercDescription').value.trim(),
@@ -335,7 +531,8 @@ async function erSubmitCreate() {
         orgUnitIds: erSelectedOuIdsC.join(','),
         executorIds: erSelectedExecIdsC.join(','),
         color: document.getElementById('ercColor').value,
-        isActive: document.getElementById('ercIsActive').checked
+        isActive: isActive,
+        deactivateReason: isActive ? '' : document.getElementById('ercDeactivateReason').value.trim()
     });
 
     if (res && res.success) {
@@ -343,14 +540,14 @@ async function erSubmitCreate() {
         await erLoad();
         erApplyFilters();
     } else {
-        alert((res && res.message) || 'خطأ في الحفظ');
+        erShowAlertMessage((res && res.message) || 'خطأ في الحفظ');
     }
 }
 
 /* ─── Edit Modal ────────────────────────────────────────────── */
 async function erShowEditModal(id) {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoleDetails?id=' + id);
-    if (!res || !res.success || !res.data) { alert('خطأ في تحميل بيانات الدور'); return; }
+    if (!res || !res.success || !res.data) { erShowAlertMessage('خطأ في تحميل بيانات الدور'); return; }
     var r = res.data;
 
     document.getElementById('ereId').value = r.id;
@@ -359,6 +556,8 @@ async function erShowEditModal(id) {
     document.getElementById('ereColor').value = r.color;
     document.getElementById('ereColorHex').textContent = r.color;
     document.getElementById('ereIsActive').checked = r.isActive;
+    document.getElementById('ereDeactivateReason').value = String(r.deactivateReason || r.DeactivateReason || '').trim();
+    erSyncDeactivateReasonVisibility('e');
     document.getElementById('ereSortOrder').value = r.sortOrder;
     document.getElementById('ereDescription').value = r.description || '';
 
@@ -375,9 +574,19 @@ async function erShowEditModal(id) {
 async function erSubmitEdit() {
     var id = parseInt(document.getElementById('ereId').value);
     var name = document.getElementById('ereName').value.trim();
-    if (!name) { alert('اسم الدور مطلوب'); return; }
-    if (!erSelectedOuIdsE.length) { alert('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!name) { erShowAlertMessage('اسم الدور مطلوب'); return; }
+    if (!erSelectedOuIdsE.length) { erShowAlertMessage('يجب اختيار الوحدة التنظيمية'); return; }
+    if (!erSelectedExecIdsE.length) { erShowAlertMessage('يجب اختيار المنفذين'); return; }
 
+    var deactivateErr = erValidateDeactivateReason('e');
+    if (deactivateErr) { erShowAlertMessage(deactivateErr); return; }
+
+    if (erRoles.some(function (role) { return role.id !== id && (role.name || '').trim() === name; })) {
+        erShowAlertMessage('اسم الدور موجود مسبقاً');
+        return;
+    }
+
+    var isActive = document.getElementById('ereIsActive').checked;
     var res = await apiFetch('/ExecutorRoles/UpdateExecutorRole', 'POST', {
         id: id,
         name: name,
@@ -387,7 +596,8 @@ async function erSubmitEdit() {
         executorIds: erSelectedExecIdsE.join(','),
         color: document.getElementById('ereColor').value,
         sortOrder: parseInt(document.getElementById('ereSortOrder').value) || 1,
-        isActive: document.getElementById('ereIsActive').checked
+        isActive: isActive,
+        deactivateReason: isActive ? '' : document.getElementById('ereDeactivateReason').value.trim()
     });
 
     if (res && res.success) {
@@ -395,14 +605,14 @@ async function erSubmitEdit() {
         await erLoad();
         erApplyFilters();
     } else {
-        alert((res && res.message) || 'خطأ في التحديث');
+        erShowAlertMessage((res && res.message) || 'خطأ في التحديث');
     }
 }
 
 /* ─── Details Modal ─────────────────────────────────────────── */
 async function erShowDetails(id) {
     var res = await apiFetch('/ExecutorRoles/GetExecutorRoleDetails?id=' + id);
-    if (!res || !res.success || !res.data) { alert('خطأ في تحميل البيانات'); return; }
+    if (!res || !res.success || !res.data) { erShowAlertMessage('خطأ في تحميل البيانات'); return; }
     var r = res.data;
     var statusBadge = r.isActive
         ? '<span style="color:#16a34a;font-weight:700;"><i class="bi bi-check-circle-fill"></i> مفعل</span>'
@@ -411,17 +621,20 @@ async function erShowDetails(id) {
         ? '<span class="er-badge-ownership er-badge-exclusive"><i class="bi bi-lock-fill"></i> حصري</span>'
         : '<span class="er-badge-ownership er-badge-nonexclusive"><i class="bi bi-unlock-fill"></i> غير حصري</span>';
 
+    var deactivateReason = r.deactivateReason || r.DeactivateReason || '';
     document.getElementById('erDetailsBody').innerHTML =
         '<div class="er-detail-grid">'
         + '<div class="er-detail-label">رقم الدور</div><div class="er-detail-value">' + r.id + '</div>'
         + '<div class="er-detail-label">اسم الدور</div><div class="er-detail-value" style="font-weight:700;">' + erEsc(r.name) + '</div>'
         + '<div class="er-detail-label">الملكية</div><div class="er-detail-value">' + ownerBadge + '</div>'
         + '<div class="er-detail-label">الوصف</div><div class="er-detail-value">' + (erEsc(r.description) || '—') + '</div>'
-        + '<div class="er-detail-label">الوحدات التنظيمية</div><div class="er-detail-value">' + (erEsc(r.orgUnitNames) || '—') + '</div>'
-        + '<div class="er-detail-label">المنفذين</div><div class="er-detail-value">' + (erEsc(r.executorNames) || '—') + '</div>'
+        + erBuildExecutorDetailsTableHtml(r)
         + '<div class="er-detail-label">الترتيب</div><div class="er-detail-value">' + r.sortOrder + '</div>'
         + '<div class="er-detail-label">اللون</div><div class="er-detail-value"><span class="er-color-swatch" style="background:' + erEsc(r.color) + ';"></span> ' + erEsc(r.color) + '</div>'
         + '<div class="er-detail-label">الحالة</div><div class="er-detail-value">' + statusBadge + '</div>'
+        + (!r.isActive && deactivateReason
+            ? '<div class="er-detail-label">سبب التعطيل</div><div class="er-detail-value">' + erEsc(deactivateReason) + '</div>'
+            : '')
         + '<div class="er-detail-label">أنشئ بواسطة</div><div class="er-detail-value">' + (erEsc(r.createdBy) || '—') + '</div>'
         + '<div class="er-detail-label">تاريخ الإنشاء</div><div class="er-detail-value">' + (r.createdAt || '—') + '</div>'
         + '<div class="er-detail-label">آخر تعديل بواسطة</div><div class="er-detail-value">' + (erEsc(r.updatedBy) || '—') + '</div>'
@@ -435,18 +648,25 @@ async function erShowDetails(id) {
 function erShowDeleteModal(id, name) {
     document.getElementById('erDeleteId').value = id;
     document.getElementById('erDeleteName').textContent = name;
+    var errEl = document.getElementById('erDeleteError');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('d-none'); }
     new bootstrap.Modal(document.getElementById('erDeleteModal')).show();
 }
 
 async function erSubmitDelete() {
     var id = parseInt(document.getElementById('erDeleteId').value);
+    var errEl = document.getElementById('erDeleteError');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('d-none'); }
     var res = await apiFetch('/ExecutorRoles/DeleteExecutorRole', 'POST', { id: id });
     if (res && res.success) {
         bootstrap.Modal.getInstance(document.getElementById('erDeleteModal'))?.hide();
         await erLoad();
         erApplyFilters();
+        if (typeof showToast === 'function') showToast(res.message || 'تم الحذف', 'success');
     } else {
-        alert((res && res.message) || 'خطأ في الحذف');
+        var msg = (res && res.message) || 'خطأ في الحذف';
+        if (errEl) { errEl.textContent = msg; errEl.classList.remove('d-none'); }
+        else erShowAlertMessage(msg);
     }
 }
 
@@ -457,6 +677,11 @@ document.addEventListener('click', function(e) {
         var panel = document.getElementById(m === 'c' ? 'ercOuPanel' : 'ereOuPanel');
         if (wrap && panel && !wrap.contains(e.target)) panel.classList.remove('show');
     });
+    var erFw = document.querySelector('.er-filter-ou-wrap');
+    var erFp = document.getElementById('erFilterOuPanel');
+    if (erFw && erFp && !erFp.classList.contains('d-none') && !erFw.contains(e.target)) {
+        erFilterOuClosePanel();
+    }
 });
 
 /* ─── Panel delegated────────────────────────── */
@@ -465,5 +690,50 @@ document.addEventListener('DOMContentLoaded', function() {
         var panel = document.getElementById(mode === 'c' ? 'ercOuPanel' : 'ereOuPanel');
         if (panel) panel.addEventListener('click', function(ev) { erOuPanelClick(mode, ev); });
     });
+    var erFilterOuTrigger = document.getElementById('erFilterOuTrigger');
+    var erFilterOuPanel = document.getElementById('erFilterOuPanel');
+    if (erFilterOuTrigger && erFilterOuPanel) {
+        erFilterOuTrigger.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            erFilterOuTogglePanel();
+        });
+        erFilterOuPanel.addEventListener('click', function(ev) {
+            var expBtn = ev.target.closest('.er-filt-ou-tree-exp');
+            if (expBtn) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    erFilterOuExpanded[eid] = !erFilterOuExpanded[eid];
+                    erRenderFilterOuTreePanel();
+                }
+                return;
+            }
+            var row = ev.target.closest('.er-filt-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null) {
+                var rawId = row.getAttribute('data-id');
+                if (rawId === '') {
+                    document.getElementById('erFilterOrgUnit').value = '';
+                    var lab = document.getElementById('erFilterOuLabel');
+                    if (lab) lab.textContent = 'الوحدة التنظيمية';
+                } else {
+                    var uid = parseInt(rawId, 10);
+                    var u = erOrgUnits.find(function (x) { return erOuUnitId(x) === uid; });
+                    if (u) {
+                        document.getElementById('erFilterOrgUnit').value = String(erOuUnitId(u));
+                        var lab2 = document.getElementById('erFilterOuLabel');
+                        if (lab2) lab2.textContent = erOuName(u);
+                    }
+                }
+                erFilterOuClosePanel();
+                erRenderFilterOuTreePanel();
+                erApplyFilters();
+            }
+        });
+    }
+    var ercActive = document.getElementById('ercIsActive');
+    var ereActive = document.getElementById('ereIsActive');
+    if (ercActive) ercActive.addEventListener('change', function () { erSyncDeactivateReasonVisibility('c'); });
+    if (ereActive) ereActive.addEventListener('change', function () { erSyncDeactivateReasonVisibility('e'); });
     erLoad();
 });

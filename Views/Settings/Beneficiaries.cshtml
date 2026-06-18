@@ -33,7 +33,14 @@
 .bnf-form-row-3 { grid-template-columns:repeat(3,1fr); }
 .bnf-photo-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--gray-200); background:var(--gray-100); }
 .bnf-photo-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.bnf-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.bnf-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-page-header > div:first-child { min-width:0; flex:1 1 auto; }
+.bnf-page-header .btn-primary { flex-shrink:0; }
+#bnfFiltersWrap { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+.bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:1040px; }
 .bnf-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
 .bnf-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
 .bnf-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
@@ -70,10 +77,17 @@
 .bnf-tbl .table { font-size:13px; }
 .bnf-tbl .table thead th { font-size:12px; white-space:nowrap; padding:10px 8px; vertical-align:middle; }
 .bnf-tbl .table tbody td { padding:8px; vertical-align:middle; white-space:nowrap; }
+.bnf-status-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:11px; }
+.bnf-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
+.bnf-status-pill.inactive { background:#fde8e8; color:#ef4444; }
+.bnf-status-dot { width:7px; height:7px; border-radius:999px; display:inline-block; }
+.bnf-status-pill.active .bnf-status-dot { background:#0f9f5c; }
+.bnf-status-pill.inactive .bnf-status-dot { background:#ef4444; }
 @@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
 
+<div class="bnf-settings-page">
 <div class="bnf-page-header">
     <div>
         <h2 class="page-title" style="margin:0;">المستفيدين</h2>
@@ -90,12 +104,17 @@
         <input type="text" class="form-control" id="bnfFilterName" placeholder="بحث باسم الموظف..." autocomplete="off">
     </div>
     <input type="text" class="form-control rt-filter-text" id="bnfFilterNationalId" placeholder="رقم الهوية" maxlength="10" inputmode="numeric" autocomplete="off" title="الهوية">
-    <select class="rt-filter-select form-select" id="bnfFilterUnit">
-        <option value="">الوحدة التنظيمية</option>
-    </select>
+    <div class="bnf-filter-ou-wrap" style="min-width:220px;max-width:280px;position:relative;">
+        <input type="hidden" id="bnfFilterUnit" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 bnf-ou-tree-trigger" id="bnfFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="bnfFilterOuLabel">الوحدة التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="bnfFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+    </div>
     <select class="rt-filter-select form-select" id="bnfFilterSubRole" style="min-width:220px;">
         <option value="">الدور الفرعي</option>
-        <option value="__none__">بدون دور فرعي</option>
+        <option value="__employee__">الموظف</option>
+        <option value="__unit_manager__">مدير الوحده التنظيميه</option>
         <option value="ممثل الوحدة التنظيمية">ممثل الوحدة التنظيمية</option>
         <option value="مدير النظام">مدير النظام</option>
     </select>
@@ -117,15 +136,17 @@
                         <th>البريد</th>
                         <th>الدور</th>
                         <th>الوحدة التنظيمية</th>
+                        <th style="width:100px;">التفعيل</th>
                         <th style="width:220px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="bnfBody">
-                    <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="11" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
     </div>
+</div>
 </div>
 
 <!-- Add/Edit Modal -->
@@ -139,6 +160,29 @@
             </div>
             <div class="bnf-modal-body">
                 <input type="hidden" id="bnfId">
+
+                <!-- الدور — أول حقل في النموذج -->
+                <div class="bnf-section" id="bnfSectionRole">
+                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الدور</div>
+                    <div class="bnf-form-row">
+                        <div class="col-12">
+                            <label class="form-label">اختر الدور<span class="required-star">*</span></label>
+                            <div class="d-flex flex-column gap-3" role="group" aria-label="الدور">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleActual" value="__actual__" checked>
+                                    <label class="form-check-label" for="bnfSubRoleActual">
+                                        مستفيد فعلي
+                                     
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
+                                    <label class="form-check-label" for="bnfSubRoleAdmin">مدير نظام</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- قسم الصورة والهوية -->
                 <div class="bnf-section">
@@ -155,9 +199,10 @@
                                 <button type="button" class="btn btn-link btn-sm p-0" id="bnfPhotoChangeBtn" style="display:none;font-size:13px;" onclick="bnfShowPhotoFileInput()">تغيير الصورة</button>
                             </div>
                         </div>
-                        <div>
+                        <div class="bnf-rep-only" id="bnfWrapNationalId">
                             <label class="form-label">الهوية الوطنية<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="bnfNationalId" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="10 أرقام تبدأ بـ 10 أو 11">
+                            <input type="text" class="form-control" id="bnfNationalId" maxlength="10" minlength="10" inputmode="numeric" pattern="1[0-9]{9}" autocomplete="off" placeholder="10 أرقام تبدأ بالرقم 1">
+                            <div class="form-text" style="font-size:11px;color:var(--gray-600);">10 أرقام فقط، ويبدأ الرقم الأول بـ 1</div>
                         </div>
                         <div></div>
                         <div></div>
@@ -165,11 +210,11 @@
                 </div>
 
                 <!-- قسم التأشير والتوقيع -->
-                <div class="bnf-section">
+                <div class="bnf-section bnf-rep-only" id="bnfSectionEndorsement">
                     <div class="bnf-section-title"><i class="bi bi-pencil-square"></i>التأشير والتوقيع</div>
                     <div class="bnf-form-row bnf-form-row-2">
                         <div>
-                            <label class="form-label">التأشير<span class="required-star">*</span></label>
+                            <label class="form-label">التأشير</label>
                             <select class="form-select" id="bnfEndorsementType">
                                 <option value="مرفق">مرفق (صورة أو PDF)</option>
                                 <option value="التوقيع بالقلم">التوقيع بالقلم</option>
@@ -188,7 +233,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="form-label">التوقيع<span class="required-star">*</span></label>
+                            <label class="form-label">التوقيع</label>
                             <select class="form-select" id="bnfSignatureType">
                                 <option value="مرفق">مرفق (صورة أو PDF)</option>
                                 <option value="التوقيع بالقلم">التوقيع بالقلم</option>
@@ -233,7 +278,7 @@
                 </div>
 
                 <!-- قسم الوحدة والاتصال -->
-                <div class="bnf-section">
+                <div class="bnf-section bnf-rep-only" id="bnfSectionOuContact">
                     <div class="bnf-section-title"><i class="bi bi-building"></i>الوحدة والاتصال</div>
                     <div class="bnf-form-row">
                         <div>
@@ -245,14 +290,24 @@
                                 </button>
                                 <div class="bnf-ou-tree-panel d-none" id="bnfOuTreePanel" role="listbox"></div>
                             </div>
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" id="bnfIsUnitManager">
-                                <label class="form-check-label" for="bnfIsUnitManager">مدير وحدة تنظيمية</label>
+                            <div class="mt-3 pt-2 border-top border-light" id="bnfOuRelationWrap">
+                                <span class="form-label small text-muted mb-2 d-block"> اختر دور  <span style="font-weight:400;"></span></span>
+                                <div class="d-flex flex-wrap gap-3 align-items-center" role="group" aria-label="الصفة في الوحدة">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="bnfOuRelationMgr" value="manager" autocomplete="off">
+                                        <label class="form-check-label" for="bnfOuRelationMgr">مدير وحدة تنظيمية</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="bnfOuRelationRep" value="representative" autocomplete="off">
+                                        <label class="form-check-label" for="bnfOuRelationRep">ممثل وحدة تنظيمية</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div>
                             <label class="form-label">الجوال<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="05xxxxxxxx">
+                            <input type="text" class="form-control" id="bnfPhone" maxlength="10" inputmode="numeric" autocomplete="off" placeholder="05xxxxxxxx" title="رقم الجوال ١٠ ارقام تبدا ب ٠٥">
+                            <div class="form-text" style="font-size:11px;color:var(--gray-600);">رقم الجوال ١٠ ارقام تبدا ب ٠٥</div>
                         </div>
                         <div>
                             <label class="form-label">البريد الإلكتروني<span class="required-star">*</span></label>
@@ -262,27 +317,15 @@
                     </div>
                 </div>
 
-                <!-- قسم الأدوار وبيانات الدخول -->
-                <div class="bnf-section">
-                    <div class="bnf-section-title"><i class="bi bi-person-badge-fill"></i>الأدوار وبيانات الدخول</div>
+                <!-- قسم بيانات الدخول -->
+                <div class="bnf-section" id="bnfSectionLogin">
+                    <div class="bnf-section-title"><i class="bi bi-key-fill"></i>بيانات الدخول</div>
                     <div class="bnf-form-row">
-                        <div>
-                            <label class="form-label">الدور</label>
-                            <div class="d-flex gap-3 flex-wrap" role="group" aria-label="الدور">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleUnit" value="ممثل الوحدة التنظيمية">
-                                    <label class="form-check-label" for="bnfSubRoleUnit">ممثل الوحدة التنظيمية</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="bnfSubRole" id="bnfSubRoleAdmin" value="مدير النظام">
-                                    <label class="form-check-label" for="bnfSubRoleAdmin">مدير النظام</label>
-                                </div>
-                            </div>
-                        </div>
                         <div>
                             <label class="form-label">اسم المستخدم<span class="required-star">*</span></label>
                             <input type="text" class="form-control" id="bnfUsername" placeholder="اسم المستخدم (إنجليزي)" autocomplete="off" dir="ltr" style="text-align:left;">
                         </div>
+                        <div></div>
                         <div></div>
                         <div></div>
                     </div>
@@ -311,17 +354,25 @@
 
                 <div id="bnfError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>
-            <div class="bnf-modal-footer">
-                <div class="bnf-activation-wrap">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="bnfIsActive" checked>
-                        <label class="form-check-label" for="bnfIsActive">التفعيل</label>
+            <div class="bnf-modal-footer flex-column gap-3" style="align-items:stretch;">
+                <div class="d-flex flex-wrap w-100 justify-content-between align-items-start gap-3">
+                    <div class="flex-grow-1" style="min-width:220px;">
+                        <div class="bnf-activation-wrap">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="bnfIsActive" checked>
+                                <label class="form-check-label" for="bnfIsActive">التفعيل</label>
+                            </div>
+                            <span class="text-muted" style="font-size:13px;" id="bnfActivationStatus">مفعل</span>
+                        </div>
+                        <div class="mt-3 w-100 d-none" id="bnfDeactivateReasonWrap">
+                            <label class="form-label small fw-semibold" for="bnfDeactivateReason" id="bnfDeactivateReasonLabel">سبب التعطيل<span class="required-star">*</span></label>
+                            <textarea class="form-control" id="bnfDeactivateReason" rows="2" maxlength="1000" placeholder="أدخل سبب تعطيل المستفيد (إلزامي)"></textarea>
+                        </div>
                     </div>
-                    <span class="text-muted" style="font-size:13px;" id="bnfActivationStatus">مفعل</span>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="bnf-save-btn" id="bnfSubmitBtn" onclick="bnfSubmit()">حفظ</button>
-                    <button class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+                    <div class="d-flex gap-2 flex-shrink-0">
+                        <button type="button" class="bnf-save-btn" id="bnfSubmitBtn" onclick="bnfSubmit()">حفظ</button>
+                        <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+                    </div>
                 </div>
             </div>
         </div>

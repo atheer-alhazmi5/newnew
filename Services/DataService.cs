@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using FormsSystem.Data;
 using FormsSystem.Models.Entities;
 using FormsSystem.Models.Enums;
@@ -196,7 +197,8 @@ public class DataService
     public Task<User?> GetUserByUsernameAsync(string username)
     {
         var users = _db.Users;
-        var u = users.FirstOrDefault(u => u.Username == username);
+        var u = users.FirstOrDefault(u =>
+            string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
         HydrateUserDepartment(u);
         return Task.FromResult(u);
     }
@@ -222,7 +224,9 @@ public class DataService
     public Task<List<User>> ListUsersAsync(int? deptId = null)
     {
         var users = _db.Users;
-        var filtered = deptId.HasValue ? users.Where(u => u.DepartmentId == deptId.Value).ToList() : users;
+        var filtered = deptId.HasValue
+            ? users.Where(u => u.DepartmentId.HasValue && u.DepartmentId.Value == deptId.Value).ToList()
+            : users;
         foreach (var u in filtered)
             HydrateUserDepartment(u);
         return Task.FromResult(filtered);
@@ -232,10 +236,12 @@ public class DataService
     private void HydrateUserDepartment(User? u)
     {
         if (u == null) return;
+        if (!u.DepartmentId.HasValue) { u.Department = null; return; }
+        var deptId = u.DepartmentId.Value;
         var depts = _db.Departments;
-        u.Department = depts.FirstOrDefault(d => d.Id == u.DepartmentId);
+        u.Department = depts.FirstOrDefault(d => d.Id == deptId);
         if (u.Department != null) return;
-        var ou = _db.OrganizationalUnits.FirstOrDefault(o => o.Id == u.DepartmentId);
+        var ou = _db.OrganizationalUnits.FirstOrDefault(o => o.Id == deptId);
         if (ou == null) return;
         u.Department = new Department { Id = ou.Id, Name = ou.Name, Code = "", CreatedAt = DateTime.UtcNow };
     }
@@ -398,7 +404,7 @@ public class DataService
     public Task<List<ReceivedForm>> ListApprovalRequestsForManagerAsync(int managerId, int deptId)
     {
         // Manager sees approval requests sent to their department users or themselves
-        var users = _db.Users.Where(u => u.DepartmentId == deptId).Select(u => u.Id).ToHashSet();
+        var users = _db.Users.Where(u => u.DepartmentId.HasValue && u.DepartmentId.Value == deptId).Select(u => u.Id).ToHashSet();
         users.Add(managerId);
         var list = _db.ReceivedForms
             .Where(r => users.Contains(r.RecipientId) && r.Category == "approval_request")
@@ -572,6 +578,9 @@ public class DataService
     public Task<List<FormClass>> ListFormClassesAsync()
         => Task.FromResult(_db.FormClasses.OrderBy(c => c.SortOrder).ToList());
 
+    public Task<List<FormClass>> ListActiveFormClassesAsync()
+        => Task.FromResult(_db.FormClasses.Where(c => c.IsActive).OrderBy(c => c.SortOrder).ToList());
+
     public Task<FormClass?> GetFormClassByIdAsync(int id)
         => Task.FromResult(_db.FormClasses.FirstOrDefault(c => c.Id == id));
 
@@ -703,6 +712,290 @@ public class DataService
     public Task<bool> IsFormSectionLinkedAsync(int sectionId)
         => Task.FromResult(_db.FormDefinitions.Any(f => f.FormTypeId == sectionId));
 
+    // ─── PROCEDURE ACTION TYPES (أنواع الإجراءات) ──────────────────────────────
+    public Task<List<ProcedureActionType>> ListProcedureActionTypesAsync()
+        => Task.FromResult(_db.ProcedureActionTypes.OrderBy(c => c.SortOrder).ToList());
+
+    public Task<ProcedureActionType?> GetProcedureActionTypeByIdAsync(int id)
+        => Task.FromResult(_db.ProcedureActionTypes.FirstOrDefault(c => c.Id == id));
+
+    public Task<ProcedureActionType> AddProcedureActionTypeAsync(ProcedureActionType row)
+    {
+        var list = _db.ProcedureActionTypes;
+        row.Id = NextId(list, c => c.Id);
+        row.CreatedAt = DateTime.Now;
+        list.Add(row);
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(row);
+    }
+
+    public Task<bool> UpdateProcedureActionTypeAsync(ProcedureActionType row)
+    {
+        var list = _db.ProcedureActionTypes;
+        var idx = list.FindIndex(c => c.Id == row.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = row;
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteProcedureActionTypeAsync(int id)
+    {
+        var list = _db.ProcedureActionTypes;
+        var row = list.FirstOrDefault(c => c.Id == id);
+        if (row == null) return Task.FromResult(false);
+        list.Remove(row);
+        _db.SaveProcedureActionTypes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> IsProcedureActionTypeNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var list = _db.ProcedureActionTypes;
+        var n = name.Trim();
+        var duplicate = list.Any(c =>
+            string.Equals((c.Name ?? "").Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || c.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task ReorderProcedureActionTypesAsync(int id, int newOrder)
+    {
+        var list = _db.ProcedureActionTypes.OrderBy(c => c.SortOrder).ToList();
+        var target = list.FirstOrDefault(c => c.Id == id);
+        if (target == null) return Task.CompletedTask;
+
+        if (newOrder < 1) newOrder = 1;
+        if (newOrder > list.Count) newOrder = list.Count;
+
+        list.Remove(target);
+        list.Insert(newOrder - 1, target);
+
+        for (int i = 0; i < list.Count; i++)
+            list[i].SortOrder = i + 1;
+
+        _db.SaveProcedureActionTypes(list);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>مرتبط بإجراءات العمل عند اختيار نوع الإجراء لها.</summary>
+    public Task<bool> IsProcedureActionTypeLinkedAsync(int id)
+        => Task.FromResult(_db.WorkProcedures.Any(p => p.ProcedureActionTypeId == id));
+
+    public Task<bool> IsFormClassLinkedAsync(int formClassId)
+        => Task.FromResult(_db.FormDefinitions.Any(f => f.FormClassId == formClassId));
+
+    public Task<bool> IsFormStatusLinkedAsync(int formStatusId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            var json = p.WorkflowStepsJson;
+            if (string.IsNullOrWhiteSpace(json)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) continue;
+                foreach (var step in doc.RootElement.EnumerateArray())
+                {
+                    foreach (var prop in new[] { "formStatusId", "FormStatusId" })
+                    {
+                        if (!step.TryGetProperty(prop, out var el) || el.ValueKind != JsonValueKind.Number)
+                            continue;
+                        if (el.TryGetInt32(out var n) && n == formStatusId)
+                            return Task.FromResult(true);
+                        if (el.TryGetInt64(out var ln) && ln == formStatusId)
+                            return Task.FromResult(true);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+               
+            }
+        }
+
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsFormDefinitionLinkedAsync(int formDefinitionId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (JsonObjectArrayHasIntProperty(p.UsedFormDefinitionsJson, formDefinitionId, "formDefinitionId", "FormDefinitionId"))
+                return Task.FromResult(true);
+            if (JsonObjectArrayHasIntProperty(p.WorkflowStepsJson, formDefinitionId, "formDefinitionId", "FormDefinitionId"))
+                return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsWorkProcedureLinkedAsync(int procedureId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (p.Id == procedureId) continue;
+            if (JsonIntArrayContains(p.PreviousProcedureIdsJson, procedureId)) return Task.FromResult(true);
+            if (JsonIntArrayContains(p.NextProcedureIdsJson, procedureId)) return Task.FromResult(true);
+            if (JsonIntArrayContains(p.ImplicitProcedureIdsJson, procedureId)) return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsReadyTableLinkedAsync(int tableId)
+        => Task.FromResult(_db.FormDefinitions.Any(f =>
+            FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "readyTableId", "ReadyTableId", tableId)));
+
+    public Task<bool> IsReadyTableNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = name.Trim();
+        var duplicate = _db.ReadyTables.Any(t =>
+            string.Equals(t.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || t.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task<bool> IsDropdownListUsedInFormsAsync(int listId)
+    {
+        if (_db.FormDefinitions.Any(f =>
+                FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.ReadyTableFields.Any(rf =>
+                PropertiesJsonReferencesNumericId(rf.PropertiesJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsDropdownListLinkedAsync(int listId)
+    {
+        if (_db.FormDefinitions.Any(f =>
+                FormFieldsJsonReferencesNumericProperty(f.FieldsJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.ReadyTableFields.Any(rf =>
+                PropertiesJsonReferencesNumericId(rf.PropertiesJson, "dropdownListId", "DropdownListId", listId)))
+            return Task.FromResult(true);
+        if (_db.DropdownLists.Any(d => d.ParentListId == listId))
+            return Task.FromResult(true);
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsDropdownListNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = name.Trim();
+        var duplicate = _db.DropdownLists.Any(d =>
+            string.Equals(d.Name.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || d.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task<bool> IsDropdownItemTextDuplicateAsync(int listId, string itemText, int? excludeId = null)
+    {
+        var n = itemText.Trim();
+        var duplicate = _db.DropdownItems.Any(i =>
+            i.DropdownListId == listId &&
+            string.Equals(i.ItemText.Trim(), n, StringComparison.Ordinal) &&
+            (!excludeId.HasValue || i.Id != excludeId.Value));
+        return Task.FromResult(duplicate);
+    }
+
+    public Task<bool> IsDropdownItemLinkedAsync(int itemId)
+        => Task.FromResult(_db.DropdownItems.Any(i => i.ParentItemId == itemId));
+
+    private static bool JsonIntArrayContains(string? json, int id)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n) && n == id)
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool JsonObjectArrayHasIntProperty(string? json, int id, params string[] propertyNames)
+    {
+        if (string.IsNullOrWhiteSpace(json) || propertyNames.Length == 0) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object) continue;
+                foreach (var name in propertyNames)
+                {
+                    if (!item.TryGetProperty(name, out var p)) continue;
+                    if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var n) && n == id)
+                        return true;
+                }
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool FormFieldsJsonReferencesNumericProperty(string? fieldsJson, string camelKey, string pascalKey, int targetId)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsJson)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(fieldsJson);
+            JsonElement fieldsArr;
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                fieldsArr = doc.RootElement;
+            }
+            else if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                     (doc.RootElement.TryGetProperty("fields", out fieldsArr) ||
+                      doc.RootElement.TryGetProperty("Fields", out fieldsArr)) &&
+                     fieldsArr.ValueKind == JsonValueKind.Array)
+            {
+                // OK — fieldsArr now points to the inner fields[] array
+            }
+            else
+            {
+                return false;
+            }
+            foreach (var field in fieldsArr.EnumerateArray())
+            {
+                if (field.ValueKind != JsonValueKind.Object) continue;
+                if (!field.TryGetProperty("propertiesJson", out var pj) &&
+                    !field.TryGetProperty("PropertiesJson", out pj))
+                    continue;
+                if (pj.ValueKind != JsonValueKind.String) continue;
+                var inner = pj.GetString();
+                if (PropertiesJsonReferencesNumericId(inner, camelKey, pascalKey, targetId))
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
+    private static bool PropertiesJsonReferencesNumericId(string? propertiesJson, string camelKey, string pascalKey, int targetId)
+    {
+        if (string.IsNullOrWhiteSpace(propertiesJson)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(propertiesJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return false;
+            var root = doc.RootElement;
+            foreach (var key in new[] { camelKey, pascalKey })
+            {
+                if (!root.TryGetProperty(key, out var el)) continue;
+                if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n) && n == targetId)
+                    return true;
+            }
+        }
+        catch (JsonException) { }
+        return false;
+    }
+
     // ─── FORM STATUSES (حالات النماذج) ───────────────────────────────────────
     public Task<List<FormStatus>> ListFormStatusesAsync()
         => Task.FromResult(_db.FormStatuses.OrderBy(s => s.SortOrder).ToList());
@@ -777,7 +1070,9 @@ public class DataService
         => Task.FromResult(_db.Workspaces.Where(w => w.IsActive).OrderBy(w => w.SortOrder).ToList());
 
     public Task<bool> IsWorkspaceLinkedAsync(int workspaceId)
-        => Task.FromResult(_db.FormDefinitions.Any(f => f.WorkspaceId == workspaceId));
+        => Task.FromResult(
+            _db.FormDefinitions.Any(f => f.WorkspaceId == workspaceId) ||
+            _db.WorkProcedures.Any(w => w.WorkspaceId == workspaceId));
 
     public Task<Workspace?> GetWorkspaceByIdAsync(int id)
         => Task.FromResult(_db.Workspaces.FirstOrDefault(w => w.Id == id));
@@ -846,7 +1141,58 @@ public class DataService
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
 
     public Task<List<OrganizationalUnit>> ListActiveOrganizationalUnitsAsync()
-        => Task.FromResult(_db.OrganizationalUnits.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList());
+        => Task.FromResult(FilterEffectivelyActiveOrganizationalUnits(_db.OrganizationalUnits));
+
+    /// <summary>وحدة نشطة فقط إذا كانت مفعّلة وجميع أسلافها مفعّلين.</summary>
+    public static bool IsOrganizationalUnitEffectivelyActive(OrganizationalUnit unit, IReadOnlyDictionary<int, OrganizationalUnit> byId)
+    {
+        if (!unit.IsActive) return false;
+        var walk = unit.ParentId;
+        while (walk is > 0)
+        {
+            if (!byId.TryGetValue(walk.Value, out var parent)) return false;
+            if (!parent.IsActive) return false;
+            walk = parent.ParentId;
+        }
+        return true;
+    }
+
+    public static List<OrganizationalUnit> FilterEffectivelyActiveOrganizationalUnits(IEnumerable<OrganizationalUnit> units)
+    {
+        var list = units.ToList();
+        var byId = list.ToDictionary(u => u.Id);
+        return list
+            .Where(u => IsOrganizationalUnitEffectivelyActive(u, byId))
+            .OrderBy(u => u.SortOrder)
+            .ThenBy(u => u.Name, StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false))
+            .ToList();
+    }
+
+    public Task CascadeDeactivateOrganizationalUnitDescendantsAsync(int unitId, string? updatedBy, DateTime updatedAt)
+    {
+        var list = _db.OrganizationalUnits.ToList();
+        var changed = false;
+
+        void Walk(int parentId)
+        {
+            foreach (var child in list.Where(u => u.ParentId == parentId))
+            {
+                if (child.IsActive)
+                {
+                    child.IsActive = false;
+                    child.UpdatedBy = updatedBy ?? "";
+                    child.UpdatedAt = updatedAt;
+                    changed = true;
+                }
+                Walk(child.Id);
+            }
+        }
+
+        Walk(unitId);
+        if (changed)
+            _db.SaveOrganizationalUnits(list);
+        return Task.CompletedTask;
+    }
 
     public Task<OrganizationalUnit?> GetOrganizationalUnitByIdAsync(int id)
         => Task.FromResult(_db.OrganizationalUnits.FirstOrDefault(u => u.Id == id));
@@ -895,6 +1241,7 @@ public class DataService
             _db.ReadyTables.Any(t => t.OrganizationalUnitId == unitId) ||
             _db.DropdownLists.Any(d => d.OrganizationalUnitId == unitId) ||
             _db.FormDefinitions.Any(f => f.OrganizationalUnitId == unitId) ||
+            _db.WorkProcedures.Any(w => w.OrganizationalUnitId == unitId) ||
             _db.ExecutorRoles.Any(r => ("," + (r.OrgUnitIds ?? "") + ",").Contains("," + unitId + ",")) ||
             _db.PopupNotifications.Any(p => (p.TargetDepartmentIds ?? new List<int>()).Contains(unitId));
 
@@ -932,6 +1279,79 @@ public class DataService
         return Task.CompletedTask;
     }
 
+    public Task RecalculateOrganizationalUnitHierarchyAsync()
+    {
+        var list = _db.OrganizationalUnits.ToList();
+        SyncInactiveOrganizationalUnitDescendants(list);
+        ApplyOrganizationalUnitHierarchyPaths(list);
+        _db.SaveOrganizationalUnits(list);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>يضمن تعطيل جميع التابعين لأي وحدة معطّلة (إصلاح البيانات القديمة).</summary>
+    private static void SyncInactiveOrganizationalUnitDescendants(List<OrganizationalUnit> list)
+    {
+        var now = DateTime.Now;
+        foreach (var root in list.Where(u => !u.IsActive))
+            DeactivateDescendantsInMemory(list, root.Id, now);
+    }
+
+    private static void DeactivateDescendantsInMemory(List<OrganizationalUnit> list, int parentId, DateTime updatedAt)
+    {
+        foreach (var child in list.Where(u => u.ParentId == parentId))
+        {
+            if (child.IsActive)
+            {
+                child.IsActive = false;
+                child.UpdatedAt = updatedAt;
+            }
+            DeactivateDescendantsInMemory(list, child.Id, updatedAt);
+        }
+    }
+
+    private static bool SameOrgUnitParent(OrganizationalUnit u, int? parentId)
+    {
+        if (!parentId.HasValue || parentId.Value <= 0)
+            return !u.ParentId.HasValue || u.ParentId.Value <= 0;
+        return u.ParentId == parentId;
+    }
+
+    private static void ApplyOrganizationalUnitHierarchyPaths(List<OrganizationalUnit> units)
+    {
+        var comparer = StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false);
+
+        List<OrganizationalUnit> ChildrenOf(int? parentId) => units
+            .Where(u => SameOrgUnitParent(u, parentId))
+            .OrderBy(u => u.SortOrder)
+            .ThenBy(u => u.Name, comparer)
+            .ToList();
+
+        void Walk(int? parentId, string? parentPath)
+        {
+            var children = ChildrenOf(parentId);
+            for (var i = 0; i < children.Count; i++)
+            {
+                var segment = (i + 1).ToString();
+                var path = parentPath == null ? segment : parentPath + "،" + segment;
+                children[i].OrderPath = path;
+                children[i].SortOrder = i + 1;
+                Walk(children[i].Id, path);
+            }
+        }
+
+        Walk(null, null);
+    }
+
+    public Task<int> GetNextOrganizationalUnitSiblingSortOrderAsync(int? parentId, int? excludeId = null)
+    {
+        var siblings = _db.OrganizationalUnits
+            .Where(u => SameOrgUnitParent(u, parentId) && (!excludeId.HasValue || u.Id != excludeId.Value))
+            .Select(u => u.SortOrder)
+            .ToList();
+        var next = siblings.Count == 0 ? 1 : siblings.Max() + 1;
+        return Task.FromResult(next);
+    }
+
     // ─── BENEFICIARIES ───────────────────────────────────────────────────────
     public Task<List<Beneficiary>> ListBeneficiariesAsync()
         => Task.FromResult(_db.Beneficiaries.OrderBy(b => b.Id).ToList());
@@ -940,7 +1360,8 @@ public class DataService
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b => b.Id == id));
 
     public Task<Beneficiary?> GetBeneficiaryByNationalIdAsync(string nationalId, int? excludeId = null)
-        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b => b.NationalId == nationalId && (!excludeId.HasValue || b.Id != excludeId.Value)));
+        => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
+            b.NationalId != null && b.NationalId == nationalId && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
     public Task<Beneficiary> AddBeneficiaryAsync(Beneficiary b)
     {
@@ -998,22 +1419,170 @@ public class DataService
         return Task.FromResult(linked);
     }
 
+    /// <summary>
+    /// سبب منع حذف المستفيد بسبب ارتباطات بيانات (تفويضات، أدوار منفذين، إجراءات عمل، آخر مدير نظام، أو إنشاء عناصر باسمه).
+    /// </summary>
+    public async Task<string?> GetBeneficiaryDeletionBlockReasonAsync(int id)
+    {
+        var beneficiary = _db.Beneficiaries.FirstOrDefault(x => x.Id == id);
+        if (beneficiary == null)
+            return null;
+
+        if (_db.Delegations.Any(d =>
+                !DelegationStatusIsCancelled(d.Status) &&
+                (d.DelegatorBeneficiaryId == id || d.DelegateeBeneficiaryId == id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لوجود تفويض مرتبط به في قسم التفويضات. يمكنك إلغاء التفويض أو تعديل السجل قبل الحذف.";
+        }
+
+        if (_db.ExecutorRoles.Any(r => IdListCsvContainsId(r.ExecutorIds, id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه مسجّل كمنفّذ ضمن أدوار المنفذين. أزل الربط من الدور أو عيِّن منفذًا آخر قبل الحذف.";
+        }
+
+        if (_db.WorkProcedures.Any(w => JsonIntArrayContainsId(w.ExecutorBeneficiaryIdsJson, id)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه مستخدم ضمن قائمة المنفّذين في إجراءات العمل.";
+        }
+
+        var isSysAdmin = string.Equals((beneficiary.SubRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal);
+        if (isSysAdmin &&
+            !_db.Beneficiaries.Any(x => x.Id != id &&
+                string.Equals((x.SubRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal)))
+        {
+            return "لا يمكن حذف هذا المستفيد لأنه آخر حساب مدير نظام مسجَّل للمستفيدين.";
+        }
+
+        if (await IsBeneficiaryLinkedByCreationAsync(id).ConfigureAwait(false))
+            return "هذا العنصر المستفيد مرتبط بعناصر تم انشائها ولا يمكن حذفه. يمكن تعطيله بدلًا من الحذف";
+
+        return null;
+    }
+
+    private static bool DelegationStatusIsCancelled(string? status) =>
+        string.Equals((status ?? "").Trim(), "cancelled", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>القيم: draft / scheduled / active / expired / cancelled.</summary>
+    public static string ComputeDelegationStatusCode(Delegation d)
+    {
+        var status = (d.Status ?? "").Trim().ToLowerInvariant();
+        if (status == "cancelled") return "cancelled";
+        if (status == "draft") return "draft";
+        var today = DateTime.Today;
+        if (today < d.StartDate.Date) return "scheduled";
+        if (today > d.EndDate.Date) return "expired";
+        return "active";
+    }
+
+    /// <summary>تفويض ساري يمكن للمفوّض له الدخول بصلاحيته.</summary>
+    public static bool IsDelegationActiveForLogin(Delegation d) =>
+        ComputeDelegationStatusCode(d) == "active";
+
+    private static bool IdListCsvContainsId(string? csv, int id)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return false;
+        foreach (var part in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (int.TryParse(part, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) && n == id)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool JsonIntArrayContainsId(string? json, int id)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                return false;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.TryGetInt32(out var n) && n == id)
+                    return true;
+                if (el.ValueKind == JsonValueKind.String
+                    && int.TryParse(el.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var sn)
+                    && sn == id)
+                    return true;
+            }
+        }
+        catch { /* تجاهل تنسيق JSON غير متوقع */ }
+        return false;
+    }
+
     public Task<Beneficiary?> GetBeneficiaryByEmailAsync(string email, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
-            b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
+            b.Email != null && b.Email.Equals(email, StringComparison.OrdinalIgnoreCase)
             && (!excludeId.HasValue || b.Id != excludeId.Value)));
 
     public Task<Beneficiary?> GetBeneficiaryByPhoneAsync(string phone, int? excludeId = null)
     {
         var p = phone.Trim();
         return Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
-            b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
+            b.Phone != null && b.Phone.Trim() == p && (!excludeId.HasValue || b.Id != excludeId.Value)));
     }
 
     public Task<Beneficiary?> GetBeneficiaryByUsernameAsync(string username, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.FirstOrDefault(b =>
             b.Username.Equals(username, StringComparison.OrdinalIgnoreCase)
             && (!excludeId.HasValue || b.Id != excludeId.Value)));
+
+    /// <summary>
+    /// Resolves the beneficiary linked to a system user without matching by national ID alone.
+    /// </summary>
+    public Task<Beneficiary?> ResolveBeneficiaryForUserAsync(User user)
+    {
+        if (user == null) return Task.FromResult<Beneficiary?>(null);
+
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            var byUsername = _db.Beneficiaries.FirstOrDefault(b =>
+                b.Username.Equals(user.Username.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (byUsername != null) return Task.FromResult<Beneficiary?>(byUsername);
+        }
+
+        if (string.IsNullOrWhiteSpace(user.NationalId))
+            return Task.FromResult<Beneficiary?>(null);
+
+        var nid = user.NationalId.Trim();
+        var matches = _db.Beneficiaries
+            .Where(b => b.NationalId != null && b.NationalId.Trim() == nid)
+            .ToList();
+
+        if (matches.Count == 0)
+            return Task.FromResult<Beneficiary?>(null);
+
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            var username = user.Username.Trim();
+            var byUserUsername = matches.FirstOrDefault(b =>
+                !string.IsNullOrWhiteSpace(b.Username) &&
+                b.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            if (byUserUsername != null) return Task.FromResult<Beneficiary?>(byUserUsername);
+        }
+
+        if (matches.Count == 1)
+        {
+            var only = matches[0];
+            if (NamesLikelySame(only.FullName, user.FullName))
+                return Task.FromResult<Beneficiary?>(only);
+        }
+        else
+        {
+            var byName = matches.FirstOrDefault(b => NamesLikelySame(b.FullName, user.FullName));
+            if (byName != null) return Task.FromResult<Beneficiary?>(byName);
+        }
+
+        return Task.FromResult<Beneficiary?>(null);
+    }
+
+    private static bool NamesLikelySame(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+        static string Norm(string s) => new string(s.Where(c => !char.IsWhiteSpace(c)).ToArray());
+        return string.Equals(Norm(a), Norm(b), StringComparison.OrdinalIgnoreCase);
+    }
 
     public Task<bool> HasManagerInUnitAsync(int organizationalUnitId, int? excludeId = null)
         => Task.FromResult(_db.Beneficiaries.Any(b =>
@@ -1032,8 +1601,13 @@ public class DataService
     public Task<DropdownList?> GetDropdownListByIdAsync(int id)
         => Task.FromResult(_db.DropdownLists.FirstOrDefault(d => d.Id == id));
 
-    public Task<List<DropdownList>> ListIndependentDropdownListsAsync()
-        => Task.FromResult(_db.DropdownLists.Where(d => d.ListType == "قائمة مستقلة").OrderBy(d => d.SortOrder).ToList());
+    public Task<List<DropdownList>> ListIndependentDropdownListsAsync(bool activeOnly = false)
+    {
+        var query = _db.DropdownLists.Where(d => d.ListType == "قائمة مستقلة");
+        if (activeOnly)
+            query = query.Where(d => d.IsActive);
+        return Task.FromResult(query.OrderBy(d => d.SortOrder).ToList());
+    }
 
     public Task<DropdownList> AddDropdownListAsync(DropdownList d)
     {
@@ -1196,6 +1770,9 @@ public class DataService
     public Task<List<AuditLog>> ListAllAuditLogsAsync()
         => Task.FromResult(_db.AuditLogs.OrderByDescending(a => a.CreatedAt).ToList());
 
+    public Task<AuditLog?> GetAuditLogByIdAsync(int id)
+        => Task.FromResult(_db.AuditLogs.FirstOrDefault(a => a.Id == id));
+
     // ─── LOGIN ATTEMPTS ──────────────────────────────────────────────────────
     public Task<LoginAttempt> AddLoginAttemptAsync(LoginAttempt a)
     {
@@ -1301,50 +1878,94 @@ public class DataService
             StringComparison.OrdinalIgnoreCase);
     }
 
-    public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
-        int userId, int departmentId, string location)
+    public int ResolveUserOrganizationalUnitId(int userId, string? username)
     {
-        var now  = DateTime.Now;
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var ben = _db.Beneficiaries.FirstOrDefault(b =>
+                b.IsActive &&
+                string.Equals(b.Username?.Trim(), username.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (ben?.OrganizationalUnitId is > 0)
+                return ben.OrganizationalUnitId.Value;
+        }
+        var user = _db.Users.FirstOrDefault(u => u.Id == userId);
+        return user?.DepartmentId ?? 0;
+    }
+
+    private static bool PopupIsWithinDisplayPeriod(PopupNotification p)
+    {
+        if (!string.Equals(p.DisplayPeriod?.Trim(), "specific", StringComparison.OrdinalIgnoreCase))
+            return true;
+        var today = DateTime.Today;
+        if (p.StartDate.HasValue && today < p.StartDate.Value.Date)
+            return false;
+        if (p.EndDate.HasValue && today > p.EndDate.Value.Date)
+            return false;
+        return true;
+    }
+
+    public Task<List<PopupNotification>> GetActivePopupsForUserAsync(
+        int userId, int departmentId, string location, string? username = null)
+    {
+        var effectiveDeptId = userId > 0
+            ? ResolveUserOrganizationalUnitId(userId, username)
+            : departmentId;
+        if (effectiveDeptId <= 0 && departmentId > 0)
+            effectiveDeptId = departmentId;
+
         var list = _db.PopupNotifications.Where(p =>
         {
-            if (!string.Equals(p.Status?.Trim(), "published", StringComparison.OrdinalIgnoreCase)) return false;
-            if (!PopupDisplayLocationMatches(p.DisplayLocation, location)) return false;
-            if (p.DisplayPeriod == "specific")
-            {
-                if (p.StartDate.HasValue && now < p.StartDate.Value) return false;
-                if (p.EndDate.HasValue   && now > p.EndDate.Value)   return false;
-            }
+            if (!string.Equals(p.Status?.Trim(), "published", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (!PopupDisplayLocationMatches(p.DisplayLocation, location))
+                return false;
+            if (!PopupIsWithinDisplayPeriod(p))
+                return false;
+
             var dismissed = p.DismissedByUserIds ?? new List<int>();
-            if (p.DisplayPeriod == "once" && dismissed.Contains(userId)) return false;
+            if (string.Equals(p.DisplayPeriod?.Trim(), "once", StringComparison.OrdinalIgnoreCase)
+                && userId > 0 && dismissed.Contains(userId))
+                return false;
 
             var userIds = p.TargetUserIds ?? new List<int>();
             var deptIds = p.TargetDepartmentIds ?? new List<int>();
             var hasU = userIds.Count > 0;
             var hasD = deptIds.Count > 0;
-            // صفحة البداية وتسجيل الدخول: لا يرتبط العرض بالوحدات — يُعرض للجميعن
             var publicPage = string.Equals(location, "landing", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(location, "login", StringComparison.OrdinalIgnoreCase);
-            if (publicPage) hasD = false;
+            if (publicPage)
+            {
+                hasD = false;
+                hasU = false;
+            }
 
             if (userId == 0)
-            {
-                if (hasU) return false;
-                return true;
-            }
+                return !hasU;
 
             if (!hasU && !hasD) return true;
             if (hasU && hasD)
-            {
-                var uOk = userIds.Contains(userId);
-                var dOk = deptIds.Contains(departmentId);
-                if (!uOk && !dOk) return false;
-                return true;
-            }
-            if (hasU && !userIds.Contains(userId)) return false;
-            if (hasD && !deptIds.Contains(departmentId)) return false;
+                return userIds.Contains(userId) || deptIds.Contains(effectiveDeptId);
+            if (hasU) return userIds.Contains(userId);
+            if (hasD) return deptIds.Contains(effectiveDeptId);
             return true;
         }).ToList();
         return Task.FromResult(list);
+    }
+
+    public Task RecordPopupViewAsync(int popupId, int userId)
+    {
+        if (userId <= 0) return Task.CompletedTask;
+        var list = _db.PopupNotifications;
+        var item = list.FirstOrDefault(p => p.Id == popupId);
+        if (item == null) return Task.CompletedTask;
+        item.ViewedBy ??= new List<PopupViewEntry>();
+        var existing = item.ViewedBy.FirstOrDefault(v => v.UserId == userId);
+        if (existing != null)
+            existing.ViewedAt = DateTime.Now;
+        else
+            item.ViewedBy.Add(new PopupViewEntry { UserId = userId, ViewedAt = DateTime.Now });
+        _db.SavePopupNotifications(list);
+        return Task.CompletedTask;
     }
 
     public Task<bool> DismissPopupAsync(int popupId, int userId)
@@ -1352,12 +1973,54 @@ public class DataService
         var list = _db.PopupNotifications;
         var item = list.FirstOrDefault(p => p.Id == popupId);
         if (item == null) return Task.FromResult(false);
-        if (!item.DismissedByUserIds.Contains(userId))
+        if (userId > 0)
         {
-            item.DismissedByUserIds.Add(userId);
-            _db.SavePopupNotifications(list);
+            item.DismissedByUserIds ??= new List<int>();
+            if (!item.DismissedByUserIds.Contains(userId))
+                item.DismissedByUserIds.Add(userId);
+            item.ViewedBy ??= new List<PopupViewEntry>();
+            var existing = item.ViewedBy.FirstOrDefault(v => v.UserId == userId);
+            if (existing != null)
+                existing.ViewedAt = DateTime.Now;
+            else
+                item.ViewedBy.Add(new PopupViewEntry { UserId = userId, ViewedAt = DateTime.Now });
         }
+        _db.SavePopupNotifications(list);
         return Task.FromResult(true);
+    }
+
+    public Task<List<(int UserId, string FullName, string OrgUnitName, DateTime ViewedAt)>> GetPopupViewerRowsAsync(int popupId)
+    {
+        var item = _db.PopupNotifications.FirstOrDefault(p => p.Id == popupId);
+        if (item?.ViewedBy == null || item.ViewedBy.Count == 0)
+            return Task.FromResult(new List<(int, string, string, DateTime)>());
+
+        var users = _db.Users.ToDictionary(u => u.Id);
+        var bensByUsername = _db.Beneficiaries
+            .Where(b => !string.IsNullOrWhiteSpace(b.Username))
+            .GroupBy(b => b.Username.Trim().ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First());
+        var ouMap = _db.OrganizationalUnits.ToDictionary(o => o.Id, o => o.Name);
+
+        var rows = item.ViewedBy
+            .GroupBy(v => v.UserId)
+            .Select(g => g.OrderByDescending(v => v.ViewedAt).First())
+            .OrderByDescending(v => v.ViewedAt)
+            .Select(v =>
+            {
+                users.TryGetValue(v.UserId, out var u);
+                var fullName = u?.FullName ?? $"مستخدم #{v.UserId}";
+                var ouName = "";
+                if (u != null && bensByUsername.TryGetValue(u.Username.Trim().ToLowerInvariant(), out var ben)
+                    && ben.OrganizationalUnitId is > 0)
+                    ouMap.TryGetValue(ben.OrganizationalUnitId.Value, out ouName);
+                else if (u?.DepartmentId is > 0)
+                    ouMap.TryGetValue(u.DepartmentId.Value, out ouName);
+                ouName ??= u?.Department?.Name ?? "—";
+                return (v.UserId, fullName, ouName, v.ViewedAt);
+            })
+            .ToList();
+        return Task.FromResult(rows);
     }
 
     // ─── DASHBOARD ────────────────────────────────────────────────────────────
@@ -1369,6 +2032,70 @@ public class DataService
         var approved = _db.SentForms.Count(s => s.SenderId == userId && s.Status == "published");
         return Task.FromResult((approved, sent, pending, inbox));
     }
+
+    public async Task<(int inbox, int outbox, int notifications, int delegations)> GetDashboardSummaryCountsAsync(int userId, string? username)
+    {
+        var formInbox = _db.ReceivedForms.Count(r => r.RecipientId == userId);
+        var assignInbox = _db.OutboxAssignments.Count(a => a.RecipientUserId == userId);
+        var inbox = formInbox + assignInbox;
+
+        var outbox = _db.OutboxRequests.Count(r => r.SubmittedById == userId);
+
+        var notifications = _db.Notifications.Count(n => n.RecipientId == userId);
+
+        var delegations = 0;
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            var me = await GetBeneficiaryByUsernameAsync(username.Trim(), null);
+            if (me != null)
+                delegations = _db.Delegations.Count(d =>
+                    d.DelegatorBeneficiaryId == me.Id || d.DelegateeBeneficiaryId == me.Id);
+        }
+
+        return (inbox, outbox, notifications, delegations);
+    }
+
+    public Task<List<(string label, int count)>> GetDashboardRequestStatusStatsAsync(int userId)
+    {
+        var requests = _db.OutboxRequests.Where(r => r.SubmittedById == userId).ToList();
+        if (requests.Count == 0)
+        {
+            return Task.FromResult(new List<(string, int)>
+            {
+                ("مفتوح", 0),
+                ("مغلق", 0)
+            });
+        }
+
+        var statuses = _db.FormStatuses.ToDictionary(s => s.Id);
+        var groups = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        foreach (var r in requests)
+        {
+            string label;
+            if (r.CurrentFormStatusId.HasValue && statuses.TryGetValue(r.CurrentFormStatusId.Value, out var fs)
+                && !string.IsNullOrWhiteSpace(fs.Name))
+                label = fs.Name.Trim();
+            else if (!string.IsNullOrWhiteSpace(r.StatusCategory))
+                label = r.StatusCategory.Trim();
+            else
+                label = "غير محدد";
+
+            groups[label] = groups.TryGetValue(label, out var c) ? c + 1 : 1;
+        }
+
+        return Task.FromResult(groups.OrderByDescending(x => x.Value).Select(x => (x.Key, x.Value)).ToList());
+    }
+
+    public Task<List<AuditLog>> ListAuditLogsByUserIdAsync(int userId)
+        => Task.FromResult(_db.AuditLogs.Where(a => a.UserId == userId).OrderByDescending(a => a.CreatedAt).ToList());
+
+    public Task<List<ExecutorRole>> ListExecutorRolesForBeneficiaryAsync(int beneficiaryId)
+        => Task.FromResult(_db.ExecutorRoles
+            .Where(r => r.IsActive && IdListCsvContainsId(r.ExecutorIds, beneficiaryId))
+            .OrderBy(r => r.SortOrder)
+            .ThenBy(r => r.Name)
+            .ToList());
 
     // ─── EXECUTOR ROLES ──────────────────────────────────────────────────────
     public Task<List<ExecutorRole>> ListExecutorRolesAsync()
@@ -1406,6 +2133,22 @@ public class DataService
         _db.SaveExecutorRoles(list);
         return Task.FromResult(true);
     }
+
+    /// <summary>يتحقق ما إذا كان دور المنفذين مستخدمًا في أي خطوة سير عمل بإجراءات العمل.</summary>
+    public Task<bool> IsExecutorRoleLinkedAsync(int executorRoleId)
+    {
+        foreach (var p in _db.WorkProcedures)
+        {
+            if (JsonObjectArrayHasIntProperty(p.WorkflowStepsJson, executorRoleId, "executorRoleId", "ExecutorRoleId"))
+                return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> IsFormTemplateLinkedAsync(int templateId)
+        => Task.FromResult(
+            _db.FormDefinitions.Any(f => f.TemplateId == templateId)
+            || _db.WorkProcedures.Any(p => p.FormTemplateId == templateId));
 
     // ─── FORM TEMPLATES ─────────────────────────────────────────────────────
     public Task<List<FormTemplate>> ListFormTemplatesAsync()
@@ -1478,7 +2221,337 @@ public class DataService
         if (f == null) return Task.FromResult(false);
         list.Remove(f);
         _db.SaveFormDefinitions(list);
+        // Delete all related versions
+        var vlist = _db.FormDefinitionVersions;
+        var deletedVersions = vlist.RemoveAll(v => v.FormDefinitionId == id);
+        if (deletedVersions > 0) _db.SaveFormDefinitionVersions(vlist);
         return Task.FromResult(true);
+    }
+
+    /// <summary>توليد المعرف العام التالي بصيغة FRM-0001 .. FRM-9999.</summary>
+    public Task<string> NextFormDefinitionPublicIdAsync()
+    {
+        var list = _db.FormDefinitions;
+        var max = 0;
+        foreach (var f in list)
+        {
+            if (string.IsNullOrWhiteSpace(f.PublicId)) continue;
+            var pid = f.PublicId.Trim().ToUpperInvariant();
+            if (!pid.StartsWith("FRM")) continue;
+            var digits = new string(pid.Where(char.IsDigit).ToArray());
+            if (int.TryParse(digits, out var n) && n > max) max = n;
+        }
+        var next = max + 1;
+        if (next > 9999) next = 9999;
+        return Task.FromResult($"FRM-{next:0000}");
+    }
+
+    // ─── FORM DEFINITION VERSIONS ─────────────────────────────────────────────
+    public Task<List<FormDefinitionVersion>> ListFormDefinitionVersionsAsync(int formDefinitionId)
+        => Task.FromResult(_db.FormDefinitionVersions
+            .Where(v => v.FormDefinitionId == formDefinitionId)
+            .OrderBy(v => v.VersionNumber)
+            .ToList());
+
+    public Task<FormDefinitionVersion?> GetFormDefinitionVersionByIdAsync(int id)
+        => Task.FromResult(_db.FormDefinitionVersions.FirstOrDefault(v => v.Id == id));
+
+    public Task<FormDefinitionVersion?> GetActiveFormDefinitionVersionAsync(int formDefinitionId)
+        => Task.FromResult(_db.FormDefinitionVersions
+            .Where(v => v.FormDefinitionId == formDefinitionId && v.IsActive)
+            .OrderByDescending(v => v.VersionNumber)
+            .FirstOrDefault());
+
+    public Task<FormDefinitionVersion> AddFormDefinitionVersionAsync(FormDefinitionVersion v)
+    {
+        var list = _db.FormDefinitionVersions;
+        v.Id = NextId(list, x => x.Id);
+        v.CreatedAt = DateTime.Now;
+        // If new version is active, deactivate other versions of the same form
+        if (v.IsActive)
+        {
+            foreach (var other in list.Where(x => x.FormDefinitionId == v.FormDefinitionId))
+                other.IsActive = false;
+        }
+        list.Add(v);
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(v);
+    }
+
+    public Task<bool> UpdateFormDefinitionVersionAsync(FormDefinitionVersion v)
+    {
+        var list = _db.FormDefinitionVersions;
+        var idx = list.FindIndex(x => x.Id == v.Id);
+        if (idx < 0) return Task.FromResult(false);
+        if (v.IsActive)
+        {
+            foreach (var other in list.Where(x => x.FormDefinitionId == v.FormDefinitionId && x.Id != v.Id))
+                other.IsActive = false;
+        }
+        list[idx] = v;
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteFormDefinitionVersionAsync(int id)
+    {
+        var list = _db.FormDefinitionVersions;
+        var v = list.FirstOrDefault(x => x.Id == id);
+        if (v == null) return Task.FromResult(false);
+        list.Remove(v);
+        _db.SaveFormDefinitionVersions(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<int> NextFormDefinitionVersionNumberAsync(int formDefinitionId)
+    {
+        var list = _db.FormDefinitionVersions.Where(v => v.FormDefinitionId == formDefinitionId).ToList();
+        var max = list.Count == 0 ? 0 : list.Max(v => v.VersionNumber);
+        return Task.FromResult(max + 1);
+    }
+
+    // ─── WORK PROCEDURES ───────────────────────────────────────────────────────
+    public Task<List<WorkProcedure>> ListWorkProceduresAsync()
+        => Task.FromResult(_db.WorkProcedures.OrderByDescending(f => f.CreatedAt).ToList());
+
+    public Task<WorkProcedure?> GetWorkProcedureByIdAsync(int id)
+        => Task.FromResult(_db.WorkProcedures.FirstOrDefault(f => f.Id == id));
+
+    public Task<WorkProcedure> AddWorkProcedureAsync(WorkProcedure w)
+    {
+        var list = _db.WorkProcedures;
+        w.Id = NextId(list, x => x.Id);
+        if (w.VersionRootProcedureId <= 0)
+            w.VersionRootProcedureId = w.Id;
+        w.CreatedAt = DateTime.Now;
+        list.Add(w);
+        _db.SaveWorkProcedures(list);
+        return Task.FromResult(w);
+    }
+
+    public Task<bool> UpdateWorkProcedureAsync(WorkProcedure w)
+    {
+        var list = _db.WorkProcedures;
+        var idx = list.FindIndex(x => x.Id == w.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = w;
+        _db.SaveWorkProcedures(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteWorkProcedureAsync(int id)
+    {
+        var list = _db.WorkProcedures;
+        var w = list.FirstOrDefault(x => x.Id == id);
+        if (w == null) return Task.FromResult(false);
+        list.Remove(w);
+        _db.SaveWorkProcedures(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── OUTBOX REQUESTS ──────────────────────────────────────────────────────
+    public Task<List<OutboxRequest>> ListOutboxRequestsAsync()
+        => Task.FromResult(_db.OutboxRequests.OrderByDescending(r => r.SubmittedAt).ToList());
+
+    public Task<OutboxRequest?> GetOutboxRequestByIdAsync(int id)
+        => Task.FromResult(_db.OutboxRequests.FirstOrDefault(r => r.Id == id));
+
+    public Task<OutboxRequest> AddOutboxRequestAsync(OutboxRequest r)
+    {
+        var list = _db.OutboxRequests;
+        r.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        r.SubmittedAt = r.SubmittedAt == default ? DateTime.Now : r.SubmittedAt;
+        list.Add(r);
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(r);
+    }
+
+    public Task<bool> UpdateOutboxRequestAsync(OutboxRequest r)
+    {
+        var list = _db.OutboxRequests;
+        var idx = list.FindIndex(x => x.Id == r.Id);
+        if (idx < 0) return Task.FromResult(false);
+        r.UpdatedAt = DateTime.Now;
+        list[idx] = r;
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteOutboxRequestAsync(int id)
+    {
+        var list = _db.OutboxRequests;
+        var r = list.FirstOrDefault(x => x.Id == id);
+        if (r == null) return Task.FromResult(false);
+        list.Remove(r);
+        _db.SaveOutboxRequests(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── OUTBOX ASSIGNMENTS ───────────────────────────────────────────────────
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsAsync()
+        => Task.FromResult(_db.OutboxAssignments.OrderByDescending(a => a.AssignedAt).ToList());
+
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsForUserAsync(int userId)
+        => Task.FromResult(_db.OutboxAssignments.Where(a => a.RecipientUserId == userId).OrderByDescending(a => a.AssignedAt).ToList());
+
+    public Task<List<OutboxAssignment>> ListOutboxAssignmentsForRequestAsync(int outboxRequestId)
+        => Task.FromResult(_db.OutboxAssignments.Where(a => a.OutboxRequestId == outboxRequestId).OrderBy(a => a.AssignedAt).ToList());
+
+    public Task<OutboxAssignment?> GetOutboxAssignmentByIdAsync(int id)
+        => Task.FromResult(_db.OutboxAssignments.FirstOrDefault(a => a.Id == id));
+
+    public Task<OutboxAssignment> AddOutboxAssignmentAsync(OutboxAssignment a)
+    {
+        var list = _db.OutboxAssignments;
+        a.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (a.AssignedAt == default) a.AssignedAt = DateTime.Now;
+        list.Add(a);
+        _db.SaveOutboxAssignments(list);
+        return Task.FromResult(a);
+    }
+
+    public Task<bool> UpdateOutboxAssignmentAsync(OutboxAssignment a)
+    {
+        var list = _db.OutboxAssignments;
+        var idx = list.FindIndex(x => x.Id == a.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = a;
+        _db.SaveOutboxAssignments(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> MarkOutboxAssignmentReadAsync(int id, int userId)
+    {
+        var list = _db.OutboxAssignments;
+        var a = list.FirstOrDefault(x => x.Id == id && x.RecipientUserId == userId);
+        if (a == null) return Task.FromResult(false);
+        if (!a.IsRead) { a.IsRead = true; a.ReadAt = DateTime.Now; _db.SaveOutboxAssignments(list); }
+        return Task.FromResult(true);
+    }
+
+    // ─── USER GUIDE ITEMS ─────────────────────────────────────────────────────
+    public Task<List<UserGuideItem>> ListUserGuideItemsAsync()
+        => Task.FromResult(_db.UserGuideItems.ToList());
+
+    public Task RecalculateUserGuideHierarchyAsync()
+    {
+        var list = _db.UserGuideItems.ToList();
+        ApplyUserGuideHierarchyPaths(list);
+        _db.SaveUserGuideItems(list);
+        return Task.CompletedTask;
+    }
+
+    private static bool SameUserGuideParent(UserGuideItem item, int? parentId)
+    {
+        if (!parentId.HasValue || parentId.Value <= 0)
+            return !item.ParentId.HasValue || item.ParentId.Value <= 0;
+        return item.ParentId == parentId;
+    }
+
+    private static void ApplyUserGuideHierarchyPaths(List<UserGuideItem> items)
+    {
+        var comparer = StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false);
+
+        List<UserGuideItem> ChildrenOf(int? parentId) => items
+            .Where(x => SameUserGuideParent(x, parentId))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Name, comparer)
+            .ToList();
+
+        void Walk(int? parentId, string? parentPath)
+        {
+            var children = ChildrenOf(parentId);
+            for (var i = 0; i < children.Count; i++)
+            {
+                var segment = (i + 1).ToString();
+                var path = parentPath == null ? segment : parentPath + "،" + segment;
+                children[i].OrderPath = path;
+                children[i].SortOrder = i + 1;
+                Walk(children[i].Id, path);
+            }
+        }
+
+        Walk(null, null);
+    }
+
+    public Task<int> GetNextUserGuideSiblingSortOrderAsync(int? parentId, int? excludeId = null)
+    {
+        var siblings = _db.UserGuideItems
+            .Where(x => SameUserGuideParent(x, parentId) && (!excludeId.HasValue || x.Id != excludeId.Value))
+            .Select(x => x.SortOrder)
+            .ToList();
+        return Task.FromResult(siblings.Count == 0 ? 1 : siblings.Max() + 1);
+    }
+
+    public Task<string?> GetUserGuideItemDeleteBlockReasonAsync(int id)
+    {
+        if (_db.UserGuideItems.Any(x => x.ParentId == id))
+            return Task.FromResult<string?>("لا يمكن حذف هذا العنصر لوجود عناصر فرعية مرتبطة به في دليل المستخدم. احذف أو انقل العناصر التابعة أولاً، أو عطّل العنصر بدلًا من الحذف.");
+        return Task.FromResult<string?>(null);
+    }
+
+    public Task<UserGuideItem?> GetUserGuideItemByIdAsync(int id)
+        => Task.FromResult(_db.UserGuideItems.FirstOrDefault(x => x.Id == id));
+
+    public Task<bool> IsUserGuideItemNameDuplicateAsync(string name, int? excludeId = null)
+    {
+        var n = (name ?? "").Trim();
+        if (string.IsNullOrEmpty(n)) return Task.FromResult(false);
+        var list = _db.UserGuideItems;
+        return Task.FromResult(list.Any(x =>
+            x.Name.Trim().Equals(n, StringComparison.OrdinalIgnoreCase)
+            && (!excludeId.HasValue || x.Id != excludeId.Value)));
+    }
+
+    public Task<UserGuideItem> AddUserGuideItemAsync(UserGuideItem item)
+    {
+        var list = _db.UserGuideItems;
+        item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (item.SortOrder <= 0)
+            item.SortOrder = list.Where(x => SameUserGuideParent(x, item.ParentId)).Select(x => x.SortOrder).DefaultIfEmpty(0).Max() + 1;
+        if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
+        list.Add(item);
+        ApplyUserGuideHierarchyPaths(list);
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(item);
+    }
+
+    public Task<bool> UpdateUserGuideItemAsync(UserGuideItem item)
+    {
+        var list = _db.UserGuideItems;
+        var idx = list.FindIndex(x => x.Id == item.Id);
+        if (idx < 0) return Task.FromResult(false);
+        item.UpdatedAt = DateTime.UtcNow;
+        list[idx] = item;
+        ApplyUserGuideHierarchyPaths(list);
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteUserGuideItemAsync(int id)
+    {
+        var list = _db.UserGuideItems;
+        var item = list.FirstOrDefault(x => x.Id == id);
+        if (item == null) return Task.FromResult(false);
+
+        list.Remove(item);
+        ApplyUserGuideHierarchyPaths(list);
+        _db.SaveUserGuideItems(list);
+        return Task.FromResult(true);
+    }
+
+    /// <summary>توليد رقم الطلب: REQ-YYYY-MM-DD-# (تسلسل لليوم نفسه).</summary>
+    public Task<string> GenerateOutboxRequestNumberAsync(DateTime? at = null)
+    {
+        var dt = (at ?? DateTime.Now).Date;
+        var prefix = $"REQ-{dt:yyyy-MM-dd}-";
+        var todays = _db.OutboxRequests
+            .Where(r => !string.IsNullOrEmpty(r.RequestNumber) && r.RequestNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.RequestNumber!.Substring(prefix.Length))
+            .Select(suf => int.TryParse(suf, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return Task.FromResult(prefix + (todays + 1).ToString(CultureInfo.InvariantCulture));
     }
 
     // ─── ALIAS METHODS ────────────────────────────────────────────────────────
@@ -1491,6 +2564,276 @@ public class DataService
 
     public Task AddAuditLogAsync(int userId, string userName, string action, string entityType, string entityId, string details = "")
         => AddAuditLogAsync(new AuditLog { UserId = userId, UserName = userName, Action = action, EntityType = entityType, EntityId = entityId, Details = details });
+
+    // ─── DELEGATIONS ─────────────────────────────────────────────────────────
+    public Task<List<Delegation>> ListDelegationsAsync()
+        => Task.FromResult(_db.Delegations.OrderByDescending(d => d.CreatedAt).ToList());
+
+    public Task<Delegation?> GetDelegationByIdAsync(int id)
+        => Task.FromResult(_db.Delegations.FirstOrDefault(d => d.Id == id));
+
+    public Task<Delegation> AddDelegationAsync(Delegation d)
+    {
+        var list = _db.Delegations;
+        d.Id = NextId(list, x => x.Id);
+        d.CreatedAt = DateTime.Now;
+        list.Add(d);
+        _db.SaveDelegations(list);
+        return Task.FromResult(d);
+    }
+
+    public Task<bool> UpdateDelegationAsync(Delegation d)
+    {
+        var list = _db.Delegations;
+        var idx = list.FindIndex(x => x.Id == d.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = d;
+        _db.SaveDelegations(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteDelegationAsync(int id)
+    {
+        var list = _db.Delegations;
+        var d = list.FirstOrDefault(x => x.Id == id);
+        if (d == null) return Task.FromResult(false);
+        list.Remove(d);
+        _db.SaveDelegations(list);
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// عند دخول المفوِّض الأساسي لحسابه الشخصي: إلغاء التفويضات الصادرة التي أنشأها (وليس إلغاء المسؤول من الإعدادات).
+    /// </summary>
+    public Task<int> CancelOutgoingDelegationsForDelegatorSelfLoginAsync(int delegatorBeneficiaryId, string cancelledBy)
+    {
+        const string reason = "تم إلغاء التفويض بواسطة المستفيد.";
+        var list = _db.Delegations;
+        var now = DateTime.Now;
+        var count = 0;
+        foreach (var d in list)
+        {
+            if (d.DelegatorBeneficiaryId != delegatorBeneficiaryId) continue;
+            var code = ComputeDelegationStatusCode(d);
+            if (code is not ("active" or "scheduled")) continue;
+
+            d.Status = "cancelled";
+            d.CancellationReason = reason;
+            d.CancelledBy = cancelledBy;
+            d.CancelledAt = now;
+            d.UpdatedBy = cancelledBy;
+            d.UpdatedAt = now;
+            count++;
+        }
+        if (count > 0)
+            _db.SaveDelegations(list);
+        return Task.FromResult(count);
+    }
+
+    // ─── SYSTEM FEEDBACK (تقييم النظام) ───────────────────────────────────────
+    public static readonly string[] SystemFeedbackRatingLevels = { "ممتاز", "جيد", "متوسط", "منخفض", "منخفض جداً" };
+
+    public static string NormalizeFeedbackRating(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (v == "منخفض جدا" || v == "منخفض جداً") return "منخفض جداً";
+        return SystemFeedbackRatingLevels.Contains(v) ? v : "";
+    }
+
+    public Task<List<SystemFeedback>> ListSystemFeedbacksAsync()
+        => Task.FromResult(_db.SystemFeedbacks.OrderByDescending(x => x.CreatedAt).ToList());
+
+    public Task<SystemFeedback?> GetSystemFeedbackByIdAsync(int id)
+        => Task.FromResult(_db.SystemFeedbacks.FirstOrDefault(x => x.Id == id));
+
+    public Task<SystemFeedback?> GetSystemFeedbackByUserIdAsync(int userId)
+        => Task.FromResult(_db.SystemFeedbacks.FirstOrDefault(x => x.UserId == userId));
+
+    public Task<SystemFeedback> AddSystemFeedbackAsync(SystemFeedback item)
+    {
+        var list = _db.SystemFeedbacks;
+        item.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (item.CreatedAt == default) item.CreatedAt = DateTime.UtcNow;
+        item.IsPublished = false;
+        list.Add(item);
+        _db.SaveSystemFeedbacks(list);
+        return Task.FromResult(item);
+    }
+
+    public Task<bool> UpdateSystemFeedbackAsync(SystemFeedback item)
+    {
+        var list = _db.SystemFeedbacks;
+        var idx = list.FindIndex(x => x.Id == item.Id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx] = item;
+        _db.SaveSystemFeedbacks(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleSystemFeedbackPublishAsync(int id)
+    {
+        var list = _db.SystemFeedbacks;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsPublished = !list[idx].IsPublished;
+        _db.SaveSystemFeedbacks(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── USER NOTES (الملاحظات) ───────────────────────────────────────────────
+    public static readonly string[] UserNoteImportanceLevels = { "عالية", "متوسطة", "منخفضة" };
+
+    public static string NormalizeNoteImportance(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return UserNoteImportanceLevels.Contains(v) ? v : "متوسطة";
+    }
+
+    public static string DefaultNoteColor(string importance) => importance switch
+    {
+        "عالية" => "#fee2e2",
+        "منخفضة" => "#d1fae5",
+        _ => "#fef9c3"
+    };
+
+    public Task<List<UserNote>> ListUserNotesByUserAsync(int userId)
+        => Task.FromResult(_db.UserNotes.Where(x => x.UserId == userId).ToList());
+
+    public Task<UserNote?> GetUserNoteByIdAsync(int id)
+        => Task.FromResult(_db.UserNotes.FirstOrDefault(x => x.Id == id));
+
+    public Task<UserNote> AddUserNoteAsync(UserNote note)
+    {
+        var list = _db.UserNotes;
+        note.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (note.CreatedAt == default) note.CreatedAt = DateTime.UtcNow;
+        list.Add(note);
+        _db.SaveUserNotes(list);
+        return Task.FromResult(note);
+    }
+
+    public Task<bool> UpdateUserNoteAsync(UserNote note)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == note.Id);
+        if (idx < 0) return Task.FromResult(false);
+        note.UpdatedAt = DateTime.UtcNow;
+        list[idx] = note;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteUserNoteAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var n = list.FirstOrDefault(x => x.Id == id);
+        if (n == null) return Task.FromResult(false);
+        list.Remove(n);
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleUserNotePinAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsPinned = !list[idx].IsPinned;
+        list[idx].UpdatedAt = DateTime.UtcNow;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ToggleUserNoteArchiveAsync(int id)
+    {
+        var list = _db.UserNotes;
+        var idx = list.FindIndex(x => x.Id == id);
+        if (idx < 0) return Task.FromResult(false);
+        list[idx].IsArchived = !list[idx].IsArchived;
+        list[idx].UpdatedAt = DateTime.UtcNow;
+        _db.SaveUserNotes(list);
+        return Task.FromResult(true);
+    }
+
+    // ─── SUPPORT TICKETS (الدعم الفني) ────────────────────────────────────────
+    public static readonly string[] SupportCategories =
+        { "استفسار", "شكوى", "ملاحظة", "اقتراح", "دعم فني", "طلب تفويض" };
+
+    public static readonly string[] SupportImportanceLevels = { "عالية", "متوسطة", "منخفضة" };
+
+    public static readonly string[] SupportStatusValues = { "مفتوح", "مغلق" };
+
+    public static string NormalizeSupportCategory(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportCategories.Contains(v) ? v : "";
+    }
+
+    public static string NormalizeSupportImportance(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportImportanceLevels.Contains(v) ? v : "متوسطة";
+    }
+
+    public static string NormalizeSupportStatus(string? value)
+    {
+        var v = (value ?? "").Trim();
+        return SupportStatusValues.Contains(v) ? v : "مفتوح";
+    }
+
+    public Task<List<SupportTicket>> ListSupportTicketsAsync()
+        => Task.FromResult(_db.SupportTickets.OrderByDescending(x => x.CreatedAt).ToList());
+
+    public Task<SupportTicket?> GetSupportTicketByIdAsync(int id)
+        => Task.FromResult(_db.SupportTickets.FirstOrDefault(x => x.Id == id));
+
+    public Task<SupportTicket> AddSupportTicketAsync(SupportTicket ticket)
+    {
+        var list = _db.SupportTickets;
+        ticket.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (ticket.CreatedAt == default) ticket.CreatedAt = DateTime.UtcNow;
+        list.Add(ticket);
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(ticket);
+    }
+
+    public Task<bool> UpdateSupportTicketAsync(SupportTicket ticket)
+    {
+        var list = _db.SupportTickets;
+        var idx = list.FindIndex(x => x.Id == ticket.Id);
+        if (idx < 0) return Task.FromResult(false);
+        ticket.UpdatedAt = DateTime.UtcNow;
+        list[idx] = ticket;
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteSupportTicketAsync(int id)
+    {
+        var list = _db.SupportTickets;
+        var t = list.FirstOrDefault(x => x.Id == id);
+        if (t == null) return Task.FromResult(false);
+        list.Remove(t);
+        _db.SaveSupportTickets(list);
+        return Task.FromResult(true);
+    }
+
+    public Task<string> GenerateSupportTicketNumberAsync(DateTime? at = null)
+    {
+        var dt = (at ?? DateTime.Now).Date;
+        var prefix = $"SUP-{dt:yyyy-MM-dd}-";
+        var todays = _db.SupportTickets
+            .Where(x => x.RequestNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.RequestNumber)
+            .ToList();
+        var maxSeq = 0;
+        foreach (var num in todays)
+        {
+            var part = num.Length > prefix.Length ? num[prefix.Length..] : "";
+            if (int.TryParse(part, out var seq) && seq > maxSeq) maxSeq = seq;
+        }
+        return Task.FromResult($"{prefix}{maxSeq + 1}");
+    }
 }
 
 public class DirectoryLookupResult

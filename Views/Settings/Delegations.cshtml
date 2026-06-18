@@ -1,0 +1,273 @@
+@{
+    ViewBag.Title = "التفويضات";
+    ViewBag.PageName = "التفويضات";
+}
+
+<style>
+.bnf-modal { border-radius:16px; border:none; overflow:hidden; box-shadow:0 8px 50px rgba(0,0,0,.2); }
+.bnf-modal-header { background:var(--sa-700); padding:18px 24px; position:relative; }
+.bnf-modal-header .btn-close-x { position:absolute; top:14px; left:14px; background:none; border:none; color:rgba(255,255,255,.7); font-size:18px; cursor:pointer; }
+.bnf-modal-header .btn-close-x:hover { color:#fff; }
+.bnf-modal-title { color:#fff; font-weight:700; font-size:16px; margin:0; }
+.bnf-modal-subtitle { color:rgba(255,255,255,.7); font-size:12px; margin-top:2px; }
+.bnf-modal-body { padding:24px; max-height:75vh; overflow-y:auto; }
+.bnf-modal-footer { padding:16px 24px; display:flex; flex-wrap:wrap; gap:10px; border:none; justify-content:flex-end; align-items:center; background:var(--gray-50); border-top:1px solid var(--gray-100); }
+.bnf-save-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .15s; }
+.bnf-save-btn:hover { background:var(--sa-700); }
+.bnf-cancel-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .15s; }
+.bnf-cancel-btn:hover { background:#4b5563; }
+.bnf-danger-outline-btn { padding:9px 20px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; background:transparent; border:2px solid var(--error-600); color:var(--error-600); transition:all .15s; }
+.bnf-danger-outline-btn:hover { background:rgba(220,38,38,.1); border-color:#b91c1c; color:#b91c1c; }
+.del-cancel-icon-wrap { width:52px;height:52px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(220,38,38,.12);color:var(--error-600);margin-bottom:12px; }
+.bnf-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; flex-wrap:wrap; gap:12px; width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
+.bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+.bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:920px; font-size:13px; }
+.bnf-tbl .table > :not(caption) > * > * { padding-top:0.72rem; padding-bottom:0.72rem; vertical-align:middle; }
+.bnf-tbl .table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding-left:10px; padding-right:10px; }
+.bnf-tbl .table tbody tr { transition:background .15s; }
+.bnf-tbl .table tbody tr:hover { background:var(--sa-25); }
+.bnf-tbl .table tbody td { border-bottom:1px solid var(--gray-100); padding-left:10px; padding-right:10px; }
+.del-action-btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.del-action-btn-detail { background:var(--gray-100); color:var(--gray-700); }
+.del-action-btn-detail:hover { background:var(--gray-200); color:var(--gray-800); }
+.del-action-btn-edit { background:#198754; color:#fff; }
+.del-action-btn-edit:hover { background:#157347; color:#fff; }
+.del-action-btn-delete { background:#dc3545; color:#fff; }
+.del-action-btn-delete:hover { background:#bb2d3b; color:#fff; }
+.required-star { color:#ef4444; margin-right:4px; }
+/* منتقي الوحدة الشجري — مطابق لصفحة إضافة مستفيد (Beneficiaries.cshtml) */
+.bnf-ou-tree-wrap.del-delegator-ou-wrap,
+.bnf-ou-tree-wrap.del-delegatee-ou-wrap,
+.bnf-ou-tree-wrap.del-filter-delegator-ou-wrap,
+.bnf-ou-tree-wrap.del-filter-delegatee-ou-wrap { position:relative; }
+.bnf-ou-tree-wrap.del-delegator-ou-wrap { z-index:3; }
+.bnf-ou-tree-wrap.del-delegatee-ou-wrap { z-index:4; }
+.bnf-ou-tree-wrap.del-filter-delegator-ou-wrap { z-index:5; }
+.bnf-ou-tree-wrap.del-filter-delegatee-ou-wrap { z-index:6; }
+.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
+.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select: none; border-bottom: 1px solid var(--gray-100); transition: background .15s ease; gap: 8px; }
+.bnf-ou-tree-row:hover { background: var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background: var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink: 0; width: 1.35rem; height: 1.35rem; min-width: 1.35rem; padding: 0; line-height: 1; font-weight: 600; font-size: 11px; color: var(--sa-600); border: 1px solid var(--gray-200); border-radius: 8px; background: linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none !important; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background: var(--sa-50); border-color: var(--sa-300); box-shadow: 0 1px 3px rgba(37,147,95,.1); color: var(--sa-700); }
+.bnf-ou-tree-exp:active { transform: scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink: 0; width: 1.35rem; height: 1.35rem; min-width: 1.35rem; }
+.bnf-ou-tree-name { text-align: right; font-size: 14px; line-height: 1.4; min-width: 0; }
+</style>
+
+<div class="bnf-settings-page">
+    <div class="bnf-page-header">
+        <div>
+            <h2 class="page-title" style="margin:0;">التفويضات</h2>
+            <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إدارة تفويضات المستخدمين.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="delShowAddModal()">
+            <i class="bi bi-plus-lg"></i> إضافة تفويض
+        </button>
+    </div>
+
+    <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
+        <div class="rt-search-box" style="min-width:200px;max-width:280px;">
+            <i class="bi bi-search rt-search-icon"></i>
+            <input type="text" class="form-control" id="delSearch" placeholder="بحث بالاسم..." autocomplete="off">
+        </div>
+        <input type="text" class="rt-filter-text rt-filter-fluid" id="delFilterReference" placeholder="بحث بالمرجع..." dir="ltr" inputmode="numeric" maxlength="18" autocomplete="off" title="مرجع التفويض (أرقام فقط)">
+        <div class="bnf-ou-tree-wrap del-filter-delegator-ou-wrap">
+            <input type="hidden" id="delFilterDelegatorOuId" value="">
+            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delFilterDelegatorOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                <span class="bnf-ou-tree-label text-truncate d-block" id="delFilterDelegatorOuLabel">كل الوحدات</span>
+            </button>
+            <div class="bnf-ou-tree-panel d-none" id="delFilterDelegatorOuPanel" role="listbox"></div>
+        </div>
+        <div class="bnf-ou-tree-wrap del-filter-delegatee-ou-wrap">
+            <input type="hidden" id="delFilterDelegateeOuId" value="">
+            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delFilterDelegateeOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                <span class="bnf-ou-tree-label text-truncate d-block" id="delFilterDelegateeOuLabel">كل الوحدات</span>
+            </button>
+            <div class="bnf-ou-tree-panel d-none" id="delFilterDelegateeOuPanel" role="listbox"></div>
+        </div>
+        <select class="form-select rt-filter-select" id="delFilterStatus" style="min-width:200px;">
+            <option value="">كل الحالات</option>
+            <option value="draft">مسودة</option>
+            <option value="scheduled">مجدول</option>
+            <option value="active">ساري</option>
+            <option value="expired">منتهي</option>
+            <option value="cancelled">ملغى</option>
+        </select>
+        <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateFrom" title="من تاريخ" aria-label="من تاريخ">
+        <input type="date" class="rt-filter-text rt-filter-fluid" id="delFilterDateTo" title="إلى تاريخ" aria-label="إلى تاريخ">
+        <button type="button" class="rt-clear-btn" id="delFilterClear" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
+    </div>
+
+    <div class="card bnf-tbl">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:44px;">#</th>
+                            <th>المفوض<br /><span class="text-muted fw-normal" style="font-size:11px;">مع الصلاحية</span></th>
+                            <th>وحدة المفوض</th>
+                            <th>المفوض له<br /><span class="text-muted fw-normal" style="font-size:11px;">مع الصلاحية</span></th>
+                            <th>وحدة المفوض له</th>
+                            <th>البداية</th>
+                            <th>النهاية</th>
+                            <th>المدة</th>
+                            <th style="width:100px;">الحالة</th>
+                            <th style="min-width:280px;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="delBody">
+                        <tr><td colspan="10" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="delModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title" id="delModalTitle"><i class="bi bi-arrow-left-right" style="margin-left:8px;"></i><span id="delModalTitleText">إضافة تفويض</span></h5>
+            </div>
+            <div class="bnf-modal-body">
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delReferenceNumber">المرجع<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="delReferenceNumber" dir="ltr" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="أرقام صحيحة فقط">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegationReason">سبب التفويض<span class="required-star">*</span></label>
+                        <input type="text" class="form-control" id="delDelegationReason" maxlength="500">
+                    </div>
+                </div>
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegatorOuTrigger">وحدة المفوض<span class="required-star">*</span></label>
+                        <div class="bnf-ou-tree-wrap del-delegator-ou-wrap">
+                            <input type="hidden" id="delDelegatorOuId" value="">
+                            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delDelegatorOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                                <span class="bnf-ou-tree-label text-truncate d-block" id="delDelegatorOuLabel">-- اختر --</span>
+                            </button>
+                            <div class="bnf-ou-tree-panel d-none" id="delDelegatorOuPanel" role="listbox"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegatorBen">المفوض<span class="required-star">*</span></label>
+                        <select class="form-select" id="delDelegatorBen"></select>
+                    </div>
+                </div>
+                <div class="row g-3 mb-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegateeOuTrigger">وحدة المفوض له<span class="required-star">*</span></label>
+                        <div class="bnf-ou-tree-wrap del-delegatee-ou-wrap">
+                            <input type="hidden" id="delDelegateeOuId" value="">
+                            <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="delDelegateeOuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                                <span class="bnf-ou-tree-label text-truncate d-block" id="delDelegateeOuLabel">-- اختر --</span>
+                            </button>
+                            <div class="bnf-ou-tree-panel d-none" id="delDelegateeOuPanel" role="listbox"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delDelegateeBen">المفوض له <span class="required-star">*</span></label>
+                        <select class="form-select" id="delDelegateeBen"></select>
+                    </div>
+                </div>
+                <hr class="my-3 text-muted" />
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delStartDate">تاريخ البداية<span class="required-star">*</span></label>
+                        <input type="date" class="form-control" id="delStartDate">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="delEndDate">تاريخ النهاية<span class="required-star">*</span></label>
+                        <input type="date" class="form-control" id="delEndDate">
+                    </div>
+                    <div class="col-12" id="delDraftWrap">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="delDraft">
+                            <label class="form-check-label" for="delDraft">حفظ كمسودة</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="delErr" class="alert alert-danger d-none mt-3 mb-0"></div>
+            </div>
+            <div class="bnf-modal-footer">
+                <button type="button" class="bnf-save-btn" onclick="delSave()">اضافة</button>
+                <button type="button" class="bnf-danger-outline-btn d-none" id="delBtnCancelDelegation" onclick="delOpenCancelDelegationConfirm()"><i class="bi bi-x-octagon" style="margin-left:6px;"></i>إلغاء التفويض</button>
+             
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="delDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--info-700);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title"><i class="bi bi-eye" style="margin-left:8px;"></i>تفاصيل التفويض</h5>
+            </div>
+            <div class="bnf-modal-body" id="delDetailsBody"></div>
+            <div class="bnf-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="delCancelDelegationModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal" aria-label="إغلاق"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title"><i class="bi bi-x-octagon" style="margin-left:8px;"></i>إلغاء التفويض</h5>
+                <div class="bnf-modal-subtitle">سيتم تعليم التفويض كـ «ملغى»</div>
+            </div>
+            <div class="bnf-modal-body text-center px-4 pb-2">
+                <div class="del-cancel-icon-wrap"><i class="bi bi-exclamation-lg fs-4"></i></div>
+                <p class="mb-2 fw-semibold" style="font-size:15px;line-height:1.65;color:var(--gray-800);">هل تريد إلغاء هذا التفويض؟</p>
+                <p class="mb-0 small text-danger fw-semibold"><i class="bi bi-info-circle" style="margin-left:6px;"></i>لا يمكن التراجع عن هذه العملية.</p>
+                <div class="text-start mt-3 w-100">
+                    <label class="form-label fw-semibold mb-1" for="delCancelReason">سبب إلغاء التفويض<span class="required-star">*</span></label>
+                    <textarea class="form-control" id="delCancelReason" rows="3" maxlength="1000" placeholder="سبب الإلغاء (إلزامي)"></textarea>
+                </div>
+                <div id="delCancelDelegationErr" class="alert alert-danger d-none mt-3 mb-0 text-start" style="font-size:13px;"></div>
+            </div>
+            <div class="bnf-modal-footer" style="justify-content:center;">
+                <button type="button" class="bnf-save-btn" style="background:var(--error-600);" onclick="delSubmitCancelDelegation()"><i class="bi bi-check-lg" style="margin-left:6px;"></i>نعم، إلغاء التفويض</button>
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">لا، احتفظ بالتفويض</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="delDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bnf-modal">
+            <div class="bnf-modal-header" style="background:var(--error-600);">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="bnf-modal-title">حذف تفويض</h5>
+            </div>
+            <div class="bnf-modal-body text-center">
+                <p style="font-weight:700;margin-top:8px;">هل أنت متأكد؟</p>
+                <div id="delDeleteErr" class="alert alert-danger d-none" style="font-size:14px;"></div>
+            </div>
+            <div class="bnf-modal-footer" style="justify-content:center;">
+                <button type="button" class="bnf-save-btn" style="background:var(--error-600);" onclick="delSubmitDelete()">حذف</button>
+                <button type="button" class="bnf-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/delegations.js?v=@DateTime.Now.Ticks"></script>
+}

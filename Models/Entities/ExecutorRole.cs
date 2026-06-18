@@ -11,6 +11,8 @@ public class ExecutorRole
     public string Color { get; set; } = "#25935F";
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>سبب التعطيل عندما يكون <see cref="IsActive"/> false.</summary>
+    public string DeactivateReason { get; set; } = "";
     public string CreatedBy { get; set; } = "";
     public string UpdatedBy { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,0 +1,633 @@
+@{
+    ViewBag.Title = "إجراءات العمل";
+    ViewBag.PageName = "إجراءات العمل";
+}
+
+<style>
+/* ── same visual language as FormDefinitions (fd-*) ── */
+.fd-modal        { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.fd-modal-header { padding:24px 28px; position:relative; }
+.fd-modal-header.create  { background:var(--sa-800); }
+.fd-modal-header.edit    { background:var(--sa-800); }
+.fd-modal-header.details { background:var(--info-700); }
+.fd-modal-header.workflow { background:var(--gray-600); }
+.fd-modal-header.danger  { background:var(--error-600); }
+.fd-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.fd-modal-header .btn-close-x:hover { color:#fff; }
+.fd-modal-title    { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
+.fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
+.fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
+.fd-section       { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+
+#wpEditBody .fd-section.wp-section-spaced { margin-top: 1.5rem; }
+.fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
+.fd-section-title i { font-size:15px; color:var(--sa-600); }
+.fd-form-row   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
+.fd-form-row.cols-3 { grid-template-columns:repeat(3,1fr); }
+.fd-form-row.cols-1 { grid-template-columns:1fr; }
+.fd-form-group { display:flex; flex-direction:column; gap:4px; }
+.fd-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
+.fd-form-group .form-control,
+.fd-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.fd-form-group .form-control:focus,
+.fd-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.fd-form-group textarea.form-control { min-height:70px; resize:vertical; }
+.required-star { color:#ef4444; margin-right:4px; }
+.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fd-action-btn-detail:hover { background:var(--info-50); }
+.fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fd-action-btn-edit:hover { background:var(--sa-50); }
+.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-action-btn-delete:hover { background:var(--error-50); }
+.fd-action-btn-approve { border-color:var(--success-600); color:var(--success-600); background:#fff; }
+.fd-action-btn-approve:hover { background:var(--success-50); }
+.fd-action-btn-reject { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fd-action-btn-reject:hover { background:var(--error-50); }
+.fd-action-btn-send   { border-color:var(--warning-600); color:var(--warning-600); background:#fff; }
+.fd-action-btn-send:hover { background:var(--warning-50); }
+.fd-action-btn-flow   { border-color:var(--gray-500); color:var(--gray-600); background:#fff; }
+.fd-action-btn-flow:hover { background:var(--gray-50); }
+.fd-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:12px; font-weight:700; }
+.fd-badge-draft    { background:var(--gray-100);   color:var(--gray-600); }
+.fd-badge-pending  { background:var(--warning-100); color:var(--warning-700); }
+.fd-badge-approved { background:var(--success-100); color:var(--success-700); }
+.fd-badge-rejected { background:var(--error-100);   color:var(--error-700); }
+.fd-toggle { position:relative; display:inline-block; width:42px; height:22px; }
+.fd-toggle input { opacity:0; width:0; height:0; }
+.fd-toggle .fd-slider { position:absolute; cursor:pointer; inset:0; background:var(--gray-300); border-radius:22px; transition:.25s; }
+.fd-toggle .fd-slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; }
+.fd-toggle input:checked + .fd-slider { background:var(--sa-600); }
+.fd-toggle input:checked + .fd-slider::before { transform:translateX(20px); }
+.fd-toggle input:disabled + .fd-slider { opacity:.45; cursor:not-allowed; }
+.fd-detail-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:13px; }
+.fd-detail-lbl  { font-weight:700; color:var(--gray-500); }
+.fd-detail-val  { color:var(--gray-800); font-weight:500; }
+.fd-empty-state { text-align:center; padding:56px 16px; color:var(--gray-400) !important; font-style:normal !important; }
+.fd-empty-state i { font-size:52px; display:block; margin-bottom:14px; color:var(--gray-300) !important; font-style:normal !important; }
+.fd-empty-state p { font-size:14px; font-weight:600; margin:0; color:var(--gray-400) !important; font-style:normal !important; }
+.fd-save-btn        { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
+.fd-save-btn:hover  { transform:translateY(-1px); }
+.fd-save-btn.draft  { background:var(--gray-500); }
+.fd-save-btn.draft:hover { background:var(--gray-600); }
+.fd-save-btn.send   { background:var(--sa-600); }
+.fd-save-btn.send:hover  { background:var(--sa-700); }
+.fd-cancel-btn      { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
+.fd-cancel-btn:hover { background:var(--gray-300); }
+/* قوائم اختيار متعدد — نفس خط وحدود حقول form-select داخل النموذج */
+.wp-dd .dropdown-toggle.wp-dd-toggle {
+    width:100%;
+    text-align:start;
+    font-size:13px;
+    border-radius:10px;
+    border:2px solid var(--gray-200);
+    padding:8px 12px;
+    padding-inline-end:2.25rem;
+    font-family:'Cairo',sans-serif;
+    background:#fff;
+    color:var(--gray-800);
+    font-weight:500;
+    line-height:1.5;
+    box-shadow:none;
+}
+.wp-dd .dropdown-toggle.wp-dd-toggle:hover,
+.wp-dd .dropdown-toggle.wp-dd-toggle:focus,
+.wp-dd .dropdown-toggle.wp-dd-toggle.show,
+.wp-dd .dropdown-toggle.wp-dd-toggle:active {
+    border-color:var(--sa-400);
+    box-shadow:none;
+    color:var(--gray-800);
+    background:#fff;
+}
+.wp-dd .dropdown-menu.wp-dd-menu {
+    border-radius:10px;
+    border:2px solid var(--gray-200);
+    box-shadow:0 8px 24px rgba(0,0,0,.08);
+    margin-top:4px;
+    max-height:300px;
+    overflow-y:auto;
+    background:#fff;
+}
+.wp-dd-menu .wp-dd-search {
+    position:sticky;
+    top:0;
+    z-index:2;
+    padding:8px 10px;
+    background:#fff;
+    border-bottom:1px solid var(--gray-200);
+}
+.wp-dd-menu .wp-dd-search .form-control-sm {
+    border-radius:8px;
+    font-size:13px;
+}
+/* توحيد مظهر زر القائمة واللوحة داخل مودال الإجراء (نماذج / منفذين / وحدات / علاقات) */
+#wpEditBody .dropdown.wp-dd .dropdown-toggle.wp-dd-toggle,
+#wpEditBody .dropdown.wp-dd .dropdown-menu.wp-dd-menu {
+    background:#fff;
+}
+
+.wp-dd-check-row {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:10px;
+    direction:rtl;
+    padding:10px 14px;
+    border-bottom:1px solid var(--gray-200);
+    margin:0;
+}
+.wp-dd-menu .wp-dd-check-row:last-child { border-bottom:none; }
+.wp-dd-check-row-cb {
+    flex-shrink:0;
+    width:1.125rem;
+    height:1.125rem;
+    margin:0 !important;
+    float:none !important;
+    cursor:pointer;
+    accent-color:var(--sa-600);
+}
+.wp-dd-check-row-label {
+    flex:1;
+    min-width:0;
+    text-align:right;
+    font-size:13px;
+    line-height:1.4;
+    font-weight:500;
+    color:var(--gray-800);
+    cursor:pointer;
+    margin:0;
+    font-family:'Cairo',sans-serif;
+}
+.wp-dd-menu .text-muted.small { padding:10px 14px; }
+
+/* قائمة الإجراء المصدر — عرض هرمي مجمَّع حسب سلسلة الإصدارات */
+.wp-ver-group { border-bottom:1px solid var(--gray-200); }
+.wp-ver-group:last-child { border-bottom:none; }
+.wp-ver-group-head {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    background:var(--sa-50);
+    border-bottom:1px solid var(--gray-100);
+    direction:rtl;
+    font-weight:800; font-size:13px; color:var(--sa-800);
+    font-family:'Cairo',sans-serif;
+    user-select:none;
+}
+.wp-ver-group-head > .bi { color:var(--sa-600); font-size:14px; }
+.wp-ver-group-name { flex:1; min-width:0; text-align:right; }
+.wp-ver-group-code { font-size:11px; font-weight:600; color:var(--gray-500); direction:ltr; padding:1px 8px; background:#fff; border:1px solid var(--gray-200); border-radius:999px; }
+.wp-ver-group-count { font-size:11px; font-weight:700; color:var(--sa-700); background:#fff; border:1px solid var(--sa-200); border-radius:999px; padding:1px 8px; min-width:22px; text-align:center; }
+.wp-ver-group-body { background:#fff; }
+.wp-ver-item-row { padding-right:32px; border-bottom:1px solid var(--gray-100); }
+.wp-ver-item-row:last-child { border-bottom:none; }
+.wp-ver-item-label { display:flex !important; flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap; }
+.wp-ver-item-ver { font-weight:800; font-size:13px; color:var(--gray-900); direction:ltr; min-width:60px; }
+.wp-ver-item-code { font-size:11px; color:var(--gray-400); direction:ltr; }
+.wp-ver-badge {
+    display:inline-flex; align-items:center;
+    font-size:10.5px; font-weight:700; line-height:1;
+    padding:3px 8px; border-radius:999px;
+    border:1px solid transparent;
+    font-family:'Cairo',sans-serif;
+}
+.wp-ver-badge-approved { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+.wp-ver-badge-pending  { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.wp-ver-badge-rejected { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.wp-ver-badge-draft    { background:var(--gray-100); color:var(--gray-700); border-color:var(--gray-200); }
+
+#wpEditBody .fd-form-row.cols-1 .fd-form-group,
+#wpEditBody .fd-form-group.fd-form-group--wp-dd {
+    width: 100%;
+    min-width: 0;
+}
+.wp-dd-check-row-cb[type="radio"] {
+    border-radius: 50%;
+}
+/* صف مُعطّل: الإجراء مختار في قائمة علاقة أخرى */
+.wp-dd-check-row:has(.wp-dd-check-row-cb:disabled) {
+    opacity: 0.62;
+}
+.wp-dd-check-row:has(.wp-dd-check-row-cb:disabled) .wp-dd-check-row-label {
+    color: var(--gray-400);
+    cursor: not-allowed;
+}
+/* نموذج مرتبط سابقاً لكنه غير مفعّل/غير ضمن قائمة الاختيار الحالية */
+.wp-dd-check-row:has(.wp-used-form-extra) .wp-dd-check-row-label {
+    color: var(--gray-500);
+    font-style: italic;
+}
+#wpEditBody .fd-form-row.fd-form-row--wp-org-pair {
+    align-items: start;
+}
+
+.wp-filt-ou-wrap { position:relative; min-width:220px; max-width:280px; }
+.wp-filt-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.wp-filt-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.wp-filt-ou-tree-panel { max-height:min(320px,70vh); overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.wp-filt-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; cursor:pointer; }
+.wp-filt-ou-tree-row:hover { background:var(--sa-25); }
+.wp-filt-ou-tree-row.is-selected { background:var(--info-50); }
+.wp-filt-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease,border-color .15s ease; }
+.wp-filt-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
+.wp-filt-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.wp-filt-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
+/* شجرة داخل قائمة المودال المنسدلة */
+.wp-ou-tree-dd-row { flex-wrap:nowrap; align-items:center; }
+.wp-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:6px; background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.wp-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); }
+.wp-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; min-width:1.35rem; }
+/* شريط تحديد الكل — نفس أسلوب الإشعارات المنبثقة */
+.wp-target-ou-toolbar { flex-shrink:0; }
+.wp-select-all-btn { background:none;border:1px solid var(--gray-300);border-radius:8px;padding:3px 12px;font-size:11px;font-weight:700;color:var(--sa-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap; }
+.wp-select-all-btn:hover { background:var(--sa-50);border-color:var(--sa-400); }
+
+.wp-action-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    max-width:100%;
+    margin-inline:auto;
+    min-width:200px;
+}
+.wp-action-grid .fd-action-btn { width:100%; justify-content:center; }
+.wp-action-grid > .fd-action-btn:last-child:nth-child(odd) { grid-column:1 / -1; }
+/* Wizard tabs — same as FormDefinitions */
+.fd-steps { display:flex; border-bottom:1px solid var(--gray-200); background:#fff; }
+.fd-step  { flex:1; padding:14px 12px; text-align:center; font-size:13px; font-weight:600; color:var(--gray-400); border-bottom:3px solid transparent; display:flex; align-items:center; justify-content:center; gap:7px; transition:all .2s; cursor:pointer; user-select:none; }
+.fd-step.active { color:var(--sa-700); border-bottom-color:var(--sa-500); }
+.fd-step.done   { color:var(--sa-500); }
+.fd-step-num { width:22px; height:22px; border-radius:50%; background:var(--gray-200); color:var(--gray-500); font-size:11px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.fd-step.active .fd-step-num { background:var(--sa-600); color:#fff; }
+.fd-step.done   .fd-step-num { background:var(--sa-100); color:var(--sa-600); }
+.wp-wf-table-wrap .table thead th { font-size:12px; white-space:nowrap; }
+#wpEditBody #wpTab2Pane .wp-wf-tab-panel { padding:18px 20px; border:1px solid var(--gray-200); border-radius:12px; background:#fff; }
+#wpEditBody #wpTab2Pane .wp-wf-table-wrap .table { font-size:12.5px; }
+#wpEditBody #wpTab2Pane .wp-wf-table-wrap .table thead th {
+    background:var(--gray-50) !important;
+    color:var(--gray-700);
+    font-weight:700;
+    border-bottom:2px solid var(--gray-200);
+    padding:10px 12px;
+}
+#wpEditBody #wpTab2Pane .wp-wf-table-wrap .table tbody td { vertical-align:middle; padding:10px 12px; }
+#wpEditBody #wpTab2Pane .wp-wf-table-wrap .table tbody tr:hover { background:var(--sa-25); }
+
+/* ── مودال إضافة/تعديل خطوة سير العمل (#wpWorkflowStepModal) ── */
+#wpWorkflowStepModal .fd-modal-body { padding:28px; }
+#wpWorkflowStepModal .wp-wf-step-form { margin-bottom:0; }
+#wpWorkflowStepModal .fd-form-group label,
+#wpWorkflowStepModal .wp-wf-duration-section-label {
+    font-weight:700; font-size:13px; color:var(--gray-700);
+}
+#wpWorkflowStepModal .wp-wf-duration-section-label { display:block; margin-bottom:4px; }
+
+#wpWorkflowStepModal .wp-wf-radio-row {
+    display:grid; grid-template-columns:1fr 1fr; gap:0;
+    border:2px solid var(--gray-200); border-radius:10px; overflow:hidden;
+}
+#wpWorkflowStepModal .wp-wf-radio {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px 14px; margin:0; cursor:pointer;
+    font-weight:700; font-size:13px; font-family:'Cairo',sans-serif;
+    border:none; transition:box-shadow .15s, filter .15s;
+}
+#wpWorkflowStepModal .wp-wf-radio input { accent-color:currentColor; margin:0; flex-shrink:0; }
+#wpWorkflowStepModal .wp-wf-radio[data-mode="specific"] { background:#fdecec; color:#b42318; }
+#wpWorkflowStepModal .wp-wf-radio[data-mode="fixed"] { background:#ecfdf3; color:#027a48; border-inline-start:1px solid var(--gray-200); }
+#wpWorkflowStepModal .wp-wf-radio:has(input:checked) { box-shadow:inset 0 0 0 2px currentColor; filter:saturate(1.05); }
+
+#wpWorkflowStepModal .wp-wf-duration-block .wp-wf-duration-pair { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+#wpWorkflowStepModal .wp-wf-duration-unit { display:flex; align-items:center; gap:8px; }
+#wpWorkflowStepModal .wp-wf-stepper-wrap { max-width:220px; width:100%; }
+#wpWorkflowStepModal .wp-wf-stepper {
+    display:grid; grid-template-columns:40px minmax(48px,1fr) 40px;
+    direction:ltr; align-items:stretch;
+    border:2px solid var(--gray-200); border-radius:10px; overflow:hidden;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+#wpWorkflowStepModal .wp-wf-stepper-btn {
+    border:none; background:linear-gradient(180deg,#fafafa 0%,#f3f4f6 100%);
+    color:var(--gray-700); font-size:18px; font-weight:700; line-height:1;
+    cursor:pointer; padding:0; transition:background .15s, color .15s;
+}
+#wpWorkflowStepModal .wp-wf-stepper-btn:hover { background:var(--sa-50); color:var(--sa-700); }
+#wpWorkflowStepModal .wp-wf-stepper-btn:active { background:var(--sa-100); }
+#wpWorkflowStepModal .wp-wf-stepper-input {
+    border:none !important; border-radius:0 !important; box-shadow:none !important;
+    text-align:center; font-weight:800; font-size:15px; padding:8px 4px !important;
+    -moz-appearance:textfield; appearance:textfield;
+}
+#wpWorkflowStepModal .wp-wf-stepper-input::-webkit-outer-spin-button,
+#wpWorkflowStepModal .wp-wf-stepper-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+#wpWorkflowStepModal .wp-wf-stepper-input:focus { outline:none; box-shadow:inset 0 0 0 2px var(--sa-200) !important; }
+#wpWorkflowStepModal .wp-wf-duration-suffix { font-size:13px; font-weight:700; color:var(--gray-600); white-space:nowrap; }
+
+#wpWorkflowStepModal .wp-wf-channel-list { display:flex; flex-wrap:wrap; gap:8px; }
+#wpWorkflowStepModal .wp-wf-channel-chip {
+    display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;
+    padding:8px 12px; border:2px solid var(--gray-200); border-radius:10px;
+    background:#fff; cursor:pointer; font-size:12px; font-weight:700;
+    font-family:'Cairo',sans-serif; transition:border-color .15s, background .15s;
+}
+#wpWorkflowStepModal .wp-wf-channel-chip input { accent-color:var(--sa-600); margin:0; }
+#wpWorkflowStepModal .wp-wf-channel-chip.is-on { border-color:var(--sa-500); background:var(--sa-25); color:var(--sa-800); }
+#wpWorkflowStepModal .wp-wf-channel-soon {
+    font-size:10px; font-weight:700; line-height:1.2;
+    background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;
+    padding:1px 7px; border-radius:999px;
+}
+#wpWorkflowStepModal .wp-wf-channel-note {
+    margin-top:8px; font-size:11.5px; color:var(--gray-500); line-height:1.5;
+}
+
+#wpWorkflowStepModal .wp-wf-actions-list {
+    display:flex; flex-direction:column; align-items:flex-start; gap:8px;
+}
+#wpWorkflowStepModal .wp-wf-action-row { width:100%; max-width:280px; }
+#wpWorkflowStepModal .wp-wf-action-chip {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    width:100%; min-width:170px; max-width:240px;
+    padding:8px 12px; border:2px solid var(--gray-200); border-radius:10px;
+    background:#fff; cursor:pointer; font-family:'Cairo',sans-serif;
+    transition:border-color .15s, background .15s, box-shadow .15s;
+}
+#wpWorkflowStepModal .wp-wf-action-chip span {
+    color:var(--wf-act-color, #6b7280); font-weight:700; font-size:13px;
+}
+#wpWorkflowStepModal .wp-wf-action-cb { accent-color:var(--wf-act-color, var(--sa-600)); margin:0; flex-shrink:0; }
+#wpWorkflowStepModal .wp-wf-action-chip.is-on {
+    border-color:var(--wf-act-color, var(--sa-500));
+    background:color-mix(in srgb, var(--wf-act-color, var(--sa-500)) 8%, #fff);
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--wf-act-color, var(--sa-500)) 25%, transparent);
+}
+
+#wpWorkflowStepModal .wp-wf-sub-row {
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin-top:8px; padding:10px 12px;
+    border:1px dashed var(--gray-300); border-radius:8px; background:var(--gray-50);
+}
+#wpWorkflowStepModal .wp-wf-sub-label { font-size:12px; font-weight:700; color:var(--gray-700); white-space:nowrap; }
+#wpWorkflowStepModal .wp-wf-sub-select { flex:1; min-width:140px; max-width:220px; font-size:13px; border-radius:10px; border:2px solid var(--gray-200); }
+
+#wpWorkflowStepModal .wp-wf-ou-tree-wrap { position:relative; width:100%; }
+#wpWorkflowStepModal .wp-wf-ou-tree-trigger.form-select {
+    display:flex; align-items:center; text-align:right !important; cursor:pointer;
+    width:100%; min-height:calc(1.5em + 16px + 4px);
+    font-size:13px; border-radius:10px; border:2px solid var(--gray-200) !important;
+    padding:8px 12px !important; font-family:'Cairo',sans-serif; background:#fff !important;
+    box-shadow:none !important;
+}
+#wpWorkflowStepModal .wp-wf-ou-tree-trigger.form-select:focus,
+#wpWorkflowStepModal .wp-wf-ou-tree-trigger.form-select:hover {
+    border-color:var(--sa-400) !important; box-shadow:none !important;
+}
+#wpWorkflowStepModal .wp-wf-ou-tree-panel {
+    margin-top:4px; max-height:280px; overflow-y:auto;
+    background:#fff !important; border:1px solid var(--gray-300) !important;
+    border-radius:8px !important; box-shadow:0 4px 16px rgba(0,0,0,.08) !important; padding:0 !important;
+}
+#wpWorkflowStepModal .wp-wf-ou-tree-panel .wp-wf-ou-tree-row {
+    border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px;
+}
+#wpWorkflowStepModal .wp-wf-ou-tree-panel .wp-wf-ou-tree-row:hover { background:var(--sa-25); }
+#wpWorkflowStepModal .wp-wf-ou-tree-panel .wp-wf-ou-tree-row.is-selected { background:var(--info-50); }
+#wpWorkflowStepModal .wp-wf-ou-tree-exp {
+    flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0;
+    line-height:1; font-weight:600; font-size:11px; color:var(--sa-600);
+    border:1px solid var(--gray-200); border-radius:6px; background:#fff; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+}
+#wpWorkflowStepModal .wp-wf-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); }
+#wpWorkflowStepModal .wp-wf-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; min-width:1.35rem; }
+#wpWorkflowStepModal .wp-wf-ou-tree-name { text-align:right; font-size:13px; line-height:1.4; min-width:0; }
+
+#wpWorkflowStepModal .fd-modal-footer .btn-primary {
+    border-radius:12px; padding:10px 28px; font-weight:700;
+    background:var(--sa-600); border:none; font-family:'Cairo',sans-serif;
+}
+#wpWorkflowStepModal .fd-modal-footer .btn-primary:hover { background:var(--sa-700); }
+#wpWorkflowStepModal .fd-modal-footer .fd-cancel-btn { padding:10px 28px; border-radius:12px; }
+
+#wpWorkflowStepModal .fd-form-group .form-control,
+#wpWorkflowStepModal .fd-form-group .form-select {
+    font-size:13px; border-radius:10px; border:2px solid var(--gray-200);
+    padding:8px 12px; font-family:'Cairo',sans-serif;
+}
+#wpWorkflowStepModal .fd-form-group .form-control:focus,
+#wpWorkflowStepModal .fd-form-group .form-select:focus {
+    border-color:var(--sa-400); box-shadow:none;
+}
+#wpWorkflowStepModal .fd-form-group textarea.form-control { min-height:70px; resize:vertical; }
+
+#wpWorkflowStepModal .wp-wf-dur-display { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
+#wpWorkflowStepModal .wp-wf-dur-dot { color:var(--gray-400); }
+#wpWorkflowStepModal .wp-wf-muted { color:var(--gray-500); }
+#wpWorkflowStepModal .wp-wf-na { color:var(--gray-400); }
+
+@@media (max-width:768px) {
+    .fd-form-row { grid-template-columns:1fr; }
+    .fd-form-row.cols-3 { grid-template-columns:1fr; }
+    .fd-detail-grid { grid-template-columns:1fr; }
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="page-title mb-0">إجراءات العمل</h2>
+        <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إنشاء وإدارة إجراءات العمل في النظام</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-primary" onclick="wpShowVersionMode()" style="border-radius:12px;padding:10px 24px;font-weight:700;">
+            <i class="bi bi-layers"></i> إصدار نسخة
+        </button>
+        <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius:12px;padding:10px 28px;">
+            <i class="bi bi-plus-lg"></i> إنشاء إجراء عمل جديد
+        </button>
+    </div>
+</div>
+
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters wp-procedure-filters">
+    <div class="rt-search-box">
+        <i class="bi bi-search rt-search-icon"></i>
+        <input type="text" class="form-control" id="wpSearch" placeholder="بحث في أسماء الإجراء..." oninput="wpLoad()">
+    </div>
+    <select class="rt-filter-select form-select" id="wpFilterWorkspace" onchange="wpLoad()" aria-label="مساحة العمل">
+        <option value="">مساحة العمل</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterFormDef" onchange="wpLoad()" aria-label="النماذج المستخدمة">
+        <option value="">النماذج المستخدمة</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterValidity" onchange="wpLoad()" aria-label="صلاحية الإجراء">
+        <option value="">صلاحية الإجراء</option>
+        <option value="دائم">دائم</option>
+        <option value="مؤقت">مؤقت</option>
+    </select>
+    <div class="wp-filt-ou-wrap">
+        <input type="hidden" id="wpFilterTargetOrg" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 wp-filt-ou-tree-trigger" id="wpFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية المستهدفة">
+            <span class="wp-filt-ou-tree-label text-truncate d-block" id="wpFilterOuLabel">الوحدات التنظيمية المستهدفة</span>
+        </button>
+        <div class="wp-filt-ou-tree-panel d-none" id="wpFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;"></div>
+    </div>
+    <select class="rt-filter-select form-select" id="wpFilterExecutor" onchange="wpLoad()" aria-label="المنفذ للإجراء">
+        <option value="">المنفذ للإجراء</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterStatus" onchange="wpLoad()" aria-label="الحالة">
+        <option value="">الحالة</option>
+        <option value="draft">مسودة</option>
+        <option value="pending">بانتظار الاعتماد</option>
+        <option value="approved">معتمد</option>
+        <option value="rejected">مرفوض</option>
+    </select>
+    <select class="rt-filter-select form-select" id="wpFilterActive" onchange="wpLoad()" aria-label="التفعيل">
+        <option value="">التفعيل</option>
+        <option value="1">مفعل</option>
+        <option value="0">غير مفعل</option>
+    </select>
+    <button type="button" class="rt-clear-btn" onclick="wpClear()"><i class="bi bi-x-circle"></i> مسح</button>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0" id="wpTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;text-align:center;">رقم</th>
+                        <th>ترميز الإجراء</th>
+                        <th>اسم الإجراء</th>
+                        <th>نوع الإجراء</th>
+                        <th style="text-align:center;">معدل الاستخدام</th>
+                        <th style="text-align:center;">مستوى الأولوية</th>
+                        <th>التصنيف</th>
+                        <th>الوحدة التنظيمية المالكة</th>
+                        <th style="text-align:center;">صلاحية الإجراء</th>
+                        <th>القالب المستخدم</th>
+                        <th style="text-align:center;">رقم الإصدار</th>
+                        <th style="text-align:center;">الحالة</th>
+                        <th style="text-align:center;display:none;" id="wpThActive">التفعيل</th>
+                        <th style="text-align:center;">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="wpBody">
+                    <tr><td colspan="13" class="text-center py-4">
+                        <div class="spinner-border" style="color:var(--sa-600);"></div>
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="wpEditHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="wpEditTitle">إضافة إجراء عمل جديد</h5>
+                <div class="fd-modal-subtitle" id="wpEditSub">أدخل بيانات الإجراء</div>
+            </div>
+            <div class="fd-modal-body" id="wpEditBody"></div>
+            <div class="fd-modal-footer" id="wpEditFoot"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تفاصيل إجراء العمل</h5>
+                <div class="fd-modal-subtitle">عرض كامل للبيانات</div>
+            </div>
+            <div class="fd-modal-body" id="wpDetailsBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpRejectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">رفض إجراء العمل</h5>
+                <div class="fd-modal-subtitle" id="wpRejectSub">الرجاء تحديد سبب الرفض</div>
+            </div>
+            <div class="fd-modal-body">
+                <div class="fd-form-group">
+                    <label><span class="required-star">*</span> سبب الرفض</label>
+                    <textarea class="form-control" id="wpRejectReason" rows="3" placeholder="اكتب سبب الرفض هنا..."></textarea>
+                </div>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="wpSubmitReject()">
+                    <i class="bi bi-x-lg"></i> رفض
+                </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header danger">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تأكيد الحذف</h5>
+                <div class="fd-modal-subtitle">هذا الإجراء لا يمكن التراجع عنه</div>
+            </div>
+            <div class="fd-modal-body">
+                <p style="font-size:14px;color:var(--gray-700);margin:0;">
+                    هل أنت متأكد من حذف الإجراء <strong id="wpDeleteName"></strong>؟
+                </p>
+            </div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;gap:10px;">
+                <button type="button" class="fd-save-btn" style="background:var(--error-600);" onclick="wpSubmitDelete()">
+                    <i class="bi bi-trash3"></i> حذف
+                </button>
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpWorkflowStepModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header create" id="wpWfStepModalHead">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal" aria-label="إغلاق"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title" id="wpWfStepModalTitle">إضافة خطوة سير عمل</h5>
+                <div class="fd-modal-subtitle" id="wpWfStepModalSub">أدخل بيانات الخطوة الجديدة</div>
+            </div>
+            <div class="fd-modal-body" id="wpWfFormWrap"></div>
+            <div class="fd-modal-footer" id="wpWfStepModalFoot" style="justify-content:flex-end;gap:10px;display:none;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="wpWorkflowStepDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content fd-modal">
+            <div class="fd-modal-header details">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="fd-modal-title">تفاصيل خطوة سير العمل</h5>
+                <div class="fd-modal-subtitle" id="wpWfDetSub"></div>
+            </div>
+            <div class="fd-modal-body" id="wpWfDetBody"></div>
+            <div class="fd-modal-footer" style="justify-content:flex-end;">
+                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/work-procedures.js" asp-append-version="true"></script>
+<script>wpLoad();</script>
+}

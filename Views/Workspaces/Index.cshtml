@@ -68,6 +68,22 @@
 .ws-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
 .ws-ou-tree-name { text-align:right; font-size:13px; line-height:1.4; min-width:0; flex-grow:1; }
 
+/* شجرة الوحدة التنظيمية (فلتر) — نفس مكوّن المستفيدين */
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
+.bnf-ou-tree-row:hover { background:var(--sa-25); }
+.bnf-ou-tree-row.is-selected { background:var(--info-50); }
+.bnf-ou-tree-exp { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; padding:0; line-height:1; font-weight:600; font-size:11px; color:var(--sa-600); border:1px solid var(--gray-200); border-radius:8px; background:linear-gradient(180deg,#fff 0%,#fafafa 100%); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none !important; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease; }
+.bnf-ou-tree-exp:hover { background:var(--sa-50); border-color:var(--sa-300); box-shadow:0 1px 3px rgba(37,147,95,.1); color:var(--sa-700); }
+.bnf-ou-tree-exp:active { transform:scale(0.94); }
+.bnf-ou-tree-exp-spacer { flex-shrink:0; width:1.35rem; height:1.35rem; min-width:1.35rem; }
+.bnf-ou-tree-name { text-align:right; font-size:14px; line-height:1.4; min-width:0; }
+
+.ws-edit-ou-wrap-disabled .ws-ou-tree-trigger,
+.ws-edit-ou-wrap-disabled .ws-ou-tree-panel { pointer-events:none; cursor:not-allowed; opacity:0.76; }
+
 </style>
 
 <div class="bnf-page-header">
@@ -84,6 +100,13 @@
     <div class="rt-search-box" style="min-width:200px;max-width:280px;">
         <i class="bi bi-search rt-search-icon"></i>
         <input type="text" class="form-control" id="wsFilterSearch" placeholder="بحث بالاسم أو الوصف..." autocomplete="off">
+    </div>
+    <div class="bnf-filter-ou-wrap" style="min-width:220px;max-width:280px;position:relative;">
+        <input type="hidden" id="wsFilterUnit" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 bnf-ou-tree-trigger" id="wsFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية">
+            <span class="bnf-ou-tree-label text-truncate d-block" id="wsFilterOuLabel">الوحدة التنظيمية</span>
+        </button>
+        <div class="bnf-ou-tree-panel d-none" id="wsFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
     </div>
     <select class="rt-filter-select form-select" id="wsFilterStatus" style="min-width:160px;">
         <option value="">الحالة</option>
@@ -197,8 +220,8 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">الوحدة التنظيمية المالكة<span class="required-star">*</span></label>
-                    <div class="ws-ou-tree-wrap" id="wsEditOuWrap">
-                        <div class="ws-ou-tree-trigger" id="wsEditOuTrigger" onclick="wsToggleOuPanel('edit')" tabindex="0">
+                    <div class="ws-ou-tree-wrap ws-edit-ou-wrap-disabled" id="wsEditOuWrap">
+                        <div class="ws-ou-tree-trigger" id="wsEditOuTrigger" onclick="wsToggleOuPanel('edit')" tabindex="-1">
                             <span id="wsEditOuLabel" style="color:var(--gray-400);">اختر الوحدة التنظيمية...</span>
                             <i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i>
                         </div>

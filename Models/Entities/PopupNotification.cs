@@ -6,7 +6,7 @@ public class PopupNotification
     public string Title         { get; set; } = "";
     public string TitleFontSize { get; set; } = "18";   
     public string TitleColor    { get; set; } = "#1F2A37";
-    public string Category      { get; set; } = "";     // إعلان | تنبيه
+    public string Category      { get; set; } = "";     // إعلان | تنبيه | تحذير
     public string ContentType   { get; set; } = "";     
     public string TextContent   { get; set; } = "";
     public string AttachmentUrl { get; set; } = "";     
@@ -18,6 +18,9 @@ public class PopupNotification
     public List<int> TargetUserIds       { get; set; } = new();
     public List<int> TargetDepartmentIds { get; set; } = new();
     public List<int> DismissedByUserIds  { get; set; } = new();
+
+    /// <summary>سجل المستخدمين الذين اطلّعوا على الإشعار (للتتبع والمراجعة).</summary>
+    public List<PopupViewEntry> ViewedBy { get; set; } = new();
     public string DisplayLocation { get; set; } = "dashboard"; 
     public string Status          { get; set; } = "draft";     
     public string CreatedBy       { get; set; } = "";

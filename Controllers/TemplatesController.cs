@@ -1,3 +1,4 @@
+using System.Globalization;
 using FormsSystem.Models.Entities;
 using FormsSystem.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -49,11 +50,15 @@ public class TemplatesController : BaseController
             data = list.Select(t => new
             {
                 t.Id, t.Name, t.Description, t.Color, t.IsActive,
+                DeactivateReason = t.DeactivateReason ?? "",
                 t.HeaderSections, t.FooterSections,
                 t.HeaderJson, t.FooterJson,
+                t.HeaderBackgroundColor, t.HeaderBackgroundImageUrl,
+                t.FooterBackgroundColor, t.FooterBackgroundImageUrl,
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.PageSize,
                 t.ShowHeaderLine, t.ShowFooterLine,
+                t.WatermarkUrl, t.WatermarkOpacity,
                 t.CreatedBy, t.CreatedAt
             })
         });
@@ -68,18 +73,43 @@ public class TemplatesController : BaseController
         var t = await _ds.GetFormTemplateByIdAsync(id);
         if (t == null) return Json(new { success = false, message = "القالب غير موجود" });
 
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var createdByDisplay = ResolveBeneficiaryDisplayName(t.CreatedBy, beneficiaries);
+        var updatedByDisplay = ResolveBeneficiaryDisplayName(t.UpdatedBy, beneficiaries);
+        var logs = await _ds.ListAllAuditLogsAsync();
+        var deleteLog = logs
+            .Where(l => string.Equals(l.EntityType, "FormTemplate", StringComparison.Ordinal)
+                && string.Equals(l.EntityId, id.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                && string.Equals(l.Action, "حذف قالب", StringComparison.Ordinal))
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstOrDefault();
+        var deletedAtDisplay = deleteLog != null
+            ? deleteLog.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+            : "";
+
         return Json(new
         {
             success = true,
             data = new
             {
                 t.Id, t.Name, t.Description, t.Color, t.IsActive,
+                DeactivateReason = t.DeactivateReason ?? "",
                 t.HeaderSections, t.FooterSections,
                 t.HeaderJson, t.FooterJson,
+                t.HeaderBackgroundColor, t.HeaderBackgroundImageUrl,
+                t.FooterBackgroundColor, t.FooterBackgroundImageUrl,
                 t.MarginTop, t.MarginBottom, t.MarginRight, t.MarginLeft,
                 t.PageDirection, t.PageSize,
                 t.ShowHeaderLine, t.ShowFooterLine,
-                t.CreatedBy, t.CreatedAt, t.UpdatedBy, t.UpdatedAt
+                t.WatermarkUrl, t.WatermarkOpacity,
+                t.CreatedBy, t.CreatedAt, t.UpdatedBy, t.UpdatedAt,
+                CreatedAtDisplay = t.CreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+                UpdatedAtDisplay = t.UpdatedAt.HasValue
+                    ? t.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                    : "",
+                CreatedByDisplay = createdByDisplay,
+                UpdatedByDisplay = updatedByDisplay,
+                DeletedAtDisplay = deletedAtDisplay
             }
         });
     }
@@ -93,16 +123,26 @@ public class TemplatesController : BaseController
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القالب مطلوب" });
 
+        var isActive = req.IsActive ?? true;
+        var deactivateErr = ValidateTemplateDeactivateReason(isActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
+
         var t = new FormTemplate
         {
             Name = req.Name.Trim(),
             Description = req.Description?.Trim() ?? "",
             Color = req.Color ?? "#25935F",
-            IsActive = req.IsActive ?? true,
+            IsActive = isActive,
+            DeactivateReason = isActive ? "" : (req.DeactivateReason ?? "").Trim(),
             HeaderSections = req.HeaderSections ?? 1,
             FooterSections = req.FooterSections ?? 1,
             HeaderJson = req.HeaderJson ?? "[]",
+            HeaderBackgroundColor = req.HeaderBackgroundColor?.Trim() ?? "",
+            HeaderBackgroundImageUrl = req.HeaderBackgroundImageUrl?.Trim() ?? "",
             FooterJson = req.FooterJson ?? "[]",
+            FooterBackgroundColor = req.FooterBackgroundColor?.Trim() ?? "",
+            FooterBackgroundImageUrl = req.FooterBackgroundImageUrl?.Trim() ?? "",
             MarginTop = req.MarginTop ?? 20,
             MarginBottom = req.MarginBottom ?? 20,
             MarginRight = req.MarginRight ?? 20,
@@ -111,7 +151,9 @@ public class TemplatesController : BaseController
             PageSize = req.PageSize ?? "A4",
             ShowHeaderLine = req.ShowHeaderLine ?? true,
             ShowFooterLine = req.ShowFooterLine ?? true,
-            CreatedBy = CurrentUserFullName
+            WatermarkUrl = req.WatermarkUrl ?? "",
+            WatermarkOpacity = ClampWatermarkOpacity(req.WatermarkOpacity),
+            CreatedBy = CurrentUserFullName ?? CurrentUserName ?? ""
         };
 
         await _ds.AddFormTemplateAsync(t);
@@ -129,14 +171,31 @@ public class TemplatesController : BaseController
         var t = await _ds.GetFormTemplateByIdAsync(req.Id);
         if (t == null) return Json(new { success = false, message = "القالب غير موجود" });
 
+        var nextActive = req.IsActive ?? t.IsActive;
+        var deactivateErr = ValidateTemplateDeactivateReason(nextActive, req.DeactivateReason);
+        if (deactivateErr != null)
+            return Json(new { success = false, message = deactivateErr });
+
         if (!string.IsNullOrWhiteSpace(req.Name)) t.Name = req.Name.Trim();
         if (req.Description != null) t.Description = req.Description.Trim();
         if (req.Color != null) t.Color = req.Color;
-        if (req.IsActive.HasValue) t.IsActive = req.IsActive.Value;
+        if (req.IsActive.HasValue)
+        {
+            t.IsActive = req.IsActive.Value;
+            t.DeactivateReason = req.IsActive.Value ? "" : (req.DeactivateReason ?? "").Trim();
+        }
+        else if (!t.IsActive && req.DeactivateReason != null)
+        {
+            t.DeactivateReason = req.DeactivateReason.Trim();
+        }
         if (req.HeaderSections.HasValue) t.HeaderSections = req.HeaderSections.Value;
         if (req.FooterSections.HasValue) t.FooterSections = req.FooterSections.Value;
         if (req.HeaderJson != null) t.HeaderJson = req.HeaderJson;
+        if (req.HeaderBackgroundColor != null) t.HeaderBackgroundColor = req.HeaderBackgroundColor.Trim();
+        if (req.HeaderBackgroundImageUrl != null) t.HeaderBackgroundImageUrl = req.HeaderBackgroundImageUrl.Trim();
         if (req.FooterJson != null) t.FooterJson = req.FooterJson;
+        if (req.FooterBackgroundColor != null) t.FooterBackgroundColor = req.FooterBackgroundColor.Trim();
+        if (req.FooterBackgroundImageUrl != null) t.FooterBackgroundImageUrl = req.FooterBackgroundImageUrl.Trim();
         if (req.MarginTop.HasValue) t.MarginTop = req.MarginTop.Value;
         if (req.MarginBottom.HasValue) t.MarginBottom = req.MarginBottom.Value;
         if (req.MarginRight.HasValue) t.MarginRight = req.MarginRight.Value;
@@ -145,8 +204,10 @@ public class TemplatesController : BaseController
         if (req.PageSize != null) t.PageSize = req.PageSize;
         if (req.ShowHeaderLine.HasValue) t.ShowHeaderLine = req.ShowHeaderLine.Value;
         if (req.ShowFooterLine.HasValue) t.ShowFooterLine = req.ShowFooterLine.Value;
+        if (req.WatermarkUrl != null) t.WatermarkUrl = req.WatermarkUrl;
+        if (req.WatermarkOpacity.HasValue) t.WatermarkOpacity = ClampWatermarkOpacity(req.WatermarkOpacity);
 
-        t.UpdatedBy = CurrentUserFullName;
+        t.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         t.UpdatedAt = DateTime.Now;
 
         await _ds.UpdateFormTemplateAsync(t);
@@ -159,6 +220,15 @@ public class TemplatesController : BaseController
         if (!IsAuthenticated || CurrentUserRole != "Admin")
             return Json(new { success = false, message = "غير مصرح" });
 
+        var tpl = await _ds.GetFormTemplateByIdAsync(req.Id);
+        if (tpl == null)
+            return Json(new { success = false, message = "القالب غير موجود" });
+
+        if (await _ds.IsFormTemplateLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قالب", "FormTemplate", req.Id.ToString(CultureInfo.InvariantCulture), tpl.Name));
+
         var ok = await _ds.DeleteFormTemplateAsync(req.Id);
         return Json(ok
             ? new { success = true, message = "تم حذف القالب بنجاح" }
@@ -166,7 +236,7 @@ public class TemplatesController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> ToggleTemplate([FromBody] TemplateIdRequest req)
+    public async Task<IActionResult> ToggleTemplate([FromBody] TemplateToggleRequest req)
     {
         if (!IsAuthenticated || CurrentUserRole != "Admin")
             return Json(new { success = false, message = "غير مصرح" });
@@ -174,12 +244,21 @@ public class TemplatesController : BaseController
         var t = await _ds.GetFormTemplateByIdAsync(req.Id);
         if (t == null) return Json(new { success = false, message = "القالب غير موجود" });
 
-        t.IsActive = !t.IsActive;
-        t.UpdatedBy = CurrentUserFullName;
+        var newActive = !t.IsActive;
+        if (!newActive)
+        {
+            var deactivateErr = ValidateTemplateDeactivateReason(false, req.DeactivateReason);
+            if (deactivateErr != null)
+                return Json(new { success = false, message = deactivateErr });
+        }
+
+        t.IsActive = newActive;
+        t.DeactivateReason = newActive ? "" : (req.DeactivateReason ?? "").Trim();
+        t.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         t.UpdatedAt = DateTime.Now;
         await _ds.UpdateFormTemplateAsync(t);
 
-        return Json(new { success = true, isActive = t.IsActive });
+        return Json(new { success = true, isActive = t.IsActive, message = newActive ? "تم تفعيل القالب" : "تم تعطيل القالب" });
     }
 
     [HttpPost]
@@ -216,10 +295,15 @@ public class TemplatesController : BaseController
         public string? Description { get; set; }
         public string? Color { get; set; }
         public bool? IsActive { get; set; }
+        public string? DeactivateReason { get; set; }
         public int? HeaderSections { get; set; }
         public int? FooterSections { get; set; }
         public string? HeaderJson { get; set; }
+        public string? HeaderBackgroundColor { get; set; }
+        public string? HeaderBackgroundImageUrl { get; set; }
         public string? FooterJson { get; set; }
+        public string? FooterBackgroundColor { get; set; }
+        public string? FooterBackgroundImageUrl { get; set; }
         public int? MarginTop { get; set; }
         public int? MarginBottom { get; set; }
         public int? MarginRight { get; set; }
@@ -228,6 +312,8 @@ public class TemplatesController : BaseController
         public string? PageSize { get; set; }
         public bool? ShowHeaderLine { get; set; }
         public bool? ShowFooterLine { get; set; }
+        public string? WatermarkUrl { get; set; }
+        public int? WatermarkOpacity { get; set; }
     }
 
     public class TemplateUpdateRequest : TemplateRequest
@@ -238,5 +324,37 @@ public class TemplatesController : BaseController
     public class TemplateIdRequest
     {
         public int Id { get; set; }
+    }
+
+    public class TemplateToggleRequest : TemplateIdRequest
+    {
+        public string? DeactivateReason { get; set; }
+    }
+
+    private static string? ValidateTemplateDeactivateReason(bool isActive, string? deactivateReason)
+    {
+        if (isActive) return null;
+        if (string.IsNullOrWhiteSpace(deactivateReason))
+            return "سبب التعطيل مطلوب عند اختيار حالة معطل";
+        return null;
+    }
+
+    private static int ClampWatermarkOpacity(int? value)
+    {
+        var v = value ?? 15;
+        if (v < 5) v = 5;
+        if (v > 80) v = 80;
+        return v;
+    }
+
+    private static string ResolveBeneficiaryDisplayName(string? stored, List<Beneficiary> beneficiaries)
+    {
+        var s = (stored ?? "").Trim();
+        if (string.IsNullOrEmpty(s)) return "";
+        var b = beneficiaries.FirstOrDefault(x => string.Equals((x.FullName ?? "").Trim(), s, StringComparison.Ordinal));
+        if (b != null) return (b.FullName ?? "").Trim();
+        b = beneficiaries.FirstOrDefault(x => string.Equals((x.Username ?? "").Trim(), s, StringComparison.OrdinalIgnoreCase));
+        if (b != null) return (b.FullName ?? "").Trim();
+        return s;
     }
 }

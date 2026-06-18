@@ -9,6 +9,7 @@
 .pn-b-draft     { background:var(--gray-100);color:var(--gray-600); }
 .pn-b-ad        { background:#ECFDF3;color:#067647; }
 .pn-b-alert     { background:#FEFCE8;color:#854D0E; }
+.pn-b-warning   { background:#FEF2F2;color:#B42318; }
 .pn-b-text      { background:#F4F3FF;color:#5925DC; }
 .pn-b-image     { background:#EFF8FF;color:#175CD3; }
 .pn-b-video     { background:#FDF4FF;color:#7E22CE; }
@@ -46,6 +47,8 @@
 .pn-target-list { max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:0;background:#fff; }
 .pn-target-list label { display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-700);cursor:pointer; }
 .pn-target-list label:hover { color:var(--sa-700); }
+.pn-user-row-manager { background:#ECFDF3;border-radius:8px;padding:6px 8px!important;margin:2px 0;align-items:center;flex-wrap:wrap; }
+.pn-user-mgr-badge { font-size:11px;font-weight:700;color:#067647;white-space:nowrap;margin-right:6px; }
 .pn-target-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; }
 .pn-select-all-btn { background:none;border:1px solid var(--gray-300);border-radius:8px;padding:3px 12px;font-size:11px;font-weight:700;color:var(--sa-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap; }
 .pn-select-all-btn:hover { background:var(--sa-50);border-color:var(--sa-400); }
@@ -70,11 +73,16 @@
 .pn-ou-tree-spacer { width:18px;flex-shrink:0; }
 .pn-ou-tree-children { padding-right:20px;display:none; }
 .pn-ou-tree-node.expanded > .pn-ou-tree-children { display:block; }
-/* Preview modal — إعلان = green, تنبيه = yellow */
-.pn-prev-head-ad    { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
-.pn-prev-head-alert { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
+/* Preview modal — إعلان = green, تنبيه = yellow, تحذير = red */
+.pn-prev-head-ad      { background:linear-gradient(135deg,#079455,#16A34A);padding:16px 20px; }
+.pn-prev-head-alert   { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:16px 20px; }
+.pn-prev-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:16px 20px; }
 .pn-preview-img   { width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px; }
 .pn-preview-video { width:100%;border-radius:8px;margin-top:10px; }
+.pn-action-btn-viewers { border-color:var(--gray-500);color:var(--gray-700);background:#fff; }
+.pn-action-btn-viewers:hover { background:var(--gray-50); }
+.pn-viewers-table thead th { background:var(--gray-50)!important;font-size:12px;font-weight:700;text-align:center; }
+.pn-viewers-table tbody td { font-size:13px;vertical-align:middle;text-align:center; }
 </style>
 
 <!-- Header -->
@@ -103,6 +111,7 @@
         <option value="">التصنيف</option>
         <option value="إعلان">إعلان</option>
         <option value="تنبيه">تنبيه</option>
+        <option value="تحذير">تحذير</option>
     </select>
     <select class="rt-filter-select form-select" id="pnFilterContentType" style="min-width:190px;max-width:220px;" onchange="pnFilter()">
         <option value="">نوع المحتوى </option>
@@ -164,6 +173,7 @@
                             <option value="">— اختر —</option>
                             <option value="إعلان">إعلان</option>
                             <option value="تنبيه">تنبيه</option>
+                            <option value="تحذير">تحذير</option>
                         </select>
                         <div class="text-danger mt-1" id="pnCategoryErr" style="font-size:12px;display:none;">مطلوب</div>
                     </div>
@@ -277,13 +287,24 @@
                             <input type="date" class="form-control" id="pnEndDate" style="border-radius:10px;font-size:13px;" />
                         </div>
                     </div>
+                    <div id="pnDateErr" class="alert alert-danger d-none mt-2" style="font-size:13px;"></div>
+                </div>
+
+                <!-- Display Location (بعد فترة الظهور) -->
+                <div class="mb-3">
+                    <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
+                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
+                        <option value="landing">صفحة البداية (Landing)</option>
+                        <option value="dashboard">لوحة المعلومات</option>
+                        <option value="login">صفحة تسجيل الدخول</option>
+                    </select>
                 </div>
 
                 <!-- Target Users -->
-                <div class="mb-3">
+                <div class="mb-3" id="pnTargetUsersSection">
                     <div class="pn-target-header">
                         <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-people"></i> الموظفين المستهدفين</div>
-                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllUsers()">
+                        <button type="button" class="pn-select-all-btn" id="pnUsersSelectAllBtn" onclick="pnToggleAllUsers()">
                             <i class="bi bi-check2-all"></i> <span id="pnUsersAllLabel">تحديد الكل</span>
                         </button>
                     </div>
@@ -292,17 +313,17 @@
                             <div class="spinner-border spinner-border-sm"></div> جارٍ التحميل...
                         </div>
                     </div>
-                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                    <div class="pn-target-footnote-dashboard" style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
                         <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
                         في حال عدم التحديد سيرسل الإشعار لجميع الموظفين
                     </div>
                 </div>
 
                 <!-- Target Departments -->
-                <div class="mb-3">
+                <div class="mb-3" id="pnTargetDeptsSection">
                     <div class="pn-target-header">
                         <div class="pn-section-label" style="margin-bottom:0;flex:1;"><i class="bi bi-building"></i> الوحدات التنظيمية</div>
-                        <button type="button" class="pn-select-all-btn" onclick="pnToggleAllDepts()">
+                        <button type="button" class="pn-select-all-btn" id="pnDeptsSelectAllBtn" onclick="pnToggleAllDepts()">
                             <i class="bi bi-check2-all"></i> <span id="pnDeptsAllLabel">تحديد الكل</span>
                         </button>
                     </div>
@@ -311,21 +332,12 @@
                             <div class="spinner-border spinner-border-sm"></div>
                         </div>
                     </div>
-                    <div style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
+                    <div class="pn-target-footnote-dashboard" style="font-size:11.5px;color:var(--gray-500);margin-top:6px;display:flex;align-items:center;gap:5px;">
                         <i class="bi bi-info-circle" style="color:var(--sa-600);"></i>
                         في حال عدم تحديد وحدة سيرسل لموظفي جميع الوحدات التنظيمية
                     </div>
                 </div>
 
-                <!-- Display Location -->
-                <div class="mb-2">
-                    <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
-                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;">
-                        <option value="landing">صفحة البداية (Landing)</option>
-                        <option value="dashboard">لوحة التحكم</option>
-                        <option value="login">صفحة تسجيل الدخول</option>
-                    </select>
-                </div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:16px 24px;gap:10px;justify-content:flex-end;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
@@ -383,6 +395,40 @@
     </div>
 </div>
 
+<!-- ═══ VIEWERS MODAL ═══ -->
+<div class="modal fade" id="pnViewersModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+            <div class="modal-header" style="background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:16px 22px;">
+                <h5 class="modal-title fw-bold" style="font-size:15px;margin:0;">
+                    <i class="bi bi-people" style="color:var(--sa-600);margin-left:6px;"></i>
+                    المراجعون — <span id="pnViewersTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 pn-viewers-table">
+                        <thead>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <th>الوحدة التنظيمية</th>
+                                <th>تاريخ ووقت الاطلاع</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pnViewersBody">
+                            <tr><td colspan="3" class="text-center py-4 text-muted">جارٍ التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="border:none;padding:12px 22px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ DELETE CONFIRM MODAL ═══ -->
 <div class="modal fade" id="pnDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
@@ -417,21 +463,137 @@
 let pnAllData = [], pnFiltered = [], pnPage = 1;
 const pnPer = 12;
 let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
-let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal;
+let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal, pnViewersModal;
 let pnPublishAfterSave = false;
+let pnLastDisplayLocation = 'landing';
 
-const LOC_LABELS = { landing:'صفحة البداية (Landing)', dashboard:'لوحة التحكم', login:'صفحة تسجيل الدخول' };
+function pnIsPublicDisplayLocation(loc) {
+    return loc === 'landing' || loc === 'login';
+}
+function pnAllUserIds() {
+    return pnAllUsers.map(u => u.id ?? u.Id);
+}
+function pnAllDeptIds() {
+    return pnAllDepts.map(d => d.id ?? d.Id);
+}
+function pnSetTargetingUiLocked(locked) {
+    const usersSec = document.getElementById('pnTargetUsersSection');
+    const deptsSec = document.getElementById('pnTargetDeptsSection');
+    if (usersSec) usersSec.style.display = locked ? 'none' : '';
+    if (deptsSec) deptsSec.style.display = locked ? 'none' : '';
+}
+function pnCatBadgeClass(cat) {
+    if (cat === 'تنبيه') return 'pn-b-alert';
+    if (cat === 'تحذير') return 'pn-b-warning';
+    return 'pn-b-ad';
+}
+function pnPreviewHeaderClass(cat) {
+    if (cat === 'تنبيه') return 'pn-prev-head-alert';
+    if (cat === 'تحذير') return 'pn-prev-head-warning';
+    return 'pn-prev-head-ad';
+}
+function pnApplyInitialDisplayLocationRules(selectedUserIds, selectedDeptIds) {
+    const loc = document.getElementById('pnDisplayLocation').value;
+    pnLastDisplayLocation = loc;
+    if (pnIsPublicDisplayLocation(loc)) {
+        pnBuildUsersList(pnAllUserIds());
+        pnBuildDeptsList(pnAllDeptIds());
+        pnSetTargetingUiLocked(true);
+    } else {
+        pnBuildUsersList(Array.isArray(selectedUserIds) ? selectedUserIds : []);
+        pnBuildDeptsList(Array.isArray(selectedDeptIds) ? selectedDeptIds : []);
+        pnSetTargetingUiLocked(false);
+    }
+}
+function pnOnDisplayLocationChange() {
+    const loc = document.getElementById('pnDisplayLocation').value;
+    const wasPublic = pnIsPublicDisplayLocation(pnLastDisplayLocation);
+    const isPublic = pnIsPublicDisplayLocation(loc);
+    if (isPublic) {
+        pnBuildUsersList(pnAllUserIds());
+        pnBuildDeptsList(pnAllDeptIds());
+        pnSetTargetingUiLocked(true);
+    } else {
+        pnSetTargetingUiLocked(false);
+        if (wasPublic) {
+            pnBuildUsersList([]);
+            pnBuildDeptsList([]);
+        }
+    }
+    pnLastDisplayLocation = loc;
+}
+
+const LOC_LABELS = { landing:'صفحة البداية (Landing)', dashboard:'لوحة المعلومات', login:'صفحة تسجيل الدخول' };
 const CT_LABELS  = { text:'نص', image:'صورة', video:'فيديو' };
 const CT_ICONS   = { text:'bi-file-text', image:'bi-image', video:'bi-camera-video-fill' };
 const CT_CLS     = { text:'pn-b-text', image:'pn-b-image', video:'pn-b-video' };
 const PER_LABELS = { permanent:'دائم', specific:'فترة محددة', once:'مرة واحدة' };
-const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill' };
+const CAT_ICON   = { 'إعلان':'bi-megaphone-fill', 'تنبيه':'bi-exclamation-triangle-fill', 'تحذير':'bi-exclamation-octagon-fill' };
+
+function pnTodayIso() {
+    const n = new Date();
+    const y = n.getFullYear();
+    const m = String(n.getMonth() + 1).padStart(2, '0');
+    const d = String(n.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+}
+function pnAddDaysIso(iso, days) {
+    if (!iso) return '';
+    const p = iso.split('-');
+    const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    dt.setDate(dt.getDate() + days);
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
+function pnValidateDates(startDate, endDate) {
+    const today = pnTodayIso();
+    if (!startDate) return 'تاريخ البداية مطلوب';
+    if (!endDate) return 'تاريخ النهاية مطلوب';
+    if (startDate < today) return 'تاريخ البداية لا يمكن أن يكون قبل تاريخ اليوم';
+    if (endDate < today) return 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ اليوم';
+    if (endDate < startDate) return 'تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية';
+    return null;
+}
+function pnConfigureDateFields() {
+    const today = pnTodayIso();
+    const sd = document.getElementById('pnStartDate');
+    const ed = document.getElementById('pnEndDate');
+    if (!sd || !ed) return;
+    sd.min = today;
+    const start = (sd.value || '').trim();
+    if (start) {
+        ed.min = start;
+        ed.max = '';
+        sd.max = (ed.value || '').trim() || '';
+        if (ed.value && ed.value < start) ed.value = '';
+    } else {
+        ed.min = today;
+        sd.removeAttribute('max');
+    }
+}
+function pnShowDateErr(msg) {
+    const el = document.getElementById('pnDateErr');
+    if (!el) return;
+    if (msg) { el.textContent = msg; el.classList.remove('d-none'); }
+    else el.classList.add('d-none');
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     pnModal        = new bootstrap.Modal(document.getElementById('pnModal'));
     pnPreviewModal = new bootstrap.Modal(document.getElementById('pnPreviewModal'));
     pnDetailsModal = new bootstrap.Modal(document.getElementById('pnDetailsModal'));
     pnDeleteModal  = new bootstrap.Modal(document.getElementById('pnDeleteModal'));
+    pnViewersModal = new bootstrap.Modal(document.getElementById('pnViewersModal'));
+    const pnStart = document.getElementById('pnStartDate');
+    const pnEnd = document.getElementById('pnEndDate');
+    function pnOnDateChange() {
+        pnConfigureDateFields();
+        const period = document.querySelector('input[name="pnPeriod"]:checked')?.value;
+        if (period === 'specific') {
+            pnShowDateErr(pnValidateDates((pnStart?.value || '').trim(), (pnEnd?.value || '').trim()));
+        } else pnShowDateErr(null);
+    }
+    if (pnStart) { pnStart.addEventListener('change', pnOnDateChange); pnStart.addEventListener('input', pnOnDateChange); }
+    if (pnEnd) { pnEnd.addEventListener('change', pnOnDateChange); pnEnd.addEventListener('input', pnOnDateChange); }
     await pnLoadMeta();
     await pnLoad();
     const active = document.querySelector('#sidebar .sidebar-child.active');
@@ -490,7 +652,7 @@ function pnRender() {
         const num     = start + i + 1;
         const stCls   = d.status === 'published' ? 'pn-b-published' : 'pn-b-draft';
         const stLbl   = d.status === 'published' ? 'منشور' : 'مسودة';
-        const catCls  = d.category === 'إعلان' ? 'pn-b-ad' : 'pn-b-alert';
+        const catCls  = pnCatBadgeClass(d.category);
         const catIcon = CAT_ICON[d.category] || 'bi-bell';
         const ctCls   = CT_CLS[d.contentType] || 'pn-b-text';
         const ctIcon  = CT_ICONS[d.contentType] || 'bi-file-text';
@@ -514,9 +676,10 @@ function pnRender() {
             <td>
                 <div class="pn-act">
                     <button type="button" class="pn-action-btn pn-action-btn-detail" onclick="pnShowDetails(${d.id})"><i class="bi bi-eye"></i> تفاصيل</button>
+                    <button type="button" class="pn-action-btn pn-action-btn-viewers" onclick="pnShowViewers(${d.id})" title="المراجعون"><i class="bi bi-people"></i> مراجعون${(d.viewerCount||0) > 0 ? ' (' + d.viewerCount + ')' : ''}</button>
                     <button type="button" class="pn-action-btn pn-action-btn-edit" onclick="pnOpenEditModal(${d.id})"><i class="bi bi-pencil"></i> تعديل</button>
                     ${pubBtn}
-                    <button type="button" class="pn-action-btn pn-action-btn-delete" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title)}')"><i class="bi bi-trash3"></i> حذف</button>
+                    <button type="button" class="pn-action-btn pn-action-btn-delete" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title).replace(/'/g, "\\'")}')"><i class="bi bi-trash3"></i> حذف</button>
                 </div>
             </td>
         </tr>`;
@@ -571,12 +734,12 @@ function pnResetModal() {
     document.getElementById('pnDateRange').style.display = 'none';
     document.getElementById('pnStartDate').value = '';
     document.getElementById('pnEndDate').value = '';
+    pnShowDateErr(null);
     document.getElementById('pnDisplayLocation').value = 'landing';
     ['pnCategoryErr','pnContentTypeErr','pnTitleErr'].forEach(id =>
         document.getElementById(id).style.display = 'none');
     pnSyncContentType();
-    pnBuildUsersList([]);
-    pnBuildDeptsList([]);
+    pnApplyInitialDisplayLocationRules([], []);
 }
 
 function pnOpenModal() {
@@ -607,11 +770,11 @@ async function pnOpenEditModal(id) {
     }
     const pRadio = document.querySelector(`input[name="pnPeriod"][value="${d.displayPeriod}"]`);
     if (pRadio) { pRadio.checked = true; pnSyncPeriod(); }
-    if (d.startDate) document.getElementById('pnStartDate').value = d.startDate;
-    if (d.endDate)   document.getElementById('pnEndDate').value   = d.endDate;
+    if (d.startDate) document.getElementById('pnStartDate').value = (d.startDate + '').substring(0, 10);
+    if (d.endDate)   document.getElementById('pnEndDate').value   = (d.endDate + '').substring(0, 10);
+    pnConfigureDateFields();
     document.getElementById('pnDisplayLocation').value = d.displayLocation || 'landing';
-    pnBuildUsersList(d.targetUserIds || []);
-    pnBuildDeptsList(d.targetDepartmentIds || []);
+    pnApplyInitialDisplayLocationRules(d.targetUserIds || [], d.targetDepartmentIds || []);
     pnModal.show();
 }
 
@@ -625,7 +788,10 @@ function pnSyncContentType() {
 }
 function pnSyncPeriod() {
     const val = document.querySelector('input[name="pnPeriod"]:checked')?.value;
-    document.getElementById('pnDateRange').style.display = val === 'specific' ? 'flex' : 'none';
+    const showDates = val === 'specific';
+    document.getElementById('pnDateRange').style.display = showDates ? 'flex' : 'none';
+    if (showDates) pnConfigureDateFields();
+    else pnShowDateErr(null);
 }
 
 /* ── Target lists ── */
@@ -654,8 +820,10 @@ function pnBuildUsersList(selected) {
         html += `<div class="pn-dept-group-body">`;
         g.users.forEach(u => {
             const name = u.fullName || u.FullName || u.name || 'مستخدم';
-            html += `<label><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
-                ${selected.includes(u.id) ? 'checked' : ''}> ${esc(name)}</label>`;
+            const isMgr = !!(u.isUnitManager || u.IsUnitManager);
+            const badge = isMgr ? '<span class="pn-user-mgr-badge">مدير وحده تنظيمية</span>' : '';
+            html += `<label${isMgr ? ' class="pn-user-row-manager"' : ''}><input type="checkbox" class="form-check-input pn-user-cb" value="${u.id}"
+                ${selected.includes(u.id) ? 'checked' : ''}> <span>${esc(name)}</span>${badge}</label>`;
         });
         html += `</div></div>`;
     });
@@ -814,7 +982,7 @@ function pnOpenPreview() {
 
     // Header bg
     const header = document.getElementById('pnPreviewHeader');
-    header.className = cat === 'تنبيه' ? 'pn-prev-head-alert' : 'pn-prev-head-ad';
+    header.className = pnPreviewHeaderClass(cat);
 
     // Category label with BI icon
     const catIconName = CAT_ICON[cat] || 'bi-bell';
@@ -862,8 +1030,17 @@ async function pnDoSave(publish) {
     if (!valid) return;
 
     const period  = document.querySelector('input[name="pnPeriod"]:checked')?.value || 'permanent';
-    const userIds = [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
-    const deptIds = [...document.querySelectorAll('.pn-dept-cb:checked')].map(c => +c.value);
+    if (period === 'specific') {
+        const startVal = (document.getElementById('pnStartDate').value || '').trim();
+        const endVal = (document.getElementById('pnEndDate').value || '').trim();
+        const dateMsg = pnValidateDates(startVal, endVal);
+        if (dateMsg) { pnShowDateErr(dateMsg); return; }
+    }
+    pnShowDateErr(null);
+    const displayLoc = document.getElementById('pnDisplayLocation').value;
+    const isPublicLoc = pnIsPublicDisplayLocation(displayLoc);
+    const userIds = isPublicLoc ? [] : [...document.querySelectorAll('.pn-user-cb:checked')].map(c => +c.value);
+    const deptIds = isPublicLoc ? [] : [...document.querySelectorAll('.pn-dept-cb:checked')].map(c => +c.value);
 
     const payload = {
         id:           +document.getElementById('pnEditId').value,
@@ -879,7 +1056,7 @@ async function pnDoSave(publish) {
         endDate:   period === 'specific' ? document.getElementById('pnEndDate').value   : null,
         targetUserIds:       userIds,
         targetDepartmentIds: deptIds,
-        displayLocation: document.getElementById('pnDisplayLocation').value,
+        displayLocation: displayLoc,
         status: 'draft'
     };
 
@@ -927,6 +1104,34 @@ async function pnDeleteConfirm() {
     finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3"></i> حذف'; pnDeleteId = null; }
 }
 
+/* ── Viewers ── */
+async function pnShowViewers(id) {
+    const item = pnAllData.find(x => x.id === id);
+    document.getElementById('pnViewersTitle').textContent = item ? item.title : '';
+    const body = document.getElementById('pnViewersBody');
+    body.innerHTML = '<tr><td colspan="3" class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color:var(--sa-600);"></div></td></tr>';
+    pnViewersModal.show();
+    try {
+        const r = await apiFetch('/Settings/GetPopupViewers?id=' + encodeURIComponent(id));
+        if (!r || !r.success) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">' + esc(r?.message || 'تعذّر التحميل') + '</td></tr>';
+            return;
+        }
+        const rows = r.data || [];
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">لم يطلع أي مستخدم على هذا الإشعار بعد</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(v =>
+            '<tr><td style="font-weight:600;text-align:right;">' + esc(v.fullName) + '</td>' +
+            '<td style="text-align:right;">' + esc(v.orgUnitName || '—') + '</td>' +
+            '<td style="direction:ltr;unicode-bidi:plaintext;">' + esc(v.viewedAt) + '</td></tr>'
+        ).join('');
+    } catch {
+        body.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-danger">خطأ في الاتصال</td></tr>';
+    }
+}
+
 /* ── Details ── */
 async function pnShowDetails(id) {
     const d = pnAllData.find(x => x.id === id);
@@ -944,8 +1149,12 @@ async function pnShowDetails(id) {
         row('الحالة', d.status==='published'
             ? '<span class="pn-badge pn-b-published"><i class="bi bi-check-circle-fill"></i> منشور</span>'
             : '<span class="pn-badge pn-b-draft"><i class="bi bi-pencil-square"></i> مسودة</span>'),
-        row('الموظفون', (d.targetUserNames||[]).join('، ')||'—'),
-        row('الوحدات',  (d.targetDeptNames||[]).join('، ')||'—'),
+        row('الموظفون', pnIsPublicDisplayLocation(d.displayLocation||'')
+            ? 'جميع الموظفين (تلقائي لهذا المكان)'
+            : ((d.targetUserNames||[]).join('، ')||'—')),
+        row('الوحدات', pnIsPublicDisplayLocation(d.displayLocation||'')
+            ? 'جميع الوحدات التنظيمية (تلقائي لهذا المكان)'
+            : ((d.targetDeptNames||[]).join('، ')||'—')),
         row('أُنشئ بواسطة', esc(d.createdBy||'—')),
         row('تاريخ الإنشاء', esc(d.createdAt||'—')),
         row('تاريخ النشر',   esc(d.publishedAt||'—')),

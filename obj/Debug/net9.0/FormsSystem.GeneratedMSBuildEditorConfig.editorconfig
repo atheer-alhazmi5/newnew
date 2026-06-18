@@ -28,6 +28,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9Mb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Account/SelectAccount.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9TZWxlY3RBY2NvdW50LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Approvals/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXBwcm92YWxzL0luZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -56,6 +60,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvRm9ybURlZmluaXRpb25zL0luZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/FormDefinitionVersions/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvRm9ybURlZmluaXRpb25WZXJzaW9ucy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/FormFill/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvRm9ybUZpbGwvSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -76,12 +84,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSW5ib3gvSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Note/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvTm90ZS9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Notifications/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvTm90aWZpY2F0aW9ucy9JbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Outbox/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT3V0Ym94L0luZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Outbox/Submit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT3V0Ym94L1N1Ym1pdC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/AuditLog.cshtml]
@@ -98,6 +114,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/Classifications.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvQ2xhc3NpZmljYXRpb25zLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/Delegations.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvRGVsZWdhdGlvbnMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/FormClasses.cshtml]
@@ -120,8 +140,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvUG9wdXBOb3RpZmljYXRpb25zLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/ProcedureActionTypes.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvUHJvY2VkdXJlQWN0aW9uVHlwZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/SystemWarnings.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvU3lzdGVtV2FybmluZ3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Settings/UserGuide.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2V0dGluZ3MvVXNlckd1aWRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Shared/Error.cshtml]
@@ -136,6 +164,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19WaWV3SW1wb3J0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Support/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU3VwcG9ydC9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/SystemEvaluation/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU3lzdGVtRXZhbHVhdGlvbi9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Tables/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvVGFibGVzL0luZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -146,6 +182,18 @@ build_metadata.AdditionalFiles.CssScope =
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Users/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvVXNlcnMvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/WorkProcedures/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvV29ya1Byb2NlZHVyZXMvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/WorkProcedures/MyDelegations.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvV29ya1Byb2NlZHVyZXMvTXlEZWxlZ2F0aW9ucy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/WorkProcedures/Workflow.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvV29ya1Byb2NlZHVyZXMvV29ya2Zsb3cuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [/Users/atheernamaa/Downloads/es -lastversionNo2/es/Forms/Views/Workspaces/Index.cshtml]

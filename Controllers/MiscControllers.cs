@@ -62,22 +62,11 @@ public class ReportsController : BaseController
 
 public class FeedbackController : BaseController
 {
-    private readonly UiHelperService _ui;
-    public FeedbackController(UiHelperService ui) { _ui = ui; }
-
     public IActionResult Index()
     {
-        var auth = RequireAuth(); if (auth != null) return auth;
-        SetViewBagUser(_ui);
-        return View();
-    }
-
-    [HttpPost]
-    public IActionResult Submit([FromBody] FeedbackRequest req)
-    {
-        if (!IsAuthenticated) return Json(new { success = false });
-        // In real system, save to DB. For now just acknowledge.
-        return Json(new { success = true, message = "شكراً لتقييمك!" });
+        var auth = RequireAuth();
+        if (auth != null) return auth;
+        return RedirectToAction("Index", "SystemEvaluation");
     }
 }
 

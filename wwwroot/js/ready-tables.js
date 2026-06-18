@@ -1,6 +1,23 @@
 /* ===== Ready Tables JS (Index Page) ===== */
 var rtAllData = [], rtFilteredData = [], rtOrgUnits = [], rtCurrentUser = '', rtIsAdmin = false;
+var RT_TABLE_NAME_DUP_MSG = 'اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var rtcFields = [], rtcEditingIndex = -1;
+var rtFilterOuExpanded = {};
+
+function rtEscHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** خلية «نوع الحقل» — نفس شارات النماذج المستخدمة (form-definitions.js) */
+function rtFieldTypeCellHtml(fieldType) {
+    try {
+        if (typeof window.fdFieldTypeBadgeHtml === 'function') {
+            return window.fdFieldTypeBadgeHtml(fieldType);
+        }
+    } catch (e) {}
+    return rtEscHtml(fieldType);
+}
 
 function rtNormalizeHeaderHex(val) {
     if (!val || typeof val !== 'string') return '#d1d5db';
@@ -45,6 +62,33 @@ function rtcResetColumnHeaderColorUI() {
     if (inp) { inp.value = def; inp.disabled = true; }
     if (hex) hex.textContent = def;
     rtcOnNoColumnHeaderColorChange();
+}
+
+/** مدير النظام: ملكية «عام» إلزامية — تعطيل «خاص» في النماذج */
+function rtApplyAdminOwnershipLock() {
+    var lock = !!rtIsAdmin;
+    var pub = document.getElementById('rtcOwPublic');
+    var priv = document.getElementById('rtcOwPrivate');
+    var pubE = document.getElementById('rtEditOwnershipPublic');
+    var privE = document.getElementById('rtEditOwnershipPrivate');
+    if (pub) { pub.disabled = false; }
+    if (priv) { priv.disabled = lock; if (lock) priv.checked = false; }
+    if (pubE) { pubE.disabled = false; }
+    if (privE) { privE.disabled = lock; if (lock) privE.checked = false; }
+    if (lock) {
+        if (pub) pub.checked = true;
+        if (pubE) pubE.checked = true;
+    }
+    document.querySelectorAll('.rt-ownership-admin-note').forEach(function (el) {
+        el.style.display = lock ? 'block' : 'none';
+    });
+}
+
+function rtEffectiveOwnership(isEdit) {
+    if (rtIsAdmin) return 'عام';
+    var nm = isEdit ? 'rtEditOwnership' : 'rtcOwnership';
+    var sel = document.querySelector('input[name="' + nm + '"]:checked');
+    return sel ? sel.value : 'عام';
 }
 
 function rtEditGetColumnHeaderColor() {
@@ -94,10 +138,8 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب (Placeholder)", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"مثال: 300" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"fieldCount", label:"عدد الحقول", type:"number", placeholder:"مثال: 3" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "البريد الإلكتروني": { props: [
@@ -105,7 +147,6 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"emailFormat", label:"التحقق من صيغة البريد (xxx@almadinah.gov.sa)", type:"checkbox" },
@@ -117,11 +158,9 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
         { key:"inputPattern", label:"نمط الإدخال", type:"select", options:["أرقام فقط","حروف فقط","حروف وأرقام"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "نص قصير": { props: [
@@ -129,10 +168,8 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "نص طويل": { props: [
@@ -141,11 +178,8 @@ var RT_FIELD_TYPES = {
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"heightPx", label:"الارتفاع", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "فقرة": { props: [
@@ -153,11 +187,8 @@ var RT_FIELD_TYPES = {
         { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
         { key:"placeholder", label:"العنصر النائب", type:"text" },
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
-        { key:"charLimit", label:"حد الأحرف", type:"number" },
         { key:"minLength", label:"الحد الأدنى", type:"number" },
         { key:"maxLength", label:"الحد الأقصى", type:"number" },
-        { key:"editMode", label:"وضع التعديل", type:"select", options:["عادي","غني (Rich Text)"] },
-        { key:"validation", label:"التحقق", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رقم": { props: [
@@ -167,8 +198,18 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"validation", label:"التحقق", type:"checkbox" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"chipSelect", options:["0","1","2","3","4"], defaultValue:"0" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "عملة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"currency", label:"العملة", type:"select", options:["ر.س","$","€","£","د.إ","د.ك","د.ب","د.أ","ج.م"] },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"minValue", label:"الحد الأدنى", type:"number" },
+        { key:"maxValue", label:"الحد الأقصى", type:"number" },
+        { key:"decimals", label:"عدد الخانات العشرية", type:"chipSelect", options:["0","1","2","3","4"], defaultValue:"2" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "قائمة منسدلة": { props: [
@@ -176,33 +217,26 @@ var RT_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
         { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
         { key:"emptyText", label:"نص الخيار الفارغ", type:"text", placeholder:"اختر خياراً" },
-        { key:"optionsCount", label:"عدد الخيارات", type:"number" },
-        { key:"visibleOptions", label:"الخيارات المرئية", type:"number" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"visibleOptions", label:"الخيارات المرئية", type:"number" }
     ] },
     "قائمة اختيار الواحد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"single", perOptionOther:true },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "قائمة اختيار متعدد": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
-        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi" },
-        { key:"emptyText", label:"نص الخيار الفارغ", type:"text" },
-        { key:"readOnly", label:"القراءة فقط", type:"checkbox" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"shuffleOptions", label:"خلط الخيارات", type:"checkbox" }
+        { key:"options", label:"الخيارات", type:"optionList", choiceMode:"multi", perOptionOther:true },
+        { key:"optionsOrientation", label:"اتجاه عرض الخيارات", type:"select", options:["عمودي","أفقي"] },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "تاريخ": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"separator", label:"الفاصل", type:"select", options:["/",":","."] },
+        { key:"calendarType", label:"نوع التقويم", type:"select", options:["ميلادي","هجري"] },
         { key:"startDate", label:"تاريخ البداية", type:"date" },
         { key:"endDate", label:"تاريخ النهاية", type:"date" },
-        { key:"autoDate", label:"التاريخ التلقائي", type:"checkbox" },
-        { key:"showCalendar", label:"ظهور التقويم", type:"checkbox" },
-        { key:"simpleMode", label:"الوضع البسيط", type:"checkbox" },
-        { key:"timeSlot", label:"خانة الوقت", type:"checkbox" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "وقت": { props: [
@@ -210,7 +244,30 @@ var RT_FIELD_TYPES = {
         { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
         { key:"timeRangeStart", label:"بداية النطاق", type:"time" },
         { key:"timeRangeEnd", label:"نهاية النطاق", type:"time" },
-        { key:"autoTime", label:"الوقت التلقائي", type:"checkbox" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "تاريخ ووقت": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"القيمة التلقائية", type:"text", placeholder:"YYYY-MM-DDTHH:mm" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"startDate", label:"أقل تاريخ مسموح", type:"date" },
+        { key:"endDate", label:"أقصى تاريخ مسموح", type:"date" },
+        { key:"timeFormat", label:"نمط الوقت", type:"select", options:["12 ساعة","24 ساعة"] },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "تبديل": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"onText", label:"نص الحالة المفعلة", type:"text", placeholder:"نعم" },
+        { key:"offText", label:"نص الحالة غير المفعلة", type:"text", placeholder:"لا" },
+        { key:"defaultOn", label:"الحالة الافتراضية مفعلة", type:"checkbox", checkboxLabel:"يبدأ مفعلاً" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "رابط": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"defaultValue", label:"الرابط الافتراضي", type:"text", placeholder:"https://example.com" },
+        { key:"placeholder", label:"العنصر النائب", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number" },
+        { key:"linkLabel", label:"نص الزر", type:"text", placeholder:"فتح الرابط" },
         { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "رفع ملف": { props: [
@@ -218,9 +275,7 @@ var RT_FIELD_TYPES = {
         { key:"buttonText", label:"نص الزر", type:"text", placeholder:"رفع ملف" },
         { key:"maxFiles", label:"حد عدد الملفات", type:"number" },
         { type:"fileMbLimitsPair", label:"حد حجم الملف (ميغابايت)", col:"col-12 mb-2" },
-        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" },
-        { key:"fileSizeLimit", label:"حد حجم الملفات", type:"checkbox", col:"col-12 mb-3 rt-file-size-enable", checkboxLabel:"تفعيل" },
-        { key:"validateSize", label:"التحقق من الحجم", type:"checkbox" }
+        { key:"fileTypes", label:"أنواع الملفات المسموحة", type:"fileTypesPick" }
     ] },
     "دوار رقمي": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
@@ -229,23 +284,45 @@ var RT_FIELD_TYPES = {
         { key:"minValue", label:"الحد الأدنى", type:"number" },
         { key:"maxValue", label:"الحد الأقصى", type:"number" },
         { key:"stepValue", label:"قيمة الفترة", type:"number", placeholder:"مثال: 1" },
-        { key:"inputLimits", label:"حدود المدخلات", type:"checkbox" },
-        { key:"noDecimals", label:"بدون عشرية", type:"checkbox" },
-        { key:"negativeValue", label:"قيمة سلبية", type:"checkbox" }
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "التقييم بالنجوم": { props: [
         { key:"subName", label:"اسم فرعي", type:"text" },
         { key:"ratingIcon", label:"أيقونة التقييم", type:"select", options:["نجمة","قلب","إبهام"] },
         { key:"ratingRange", label:"مدى التقييم", type:"number", placeholder:"مثال: 5" },
         { key:"defaultValue", label:"القيمة التلقائية", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
     ] },
     "التقييم بالأرقام": { props: [
         { key:"lowRatingText", label:"نص أقل تقييم", type:"text" },
         { key:"highRatingText", label:"نص أعلى تقييم", type:"text" },
         { key:"minRating", label:"أقل قيمة", type:"number" },
         { key:"maxRating", label:"أعلى قيمة", type:"number" },
-        { key:"tooltipText", label:"نص التلميح", type:"text" }
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "جدول بيانات": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"options", label:"عناوين الأعمدة (سطر لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "شبكة خيارات متعددة": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"اختيار واحد لكل صف." },
+        { key:"options", label:"عناوين الأعمدة (خيار لكل عمود)", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "شبكة مربعات اختيار": { props: [
+        { key:"subName", label:"اسم فرعي", type:"text" },
+        { key:"rowLabels", label:"صفوف الشبكة (سطر لكل صف)", type:"textarea", rows:5, placeholder:"صف 1", hint:"يمكن تحديد أكثر من خانة." },
+        { key:"options", label:"عناوين الأعمدة", type:"optionList", choiceMode:"single" },
+        { key:"readOnly", label:"القراءة فقط", type:"checkbox" }
+    ] },
+    "صورة عرض": { props: [
+        { key:"imageUrl", label:"إرفاق صورة", type:"displayImageUpload" },
+        { key:"altText", label:"نص بديل", type:"text" },
+        { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"320" },
+        { key:"heightPx", label:"الارتفاع بالبيكسل", type:"number", placeholder:"200" },
+        { key:"imageAlign", label:"محاذاة الصورة", type:"select", options:["يمين","وسط","يسار"] }
     ] }
 };
 
@@ -258,7 +335,10 @@ var RT_FILE_TYPE_CHOICES = [
     { ext: 'docx', label: 'Word (.docx)' },
     { ext: 'xls', label: 'Excel (.xls)' },
     { ext: 'xlsx', label: 'Excel (.xlsx)' },
-    { ext: 'txt', label: 'TXT' }
+    { ext: 'txt', label: 'TXT' },
+    { ext: 'pptx', label: 'PowerPoint (.pptx)' },
+    { ext: 'zip', label: 'ZIP' },
+    { ext: 'rar', label: 'RAR' }
 ];
 
 function rtEscAttr(s) {
@@ -266,25 +346,48 @@ function rtEscAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
-function rtInitOptionListEditor(idPrefix, mode, propsObj) {
-    var el = document.getElementById(idPrefix + '_options_editor');
+/**
+ * مفاتيح قديمة يجب حذفها تلقائياً من الخصائص الإضافية لأي نوع حقل
+ * (لا تظهر ضمن أي تعريف نوع في RT_FIELD_TYPES حالياً، لكن قد تكون موجودة في
+ * بيانات قديمة محفوظة، أو ضمن قوائم بناء قديمة).
+ */
+var RT_LEGACY_PROP_KEYS = ['charLimit', 'fieldCount', 'editMode', 'tooltipText', 'optionsActivationLabel'];
+
+/** يحذف المفاتيح القديمة من كائن الخصائص (in-place + إرجاع الكائن نفسه). */
+function rtStripLegacyProps(props) {
+    if (!props || typeof props !== 'object') return props;
+    RT_LEGACY_PROP_KEYS.forEach(function (k) {
+        if (k in props) delete props[k];
+    });
+    return props;
+}
+
+function rtInitOptionListEditor(idPrefix, mode, propsObj, propKey, perOptionOther) {
+    propKey = propKey || 'options';
+    var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return;
     el.classList.add('rtc-option-list-editor');
     el.setAttribute('data-mode', mode);
+    if (perOptionOther) el.setAttribute('data-fd-per-option-other', '1');
+    else el.removeAttribute('data-fd-per-option-other');
     el.innerHTML = '';
     var rowsHost = document.createElement('div');
     rowsHost.className = 'rtc-opt-rows';
     var lines = [''];
     var defaultStr = '';
     var po = propsObj || {};
-    if (po.options != null && String(po.options).trim() !== '') {
-        lines = String(po.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var raw = (po[propKey] != null && String(po[propKey]).trim() !== '') ? po[propKey] : (propKey === 'options' ? po.options : '');
+    if (raw != null && String(raw).trim() !== '') {
+        lines = String(raw).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
         if (lines.length === 0) lines = [''];
         defaultStr = (po.defaultOption || '').trim();
     }
     var defaultMulti = mode === 'multi' ? defaultStr.split(/,\s*/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
-    lines.forEach(function (text) {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti));
+    var markLines = String(po.choiceOtherMarks || '').split(/[\r\n]+/);
+    var showO = !!perOptionOther;
+    lines.forEach(function (text, idx) {
+        var oth = !!(showO && (markLines[idx] === '1' || /^true$/i.test(String(markLines[idx] || '').trim())));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, text, defaultStr, defaultMulti, propKey, { showOtherCheckbox: showO, otherChecked: oth }));
     });
     el.appendChild(rowsHost);
     var btn = document.createElement('button');
@@ -292,12 +395,14 @@ function rtInitOptionListEditor(idPrefix, mode, propsObj) {
     btn.className = 'btn btn-sm btn-outline-primary mt-2';
     btn.innerHTML = '<i class="bi bi-plus-lg"></i> إضافة خيار';
     btn.addEventListener('click', function () {
-        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', []));
+        rowsHost.appendChild(rtCreateOptionRow(idPrefix, mode, '', '', [], propKey, { showOtherCheckbox: showO, otherChecked: false }));
     });
     el.appendChild(btn);
 }
 
-function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr) {
+function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr, propKey, rowOpts) {
+    propKey = propKey || 'options';
+    rowOpts = rowOpts || {};
     var wrap = document.createElement('div');
     wrap.className = 'rtc-opt-row d-flex align-items-center gap-2 mb-2 flex-wrap';
     var inp = document.createElement('input');
@@ -322,12 +427,26 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr)
         d.appendChild(c);
         d.appendChild(lid);
         wrap.appendChild(d);
+        if (rowOpts.showOtherCheckbox) {
+            var od = document.createElement('div');
+            od.className = 'form-check m-0 flex-shrink-0';
+            var oc = document.createElement('input');
+            oc.type = 'checkbox';
+            oc.className = 'form-check-input rtc-opt-choice-other';
+            if (rowOpts.otherChecked) oc.checked = true;
+            var ol = document.createElement('label');
+            ol.className = 'form-check-label small';
+            ol.textContent = 'أخرى';
+            od.appendChild(oc);
+            od.appendChild(ol);
+            wrap.appendChild(od);
+        }
     } else {
         var d2 = document.createElement('div');
         d2.className = 'form-check m-0 flex-shrink-0';
         var r = document.createElement('input');
         r.type = 'radio';
-        r.name = idPrefix + '_defaultOpt';
+        r.name = idPrefix + '_' + propKey + '_defaultOpt';
         r.className = 'form-check-input rtc-opt-def-single';
         r.title = 'الخيار الافتراضي عند فتح النموذج';
         if (trimmed && defaultSingle && trimmed === defaultSingle) r.checked = true;
@@ -337,6 +456,20 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr)
         d2.appendChild(r);
         d2.appendChild(lid2);
         wrap.appendChild(d2);
+        if (rowOpts.showOtherCheckbox) {
+            var od2 = document.createElement('div');
+            od2.className = 'form-check m-0 flex-shrink-0';
+            var oc2 = document.createElement('input');
+            oc2.type = 'checkbox';
+            oc2.className = 'form-check-input rtc-opt-choice-other';
+            if (rowOpts.otherChecked) oc2.checked = true;
+            var ol2 = document.createElement('label');
+            ol2.className = 'form-check-label small';
+            ol2.textContent = 'أخرى';
+            od2.appendChild(oc2);
+            od2.appendChild(ol2);
+            wrap.appendChild(od2);
+        }
     }
     var rm = document.createElement('button');
     rm.type = 'button';
@@ -353,13 +486,18 @@ function rtCreateOptionRow(idPrefix, mode, text, defaultSingle, defaultMultiArr)
     return wrap;
 }
 
-function rtCollectOptionListFromEditor(idPrefix) {
-    var el = document.getElementById(idPrefix + '_options_editor');
+function rtCollectOptionListFromEditor(idPrefix, propKey) {
+    propKey = propKey || 'options';
+    var el = document.getElementById(idPrefix + '_' + propKey + '_options_editor');
     if (!el) return null;
     var mode = el.getAttribute('data-mode') || 'single';
+    var perOther = el.getAttribute('data-fd-per-option-other') === '1';
     var host = el.querySelector('.rtc-opt-rows');
     if (!host) return { options: '', defaultOption: '' };
-    var lines = [], defaultOption = '', defaultsMulti = [];
+    var lines = [];
+    var defaultOption = '';
+    var defaultsMulti = [];
+    var otherMarks = [];
     host.querySelectorAll('.rtc-opt-row').forEach(function (row) {
         var ti = row.querySelector('.rtc-opt-text');
         var t = ti ? ti.value.trim() : '';
@@ -368,12 +506,22 @@ function rtCollectOptionListFromEditor(idPrefix) {
         if (mode === 'multi') {
             var c = row.querySelector('.rtc-opt-def-multi');
             if (c && c.checked) defaultsMulti.push(t);
+            if (perOther) {
+                var oc = row.querySelector('.rtc-opt-choice-other');
+                otherMarks.push(oc && oc.checked ? '1' : '0');
+            }
         } else {
             var r = row.querySelector('.rtc-opt-def-single');
             if (r && r.checked) defaultOption = t;
+            if (perOther) {
+                var oc2 = row.querySelector('.rtc-opt-choice-other');
+                otherMarks.push(oc2 && oc2.checked ? '1' : '0');
+            }
         }
     });
-    return { options: lines.join('\n'), defaultOption: mode === 'multi' ? defaultsMulti.join(', ') : defaultOption };
+    var out = { options: lines.join('\n'), defaultOption: mode === 'multi' ? defaultsMulti.join(', ') : defaultOption };
+    if (perOther) out.choiceOtherMarks = otherMarks.join('\n');
+    return out;
 }
 
 function rtCollectFileTypesPick(idPrefix) {
@@ -403,13 +551,15 @@ function rtApplyFileTypesFromProps(idPrefix, propsObj) {
 function rtMergeSpecialPropsIntoResult(type, idPrefix, result) {
     var def = RT_FIELD_TYPES[type];
     if (!def) return result;
-    if (def.props.some(function (p) { return p.type === 'optionList'; })) {
-        var o = rtCollectOptionListFromEditor(idPrefix);
-        if (o) {
-            result.options = o.options;
-            result.defaultOption = o.defaultOption;
-        }
-    }
+    def.props.forEach(function (p) {
+        if (p.type !== 'optionList') return;
+        var o = rtCollectOptionListFromEditor(idPrefix, p.key);
+        if (!o) return;
+        result[p.key] = o.options;
+        if (p.choiceMode === 'multi') result.defaultOption = o.defaultOption;
+        else if (p.key === 'options') result.defaultOption = o.defaultOption;
+        if (p.perOptionOther && o.choiceOtherMarks != null) result.choiceOtherMarks = o.choiceOtherMarks;
+    });
     if (def.props.some(function (p) { return p.type === 'fileTypesPick'; })) {
         result.fileTypes = rtCollectFileTypesPick(idPrefix);
     }
@@ -422,10 +572,77 @@ function rtApplyPropsSpecialEditors(type, idPrefix, propsObj) {
     var po = propsObj || {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList') {
-            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po);
+            rtInitOptionListEditor(idPrefix, p.choiceMode || 'single', po, p.key, p.perOptionOther);
+        }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips(idPrefix, p.key, po[p.key] != null ? po[p.key] : p.defaultValue);
         }
     });
     rtApplyFileTypesFromProps(idPrefix, po);
+    if (type === 'صورة عرض') rtWireDisplayImageProp(idPrefix, 'imageUrl');
+}
+
+function rtSelectDecimalChip(btn, idPrefix, key) {
+    var group = btn && btn.parentElement;
+    if (!group) return;
+    var val = btn.getAttribute('data-value');
+    var hid = document.getElementById(idPrefix + '_' + key);
+    if (hid) hid.value = val;
+    group.querySelectorAll('.rt-prop-chip').forEach(function (c) {
+        c.classList.toggle('is-active', c === btn);
+    });
+}
+
+function rtSyncDecimalChips(idPrefix, key, val) {
+    var defVal = '0';
+    var hid = document.getElementById(idPrefix + '_' + key);
+    if (hid) {
+        hid.value = (val != null && val !== '') ? String(val) : defVal;
+        defVal = hid.value;
+    }
+    var group = document.getElementById(idPrefix + '_' + key + '_chips');
+    if (!group) return;
+    group.querySelectorAll('.rt-prop-chip').forEach(function (c) {
+        c.classList.toggle('is-active', c.getAttribute('data-value') === defVal);
+    });
+}
+
+/** ربط إرفاق صورة «صورة عرض» (نفس منطق النماذج المستخدمة). */
+function rtWireDisplayImageProp(pfx, key) {
+    var tid = pfx + '_' + key;
+    var fileInp = document.getElementById(tid + '_file');
+    var ta = document.getElementById(tid);
+    var prev = document.getElementById(tid + '_preview');
+    var empty = document.getElementById(tid + '_empty');
+    var clr = document.getElementById(tid + '_clear');
+    if (!fileInp || !ta) return;
+    function sync() {
+        var v = String(ta.value || '').trim();
+        if (v) {
+            if (prev) { prev.src = v; prev.style.display = ''; }
+            if (empty) empty.style.display = 'none';
+            if (clr) clr.style.display = '';
+        } else {
+            if (prev) { prev.removeAttribute('src'); prev.style.display = 'none'; }
+            if (empty) empty.style.display = '';
+            if (clr) clr.style.display = 'none';
+        }
+    }
+    fileInp.onchange = function () {
+        var f = fileInp.files && fileInp.files[0];
+        if (!f) return;
+        if (!/^image\//i.test(f.type)) {
+            if (typeof showToast === 'function') showToast('يرجى اختيار ملف صورة', 'error');
+            fileInp.value = '';
+            return;
+        }
+        var r = new FileReader();
+        r.onload = function () { ta.value = r.result || ''; sync(); };
+        r.readAsDataURL(f);
+        fileInp.value = '';
+    };
+    if (clr) clr.onclick = function () { ta.value = ''; sync(); };
+    sync();
 }
 
 function rtBuildSinglePropHtml(p, idPrefix) {
@@ -437,7 +654,20 @@ function rtBuildSinglePropHtml(p, idPrefix) {
             '</div></div>';
     }
     if (p.type === 'optionList') {
-        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"></div></div>';
+        var dOther = p.perOptionOther ? ' data-fd-per-option-other="1"' : '';
+        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"' + dOther + '></div></div>';
+    }
+    if (p.type === 'displayImageUpload') {
+        var fid = idPrefix + '_' + p.key;
+        return '<div class="col-12 mb-3 fd-display-image-prop">' +
+            '<label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label>' +
+            '<input type="file" class="form-control form-control-sm" id="' + fid + '_file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">' +
+            '<p class="text-muted small mb-0 mt-1" style="font-size:11px;">اختر ملف صورة من الجهاز (PNG، JPEG، GIF، WebP).</p>' +
+            '<textarea class="form-control form-control-sm visually-hidden" id="' + fid + '" rows="1" autocomplete="off" style="position:absolute;left:-9999px;height:1px;width:1px;opacity:0;" aria-hidden="true"></textarea>' +
+            '<div class="mt-2 p-2 rounded-3" style="border:1px dashed var(--gray-300);background:var(--gray-50);min-height:72px;">' +
+            '<img id="' + fid + '_preview" alt="" class="rounded" style="max-width:100%;max-height:180px;display:none;object-fit:contain;">' +
+            '<span id="' + fid + '_empty" class="text-muted small">لم تُرفع صورة بعد</span></div>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="' + fid + '_clear" style="display:none;">إزالة الصورة</button></div>';
     }
     if (p.type === 'fileTypesPick') {
         var h = '<div class="col-12 mb-3"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><div id="' + idPrefix + '_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">';
@@ -446,6 +676,19 @@ function rtBuildSinglePropHtml(p, idPrefix) {
             h += '<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="' + ft.ext + '" id="' + cid + '"><label class="form-check-label" for="' + cid + '" style="font-size:12.5px;">' + ft.label + '</label></div>';
         });
         return h + '</div></div>';
+    }
+    if (p.type === 'chipSelect') {
+        var chipFid = idPrefix + '_' + p.key;
+        var colClassChip = p.col || 'col-md-6 col-sm-6 mb-3';
+        var defChip = (p.defaultValue != null && p.defaultValue !== '') ? String(p.defaultValue) : '0';
+        var chipOpts = p.options || ['0', '1', '2', '3', '4'];
+        var chipsHtml = chipOpts.map(function (opt) {
+            var active = opt === defChip ? ' is-active' : '';
+            return '<button type="button" class="rt-prop-chip' + active + '" data-value="' + rtEscAttr(opt) + '" onclick="rtSelectDecimalChip(this,\'' + idPrefix + '\',\'' + p.key + '\')">' + opt + '</button>';
+        }).join('');
+        return '<div class="' + colClassChip + '"><label class="d-block" style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:6px;">' + p.label + '</label>' +
+            '<input type="hidden" id="' + chipFid + '" value="' + rtEscAttr(defChip) + '">' +
+            '<div class="rt-prop-chip-group" id="' + chipFid + '_chips" role="group" aria-label="' + rtEscAttr(p.label) + '">' + chipsHtml + '</div></div>';
     }
     var fid = idPrefix + '_' + p.key;
     var colClass = p.col || 'col-md-4 col-sm-6 mb-3';
@@ -463,7 +706,8 @@ function rtBuildSinglePropHtml(p, idPrefix) {
         (p.options || []).forEach(function (o) { html += '<option value="' + rtEscAttr(o) + '">' + o + '</option>'; });
         html += '</select>';
     } else if (p.type === 'textarea') {
-        html += '<textarea class="form-control form-control-sm" id="' + fid + '" rows="3" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;"></textarea>';
+        var hintTx = p.hint ? '<p class="text-muted small mb-2" style="font-size:11px;">' + p.hint + '</p>' : '';
+        html += hintTx + '<textarea class="form-control form-control-sm" id="' + fid + '" rows="' + (p.rows || 4) + '" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;"></textarea>';
     } else {
         html += '<input type="' + (p.type || 'text') + '" class="form-control form-control-sm" id="' + fid + '" placeholder="' + rtEscAttr(p.placeholder || '') + '" style="border-radius:8px;font-size:12.5px;">';
     }
@@ -471,7 +715,60 @@ function rtBuildSinglePropHtml(p, idPrefix) {
 }
 
 /* ===== Page Load ===== */
-document.addEventListener('DOMContentLoaded', rtLoad);
+document.addEventListener('DOMContentLoaded', function () {
+    rtLoad();
+    rtBindFilterOuTree();
+});
+
+function rtBindFilterOuTree() {
+    var trigger = document.getElementById('rtFilterOuTrigger');
+    var panel = document.getElementById('rtFilterOuPanel');
+    if (!trigger || !panel) return;
+
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        rtFilterOuTogglePanel();
+    });
+
+    panel.addEventListener('click', function (e) {
+        var expBtn = e.target.closest('.bnf-ou-tree-exp');
+        if (expBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            var eid = expBtn.getAttribute('data-exp');
+            if (eid) {
+                rtFilterOuExpanded[eid] = !rtFilterOuExpanded[eid];
+                rtRenderFilterOrgUnitTreePanel();
+            }
+            return;
+        }
+        var row = e.target.closest('.bnf-ou-tree-row');
+        if (!row || !row.hasAttribute('data-id')) return;
+        var idAttr = row.getAttribute('data-id');
+        var hid = document.getElementById('rtFilterOrgUnit');
+        var lab = document.getElementById('rtFilterOuLabel');
+        if (hid) hid.value = idAttr === null ? '' : String(idAttr);
+        if (lab) {
+            if (!idAttr) {
+                lab.textContent = 'قائمة بالوحدات التنظيمية';
+            } else {
+                var uid = parseInt(idAttr, 10);
+                var u = rtOrgUnits.find(function (x) { return x.id === uid; });
+                lab.textContent = u ? u.name : 'قائمة بالوحدات التنظيمية';
+            }
+        }
+        rtFilterOuClosePanel();
+        rtRenderFilterOrgUnitTreePanel();
+        rtApplyFilters();
+    });
+
+    document.addEventListener('click', function (e) {
+        var wrap = document.querySelector('.bnf-ou-tree-wrap');
+        var pnl = document.getElementById('rtFilterOuPanel');
+        if (!wrap || !pnl || pnl.classList.contains('d-none')) return;
+        if (!wrap.contains(e.target)) rtFilterOuClosePanel();
+    });
+}
 
 async function rtLoad() {
     try {
@@ -482,15 +779,121 @@ async function rtLoad() {
         rtOrgUnits = r.organizationalUnits || [];
         rtCurrentUser = r.currentUser || '';
         rtIsAdmin = r.isAdmin || false;
-        rtRenderOrgFilter();
+        rtSyncFilterOuTreeLabel();
         rtRenderTable();
+        rtApplyAdminOwnershipLock();
     } catch(e) { console.error('rtLoad error:', e); }
 }
 
-function rtRenderOrgFilter() {
-    var sel = document.getElementById('rtFilterOrgUnit');
-    sel.innerHTML = '<option value="">قائمة بالوحدات التنظيمية</option>';
-    rtOrgUnits.forEach(function(u) { sel.innerHTML += '<option value="' + u.id + '">' + u.name + '</option>'; });
+function rtOuBuildTreeMap() {
+    var ids = {};
+    rtOrgUnits.forEach(function (u) { ids[u.id] = true; });
+    var byParent = {};
+    rtOrgUnits.forEach(function (u) {
+        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
+    });
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
+        });
+    });
+    return byParent;
+}
+
+function rtRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + rtEscHtml(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += rtRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function rtFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    rtOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        rtFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function rtRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    if (!panel) return;
+    if (!rtOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = rtOuBuildTreeMap();
+    var hid = document.getElementById('rtFilterOrgUnit');
+    var selectedId = hid ? hid.value : '';
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += rtRenderOuFilterTreeRows(byParent, '', 0, selectedId, rtFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function rtFilterOuTogglePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    var trig = document.getElementById('rtFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var hid = document.getElementById('rtFilterOrgUnit');
+        var cur = hid ? hid.value : '';
+        if (cur) rtFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        rtRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function rtFilterOuClosePanel() {
+    var panel = document.getElementById('rtFilterOuPanel');
+    var trig = document.getElementById('rtFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function rtSyncFilterOuTreeLabel() {
+    var hid = document.getElementById('rtFilterOrgUnit');
+    var lab = document.getElementById('rtFilterOuLabel');
+    if (!hid || !lab) return;
+    var defLabel = 'قائمة بالوحدات التنظيمية';
+    if (hid.value) {
+        var u = rtOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
+        lab.textContent = u ? u.name : defLabel;
+    } else {
+        lab.textContent = defLabel;
+    }
+    rtRenderFilterOrgUnitTreePanel();
 }
 
 function rtApplyFilters() {
@@ -512,12 +915,57 @@ function rtClearFilters() {
     document.getElementById('rtSearchInput').value = '';
     document.getElementById('rtFilterRowCount').value = '';
     document.getElementById('rtFilterOwnership').value = '';
-    document.getElementById('rtFilterOrgUnit').value = '';
+    var hid = document.getElementById('rtFilterOrgUnit');
+    if (hid) hid.value = '';
+    var lab = document.getElementById('rtFilterOuLabel');
+    if (lab) lab.textContent = 'قائمة بالوحدات التنظيمية';
+    rtFilterOuExpanded = {};
+    rtFilterOuClosePanel();
+    rtRenderFilterOrgUnitTreePanel();
     rtFilteredData = rtAllData.slice();
     rtRenderTable();
 }
 
-function rtCanEdit(t) { return t.createdBy === rtCurrentUser || rtIsAdmin; }
+function rtNormCreatorName(s) {
+    return String(s || '').replace(/\s+/g, '');
+}
+
+function rtCreatorNamesMatch(createdBy, candidate) {
+    if (!createdBy || !candidate) return false;
+    var a = String(createdBy).trim();
+    var b = String(candidate).trim();
+    if (!a || !b) return false;
+    if (a.toLowerCase() === b.toLowerCase()) return true;
+    return rtNormCreatorName(a).toLowerCase() === rtNormCreatorName(b).toLowerCase();
+}
+
+function rtIsDuplicateTableName(name, excludeId) {
+    var n = (name || '').trim().toLowerCase();
+    if (!n) return false;
+    return rtAllData.some(function (t) {
+        if (excludeId != null && t.id === excludeId) return false;
+        return ((t.name || '').trim().toLowerCase() === n);
+    });
+}
+
+function rtIsTableLinkedToForm(t) {
+    return !!(t && (t.isLinkedToForm === true || t.IsLinkedToForm === true));
+}
+
+function rtGetTableActions(t) {
+    if (!t) return { canEdit: false, canDelete: false, canViewDetails: false };
+    var canEdit = typeof t.canEdit === 'boolean' ? t.canEdit : (typeof t.CanEdit === 'boolean' ? t.CanEdit : false);
+    if (rtIsTableLinkedToForm(t)) canEdit = false;
+    return {
+        canEdit: canEdit,
+        canDelete: typeof t.canDelete === 'boolean' ? t.canDelete : (typeof t.CanDelete === 'boolean' ? t.CanDelete : false),
+        canViewDetails: typeof t.canViewDetails === 'boolean' ? t.canViewDetails : (typeof t.CanViewDetails === 'boolean' ? t.CanViewDetails : false)
+    };
+}
+
+function rtCanEdit(t) {
+    return rtGetTableActions(t).canEdit;
+}
 
 function rtRenderTable() {
     var badge = document.getElementById('rtCountBadge');
@@ -544,9 +992,14 @@ function rtRenderTable() {
         html += '<td style="text-align:center;"><span class="' + actClass + '">' + actLabel + '</span></td>';
         html += '<td style="text-align:center;white-space:nowrap;">';
         html += '<div style="display:inline-flex;gap:4px;align-items:center;justify-content:center;">';
-        html += '<button class="rt-action-btn rt-action-btn-detail" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
-        if (rtCanEdit(t)) {
+        var actions = rtGetTableActions(t);
+        if (actions.canViewDetails) {
+            html += '<button class="rt-action-btn rt-action-btn-detail" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
+        }
+        if (actions.canEdit) {
             html += '<button class="rt-action-btn rt-action-btn-edit" onclick="rtShowEditModal(' + t.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+        }
+        if (actions.canDelete) {
             html += '<button class="rt-action-btn rt-action-btn-delete" onclick="rtShowDeleteModal(' + t.id + ',\'' + (t.name||'').replace(/'/g,"\\'") + '\')"><i class="bi bi-trash"></i> حذف</button>';
         }
         html += '</div></td></tr>';
@@ -573,6 +1026,7 @@ function rtShowCreateModal() {
     document.getElementById('rtcCreateError').classList.add('d-none');
     var pi = document.getElementById('rtcPreviewInline');
     if (pi) pi.classList.add('d-none');
+    rtApplyAdminOwnershipLock();
     new bootstrap.Modal(document.getElementById('rtCreateModal')).show();
 }
 
@@ -609,12 +1063,9 @@ function rtcOnFieldTypeChange() {
     area.style.display = 'block';
     cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    var cbStarted = false;
     def.props.forEach(function (p) {
-        if (p.type === 'checkbox' && !cbStarted) {
-            cbStarted = true;
-            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
-        }
+        // تجاهل المفاتيح القديمة دفاعياً (لا تظهر بالحقول الجديدة)
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         html += rtBuildSinglePropHtml(p, 'rtcProp');
     });
     html += '</div>';
@@ -624,10 +1075,9 @@ function rtcOnFieldTypeChange() {
         var pfmt = document.getElementById('rtcProp_phoneFormat');
         if (pfmt && !pfmt.value) pfmt.value = '+966 (9 أرقام)';
     }
-    var tooltip = document.getElementById('rtcFieldTooltip');
-    if (!tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
-        tooltip.value = defaults[type] || "أدخل قيمة الحقل";
+    if (type === 'تاريخ') {
+        var calRtc = document.getElementById('rtcProp_calendarType');
+        if (calRtc && !calRtc.value) calRtc.value = 'ميلادي';
     }
 }
 
@@ -637,6 +1087,7 @@ function rtcCollectProps() {
     var def = RT_FIELD_TYPES[type], result = {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtcProp_minFileSize');
             var mx = document.getElementById('rtcProp_maxFileSize');
@@ -644,24 +1095,35 @@ function rtcCollectProps() {
             if (mx) result.maxFileSize = mx.value;
             return;
         }
+        if (p.type === 'chipSelect') {
+            var chipEl = document.getElementById('rtcProp_' + p.key);
+            if (chipEl) result[p.key] = chipEl.value;
+            return;
+        }
         var el = document.getElementById('rtcProp_' + p.key);
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
     });
-    return rtMergeSpecialPropsIntoResult(type, 'rtcProp', result);
+    rtMergeSpecialPropsIntoResult(type, 'rtcProp', result);
+    return rtStripLegacyProps(result);
 }
 
 function rtcSetProps(type, propsObj) {
     if (!type || !RT_FIELD_TYPES[type]) return;
     var def = RT_FIELD_TYPES[type];
-    var po = propsObj || {};
+    var po = rtStripLegacyProps(Object.assign({}, propsObj || {}));
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtcProp_minFileSize');
             var mx = document.getElementById('rtcProp_maxFileSize');
             if (mn && po.minFileSize !== undefined && po.minFileSize !== null) mn.value = po.minFileSize;
             if (mx && po.maxFileSize !== undefined && po.maxFileSize !== null) mx.value = po.maxFileSize;
+            return;
+        }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips('rtcProp', p.key, po[p.key]);
             return;
         }
         var el = document.getElementById('rtcProp_' + p.key);
@@ -679,11 +1141,16 @@ function rtcAddField() {
     if (!name) { showToast('يرجى إدخال اسم الحقل', 'danger'); return; }
     var defPre = RT_FIELD_TYPES[type];
     if (defPre && defPre.props.some(function (p) { return p.type === 'optionList'; })) {
-        var oc = rtCollectOptionListFromEditor('rtcProp');
+        var oc = rtCollectOptionListFromEditor('rtcProp', 'options');
         if (!oc || !String(oc.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
     }
+    if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+        var rl = document.getElementById('rtcProp_rowLabels');
+        if (!rl || !String(rl.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
+    }
     var props = rtcCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtcFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
+    var tooltipVal = (document.getElementById('rtcFieldTooltip') && document.getElementById('rtcFieldTooltip').value || '').trim();
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtcFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:tooltipVal, propertiesJson:JSON.stringify(props) };
     if (rtcEditingIndex >= 0) { rtcFields[rtcEditingIndex] = field; rtcEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtcFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtcResetFieldForm();
     rtcRenderFieldsTable();
@@ -716,7 +1183,8 @@ function rtcEditField(idx) {
     document.getElementById('rtcFieldType').value = f.fieldType;
     document.getElementById('rtcFieldName').value = f.fieldName;
     document.getElementById('rtcFieldRequired').value = f.isRequired ? '1' : '0';
-    document.getElementById('rtcFieldTooltip').value = f.tooltipText || '';
+    var tipEl = document.getElementById('rtcFieldTooltip');
+    if (tipEl) tipEl.value = f.tooltipText || '';
     document.getElementById('rtcFieldNum').textContent = (idx + 1).toString();
     rtcOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtcSetProps(f.fieldType, p); } catch(e) {}
@@ -742,7 +1210,8 @@ function rtcRenderFieldsTable() {
     rtcFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td>' + (f.tooltipText||'-') + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        var tipText = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText.replace(/"/g,'&quot;') + '">' + tipText + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -773,11 +1242,17 @@ function rtcGetPropsSummaryCreate(f) {
 async function rtcSubmitTable() {
     var name = document.getElementById('rtcName').value.trim();
     if (!name) { showToast('يرجى إدخال اسم الجدول', 'danger'); return; }
+    if (rtIsDuplicateTableName(name)) {
+        var dupErr = document.getElementById('rtcCreateError');
+        dupErr.textContent = RT_TABLE_NAME_DUP_MSG;
+        dupErr.classList.remove('d-none');
+        return;
+    }
     var rowMode = document.querySelector('input[name="rtcRowMode"]:checked').value;
     var maxRows = rowMode === 'مقيد' ? parseInt(document.getElementById('rtcMaxRows').value, 10) : null;
     if (rowMode === 'مقيد' && (!maxRows || maxRows < 1)) { showToast('يرجى تحديد عدد الصفوف', 'danger'); return; }
     if (rtcFields.length === 0) { showToast('يرجى إضافة حقل واحد على الأقل', 'danger'); return; }
-    var reqBody = { name:name, description:document.getElementById('rtcDesc').value.trim(), ownership:document.querySelector('input[name="rtcOwnership"]:checked').value, rowCountMode:rowMode, maxRows:maxRows, columnHeaderColor:rtcGetColumnHeaderColor(), isActive:document.querySelector('input[name="rtcActive"]:checked').value === '1', fields:rtcFields.map(function(f){return{fieldName:f.fieldName,fieldType:f.fieldType,isRequired:f.isRequired,subName:f.subName||'',placeholder:f.placeholder||'',tooltipText:f.tooltipText||'',propertiesJson:f.propertiesJson||'{}'};}) };
+    var reqBody = { name:name, description:document.getElementById('rtcDesc').value.trim(), ownership:rtEffectiveOwnership(false), rowCountMode:rowMode, maxRows:maxRows, columnHeaderColor:rtcGetColumnHeaderColor(), isActive:document.querySelector('input[name="rtcActive"]:checked').value === '1', fields:rtcFields.map(function(f){return{fieldName:f.fieldName,fieldType:f.fieldType,isRequired:f.isRequired,subName:f.subName||'',placeholder:f.placeholder||'',tooltipText:f.tooltipText||'',propertiesJson:f.propertiesJson||'{}'};}) };
     try {
         var r = await apiFetch('/Tables/AddReadyTable', 'POST', reqBody);
         if (r && r.success) {
@@ -807,148 +1282,59 @@ function rtpFileAcceptFromProps(p) {
     return parts.join(',');
 }
 
-function rtpBuildFieldInput(f) {
-    var ph = rtpFieldPlaceholder(f);
-    var props = {};
-    try { props = JSON.parse(f.propertiesJson || '{}'); } catch (e) {}
-    var defVal = (props.defaultValue != null && props.defaultValue !== '') ? String(props.defaultValue).replace(/"/g, '&quot;') : '';
-    var roAttr = props.readOnly ? ' readonly' : '';
-    var roSel = props.readOnly ? ' disabled' : '';
-    var roStyle = props.readOnly ? 'background:#f3f4f6;cursor:not-allowed;' : '';
-    var reqAttr = f.isRequired ? ' required' : '';
-    var maxL = (props.maxLength || props.charLimit) ? ' maxlength="' + (props.maxLength || props.charLimit) + '"' : '';
-    var minL = props.minLength ? ' minlength="' + props.minLength + '"' : '';
-    var wStyle = props.widthPx ? 'width:' + props.widthPx + 'px;' : '';
-    var ttAttr = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '"' : '';
-    function mkStyle(extra) { var s = (wStyle + roStyle + (extra || '')).trim(); return s ? ' style="' + s + '"' : ''; }
-    var inp = '';
-
-    if (f.fieldType === 'الاسم الكامل' || f.fieldType === 'نص قصير') {
-        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'رقم الهاتف') {
-        var fmt = props.phoneFormat || '+966 (9 أرقام)';
-        if (fmt === '+966 (9 أرقام)') {
-            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+966</span><input type="tel" class="form-control" placeholder="5XXXXXXXX" maxlength="9" pattern="[0-9]{9}" value="' + defVal + '"' + reqAttr + roAttr + mkStyle('direction:ltr;') + '></div>';
-        } else if (fmt === '05xxxxxxxx (10 أرقام)') {
-            inp = '<input type="tel" class="form-control" placeholder="05XXXXXXXX" maxlength="10" pattern="05[0-9]{8}" value="' + (defVal || '') + '"' + reqAttr + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
-        } else if (fmt === 'تلفون') {
-            inp = '<input type="tel" class="form-control" placeholder="' + (ph || 'XXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + ttAttr + mkStyle('direction:ltr;') + '>';
-        } else {
-            inp = '<div class="input-group" style="direction:ltr;' + wStyle + '"' + ttAttr + '><span class="input-group-text" style="font-weight:700;font-size:13px;background:var(--sa-50);border-color:var(--gray-200);">+</span><input type="tel" class="form-control" placeholder="' + (ph || 'XXX XXXXXXXXX') + '" value="' + defVal + '"' + reqAttr + maxL + roAttr + mkStyle('direction:ltr;') + '></div>';
-        }
-    } else if (f.fieldType === 'البريد الإلكتروني') {
-        var pat = '';
-        if (props.emailFormat) {
-            pat = ' pattern="[^\\s@]+@almadinah\\.gov\\.sa" title="يجب أن يكون البريد بصيغة اسم@almadinah.gov.sa"';
-        }
-        inp = '<input type="email" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + pat + reqAttr + maxL + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'نص طويل' || f.fieldType === 'فقرة') {
-        var dv = (props.defaultValue != null) ? String(props.defaultValue) : '';
-        var hPx = props.heightPx ? 'height:' + props.heightPx + 'px;' : '';
-        inp = '<textarea class="form-control" rows="3" placeholder="' + ph + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle(hPx) + '>' + dv.replace(/</g, '&lt;') + '</textarea>';
-    } else if (f.fieldType === 'رقم') {
-        var numMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
-        var numMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
-        inp = '<input type="number" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + numMin + numMax + reqAttr + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'دوار رقمي') {
-        var spMin = (props.minValue != null && props.minValue !== '') ? ' min="' + props.minValue + '"' : '';
-        var spMax = (props.maxValue != null && props.maxValue !== '') ? ' max="' + props.maxValue + '"' : '';
-        var spStep = (props.stepValue != null && props.stepValue !== '') ? ' step="' + props.stepValue + '"' : ' step="1"';
-        var spNoD = props.noDecimals ? ' step="1"' : spStep;
-        inp = '<div class="input-group rt-spinner-group" style="' + wStyle + '"' + ttAttr + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinDec(this)" style="border-radius:8px 0 0 8px;padding:4px 10px;font-size:16px;font-weight:700;">−</button><input type="number" class="form-control text-center rt-spin-input" value="' + (defVal || props.minValue || '0') + '"' + spMin + spMax + spNoD + reqAttr + (props.readOnly ? ' readonly style="background:#f3f4f6;"' : '') + '><button type="button" class="btn btn-outline-secondary rt-spin-btn" onclick="rtSpinInc(this)" style="border-radius:0 8px 8px 0;padding:4px 10px;font-size:16px;font-weight:700;">+</button></div>';
-    } else if (f.fieldType === 'التقييم بالأرقام') {
-        var arMin = (props.minRating != null && props.minRating !== '') ? props.minRating : '0';
-        var arMax = (props.maxRating != null && props.maxRating !== '') ? props.maxRating : '10';
-        inp = '<div' + ttAttr + '><input type="range" class="form-range" min="' + arMin + '" max="' + arMax + '" value="' + (defVal || arMin) + '" oninput="this.nextElementSibling.textContent=this.value"><div class="text-center fw-bold" style="font-size:14px;">' + (defVal || arMin) + '</div>';
-        var lo = props.lowRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.lowRatingText) + '</span>' : '';
-        var hi = props.highRatingText ? '<span class="text-muted" style="font-size:11px;">' + rtEscAttr(props.highRatingText) + '</span>' : '';
-        if (lo || hi) inp += '<div class="d-flex justify-content-between">' + lo + hi + '</div>';
-        inp += '</div>';
-    } else if (f.fieldType === 'قائمة منسدلة' || f.fieldType === 'قائمة اختيار الواحد') {
-        var opts = [];
-        if (props.options) opts = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-        var emptyText = (props.emptyText || '').trim();
-        var defaultOpt = (props.defaultOption || '').trim();
-        var firstLabel = emptyText || ph || 'اختر...';
-        inp = '<select class="form-select"' + reqAttr + roSel + ttAttr + mkStyle() + '>';
-        inp += '<option value="">' + String(firstLabel).replace(/</g, '&lt;') + '</option>';
-        opts.forEach(function (o) {
-            var sel = (defaultOpt && o === defaultOpt) ? ' selected' : '';
-            inp += '<option value="' + String(o).replace(/"/g, '&quot;') + '"' + sel + '>' + String(o).replace(/</g, '&lt;') + '</option>';
-        });
-        inp += '</select>';
-    } else if (f.fieldType === 'قائمة اختيار متعدد') {
-        var opts2 = [];
-        if (props.options) opts2 = String(props.options).split(/[\r\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-        var defaultSet = {};
-        String(props.defaultOption || '').split(/,\s*/).forEach(function (d) {
-            var t = d.trim();
-            if (t) defaultSet[t] = true;
-        });
-        inp = '<div class="d-flex flex-wrap gap-2"' + ttAttr + '>';
-        opts2.forEach(function (o) {
-            var chk = defaultSet[o] ? ' checked' : '';
-            var dis = props.readOnly ? ' disabled' : '';
-            inp += '<div class="form-check mb-0"><input class="form-check-input" type="checkbox"' + chk + dis + '><label class="form-check-label">' + String(o).replace(/</g, '&lt;') + '</label></div>';
-        });
-        if (opts2.length === 0) inp += '<span class="text-muted">—</span>';
-        inp += '</div>';
-    } else if (f.fieldType === 'تاريخ') {
-        inp = '<input type="date" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + '>';
-    } else if (f.fieldType === 'وقت') {
-        var tfmt = props.timeFormat || '';
-        inp = '<input type="time" class="form-control" value="' + defVal + '"' + reqAttr + roAttr + ttAttr + mkStyle() + (tfmt === '24 ساعة' ? '' : ' step="3600"') + '>';
-    } else if (f.fieldType === 'رفع ملف') {
-        var acc = rtpFileAcceptFromProps(props);
-        inp = '<input type="file" class="form-control form-control-sm"' + (acc ? ' accept="' + acc.replace(/"/g, '') + '"' : '') + reqAttr + ttAttr + '>';
-    } else if (f.fieldType === 'التقييم بالنجوم') {
-        var range = parseInt(props.ratingRange) || 5;
-        var icon = props.ratingIcon || 'نجمة';
-        var starChar = icon === 'قلب' ? '♥' : icon === 'إبهام' ? '👍' : '★';
-        var sdef = parseInt(defVal) || 0;
-        inp = '<div class="rt-star-rating d-flex gap-1 align-items-center"' + ttAttr + ' data-val="' + sdef + '">';
-        for (var si = 1; si <= range; si++) {
-            var active = si <= sdef ? 'color:#f59e0b;' : 'color:#d1d5db;';
-            inp += '<span class="rt-star-icon" data-i="' + si + '" style="font-size:22px;cursor:pointer;' + active + '" onclick="rtStarClick(this,' + si + ')">' + starChar + '</span>';
-        }
-        inp += '<span class="rt-star-val ms-2 fw-bold" style="font-size:13px;">' + sdef + '/' + range + '</span></div>';
-    } else {
-        inp = '<input type="text" class="form-control" placeholder="' + ph + '" value="' + defVal + '"' + reqAttr + maxL + minL + roAttr + ttAttr + mkStyle() + '>';
-    }
-    var subName = (f.subName || props.subName || '').trim();
-    if (subName) {
-        inp += '<div class="rt-field-subname">' + subName.replace(/</g, '&lt;') + '</div>';
-    }
-    return inp;
+function rtpParseLines(s) {
+    if (s == null || s === '') return [];
+    return String(s).split(/[\r\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
 }
 
-function rtSpinInc(btn) {
-    var inp = btn.parentElement.querySelector('.rt-spin-input');
-    if (!inp) return;
-    var step = parseFloat(inp.step) || 1;
-    var max = inp.max !== '' ? parseFloat(inp.max) : Infinity;
-    var v = parseFloat(inp.value) || 0;
-    if (v + step <= max) inp.value = +(v + step).toFixed(4);
+/** معرّف فريد لكل خلية معاينة (يتجنّب تكرار id عند صفوف متعددة). */
+function rtpSyntheticPreviewFieldId(f) {
+    var base = String((f && f.fieldName) || 'f').replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF\-]/g, '') || 'fld';
+    return 'rtpv_' + base + '_' + Math.random().toString(36).slice(2, 11);
 }
-function rtSpinDec(btn) {
-    var inp = btn.parentElement.querySelector('.rt-spin-input');
-    if (!inp) return;
-    var step = parseFloat(inp.step) || 1;
-    var min = inp.min !== '' ? parseFloat(inp.min) : -Infinity;
-    var v = parseFloat(inp.value) || 0;
-    if (v - step >= min) inp.value = +(v - step).toFixed(4);
-}
-function rtStarClick(el, idx) {
-    var wrap = el.closest('.rt-star-rating');
-    if (!wrap) return;
-    wrap.setAttribute('data-val', idx);
-    var stars = wrap.querySelectorAll('.rt-star-icon');
-    stars.forEach(function(s) {
-        var i = parseInt(s.getAttribute('data-i'));
-        s.style.color = (i <= idx) ? '#f59e0b' : '#d1d5db';
+
+/** حمولة متوافقة مع fdBuildFieldInput (تلميح/نائب من الحقل أو من JSON الخصائص). */
+function rtpFdFieldPayload(f, opt) {
+    var propsHint = {};
+    try { propsHint = JSON.parse((f && f.propertiesJson) || '{}'); } catch (e) {}
+    var tip = '';
+    if (f && f.tooltipText != null && String(f.tooltipText).trim() !== '') tip = String(f.tooltipText).trim();
+    else if (propsHint.tooltipText != null && String(propsHint.tooltipText).trim() !== '') tip = String(propsHint.tooltipText).trim();
+    var placeholder = ((f && f.placeholder) || propsHint.placeholder || '').trim();
+    return Object.assign({}, f, {
+        id: rtpSyntheticPreviewFieldId(f),
+        tooltipText: tip,
+        placeholder: placeholder
     });
-    var lbl = wrap.querySelector('.rt-star-val');
-    if (lbl) lbl.textContent = idx + '/' + stars.length;
+}
+
+/** ربط التقويم والدوار وقوائم الاختيار ورفع الملفات كما في النماذج المستخدمة. */
+function rtpAfterPreviewRendered(root) {
+    if (!root) return;
+    try {
+        if (typeof window.fdInitDynamicWidgets === 'function') window.fdInitDynamicWidgets(root);
+    } catch (e) { console.warn('rtpAfterPreviewRendered', e); }
+}
+
+function rtpBuildFieldInput(f, opt) {
+    var props = {};
+    try { props = JSON.parse((f && f.propertiesJson) || '{}'); } catch (e) {}
+    var subName = ((f && f.subName) || props.subName || '').trim();
+    var html = '';
+    if (typeof fdBuildFieldInput === 'function') {
+        try {
+            html = fdBuildFieldInput(rtpFdFieldPayload(f, opt), opt || {});
+        } catch (e) {
+            console.warn('rtpBuildFieldInput', e);
+            html = '';
+        }
+    }
+    if (!html) {
+        var ph = rtpFieldPlaceholder(f || {});
+        html = '<input type="text" class="form-control" placeholder="' + ph + '">';
+    }
+    if (subName) html += '<div class="rt-field-subname">' + subName.replace(/</g, '&lt;') + '</div>';
+    return html;
 }
 
 function rtpBuildRowHtml() {
@@ -966,12 +1352,51 @@ function rtpAddRow(btn) {
     var tr = document.createElement('tr');
     tr.innerHTML = fields.map(function(f){ return '<td>' + rtpBuildFieldInput(f) + '</td>'; }).join('');
     tbody.insertBefore(tr, addRow);
+    rtpWireFileUploadMulti(tr);
+    rtpAfterPreviewRendered(tr);
+}
+
+/** تفعيل اختيار عدة ملفات في معاينة الجداول الجاهزة (يربط fdFileUploadBindInRoot إن وُجد). */
+function rtpWireFileUploadMulti(rootEl) {
+    if (!rootEl || !rootEl.querySelectorAll) return;
+    if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] قبل', rootEl);
+    function fallbackApply() {
+        rootEl.querySelectorAll('.fd-file-upload-wrap input[type="file"]').forEach(function (inp) {
+            var w = inp.closest('.fd-file-upload-wrap');
+            if (!w) return;
+            var mf = parseInt(String(w.getAttribute('data-fd-max-files') || '1').replace(/[\u0660-\u0669]/g, function (ch) { return String(ch.charCodeAt(0) - 0x0660); }).replace(/[\u06f0-\u06f9]/gi, function (ch) { return String(ch.charCodeAt(0) - 0x06f0); }).trim(), 10);
+            if (isNaN(mf) || mf < 1) mf = 1;
+            if (mf > 100) mf = 100;
+            if (mf > 1) {
+                inp.setAttribute('multiple', 'multiple');
+            } else {
+                inp.removeAttribute('multiple');
+            }
+            try { inp.multiple = mf > 1; } catch (e) {}
+        });
+    }
+    if (typeof fdFileUploadBindInRoot === 'function') {
+        fdFileUploadBindInRoot(rootEl);
+    } else {
+        fallbackApply();
+    }
+    if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] بعد', rootEl);
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(function () {
+            if (typeof window.fdFileUploadReassertMultipleInRoot === 'function') {
+                window.fdFileUploadReassertMultipleInRoot(rootEl);
+            } else {
+                fallbackApply();
+            }
+            if (typeof window.fdFileUploadTraceStage === 'function') window.fdFileUploadTraceStage('[rtpWireFileUploadMulti] بعد requestAnimationFrame', rootEl);
+        });
+    }
 }
 
 function rtcShowPreview() {
     var name = document.getElementById('rtcName').value.trim();
     var desc = document.getElementById('rtcDesc').value.trim();
-    var ownership = document.querySelector('input[name="rtcOwnership"]:checked').value;
+    var ownership = rtEffectiveOwnership(false);
     var rowMode = document.querySelector('input[name="rtcRowMode"]:checked').value;
     var maxRowsVal = rowMode === 'مقيد' ? document.getElementById('rtcMaxRows').value : '';
     var numRows = rowMode === 'مقيد' ? (parseInt(maxRowsVal, 10) || 1) : 1;
@@ -1004,6 +1429,9 @@ function rtcShowPreview() {
     html += '</tbody></table></div>';
 
     body.innerHTML = html;
+
+    rtpWireFileUploadMulti(body);
+    rtpAfterPreviewRendered(body);
 
     var createModal = document.getElementById('rtCreateModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
@@ -1054,12 +1482,12 @@ async function rtShowDetails(id) {
         if (d.fields && d.fields.length > 0) {
             html += '<div class="rt-section"><div class="rt-section-title">حقول الجدول (' + d.fields.length + ')</div>';
             html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr>';
-            html += '<th>رقم</th><th>نوع الحقل</th><th>اسم الحقل</th><th>إلزامي</th><th>التلميح</th><th>الخصائص</th>';
+            html += '<th>رقم</th><th>نوع الحقل</th><th>اسم الحقل</th><th>إلزامي</th><th>الخصائص</th>';
             html += '</tr></thead><tbody>';
             d.fields.forEach(function(f) {
                 var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
                 var propsSummary = rtGetPropsSummary(f);
-                html += '<tr><td>' + f.sortOrder + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td>' + (f.tooltipText || '-') + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
+                html += '<tr><td>' + f.sortOrder + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;">' + propsSummary + '</td></tr>';
             });
             html += '</tbody></table></div></div>';
         }
@@ -1102,6 +1530,15 @@ async function rtShowEditModal(id) {
         showToast('معرّف الجدول غير صحيح', 'danger');
         return;
     }
+    var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
+    if (listed && rtIsTableLinkedToForm(listed)) {
+        showToast('لا يمكن تعديل جدول مستخدم في أحد النماذج', 'error');
+        return;
+    }
+    if (listed && !rtCanEdit(listed)) {
+        showToast('غير مصرح بتعديل هذا الجدول', 'error');
+        return;
+    }
     try {
         var r = await apiFetch('/Tables/GetReadyTableDetails?id=' + encodeURIComponent(id));
         if (!r) { showToast('خطأ في الاتصال بالخادم', 'danger'); return; }
@@ -1126,6 +1563,7 @@ async function rtShowEditModal(id) {
 
         if (d.ownership === 'خاص') document.getElementById('rtEditOwnershipPrivate').checked = true;
         else document.getElementById('rtEditOwnershipPublic').checked = true;
+        rtApplyAdminOwnershipLock();
 
         rtEditApplyColumnHeaderColorFromValue(d.columnHeaderColor || '');
 
@@ -1178,12 +1616,8 @@ function rtEditOnFieldTypeChange() {
     area.style.display = 'block';
     cell.innerHTML = '<span style="font-size:11px;color:var(--sa-600);"><i class="bi bi-check-circle-fill"></i> ' + def.props.length + ' خاصية</span>';
     var html = '<div class="row g-2">';
-    var cbStarted2 = false;
     def.props.forEach(function (p) {
-        if (p.type === 'checkbox' && !cbStarted2) {
-            cbStarted2 = true;
-            html += '<div class="col-12"><hr style="border-color:var(--gray-200);margin:8px 0 4px;"><div style="font-size:11px;font-weight:700;color:var(--gray-400);margin-bottom:6px;"><i class="bi bi-toggles"></i> خيارات التفعيل</div></div>';
-        }
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         html += rtBuildSinglePropHtml(p, 'rtEditProp');
     });
     html += '</div>';
@@ -1193,10 +1627,9 @@ function rtEditOnFieldTypeChange() {
         var pfmt2 = document.getElementById('rtEditProp_phoneFormat');
         if (pfmt2 && !pfmt2.value) pfmt2.value = '+966 (9 أرقام)';
     }
-    var tooltip = document.getElementById('rtEditFieldTooltip');
-    if (tooltip && !tooltip.value) {
-        var defaults = { "الاسم الكامل":"أدخل الاسم الكامل","البريد الإلكتروني":"أدخل البريد الإلكتروني","رقم الهاتف":"أدخل رقم الهاتف","نص قصير":"أدخل النص","نص طويل":"أدخل النص","فقرة":"أدخل الفقرة","رقم":"أدخل الرقم","قائمة منسدلة":"اختر من القائمة","قائمة اختيار الواحد":"اختر خياراً واحداً","قائمة اختيار متعدد":"اختر خياراً أو أكثر","تاريخ":"اختر التاريخ","وقت":"اختر الوقت","رفع ملف":"ارفع ملفاً","دوار رقمي":"حدد الرقم","التقييم بالنجوم":"حدد التقييم","التقييم بالأرقام":"حدد التقييم" };
-        tooltip.value = defaults[type] || "أدخل قيمة الحقل";
+    if (type === 'تاريخ') {
+        var calEdit = document.getElementById('rtEditProp_calendarType');
+        if (calEdit && !calEdit.value) calEdit.value = 'ميلادي';
     }
 }
 
@@ -1206,6 +1639,7 @@ function rtEditCollectProps() {
     var def = RT_FIELD_TYPES[type], result = {};
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtEditProp_minFileSize');
             var mx = document.getElementById('rtEditProp_maxFileSize');
@@ -1213,24 +1647,35 @@ function rtEditCollectProps() {
             if (mx) result.maxFileSize = mx.value;
             return;
         }
+        if (p.type === 'chipSelect') {
+            var chipEl2 = document.getElementById('rtEditProp_' + p.key);
+            if (chipEl2) result[p.key] = chipEl2.value;
+            return;
+        }
         var el = document.getElementById('rtEditProp_' + p.key);
         if (!el) return;
         if (p.type === 'checkbox') result[p.key] = el.checked; else result[p.key] = el.value;
     });
-    return rtMergeSpecialPropsIntoResult(type, 'rtEditProp', result);
+    rtMergeSpecialPropsIntoResult(type, 'rtEditProp', result);
+    return rtStripLegacyProps(result);
 }
 
 function rtEditSetProps(type, propsObj) {
     if (!type || !RT_FIELD_TYPES[type]) return;
     var def = RT_FIELD_TYPES[type];
-    var po = propsObj || {};
+    var po = rtStripLegacyProps(Object.assign({}, propsObj || {}));
     def.props.forEach(function (p) {
         if (p.type === 'optionList' || p.type === 'fileTypesPick') return;
+        if (p && p.key && RT_LEGACY_PROP_KEYS.indexOf(p.key) >= 0) return;
         if (p.type === 'fileMbLimitsPair') {
             var mn = document.getElementById('rtEditProp_minFileSize');
             var mx = document.getElementById('rtEditProp_maxFileSize');
             if (mn && po.minFileSize !== undefined && po.minFileSize !== null) mn.value = po.minFileSize;
             if (mx && po.maxFileSize !== undefined && po.maxFileSize !== null) mx.value = po.maxFileSize;
+            return;
+        }
+        if (p.type === 'chipSelect') {
+            rtSyncDecimalChips('rtEditProp', p.key, po[p.key]);
             return;
         }
         var el = document.getElementById('rtEditProp_' + p.key);
@@ -1248,11 +1693,16 @@ function rtEditAddField() {
     if (!name) { showToast('يرجى إدخال اسم الحقل', 'danger'); return; }
     var defPre2 = RT_FIELD_TYPES[type];
     if (defPre2 && defPre2.props.some(function (p) { return p.type === 'optionList'; })) {
-        var oc2 = rtCollectOptionListFromEditor('rtEditProp');
+        var oc2 = rtCollectOptionListFromEditor('rtEditProp', 'options');
         if (!oc2 || !String(oc2.options || '').trim()) { showToast('يرجى إدخال خيار واحد على الأقل للقائمة', 'danger'); return; }
     }
+    if (type === 'شبكة خيارات متعددة' || type === 'شبكة مربعات اختيار') {
+        var rl2 = document.getElementById('rtEditProp_rowLabels');
+        if (!rl2 || !String(rl2.value || '').trim()) { showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'danger'); return; }
+    }
     var props = rtEditCollectProps();
-    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:document.getElementById('rtEditFieldTooltip').value.trim(), propertiesJson:JSON.stringify(props) };
+    var tooltipVal2 = (document.getElementById('rtEditFieldTooltip') && document.getElementById('rtEditFieldTooltip').value || '').trim();
+    var field = { fieldType:type, fieldName:name, isRequired:document.getElementById('rtEditFieldRequired').value === '1', subName:props.subName||'', placeholder:props.placeholder||'', tooltipText:tooltipVal2, propertiesJson:JSON.stringify(props) };
     if (rtEditEditingIndex >= 0) { rtEditFields[rtEditEditingIndex] = field; rtEditEditingIndex = -1; showToast('تم تحديث الحقل', 'success'); } else { rtEditFields.push(field); showToast('تم إضافة الحقل', 'success'); }
     rtEditResetFieldForm();
     rtEditRenderFieldsTable();
@@ -1267,8 +1717,8 @@ function rtEditResetFieldForm() {
     if (fname) fname.value = '';
     var req = document.getElementById('rtEditFieldRequired');
     if (req) req.value = '1';
-    var tip = document.getElementById('rtEditFieldTooltip');
-    if (tip) tip.value = '';
+    var tip2 = document.getElementById('rtEditFieldTooltip');
+    if (tip2) tip2.value = '';
     var area = document.getElementById('rtEditPropsArea');
     if (area) area.style.display = 'none';
     var fields = document.getElementById('rtEditPropsFields');
@@ -1285,7 +1735,8 @@ function rtEditEditField(idx) {
     document.getElementById('rtEditFieldType').value = f.fieldType;
     document.getElementById('rtEditFieldName').value = f.fieldName;
     document.getElementById('rtEditFieldRequired').value = f.isRequired ? '1' : '0';
-    document.getElementById('rtEditFieldTooltip').value = f.tooltipText || '';
+    var tipEdit = document.getElementById('rtEditFieldTooltip');
+    if (tipEdit) tipEdit.value = f.tooltipText || '';
     document.getElementById('rtEditFieldNum').textContent = (idx + 1).toString();
     rtEditOnFieldTypeChange();
     try { var p = JSON.parse(f.propertiesJson || '{}'); rtEditSetProps(f.fieldType, p); } catch(e) {}
@@ -1311,7 +1762,8 @@ function rtEditRenderFieldsTable() {
     rtEditFields.forEach(function(f, i) {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
-        html += '<tr><td>' + (i+1) + '</td><td>' + f.fieldType + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td>' + (f.tooltipText||'-') + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        var tipText2 = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText2.replace(/"/g,'&quot;') + '">' + tipText2 + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1319,7 +1771,7 @@ function rtEditRenderFieldsTable() {
 function rtEditShowPreview() {
     var name = document.getElementById('rtEditName').value.trim();
     var desc = document.getElementById('rtEditDescription').value.trim();
-    var ownership = document.querySelector('input[name="rtEditOwnership"]:checked').value;
+    var ownership = rtEffectiveOwnership(true);
     var rowMode = document.querySelector('input[name="rtEditRowMode"]:checked').value;
     var maxRowsVal = rowMode === 'مقيد' ? document.getElementById('rtEditMaxRows').value : '';
     var numRows = rowMode === 'مقيد' ? (parseInt(maxRowsVal, 10) || 1) : 1;
@@ -1356,6 +1808,8 @@ function rtEditShowPreview() {
     html += '</tbody></table></div>';
 
     body.innerHTML = html;
+    rtpWireFileUploadMulti(body);
+    rtpAfterPreviewRendered(body);
     var editModal = document.getElementById('rtEditModal');
     var previewModalEl = document.getElementById('rtPreviewModal');
     var editModalInstance = bootstrap.Modal.getInstance(editModal);
@@ -1387,6 +1841,11 @@ async function rtSubmitEdit() {
     var name = document.getElementById('rtEditName').value.trim();
     var errEl = document.getElementById('rtEditError');
     if (!name) { errEl.textContent = 'اسم الجدول مطلوب'; errEl.classList.remove('d-none'); return; }
+    if (rtIsDuplicateTableName(name, id)) {
+        errEl.textContent = RT_TABLE_NAME_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
     var rowMode = document.querySelector('input[name="rtEditRowMode"]:checked').value;
     if (rowMode === 'مقيد') {
         var maxRows = parseInt(document.getElementById('rtEditMaxRows').value, 10);
@@ -1401,7 +1860,7 @@ async function rtSubmitEdit() {
         sortOrder: parseInt(document.getElementById('rtEditSortOrder').value) || 0,
         rowCountMode: document.querySelector('input[name="rtEditRowMode"]:checked').value,
         maxRows: parseInt(document.getElementById('rtEditMaxRows').value) || null,
-        ownership: document.querySelector('input[name="rtEditOwnership"]:checked').value,
+        ownership: rtEffectiveOwnership(true),
         columnHeaderColor: rtEditGetColumnHeaderColor(),
         isActive: document.querySelector('input[name="rtEditIsActive"]:checked').value === '1',
         fields: rtEditFields.map(function(f) { return {
@@ -1427,6 +1886,11 @@ async function rtSubmitEdit() {
 
 /* ===== Delete ===== */
 function rtShowDeleteModal(id, name) {
+    var listed = rtAllData.find(function (x) { return x.id === parseInt(id, 10); });
+    if (listed && !rtGetTableActions(listed).canDelete) {
+        showToast('غير مصرح بحذف هذا الجدول', 'error');
+        return;
+    }
     document.getElementById('rtDeleteId').value = id;
     document.getElementById('rtDeleteNameLabel').textContent = name;
     document.getElementById('rtDeleteError').classList.add('d-none');

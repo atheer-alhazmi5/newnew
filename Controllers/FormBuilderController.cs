@@ -22,6 +22,11 @@ public class FormBuilderController : BaseController
         var categories = await _ds.ListCategoriesAsync();
         var departments = await _ds.ListDepartmentsAsync();
         var users = await _ds.ListUsersAsync();
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var benByUsername = beneficiaries
+            .Where(b => b.IsActive && !string.IsNullOrWhiteSpace(b.Username))
+            .GroupBy(b => b.Username.ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First());
 
         var jsonOpts = new System.Text.Json.JsonSerializerOptions
         {
@@ -33,7 +38,20 @@ public class FormBuilderController : BaseController
             departments.Select(d => new { d.Id, d.Name }), jsonOpts);
         ViewBag.UsersJson = System.Text.Json.JsonSerializer.Serialize(
             users.Where(u => u.Id != CurrentUserId)
-                 .Select(u => new { u.Id, u.FullName, DeptName = u.Department?.Name ?? "", u.DepartmentId, u.RoleLabel }), jsonOpts);
+                 .Select(u =>
+                 {
+                     benByUsername.TryGetValue((u.Username ?? "").ToLowerInvariant(), out var ben);
+                     return new
+                     {
+                         u.Id,
+                         u.FullName,
+                         DeptName = u.Department?.Name ?? "",
+                         u.DepartmentId,
+                         u.RoleLabel,
+                         isUnitManager = ben?.IsUnitManager ?? false,
+                         roleDisplay = ben?.RoleDisplay ?? ""
+                     };
+                 }), jsonOpts);
 
         return View();
     }
@@ -160,7 +178,7 @@ public class FormBuilderController : BaseController
 
         if (targetDeptIds.Any())
         {
-            var deptUsers = allUsers.Where(u => targetDeptIds.Contains(u.DepartmentId) && u.Id != CurrentUserId)
+            var deptUsers = allUsers.Where(u => u.DepartmentId.HasValue && targetDeptIds.Contains(u.DepartmentId.Value) && u.Id != CurrentUserId)
                                     .Select(u => u.Id);
             targetUserIds = targetUserIds.Union(deptUsers).Distinct().ToList();
         }

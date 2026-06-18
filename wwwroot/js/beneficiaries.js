@@ -1,7 +1,63 @@
 var bnfAll = [];
 var bnfUnits = [];
 var bnfOuExpanded = {};
+var bnfFilterOuExpanded = {};
 var bnfSignCtx = {};
+
+function bnfIsSysAdminRole() {
+    var c = document.querySelector('input[name="bnfSubRole"]:checked');
+    return !!(c && c.value === 'مدير النظام');
+}
+
+/** SubRole عند الحفظ: الممثل من checkbox؛ وإلا مستفيد فعلي (حتى مع مدير وحدة). */
+function bnfResolveSubRoleForSubmit() {
+    var main = document.querySelector('input[name="bnfSubRole"]:checked');
+    if (!main) return '';
+    if (main.value === 'مدير النظام') return 'مدير النظام';
+    var repCb = document.getElementById('bnfOuRelationRep');
+    if (repCb && repCb.checked) return 'ممثل الوحدة التنظيمية';
+    return 'مستفيد فعلي';
+}
+
+function bnfApplyRoleVisibility() {
+    var sys = bnfIsSysAdminRole();
+    document.querySelectorAll('.bnf-rep-only').forEach(function (el) {
+        el.classList.toggle('d-none', sys);
+    });
+}
+
+function bnfSyncDeactivateReasonVisibility() {
+    var active = document.getElementById('bnfIsActive');
+    var wrap = document.getElementById('bnfDeactivateReasonWrap');
+    var reason = document.getElementById('bnfDeactivateReason');
+    if (!active || !wrap) return;
+    if (active.checked) {
+        wrap.classList.add('d-none');
+        if (reason) {
+            reason.removeAttribute('required');
+            reason.classList.remove('is-invalid');
+        }
+    } else {
+        wrap.classList.remove('d-none');
+        if (reason) reason.setAttribute('required', 'required');
+    }
+}
+
+function bnfValidateNationalId(nid) {
+    if (!nid) return 'رقم الهوية مطلوب';
+    if (nid.length !== 10 || !/^\d{10}$/.test(nid))
+        return 'رقم الهوية يجب أن يتكون من 10 أرقام فقط';
+    if (!nid.startsWith('1'))
+        return 'رقم الهوية يجب أن يبدأ بالرقم 1';
+    return null;
+}
+
+function bnfValidateDeactivateReason() {
+    if (document.getElementById('bnfIsActive').checked) return null;
+    if (!(document.getElementById('bnfDeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
 
 function bnfBindDigitsOnly(inputId, maxLen) {
     var el = document.getElementById(inputId);
@@ -43,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
     bnfBindDigitsOnly('bnfPhone', 10);
     bnfLoad();
 
-    var filterIds = ['bnfFilterName', 'bnfFilterNationalId', 'bnfFilterUnit', 'bnfFilterSubRole'];
+    var filterIds = ['bnfFilterName', 'bnfFilterNationalId', 'bnfFilterSubRole'];
     filterIds.forEach(function (fid) {
         var el = document.getElementById(fid);
         if (!el) return;
@@ -53,10 +109,41 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('bnfFilterName').value = '';
         document.getElementById('bnfFilterNationalId').value = '';
         document.getElementById('bnfFilterUnit').value = '';
+        var flab = document.getElementById('bnfFilterOuLabel');
+        if (flab) flab.textContent = 'الوحدة التنظيمية';
+        bnfFilterOuExpanded = {};
         document.getElementById('bnfFilterSubRole').value = '';
         bnfRenderTable();
     });
     bnfBindDigitsOnly('bnfFilterNationalId', 10);
+
+    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) {
+        r.addEventListener('change', function () { bnfApplyRoleVisibility(); });
+    });
+    (function bnfBindSubRoleRadioUncheckToggle() {
+        var radios = document.querySelectorAll('input[name="bnfSubRole"]');
+        if (!radios.length) return;
+        var prevRadio = null;
+        Array.prototype.forEach.call(radios, function (r) {
+            r.addEventListener('mousedown', function () {
+                prevRadio = document.querySelector('input[name="bnfSubRole"]:checked');
+            });
+            r.addEventListener('click', function () {
+                if (prevRadio === r) {
+                    r.checked = false;
+                    prevRadio = null;
+                    bnfApplyRoleVisibility();
+                }
+            });
+        });
+    })();
+    var bnfFormModal = document.getElementById('bnfFormModal');
+    if (bnfFormModal) {
+        bnfFormModal.addEventListener('shown.bs.modal', function () {
+            bnfApplyRoleVisibility();
+            bnfSyncDeactivateReasonVisibility();
+        });
+    }
 
     document.getElementById('bnfPhoto').addEventListener('change', function (e) {
         var f = e.target.files[0];
@@ -90,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('bnfIsActive').addEventListener('change', function () {
         document.getElementById('bnfActivationStatus').textContent = this.checked ? 'مفعل' : 'معطل';
+        bnfSyncDeactivateReasonVisibility();
     });
 
     document.getElementById('bnfPassword').addEventListener('input', bnfCheckPasswordLive);
@@ -129,7 +217,104 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    var bnfFilterOuTrigger = document.getElementById('bnfFilterOuTrigger');
+    var bnfFilterOuPanel = document.getElementById('bnfFilterOuPanel');
+    if (bnfFilterOuTrigger && bnfFilterOuPanel) {
+        bnfFilterOuTrigger.addEventListener('click', function (e) {
+            e.preventDefault();
+            bnfFilterOuTogglePanel();
+        });
+        bnfFilterOuPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    bnfFilterOuExpanded[eid] = !bnfFilterOuExpanded[eid];
+                    bnfRenderFilterOrgUnitTreePanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null) {
+                var rawId = row.getAttribute('data-id');
+                if (rawId === '') {
+                    document.getElementById('bnfFilterUnit').value = '';
+                    document.getElementById('bnfFilterOuLabel').textContent = 'الوحدة التنظيمية';
+                } else {
+                    var uid = parseInt(rawId, 10);
+                    var u = bnfUnits.find(function (x) { return x.id === uid; });
+                    if (u) {
+                        document.getElementById('bnfFilterUnit').value = String(u.id);
+                        document.getElementById('bnfFilterOuLabel').textContent = u.name;
+                    }
+                }
+                bnfFilterOuClosePanel();
+                bnfRenderFilterOrgUnitTreePanel();
+                bnfRenderTable();
+            }
+        });
+        document.addEventListener('click', function (e) {
+            var wrap = document.querySelector('.bnf-filter-ou-wrap');
+            var panel = document.getElementById('bnfFilterOuPanel');
+            if (!wrap || !panel || panel.classList.contains('d-none')) return;
+            if (!wrap.contains(e.target)) bnfFilterOuClosePanel();
+        });
+    }
 });
+
+function bnfFilterOuTogglePanel() {
+    var panel = document.getElementById('bnfFilterOuPanel');
+    var trig = document.getElementById('bnfFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = document.getElementById('bnfFilterUnit').value;
+        if (cur) bnfFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        bnfRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function bnfFilterOuClosePanel() {
+    var panel = document.getElementById('bnfFilterOuPanel');
+    var trig = document.getElementById('bnfFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function bnfFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    bnfUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        bnfFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function bnfRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('bnfFilterOuPanel');
+    if (!panel) return;
+    if (!bnfUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = bnfOrgUnitByParent();
+    var selectedId = document.getElementById('bnfFilterUnit').value;
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += bnfRenderOuTreeRows(byParent, '', 0, selectedId, bnfFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
 
 function bnfOuTogglePanel() {
     var panel = document.getElementById('bnfOuTreePanel');
@@ -175,18 +360,19 @@ function bnfOrgUnitByParent() {
     return byParent;
 }
 
-function bnfRenderOuTreeRows(byParent, parentKey, depth) {
+function bnfRenderOuTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
     var rows = byParent[parentKey] || [];
-    var selectedId = document.getElementById('bnfOrganizationalUnitId').value;
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : document.getElementById('bnfOrganizationalUnitId').value;
+    var expMap = expandedMap !== undefined && expandedMap !== null ? expandedMap : bnfOuExpanded;
     var html = '';
     rows.forEach(function (u) {
         var idStr = String(u.id);
         var children = byParent[idStr] || [];
         var hasChildren = children.length > 0;
-        var expanded = !!bnfOuExpanded[idStr];
+        var expanded = !!expMap[idStr];
         var indent = depth * 22;
-        var sel = String(selectedId) === idStr ? ' is-selected' : '';
-        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + sel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
         if (hasChildren) {
             html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
         } else {
@@ -194,7 +380,7 @@ function bnfRenderOuTreeRows(byParent, parentKey, depth) {
         }
         html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(u.name) + '</span></div>';
         if (hasChildren && expanded) {
-            html += bnfRenderOuTreeRows(byParent, idStr, depth + 1);
+            html += bnfRenderOuTreeRows(byParent, idStr, depth + 1, sel, expMap);
         }
     });
     return html;
@@ -208,7 +394,8 @@ function bnfRenderOrgUnitTreePanel() {
         return;
     }
     var byParent = bnfOrgUnitByParent();
-    var html = bnfRenderOuTreeRows(byParent, '', 0);
+    var selectedId = document.getElementById('bnfOrganizationalUnitId').value;
+    var html = bnfRenderOuTreeRows(byParent, '', 0, selectedId, bnfOuExpanded);
     panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
 }
 
@@ -380,15 +567,15 @@ async function bnfLoad() {
             bnfAll = r.data;
             bnfUnits = r.organizationalUnits || [];
             bnfFillUnitDropdown();
-            bnfFillFilterUnitSelect();
+            bnfSyncFilterUnitTreeLabel();
             bnfRenderTable();
         } else {
             document.getElementById('bnfBody').innerHTML =
-                '<tr><td colspan="5">' + emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'أضف مستفيدين للبدء') + '</td></tr>';
+                '<tr><td colspan="11">' + emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'أضف مستفيدين للبدء') + '</td></tr>';
         }
     } catch (e) {
         document.getElementById('bnfBody').innerHTML =
-            '<tr><td colspan="5" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
+            '<tr><td colspan="11" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
     }
 }
 
@@ -406,24 +593,45 @@ function bnfFillUnitDropdown() {
     bnfRenderOrgUnitTreePanel();
 }
 
-function bnfFillFilterUnitSelect() {
-    var sel = document.getElementById('bnfFilterUnit');
-    if (!sel) return;
-    var cur = sel.value;
-    var html = '<option value="">الوحدة التنظيمية</option>';
-    bnfUnits.forEach(function (u) {
-        html += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
-    });
-    sel.innerHTML = html;
-    if (cur && Array.prototype.some.call(sel.options, function (o) { return o.value === cur; }))
-        sel.value = cur;
+function bnfSyncFilterUnitTreeLabel() {
+    var hid = document.getElementById('bnfFilterUnit');
+    var lab = document.getElementById('bnfFilterOuLabel');
+    if (!hid || !lab) return;
+    if (hid.value) {
+        var u = bnfUnits.find(function (x) { return String(x.id) === String(hid.value); });
+        lab.textContent = u ? u.name : 'الوحدة التنظيمية';
+    } else {
+        lab.textContent = 'الوحدة التنظيمية';
+    }
+}
+
+/** نفس نص عمود «الدور» في الجدول — أساس فلترة الدور الفرعي (تطابق تام). */
+function bnfBeneficiaryTableRoleDisplay(b) {
+    if (!b) return '';
+    return String(b.roleDisplayTable || b.RoleDisplayTable || b.roleDisplay || '').trim();
+}
+
+/**
+ * يحوّل قيمة فلتر الدور إلى النص المقارَن لعمود الجدول.
+ * القيم السحرية القديمة تُربَط بعناوين الجدول الفعلية حرفيًا.
+ */
+function bnfNormalizeSubRoleFilterForTableMatch(raw) {
+    if (raw == null) return '';
+    var s = String(raw).trim();
+    if (!s) return '';
+    if (s === '__employee__') return 'موظف';
+    if (s === '__unit_manager__') return 'موظف - مدير وحدة تنظيمية';
+    /** عمود الجدول: «موظف - ممثل وحدة تنظيمية» وليس نص الفلتر وحده */
+    if (s === 'ممثل الوحدة التنظيمية') return 'موظف - ممثل وحدة تنظيمية';
+    return s;
 }
 
 function bnfGetFilteredBeneficiaries() {
     var nameQ = (document.getElementById('bnfFilterName') && document.getElementById('bnfFilterName').value || '').trim();
     var nidQ = (document.getElementById('bnfFilterNationalId') && document.getElementById('bnfFilterNationalId').value || '').trim();
     var unitId = document.getElementById('bnfFilterUnit') ? document.getElementById('bnfFilterUnit').value : '';
-    var subRole = document.getElementById('bnfFilterSubRole') ? document.getElementById('bnfFilterSubRole').value : '';
+    var subRoleRaw = document.getElementById('bnfFilterSubRole') ? document.getElementById('bnfFilterSubRole').value : '';
+    var roleFilter = bnfNormalizeSubRoleFilterForTableMatch(subRoleRaw);
 
     return bnfAll.filter(function (b) {
         if (nameQ && (b.fullName || '').indexOf(nameQ) === -1)
@@ -432,12 +640,8 @@ function bnfGetFilteredBeneficiaries() {
             return false;
         if (unitId && String(b.organizationalUnitId) !== String(unitId))
             return false;
-        if (subRole) {
-            var sr = (b.subRole || '').trim();
-            if (subRole === '__none__') {
-                if (sr !== '') return false;
-            } else if (sr !== subRole)
-                return false;
+        if (roleFilter) {
+            if (bnfBeneficiaryTableRoleDisplay(b) !== roleFilter) return false;
         }
         return true;
     });
@@ -446,13 +650,13 @@ function bnfGetFilteredBeneficiaries() {
 function bnfRenderTable() {
     var body = document.getElementById('bnfBody');
     if (bnfAll.length === 0) {
-        body.innerHTML = '<tr><td colspan="10">' +
+        body.innerHTML = '<tr><td colspan="11">' +
             emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'اضغط إضافة لإدخال مستفيد جديد') + '</td></tr>';
         return;
     }
     var rows = bnfGetFilteredBeneficiaries();
     if (rows.length === 0) {
-        body.innerHTML = '<tr><td colspan="10">' +
+        body.innerHTML = '<tr><td colspan="11">' +
             emptyState('bi-search', 'لا توجد نتائج', 'جرّب تعديل معايير البحث أو مسح الفلاتر') + '</td></tr>';
         return;
     }
@@ -462,6 +666,9 @@ function bnfRenderTable() {
         var avatarHtml = b.photoUrl
             ? '<img src="' + esc(b.photoUrl) + '" class="bnf-tbl-avatar" alt="" onerror="this.outerHTML=\'<span class=bnf-tbl-avatar-placeholder><i class=bi bi-person></i></span>\'">'
             : '<span class="bnf-tbl-avatar-placeholder"><i class="bi bi-person"></i></span>';
+        var active = b.isActive !== false;
+        var statusClass = active ? 'active' : 'inactive';
+        var statusText = active ? 'مفعل' : 'معطل';
         html += '<tr>' +
             '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td>' +
             '<td style="text-align:center;">' + avatarHtml + '</td>' +
@@ -470,8 +677,9 @@ function bnfRenderTable() {
             '<td><span dir="ltr" style="font-family:Consolas,monospace;font-size:12px;">' + esc(b.nationalId || '') + '</span></td>' +
             '<td><span dir="ltr" style="font-size:12px;">' + esc(b.phone || '') + '</span></td>' +
             '<td><span dir="ltr" style="font-size:11px;">' + esc(b.email || '') + '</span></td>' +
-            '<td style="font-size:12px;">' + esc(b.roleDisplay) + '</td>' +
+            '<td style="font-size:12px;">' + esc(b.roleDisplayTable || b.RoleDisplayTable || b.roleDisplay || '') + '</td>' +
             '<td style="font-size:12px;">' + esc(b.organizationalUnitName || '') + '</td>' +
+            '<td style="text-align:center;"><span class="bnf-status-pill ' + statusClass + '"><span class="bnf-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;">' +
                     '<button class="bnf-action-btn bnf-action-btn-detail" onclick="bnfShowDetails(' + b.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
@@ -526,19 +734,39 @@ function bnfCheckPasswordLive() {
 }
 
 function bnfValidate(isAdd) {
-    var nid = (document.getElementById('bnfNationalId').value || '').trim();
-    if (!nid) return 'الهوية الوطنية مطلوبة';
-    if (nid.length !== 10 || !/^\d+$/.test(nid))
-        return 'الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11';
-    if (!nid.startsWith('10') && !nid.startsWith('11'))
-        return 'الهوية الوطنية يجب أن تتكون من 10 أرقام وتبدأ بـ 10 أو 11';
+    if (!document.querySelector('input[name="bnfSubRole"]:checked'))
+        return 'اختر الدور';
+
+    if (bnfIsSysAdminRole()) {
+        if (!document.getElementById('bnfFirstName').value.trim()) return 'الاسم الأول مطلوب';
+        if (!document.getElementById('bnfSecondName').value.trim()) return 'الاسم الثاني مطلوب';
+        if (!document.getElementById('bnfThirdName').value.trim()) return 'الاسم الثالث مطلوب';
+        if (!document.getElementById('bnfFourthName').value.trim()) return 'الاسم الرابع مطلوب';
+
+        var usernameSa = (document.getElementById('bnfUsername').value || '').trim();
+        if (!usernameSa) return 'اسم المستخدم مطلوب';
+        if (usernameSa.length < 3) return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
+        if (!/^[a-zA-Z0-9_]+$/.test(usernameSa)) return 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط';
+
+        var pwdSa = document.getElementById('bnfPassword').value;
+        var confirmSa = document.getElementById('bnfConfirmPassword').value;
+        if (isAdd && !pwdSa) return 'كلمة المرور مطلوبة عند إضافة مستفيد جديد';
+        if (pwdSa && pwdSa !== confirmSa)
+            return 'كلمة المرور وتأكيد كلمة المرور غير متطابقتين';
+        if (pwdSa) {
+            var pwStrengthSa = bnfValidatePasswordStrength(pwdSa);
+            if (pwStrengthSa) return pwStrengthSa;
+        }
+        return bnfValidateDeactivateReason();
+    }
+
+    var nidErr = bnfValidateNationalId((document.getElementById('bnfNationalId').value || '').trim());
+    if (nidErr) return nidErr;
 
     var phone = (document.getElementById('bnfPhone').value || '').trim();
     if (!phone) return 'رقم الجوال مطلوب';
-    if (!phone.startsWith('05'))
-        return 'رقم الجوال يجب أن يبدأ بـ 05';
-    if (phone.length < 10 || !/^\d+$/.test(phone))
-        return 'رقم الجوال يجب أن يبدأ بـ 05';
+    if (phone.length !== 10 || !/^\d+$/.test(phone) || !phone.startsWith('05'))
+        return 'رقم الجوال ١٠ ارقام تبدا ب ٠٥';
 
     var email = (document.getElementById('bnfEmail').value || '').trim();
     if (!email) return 'البريد الإلكتروني مطلوب';
@@ -557,26 +785,6 @@ function bnfValidate(isAdd) {
     if (username.length < 3) return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
     if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'اسم المستخدم يجب أن يحتوي على أحرف إنجليزية وأرقام فقط';
 
-    // التأشير
-    var endorsementType = document.getElementById('bnfEndorsementType').value;
-    if (endorsementType === 'مرفق') {
-        var endorsementFile = document.getElementById('bnfEndorsementFile').dataset.base64 || '';
-        if (!endorsementFile) return 'يجب رفع ملف التأشير (صورة أو PDF)';
-    } else {
-        if (bnfIsCanvasEmpty('bnfEndorsementCanvas'))
-            return 'يجب التوقيع في مربع التأشير الإلكتروني';
-    }
-
-    // التوقيع
-    var signatureType = document.getElementById('bnfSignatureType').value;
-    if (signatureType === 'مرفق') {
-        var signatureFile = document.getElementById('bnfSignatureFile').dataset.base64 || '';
-        if (!signatureFile) return 'يجب رفع ملف التوقيع (صورة أو PDF)';
-    } else {
-        if (bnfIsCanvasEmpty('bnfSignatureCanvas'))
-            return 'يجب التوقيع في مربع التوقيع الإلكتروني';
-    }
-
     var pwd = document.getElementById('bnfPassword').value;
     var confirm = document.getElementById('bnfConfirmPassword').value;
     if (isAdd && !pwd) return 'كلمة المرور مطلوبة عند إضافة مستفيد جديد';
@@ -586,7 +794,7 @@ function bnfValidate(isAdd) {
         var pwStrength = bnfValidatePasswordStrength(pwd);
         if (pwStrength) return pwStrength;
     }
-    return null;
+    return bnfValidateDeactivateReason();
 }
 
 function bnfGetEndorsementData() {
@@ -642,8 +850,17 @@ function bnfShowAddModal() {
     document.getElementById('bnfEmail').value = '';
     document.getElementById('bnfIsActive').checked = true;
     document.getElementById('bnfActivationStatus').textContent = 'مفعل';
-    document.getElementById('bnfIsUnitManager').checked = false;
-    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = false; });
+    document.getElementById('bnfDeactivateReason').value = '';
+    bnfSyncDeactivateReasonVisibility();
+    var bnfAct = document.getElementById('bnfSubRoleActual');
+    var bnfAdm = document.getElementById('bnfSubRoleAdmin');
+    if (bnfAct) bnfAct.checked = true;
+    if (bnfAdm) bnfAdm.checked = false;
+    var ouMgr = document.getElementById('bnfOuRelationMgr');
+    var ouRep = document.getElementById('bnfOuRelationRep');
+    if (ouMgr) ouMgr.checked = false;
+    if (ouRep) ouRep.checked = false;
+    bnfApplyRoleVisibility();
     document.getElementById('bnfUsername').value = '';
     document.getElementById('bnfUsername').readOnly = false;
     document.getElementById('bnfPassword').value = '';
@@ -674,7 +891,7 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfModalSubtitle').textContent = 'تعديل بيانات المستفيد';
     document.getElementById('bnfSubmitBtn').textContent = 'حفظ التعديلات';
     document.getElementById('bnfNationalId').value = b.nationalId;
-    document.getElementById('bnfNationalId').readOnly = true;
+    document.getElementById('bnfNationalId').readOnly = false;
     document.getElementById('bnfEndorsementType').value = b.endorsementType || 'مرفق';
     document.getElementById('bnfSignatureType').value = b.signatureType || 'مرفق';
     bnfToggleEndorsement();
@@ -716,9 +933,20 @@ function bnfShowEditModal(id) {
     document.getElementById('bnfEmail').value = b.email || '';
     document.getElementById('bnfIsActive').checked = b.isActive !== false;
     document.getElementById('bnfActivationStatus').textContent = b.isActive !== false ? 'مفعل' : 'معطل';
-    document.getElementById('bnfIsUnitManager').checked = !!b.isUnitManager || b.mainRole === 'مدير';
-    var subRole = b.subRole || '';
-    document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) { r.checked = (r.value === subRole); });
+    document.getElementById('bnfDeactivateReason').value = String(b.deactivateReason || '').trim();
+    bnfSyncDeactivateReasonVisibility();
+    var subRole = (b.subRole || '').trim();
+    var isSys = subRole === 'مدير النظام';
+    var act = document.getElementById('bnfSubRoleActual');
+    var adm = document.getElementById('bnfSubRoleAdmin');
+    if (adm) adm.checked = isSys;
+    if (act) act.checked = !isSys;
+
+    var isUm = !!(b.isUnitManager || (b.mainRole || '').trim() === 'مدير');
+    var ouMgr = document.getElementById('bnfOuRelationMgr');
+    var ouRep = document.getElementById('bnfOuRelationRep');
+    if (ouMgr) ouMgr.checked = isUm;
+    if (ouRep) ouRep.checked = subRole === 'ممثل الوحدة التنظيمية';
     document.getElementById('bnfUsername').value = b.username || '';
     document.getElementById('bnfPassword').value = '';
     document.getElementById('bnfConfirmPassword').value = '';
@@ -758,24 +986,41 @@ function bnfSubmit() {
     bnfClearDuplicateFieldHighlight();
 
     var photoData = document.getElementById('bnfPhoto').dataset.base64 || '';
+    var isSys = bnfIsSysAdminRole();
+    var mgrCb = document.getElementById('bnfOuRelationMgr');
+    var isUnitMgr = !isSys && !!(mgrCb && mgrCb.checked);
+    var subRoleSaved = bnfResolveSubRoleForSubmit();
+    var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
+    var sysAdd = isSys && isAdd;
+
+    var existingBen = (!isAdd && id) ? bnfAll.find(function (x) { return String(x.id) === String(id); }) : null;
+    var endorsementFileVal = sysAdd ? '' : bnfGetEndorsementData();
+    var signatureFileVal = sysAdd ? '' : bnfGetSignatureData();
+    if (existingBen) {
+        if (!String(endorsementFileVal || '').trim()) endorsementFileVal = existingBen.endorsementFile || '';
+        if (!String(signatureFileVal || '').trim()) signatureFileVal = existingBen.signatureFile || '';
+    }
+
+    var activeChecked = document.getElementById('bnfIsActive').checked;
     var body = {
         photoUrl: photoData || undefined,
-        nationalId: document.getElementById('bnfNationalId').value.trim(),
-        endorsementType: document.getElementById('bnfEndorsementType').value,
-        endorsementFile: bnfGetEndorsementData(),
-        signatureType: document.getElementById('bnfSignatureType').value,
-        signatureFile: bnfGetSignatureData(),
+        nationalId: sysAdd ? '' : document.getElementById('bnfNationalId').value.trim(),
+        endorsementType: sysAdd ? 'مرفق' : document.getElementById('bnfEndorsementType').value,
+        endorsementFile: sysAdd ? '' : endorsementFileVal,
+        signatureType: sysAdd ? 'مرفق' : document.getElementById('bnfSignatureType').value,
+        signatureFile: sysAdd ? '' : signatureFileVal,
         firstName: document.getElementById('bnfFirstName').value.trim(),
         secondName: document.getElementById('bnfSecondName').value.trim(),
         thirdName: document.getElementById('bnfThirdName').value.trim(),
         fourthName: document.getElementById('bnfFourthName').value.trim(),
-        organizationalUnitId: parseInt(document.getElementById('bnfOrganizationalUnitId').value),
-        phone: document.getElementById('bnfPhone').value.trim(),
-        email: document.getElementById('bnfEmail').value.trim(),
+        organizationalUnitId: sysAdd ? 0 : ouVal,
+        phone: sysAdd ? '' : document.getElementById('bnfPhone').value.trim(),
+        email: sysAdd ? '' : document.getElementById('bnfEmail').value.trim(),
         username: document.getElementById('bnfUsername').value.trim(),
-        isActive: document.getElementById('bnfIsActive').checked,
-        isUnitManager: !!document.getElementById('bnfIsUnitManager').checked,
-        subRole: (document.querySelector('input[name="bnfSubRole"]:checked') || {}).value || '',
+        isActive: activeChecked,
+        deactivateReason: activeChecked ? '' : document.getElementById('bnfDeactivateReason').value.trim(),
+        isUnitManager: isSys ? false : isUnitMgr,
+        subRole: subRoleSaved,
         password: document.getElementById('bnfPassword').value || undefined,
         confirmPassword: document.getElementById('bnfConfirmPassword').value || undefined
     };
@@ -832,11 +1077,19 @@ function bnfShowDetails(id) {
         '<div class="row mb-3"><div class="col-md-2"><strong>الوحدة التنظيمية:</strong></div><div class="col-md-10">' + esc(b.organizationalUnitName || '—') + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الجوال:</strong></div><div class="col-md-10">' + esc(b.phone) + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>البريد الإلكتروني:</strong></div><div class="col-md-10">' + esc(b.email) + '</div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div>' +
+        (b.isActive === false && String(b.deactivateReason || '').trim() ? '<div class="row mb-3"><div class="col-md-2"><strong>سبب التعطيل:</strong></div><div class="col-md-10">' + esc(String(b.deactivateReason).trim()) + '</div></div>' : '') +
+        '</div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-person-badge"></i>الأدوار وبيانات الدخول</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المستخدم:</strong></div><div class="col-md-10"><span dir="ltr">' + esc(b.username || '—') + '</span></div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>مدير وحدة تنظيمية:</strong></div><div class="col-md-10">' + ((b.isUnitManager || b.mainRole === 'مدير') ? 'نعم' : 'لا') + '</div></div>' +
-        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + (b.subRole ? esc(b.subRole) : '—') + '</div></div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>الدور:</strong></div><div class="col-md-10">' + esc(b.roleDisplay || '—') + '</div></div>' +
+        '<div class="row mb-3"><div class="col-md-2"><strong>الصفة في الوحدة:</strong></div><div class="col-md-10">' + esc((function () {
+            var sr = (b.subRole || '').trim();
+            if (sr === 'مدير النظام') return '—';
+            if (b.isUnitManager || (b.mainRole || '').trim() === 'مدير') return 'مدير وحدة تنظيمية';
+            if (sr === 'ممثل الوحدة التنظيمية') return 'ممثل وحدة تنظيمية';
+            return 'بدون تحديد';
+        })()) + '</div></div></div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-clock-history"></i>معلومات التدقيق</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>اسم المنشئ:</strong></div><div class="col-md-10">' + esc(b.createdBy || '—') + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>تاريخ الإنشاء:</strong></div><div class="col-md-10">' + esc(b.createdAt || '—') + '</div></div>' +

@@ -3,15 +3,134 @@ var ddlFiltered = [];
 var ddlOrgUnits = [];
 var ddlIndependentLists = [];
 var ddlParentListItemsCache = [];
+var ddlItemsAllCache = [];
+var ddlHierItemsAllCache = [];
 var ddlCurrentUser = '';
+var ddlIsAdmin = false;
+var ddlCurrentOrgUnitId = 0;
+var ddlFilterOuExpanded = {};
+
+var DDL_LIST_NAME_DUP_MSG = 'اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.';
+var DDL_ITEM_TEXT_DUP_MSG = 'اسم العنصر موجود مسبقًا، يرجى إدخال اسم مختلف.';
 
 var ddlHierItems = [];
 var ddlHierLevelNames = [];
 var ddlHierLevelCount = 2;
-var ddlHierCurrentLevel = 1;
+/** الأدمن: الملكية «عام» إلزامية. ممثل الوحدة: يختار عام/خاص بحرية. */
+function ddlApplyOwnershipUi() {
+    var pubC = document.getElementById('ddlCreateOwnershipPublic');
+    var privC = document.getElementById('ddlCreateOwnershipPrivate');
+    var pubE = document.getElementById('ddlEditOwnershipPublic');
+    var privE = document.getElementById('ddlEditOwnershipPrivate');
+    if (ddlIsAdmin) {
+        if (pubC) { pubC.checked = true; pubC.disabled = false; }
+        if (privC) { privC.checked = false; privC.disabled = true; }
+        if (pubE) { pubE.checked = true; pubE.disabled = false; }
+        if (privE) { privE.checked = false; privE.disabled = true; }
+    } else {
+        if (pubC) pubC.disabled = false;
+        if (privC) privC.disabled = false;
+        if (pubE) pubE.disabled = false;
+        if (privE) privE.disabled = false;
+    }
+}
+
+/** مدير النظام لا يعدّل القوائم الخاصة؛ ممثل الوحدة يعدّل ما أنشأه أو الخاص بوحدته. */
+function ddlCanModifyList(d) {
+    if (!d) return false;
+    if (ddlIsAdmin && d.ownership === 'خاص') return false;
+    if (ddlIsAdmin) return true;
+    var createdBy = (d.createdBy || '').trim();
+    if (createdBy && ddlCurrentUser && createdBy === ddlCurrentUser) return true;
+    if (d.ownership === 'خاص' && ddlCurrentOrgUnitId > 0 && d.organizationalUnitId === ddlCurrentOrgUnitId) return true;
+    return false;
+}
+
+function ddlIsDuplicateListName(name, excludeId) {
+    var norm = (name || '').trim();
+    if (!norm) return false;
+    return ddlAll.some(function (d) {
+        if (excludeId && d.id === excludeId) return false;
+        return (d.name || '').trim() === norm;
+    });
+}
+
+function ddlIsDuplicateItemText(text, excludeId) {
+    var norm = (text || '').trim();
+    if (!norm) return false;
+    var listType = document.getElementById('ddlItemsListType')?.value || '';
+    var cache = listType === 'قائمة هرمية' ? ddlHierItemsAllCache : ddlItemsAllCache;
+    return cache.some(function (i) {
+        if (excludeId && i.id === excludeId) return false;
+        return (i.itemText || '').trim() === norm;
+    });
+}
+
+function ddlIsListLinkedToForm(listData) {
+    return !!(listData && (listData.isLinkedToForm === true || listData.IsLinkedToForm === true));
+}
+
+/** تعطيل حقول نوع القائمة عند التحديث فقط */
+function ddlSetEditListTypeLocked(locked) {
+    document.querySelectorAll('input[name="ddlEditListType"]').forEach(function (el) {
+        el.disabled = !!locked;
+    });
+    var pl = document.getElementById('ddlEditParentListId');
+    var lc = document.getElementById('ddlEditLevelCount');
+    if (pl) pl.disabled = !!locked;
+    if (lc) lc.disabled = !!locked;
+}
 
 document.addEventListener('DOMContentLoaded', function () {
+    ddlApplyOwnershipUi();
     ddlLoad();
+    var em = document.getElementById('ddlEditModal');
+    if (em) em.addEventListener('hidden.bs.modal', function () { ddlSetEditListTypeLocked(false); });
+
+    var ddlFilterOuTrigger = document.getElementById('ddlFilterOuTrigger');
+    var ddlFilterOuPanel = document.getElementById('ddlFilterOuPanel');
+    if (ddlFilterOuTrigger && ddlFilterOuPanel) {
+        ddlFilterOuTrigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            ddlFilterOuTogglePanel();
+        });
+        ddlFilterOuPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    ddlFilterOuExpanded[eid] = !ddlFilterOuExpanded[eid];
+                    ddlRenderFilterOrgUnitTreePanel();
+                }
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (!row || !row.hasAttribute('data-id')) return;
+            var idAttr = row.getAttribute('data-id');
+            var hid = document.getElementById('ddlFilterOrgUnit');
+            var lab = document.getElementById('ddlFilterOuLabel');
+            if (hid) hid.value = idAttr === null ? '' : String(idAttr);
+            if (lab) {
+                if (!idAttr) lab.textContent = 'قائمة بالوحدات التنظيمية';
+                else {
+                    var uid = parseInt(idAttr, 10);
+                    var u = ddlOrgUnits.find(function (x) { return x.id === uid; });
+                    lab.textContent = u ? u.name : 'قائمة بالوحدات التنظيمية';
+                }
+            }
+            ddlFilterOuClosePanel();
+            ddlRenderFilterOrgUnitTreePanel();
+            ddlApplyFilters();
+        });
+        document.addEventListener('click', function (e) {
+            var wrap = document.querySelector('.ddl-filter-ou-wrap');
+            var panel = document.getElementById('ddlFilterOuPanel');
+            if (!wrap || !panel || panel.classList.contains('d-none')) return;
+            if (!wrap.contains(e.target)) ddlFilterOuClosePanel();
+        });
+    }
 });
 
 async function ddlLoad() {
@@ -21,8 +140,11 @@ async function ddlLoad() {
             ddlAll = r.data || [];
             ddlOrgUnits = r.organizationalUnits || [];
             ddlCurrentUser = r.currentUser || '';
+            ddlIsAdmin = r.isAdmin === true;
+            ddlCurrentOrgUnitId = r.currentOrgUnitId || 0;
             ddlApplyFilters();
-            ddlFillOrgUnitFilter();
+            ddlSyncFilterOuTreeLabel();
+            ddlApplyOwnershipUi();
         } else {
             document.getElementById('ddlBody').innerHTML =
                 '<tr><td colspan="8">' + emptyState('bi-ui-checks-grid', 'لا توجد قوائم منسدلة', 'أنشئ قائمة منسدلة للبدء') + '</td></tr>';
@@ -33,14 +155,113 @@ async function ddlLoad() {
     }
 }
 
-function ddlFillOrgUnitFilter() {
-    var sel = document.getElementById('ddlFilterOrgUnit');
-    if (!sel) return;
-    var html = '<option value="">قائمة بالوحدات التنظيمية</option>';
+function ddlOuBuildTreeMap() {
+    var ids = {};
+    ddlOrgUnits.forEach(function (u) { ids[u.id] = true; });
+    var byParent = {};
     ddlOrgUnits.forEach(function (u) {
-        html += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
+        if (!byParent[pk]) byParent[pk] = [];
+        byParent[pk].push(u);
     });
-    sel.innerHTML = html;
+    Object.keys(byParent).forEach(function (k) {
+        byParent[k].sort(function (a, b) {
+            var sa = a.sortOrder != null ? a.sortOrder : 0;
+            var sb = b.sortOrder != null ? b.sortOrder : 0;
+            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
+        });
+    });
+    return byParent;
+}
+
+function ddlRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += ddlRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function ddlFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    ddlOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        ddlFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function ddlRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    if (!panel) return;
+    if (!ddlOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = ddlOuBuildTreeMap();
+    var selectedId = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += ddlRenderOuFilterTreeRows(byParent, '', 0, selectedId, ddlFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function ddlFilterOuTogglePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    var trig = document.getElementById('ddlFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
+        if (cur) ddlFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        ddlRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function ddlFilterOuClosePanel() {
+    var panel = document.getElementById('ddlFilterOuPanel');
+    var trig = document.getElementById('ddlFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function ddlSyncFilterOuTreeLabel() {
+    var hid = document.getElementById('ddlFilterOrgUnit');
+    var lab = document.getElementById('ddlFilterOuLabel');
+    if (!hid || !lab) return;
+    var defLabel = 'قائمة بالوحدات التنظيمية';
+    if (hid.value) {
+        var u = ddlOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
+        lab.textContent = u ? u.name : defLabel;
+    } else {
+        lab.textContent = defLabel;
+    }
+    ddlRenderFilterOrgUnitTreePanel();
 }
 
 function ddlApplyFilters() {
@@ -67,7 +288,12 @@ function ddlClearFilters() {
     document.getElementById('ddlFilterListType').value = '';
     document.getElementById('ddlFilterSelectionType').value = '';
     document.getElementById('ddlFilterOwnership').value = '';
-    document.getElementById('ddlFilterOrgUnit').value = '';
+    var ouHid = document.getElementById('ddlFilterOrgUnit');
+    if (ouHid) ouHid.value = '';
+    var flab = document.getElementById('ddlFilterOuLabel');
+    if (flab) flab.textContent = 'قائمة بالوحدات التنظيمية';
+    ddlFilterOuExpanded = {};
+    ddlFilterOuClosePanel();
     ddlApplyFilters();
 }
 
@@ -86,6 +312,7 @@ function ddlRenderTable() {
         var ownershipClass = d.ownership === 'عام' ? 'ddl-badge-public' : 'ddl-badge-private';
         var statusClass = d.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
         var statusText = d.isActive ? 'مفعل' : 'معطل';
+        var canModify = ddlCanModifyList(d);
 
         html += '<tr>' +
             '<td style="text-align:center;font-weight:800;">' + (idx + 1) + '</td>' +
@@ -98,10 +325,14 @@ function ddlRenderTable() {
             '<td style="text-align:center;">' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
                     '<button class="ddl-action-btn ddl-action-btn-detail" onclick="ddlShowDetails(' + d.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
-                '</div>' +
+                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>';
+        if (canModify) {
+            if (!ddlIsListLinkedToForm(d)) {
+                html += '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+            }
+            html += '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>';
+        }
+        html += '</div>' +
             '</td>' +
             '</tr>';
     });
@@ -112,7 +343,9 @@ function ddlRenderTable() {
 function ddlShowCreateModal() {
     document.getElementById('ddlCreateName').value = '';
     document.getElementById('ddlCreateDescription').value = '';
-    document.querySelector('input[name="ddlCreateOwnership"][value="عام"]').checked = true;
+    var pubC = document.getElementById('ddlCreateOwnershipPublic');
+    if (pubC) pubC.checked = true;
+    ddlApplyOwnershipUi();
     document.getElementById('ddlCreateListTypeIndependent').checked = true;
     document.getElementById('ddlCreateParentListId').value = '';
     document.getElementById('ddlCreateLevelCount').value = '2';
@@ -155,6 +388,11 @@ async function ddlSubmitCreate() {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateListName(name)) {
+        errEl.textContent = DDL_LIST_NAME_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
 
     var listType = document.querySelector('input[name="ddlCreateListType"]:checked')?.value || 'قائمة مستقلة';
 
@@ -167,7 +405,8 @@ async function ddlSubmitCreate() {
         }
     }
 
-    var ownership = document.querySelector('input[name="ddlCreateOwnership"]:checked')?.value || 'عام';
+    var ownership = (document.querySelector('input[name="ddlCreateOwnership"]:checked')?.value) || 'عام';
+    if (ddlIsAdmin) ownership = 'عام';
     var parentListId = listType === 'قائمة فرعية' ? parseInt(document.getElementById('ddlCreateParentListId').value || '0') : null;
     var levelCount = listType === 'قائمة هرمية' ? parseInt(document.getElementById('ddlCreateLevelCount').value || '2') : 2;
     if (listType === 'قائمة هرمية') levelCount = Math.min(4, Math.max(2, levelCount));
@@ -234,11 +473,11 @@ async function ddlLoadParentListItems(parentListId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + parentListId);
         if (r && r.success) {
-            ddlParentListItemsCache = r.data || [];
+            ddlParentListItemsCache = (r.data || []);
             var sel = document.getElementById('ddlItemParentItemId');
             var html = '<option value="">-- اختر عنصر القائمة المستقلة --</option>';
             ddlParentListItemsCache.forEach(function (item) {
-                html += '<option value="' + item.id + '">' + esc(item.itemText) + '</option>';
+                html += '<option value="' + item.id + '">' + esc(item.itemText) + (item.isActive ? '' : ' (معطل)') + '</option>';
             });
             sel.innerHTML = html;
         }
@@ -253,24 +492,27 @@ async function ddlLoadItems(listId) {
         var tableWrap = document.getElementById('ddlItemsTableWrap');
         var listType = document.getElementById('ddlItemsListType').value;
         var isSubList = listType === 'قائمة فرعية';
-        var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-        var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+        var listData = ddlAll.find(function (x) { return x.id === listId; });
+        var canModify = ddlCanModifyList(listData);
+        var canEditItems = canModify && !ddlIsListLinkedToForm(listData);
 
         var addBtn = document.getElementById('ddlAddItemBtn');
-        if (addBtn) addBtn.style.display = isCreator ? '' : 'none';
+        if (addBtn) addBtn.style.display = canModify ? '' : 'none';
 
         var theadRow = tableWrap.querySelector('thead tr');
         if (isSubList) {
-            theadRow.innerHTML = '<th>#</th><th>عنصر القائمة المستقلة</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (isCreator ? '<th>الإجراءات</th>' : '');
+            theadRow.innerHTML = '<th>#</th><th>عنصر القائمة المستقلة</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (canModify ? '<th>الإجراءات</th>' : '');
         } else {
-            theadRow.innerHTML = '<th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (isCreator ? '<th>الإجراءات</th>' : '');
+            theadRow.innerHTML = '<th>#</th><th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' + (canModify ? '<th>الإجراءات</th>' : '');
         }
 
-        if (r && r.success && r.data && r.data.length > 0) {
+        ddlItemsAllCache = (r && r.success && r.data) ? (r.data || []) : [];
+
+        if (r && r.success && ddlItemsAllCache.length > 0) {
             var html = '';
-            r.data.forEach(function (item, idx) {
+            ddlItemsAllCache.forEach(function (item, idx) {
                 var statusClass = item.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
-                html += '<tr>';
+                html += '<tr' + (item.isActive ? '' : ' class="ddl-item-row-inactive"') + '>';
                 html += '<td>' + (idx + 1) + '</td>';
                 if (isSubList) {
                     html += '<td style="font-weight:700;color:var(--sa-700);">' + esc(item.parentItemText || '—') + '</td>';
@@ -279,9 +521,13 @@ async function ddlLoadItems(listId) {
                     '<td>' + esc(item.description || '') + '</td>' +
                     '<td><span class="ddl-color-circle" style="background:' + esc(item.color || '#25935F') + ';"></span></td>' +
                     '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
-                if (isCreator) {
-                    html += '<td><button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ' +
-                        '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteItem(' + item.id + ')">حذف</button></td>';
+                if (canModify) {
+                    var safeItemName = esc(item.itemText || '').replace(/'/g, "\\'");
+                    html += '<td>';
+                    if (canEditItems) {
+                        html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ';
+                    }
+                    html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeItemName + '\')">حذف</button></td>';
                 }
                 html += '</tr>';
             });
@@ -341,6 +587,11 @@ async function ddlSubmitNormalItem() {
 
     if (!itemText) {
         errEl.textContent = 'العنصر مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ddlIsDuplicateItemText(itemText)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
         errEl.classList.remove('d-none');
         return;
     }
@@ -414,6 +665,11 @@ async function ddlSubmitUpdateItem(id) {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateItemText(itemText, id)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
     var body = {
         id: id,
         itemText: itemText,
@@ -434,15 +690,36 @@ async function ddlSubmitUpdateItem(id) {
     }
 }
 
-async function ddlDeleteItem(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
-    var listId = parseInt(document.getElementById('ddlItemsListId').value);
+async function ddlDeleteItem(id, name) {
+    ddlShowDeleteItemModal(id, name);
+}
+
+function ddlShowDeleteItemModal(id, name) {
+    document.getElementById('ddlDeleteItemId').value = id;
+    document.getElementById('ddlDeleteItemNameLabel').textContent = name || '';
+    document.getElementById('ddlDeleteItemError').classList.add('d-none');
+    new bootstrap.Modal(document.getElementById('ddlDeleteItemModal')).show();
+}
+
+async function ddlSubmitDeleteItem() {
+    var id = parseInt(document.getElementById('ddlDeleteItemId').value, 10);
+    var errEl = document.getElementById('ddlDeleteItemError');
+    errEl.classList.add('d-none');
+    var listId = parseInt(document.getElementById('ddlItemsListId').value, 10);
+    var listType = document.getElementById('ddlItemsListType').value || '';
+
     var r = await apiFetch('/Dropdowns/DeleteDropdownItem', 'POST', { id: id });
     if (r && r.success) {
+        bootstrap.Modal.getInstance(document.getElementById('ddlDeleteItemModal')).hide();
         showToast(r.message, 'success');
-        ddlLoadItems(listId);
+        if (listType === 'قائمة هرمية') {
+            await ddlLoadHierItems(listId);
+        } else {
+            ddlLoadItems(listId);
+        }
     } else {
-        showToast((r && r.message) || 'حدث خطأ', 'danger');
+        errEl.textContent = (r && r.message) || 'حدث خطأ';
+        errEl.classList.remove('d-none');
     }
 }
 
@@ -512,22 +789,27 @@ async function ddlSaveLevelNames() {
 async function ddlLoadHierItems(listId) {
     try {
         var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + listId);
-        ddlHierItems = (r && r.success) ? (r.data || []) : [];
+        ddlHierItemsAllCache = (r && r.success) ? (r.data || []) : [];
+        ddlHierItems = ddlHierItemsAllCache.slice();
     } catch (e) {
+        ddlHierItemsAllCache = [];
         ddlHierItems = [];
     }
 
     document.getElementById('ddlHierItemsSection').style.display = '';
     document.getElementById('ddlHierAddForm').style.display = 'none';
 
-    var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-    var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+    var listData = ddlAll.find(function (x) { return x.id === listId; });
+    var canModify = ddlCanModifyList(listData);
+    var canEditItems = canModify && !ddlIsListLinkedToForm(listData);
     var addBtn = document.getElementById('ddlHierAddBtn');
-    if (addBtn) addBtn.style.display = isCreator ? '' : 'none';
+    if (addBtn) addBtn.style.display = canModify ? '' : 'none';
+    var editNamesBtn = document.getElementById('ddlHierEditLevelNamesBtn');
+    if (editNamesBtn) editNamesBtn.style.display = canModify ? '' : 'none';
 
     ddlRenderHierLevelBadges();
     ddlRenderHierLevelTabs();
-    ddlRenderHierTree();
+    ddlRenderHierTree(canEditItems);
 }
 
 function ddlRenderHierLevelBadges() {
@@ -586,11 +868,15 @@ function ddlSelectHierLevel(levelNum) {
     }
 }
 
-function ddlRenderHierTree() {
+function ddlRenderHierTree(canEditItems) {
     var treeWrap = document.getElementById('ddlHierTreeWrap');
     var emptyEl = document.getElementById('ddlHierEmpty');
-    var createdBy = document.getElementById('ddlItemsCreatedBy').value;
-    var isCreator = ddlCurrentUser && createdBy && ddlCurrentUser === createdBy;
+    var listId = parseInt(document.getElementById('ddlItemsListId').value, 10);
+    var listData = ddlAll.find(function (x) { return x.id === listId; });
+    var canModify = ddlCanModifyList(listData);
+    if (canEditItems === undefined) {
+        canEditItems = canModify && !ddlIsListLinkedToForm(listData);
+    }
 
     if (ddlHierItems.length === 0) {
         treeWrap.innerHTML = '';
@@ -603,11 +889,11 @@ function ddlRenderHierTree() {
     emptyEl.style.display = 'none';
 
     var tree = ddlBuildTree(ddlHierItems);
-    var rows = ddlRenderTreeRows(tree, 0, isCreator);
+    var rows = ddlRenderTreeRows(tree, 0, canModify, canEditItems);
 
     var html = '<table class="ddl-tree-table"><thead><tr>' +
         '<th style="text-align:right;">العنصر</th><th>المستوى</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>' +
-        (isCreator ? '<th>الإجراءات</th>' : '') +
+        (canModify ? '<th>الإجراءات</th>' : '') +
         '</tr></thead><tbody>' + rows + '</tbody></table>';
 
     treeWrap.innerHTML = html;
@@ -629,7 +915,7 @@ function ddlBuildTree(items) {
     return roots.map(buildNode);
 }
 
-function ddlRenderTreeRows(nodes, depth, isCreator) {
+function ddlRenderTreeRows(nodes, depth, canModify, canEditItems) {
     var html = '';
     nodes.forEach(function (node) {
         var item = node.item;
@@ -638,7 +924,7 @@ function ddlRenderTreeRows(nodes, depth, isCreator) {
         var levelName = ddlHierLevelNames[item.levelNumber - 1] || ddlHierLevelNames[(depth < ddlHierLevelNames.length ? depth : ddlHierLevelNames.length - 1)] || '';
         var prefix = depth > 0 ? '└ ' : '';
 
-        html += '<tr>' +
+        html += '<tr' + (item.isActive ? '' : ' class="ddl-item-row-inactive"') + '>' +
             '<td style="padding-right:' + (12 + indent) + 'px;font-weight:' + (depth === 0 ? '800' : '600') + ';">' +
                 '<span style="color:var(--gray-400);font-family:monospace;">' + prefix + '</span>' + esc(item.itemText) +
             '</td>' +
@@ -647,16 +933,19 @@ function ddlRenderTreeRows(nodes, depth, isCreator) {
             '<td><span class="ddl-color-circle" style="background:' + esc(item.color || '#25935F') + ';"></span></td>' +
             '<td><span class="' + statusClass + '">' + (item.isActive ? 'مفعل' : 'معطل') + '</span></td>';
 
-        if (isCreator) {
-            html += '<td>' +
-                '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ' +
-                '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlDeleteHierItem(' + item.id + ')">حذف</button>' +
+        if (canModify) {
+            var safeHierItemName = esc(item.itemText || '').replace(/'/g, "\\'");
+            html += '<td>';
+            if (canEditItems) {
+                html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ';
+            }
+            html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeHierItemName + '\')">حذف</button>' +
                 '</td>';
         }
         html += '</tr>';
 
         if (node.children.length > 0) {
-            html += ddlRenderTreeRows(node.children, depth + 1, isCreator);
+            html += ddlRenderTreeRows(node.children, depth + 1, canModify, canEditItems);
         }
     });
     return html;
@@ -736,7 +1025,7 @@ function ddlPopulateHierParentDropdown(level) {
 
     var html = '<option value="">-- اختر --</option>';
     items.forEach(function (item) {
-        html += '<option value="' + item.id + '">' + esc(item.itemText) + '</option>';
+        html += '<option value="' + item.id + '">' + esc(item.itemText) + (item.isActive ? '' : ' (معطل)') + '</option>';
     });
     sel.innerHTML = html;
 }
@@ -771,6 +1060,11 @@ async function ddlSubmitHierItem() {
     var itemText = document.getElementById('ddlHierItemText').value.trim();
     if (!itemText) {
         errEl.textContent = 'العنصر مطلوب';
+        errEl.classList.remove('d-none');
+        return;
+    }
+    if (ddlIsDuplicateItemText(itemText)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
         errEl.classList.remove('d-none');
         return;
     }
@@ -865,6 +1159,11 @@ async function ddlSubmitUpdateHierItem(id) {
         errEl.classList.remove('d-none');
         return;
     }
+    if (ddlIsDuplicateItemText(itemText, id)) {
+        errEl.textContent = DDL_ITEM_TEXT_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
+    }
 
     var body = {
         id: id,
@@ -886,16 +1185,8 @@ async function ddlSubmitUpdateHierItem(id) {
     }
 }
 
-async function ddlDeleteHierItem(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا العنصر؟')) return;
-    var listId = parseInt(document.getElementById('ddlItemsListId').value);
-    var r = await apiFetch('/Dropdowns/DeleteDropdownItem', 'POST', { id: id });
-    if (r && r.success) {
-        showToast(r.message, 'success');
-        await ddlLoadHierItems(listId);
-    } else {
-        showToast((r && r.message) || 'حدث خطأ', 'danger');
-    }
+async function ddlDeleteHierItem(id, name) {
+    ddlShowDeleteItemModal(id, name);
 }
 
 // ─── Details Modal ───────────────────────────────────────────────────────────
@@ -976,7 +1267,11 @@ async function ddlShowDetails(id) {
                 '<div class="row mb-3"><div class="col-4"><strong>خاصية الاختيار:</strong></div><div class="col-8">' + esc(d.selectionType) + '</div></div>' +
                 '<div class="row mb-3"><div class="col-4"><strong>الملكية:</strong></div><div class="col-8">' + esc(d.ownership) + '</div></div>' +
                 '<div class="row mb-3"><div class="col-4"><strong>الوحدة التنظيمية المالكة:</strong></div><div class="col-8">' + esc(d.organizationalUnitName || '—') + '</div></div>' +
-                '<div class="row mb-3"><div class="col-4"><strong>التفعيل:</strong></div><div class="col-8">' + (d.isActive ? 'مفعل' : 'معطل') + '</div></div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>التفعيل:</strong></div><div class="col-8">' + (d.isActive ? 'مفعل' : 'معطل') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>أُنشئ بواسطة:</strong></div><div class="col-8">' + esc(d.createdBy || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>تاريخ الإنشاء:</strong></div><div class="col-8">' + esc(d.createdAt || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>التحديث بواسطة:</strong></div><div class="col-8">' + esc(d.updatedBy || '—') + '</div></div>' +
+                '<div class="row mb-3"><div class="col-4"><strong>تاريخ التحديث:</strong></div><div class="col-8">' + esc(d.updatedAt || '—') + '</div></div></div>' +
                 '<div class="ddl-section"><div class="ddl-section-title">العناصر</div>' + itemsHtml + '</div>';
 
             document.getElementById('ddlDetailsBody').innerHTML = html;
@@ -1037,11 +1332,24 @@ async function ddlShowEditModal(id) {
         if (r && r.success) d = r.data;
     }
     if (!d) return;
+    if (!ddlCanModifyList(d)) {
+        showToast('لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة', 'error');
+        return;
+    }
+    if (ddlIsListLinkedToForm(d)) {
+        showToast('لا يمكن تعديل قائمة منسدلة مرتبطة بنموذج', 'error');
+        return;
+    }
 
     document.getElementById('ddlEditId').value = d.id;
     document.getElementById('ddlEditName').value = d.name || '';
     document.getElementById('ddlEditDescription').value = d.description || '';
-    document.querySelector('input[name="ddlEditOwnership"][value="' + (d.ownership || 'عام') + '"]').checked = true;
+    var curOwnership = d.ownership || 'عام';
+    var pubE = document.getElementById('ddlEditOwnershipPublic');
+    var privE = document.getElementById('ddlEditOwnershipPrivate');
+    if (pubE) pubE.checked = curOwnership === 'عام';
+    if (privE) privE.checked = curOwnership === 'خاص';
+    ddlApplyOwnershipUi();
     document.querySelector('input[name="ddlEditListType"][value="' + (d.listType || 'قائمة مستقلة') + '"]').checked = true;
     document.getElementById('ddlEditLevelCount').value = d.levelCount || 2;
     document.querySelector('input[name="ddlEditSelectionType"][value="' + (d.selectionType || 'خيار محدد') + '"]').checked = true;
@@ -1050,7 +1358,13 @@ async function ddlShowEditModal(id) {
     ddlToggleEditTypeFields();
     ddlLoadIndependentListsForEdit(d.parentListId);
     if (d.listType === 'قائمة فرعية') {
-        setTimeout(function () { document.getElementById('ddlEditParentListId').value = d.parentListId || ''; }, 300);
+        setTimeout(function () {
+            var sel = document.getElementById('ddlEditParentListId');
+            if (sel) sel.value = d.parentListId || '';
+            ddlSetEditListTypeLocked(true);
+        }, 320);
+    } else {
+        ddlSetEditListTypeLocked(true);
     }
     new bootstrap.Modal(document.getElementById('ddlEditModal')).show();
 }
@@ -1087,30 +1401,19 @@ async function ddlSubmitEdit() {
         errEl.classList.remove('d-none');
         return;
     }
-
-    var listType = document.querySelector('input[name="ddlEditListType"]:checked')?.value || 'قائمة مستقلة';
-
-    if (listType === 'قائمة فرعية') {
-        var parentVal = document.getElementById('ddlEditParentListId').value;
-        if (!parentVal || parentVal === '') {
-            errEl.textContent = 'يجب اختيار القائمة المستقلة للقائمة الفرعية';
-            errEl.classList.remove('d-none');
-            return;
-        }
+    if (ddlIsDuplicateListName(name, id)) {
+        errEl.textContent = DDL_LIST_NAME_DUP_MSG;
+        errEl.classList.remove('d-none');
+        return;
     }
 
-    var parentListId = listType === 'قائمة فرعية' ? parseInt(document.getElementById('ddlEditParentListId').value || '0') : null;
-    var levelCount = parseInt(document.getElementById('ddlEditLevelCount').value || '2');
-    if (listType === 'قائمة هرمية') levelCount = Math.min(4, Math.max(2, levelCount));
-
+    var editOwnership = (document.querySelector('input[name="ddlEditOwnership"]:checked')?.value) || 'عام';
+    if (ddlIsAdmin) editOwnership = 'عام';
     var body = {
         id: id,
         name: name,
         description: document.getElementById('ddlEditDescription').value.trim(),
-        ownership: document.querySelector('input[name="ddlEditOwnership"]:checked')?.value || 'عام',
-        listType: listType,
-        parentListId: parentListId,
-        levelCount: levelCount,
+        ownership: editOwnership,
         selectionType: document.querySelector('input[name="ddlEditSelectionType"]:checked')?.value || 'خيار محدد',
         isActive: document.querySelector('input[name="ddlEditIsActive"]:checked')?.value === '1'
     };
@@ -1128,6 +1431,11 @@ async function ddlSubmitEdit() {
 
 // ─── Delete Modal ────────────────────────────────────────────────────────────
 function ddlShowDeleteModal(id, name) {
+    var d = ddlAll.find(function (x) { return x.id === id; });
+    if (!ddlCanModifyList(d)) {
+        showToast('لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة', 'error');
+        return;
+    }
     document.getElementById('ddlDeleteId').value = id;
     document.getElementById('ddlDeleteNameLabel').textContent = name || '';
     document.getElementById('ddlDeleteError').classList.add('d-none');

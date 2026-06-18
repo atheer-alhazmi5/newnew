@@ -1,0 +1,53 @@
+[
+  {
+    "Id": 1,
+    "ParentId": null,
+    "Name": "hj",
+    "Content": "\u003Cp\u003Ehjk\u003C/p\u003E",
+    "AttachmentUrl": "",
+    "Icon": "",
+    "Color": "#25935f",
+    "Notes": "",
+    "SortOrder": 1,
+    "OrderPath": "1",
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-06-04T07:18:43.650156Z",
+    "UpdatedBy": null,
+    "UpdatedAt": null
+  },
+  {
+    "Id": 2,
+    "ParentId": 1,
+    "Name": "ghj",
+    "Content": "\u003Cp\u003Eghj\u003C/p\u003E",
+    "AttachmentUrl": "",
+    "Icon": "",
+    "Color": "#25935f",
+    "Notes": "",
+    "SortOrder": 1,
+    "OrderPath": "1\u060C1",
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-06-04T07:18:53.038166Z",
+    "UpdatedBy": null,
+    "UpdatedAt": null
+  },
+  {
+    "Id": 3,
+    "ParentId": 2,
+    "Name": "7t76",
+    "Content": "\u003Cp\u003Ehj\u003C/p\u003E",
+    "AttachmentUrl": "",
+    "Icon": "",
+    "Color": "#25935f",
+    "Notes": "",
+    "SortOrder": 1,
+    "OrderPath": "1\u060C1\u060C1",
+    "IsActive": true,
+    "CreatedBy": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "CreatedAt": "2026-06-04T07:19:06.136032Z",
+    "UpdatedBy": null,
+    "UpdatedAt": null
+  }
+]

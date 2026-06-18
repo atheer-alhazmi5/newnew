@@ -64,6 +64,16 @@ public class AppDbContext
     public List<ExecutorRole> ExecutorRoles => Load<ExecutorRole>("executor_roles");
     public List<FormTemplate> FormTemplates => Load<FormTemplate>("form_templates");
     public List<FormDefinition> FormDefinitions => Load<FormDefinition>("form_definitions");
+    public List<FormDefinitionVersion> FormDefinitionVersions => Load<FormDefinitionVersion>("form_definition_versions");
+    public List<WorkProcedure> WorkProcedures => Load<WorkProcedure>("work_procedures");
+    public List<Delegation> Delegations => Load<Delegation>("delegations");
+    public List<ProcedureActionType> ProcedureActionTypes => Load<ProcedureActionType>("procedure_action_types");
+    public List<OutboxRequest> OutboxRequests => Load<OutboxRequest>("outbox_requests");
+    public List<OutboxAssignment> OutboxAssignments => Load<OutboxAssignment>("outbox_assignments");
+    public List<UserGuideItem> UserGuideItems => Load<UserGuideItem>("user_guide_items");
+    public List<SystemFeedback> SystemFeedbacks => Load<SystemFeedback>("system_feedbacks");
+    public List<UserNote> UserNotes => Load<UserNote>("user_notes");
+    public List<SupportTicket> SupportTickets => Load<SupportTicket>("support_tickets");
 
     // ── Mutation helpers ──────────────────────────────────────────────
     public void SaveDepartments(List<Department> d)    => Save("departments", d);
@@ -92,6 +102,16 @@ public class AppDbContext
     public void SaveExecutorRoles(List<ExecutorRole> d) => Save("executor_roles", d);
     public void SaveFormTemplates(List<FormTemplate> d) => Save("form_templates", d);
     public void SaveFormDefinitions(List<FormDefinition> d) => Save("form_definitions", d);
+    public void SaveFormDefinitionVersions(List<FormDefinitionVersion> d) => Save("form_definition_versions", d);
+    public void SaveWorkProcedures(List<WorkProcedure> d) => Save("work_procedures", d);
+    public void SaveDelegations(List<Delegation> d) => Save("delegations", d);
+    public void SaveProcedureActionTypes(List<ProcedureActionType> d) => Save("procedure_action_types", d);
+    public void SaveOutboxRequests(List<OutboxRequest> d) => Save("outbox_requests", d);
+    public void SaveOutboxAssignments(List<OutboxAssignment> d) => Save("outbox_assignments", d);
+    public void SaveUserGuideItems(List<UserGuideItem> d) => Save("user_guide_items", d);
+    public void SaveSystemFeedbacks(List<SystemFeedback> d) => Save("system_feedbacks", d);
+    public void SaveUserNotes(List<UserNote> d) => Save("user_notes", d);
+    public void SaveSupportTickets(List<SupportTicket> d) => Save("support_tickets", d);
 
     public bool IsEmpty() => !File.Exists(FilePath("departments"));
 }

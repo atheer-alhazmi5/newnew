@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormsSystem.Controllers;
 
-public class InboxController : BaseController
+public partial class InboxController : BaseController
 {
     private readonly DataService _ds;
     private readonly UiHelperService _ui;
@@ -22,21 +22,96 @@ public class InboxController : BaseController
     public async Task<IActionResult> GetItems(string? category, string? status)
     {
         if (!IsAuthenticated) return Json(new { success = false });
-        var items = await _ds.ListReceivedFormsAsync(CurrentUserId, category);
-        if (!string.IsNullOrEmpty(status))
-            items = items.Where(r => r.Status == status).ToList();
 
-        return Json(new
+        // طلبات النماذج (السلوك القديم)
+        var formItems = await _ds.ListReceivedFormsAsync(CurrentUserId, category);
+        if (!string.IsNullOrEmpty(status))
+            formItems = formItems.Where(r => r.Status == status).ToList();
+
+        var unifiedForms = formItems.Select(r => new InboxItemDto
         {
-            success = true,
-            data = items.Select(r => new
+            Id = r.Id,
+            Source = "form",
+            FormId = r.FormId,
+            FormName = r.FormName,
+            FormIcon = r.FormIcon,
+            SenderName = r.SenderName,
+            SenderDepartment = r.SenderDepartment,
+            Category = r.Category,
+            SentDate = r.SentDate,
+            Status = r.Status,
+            IsRead = r.IsRead,
+            ReplyDate = r.ReplyDate,
+            SentFormId = r.SentFormId,
+            TargetRecipientsJson = r.TargetRecipientsJson
+        }).ToList();
+
+        // طلبات إجراءات العمل (المضافة): تظهر كفئة "request_review"
+        var includeRequests = string.IsNullOrEmpty(category) || category == "request_review";
+        var unifiedRequests = new List<InboxItemDto>();
+        if (includeRequests)
+        {
+            var asgs = await _ds.ListOutboxAssignmentsForUserAsync(CurrentUserId);
+            if (!string.IsNullOrEmpty(status))
+                asgs = asgs.Where(a => a.Status == status).ToList();
+
+            unifiedRequests = asgs.Select(a => new InboxItemDto
             {
-                r.Id, r.FormId, r.FormName, r.FormIcon,
-                r.SenderName, r.SenderDepartment, r.Category,
-                r.SentDate, r.Status, r.IsRead, r.ReplyDate,
-                r.SentFormId, r.TargetRecipientsJson
-            })
-        });
+                Id = a.Id,
+                Source = "outbox_request",
+                FormId = 0,
+                AssignmentId = a.Id,
+                OutboxRequestId = a.OutboxRequestId,
+                FormName = $"{a.RequestNumber} — {a.ProcedureName}",
+                FormIcon = "document",
+                ProcedureName = a.ProcedureName,
+                ProcedureCode = a.ProcedureCode,
+                ProcedureTypeIcon = a.ProcedureTypeIcon,
+                ProcedureTypeColor = a.ProcedureTypeColor,
+                RequestNumber = a.RequestNumber,
+                StepLabel = a.StepLabel,
+                AssignedVia = a.AssignedVia,
+                SenderName = a.SenderName,
+                SenderDepartment = a.SenderDept,
+                Category = "request_review",
+                SentDate = a.AssignedAt,
+                Status = a.Status,
+                IsRead = a.IsRead,
+                ReplyDate = a.ActedAt
+            }).ToList();
+        }
+
+        // دمج وفرز موحَّد حسب التاريخ التنازلي
+        var all = unifiedForms.Concat(unifiedRequests).OrderByDescending(x => x.SentDate).ToList();
+
+        return Json(new { success = true, data = all });
+    }
+
+    private class InboxItemDto
+    {
+        public int Id { get; set; }
+        public string Source { get; set; } = "form";
+        public int FormId { get; set; }
+        public int? AssignmentId { get; set; }
+        public int? OutboxRequestId { get; set; }
+        public string FormName { get; set; } = "";
+        public string FormIcon { get; set; } = "";
+        public string ProcedureName { get; set; } = "";
+        public string ProcedureCode { get; set; } = "";
+        public string ProcedureTypeIcon { get; set; } = "";
+        public string ProcedureTypeColor { get; set; } = "";
+        public string RequestNumber { get; set; } = "";
+        public string StepLabel { get; set; } = "";
+        public string AssignedVia { get; set; } = "";
+        public string SenderName { get; set; } = "";
+        public string SenderDepartment { get; set; } = "";
+        public string Category { get; set; } = "";
+        public DateTime SentDate { get; set; }
+        public string Status { get; set; } = "";
+        public bool IsRead { get; set; }
+        public DateTime? ReplyDate { get; set; }
+        public int? SentFormId { get; set; }
+        public string? TargetRecipientsJson { get; set; }
     }
 
     [HttpGet]
@@ -197,4 +272,106 @@ public class InboxController : BaseController
 public class ApproveRejectRequest
 {
     public int ReceivedFormId { get; set; }
+}
+
+public partial class InboxController
+{
+    // ─── OUTBOX REQUEST ASSIGNMENTS (تسليمات طلبات الإجراءات داخل الوارد) ─────
+    [HttpGet]
+    public async Task<IActionResult> GetRequestAssignment(int id)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        var a = await _ds.GetOutboxAssignmentByIdAsync(id);
+        if (a == null || a.RecipientUserId != CurrentUserId)
+            return Json(new { success = false, message = "غير موجود" });
+
+        // علِّمه مقروءاً عند الفتح
+        await _ds.MarkOutboxAssignmentReadAsync(id, CurrentUserId);
+
+        var req = await _ds.GetOutboxRequestByIdAsync(a.OutboxRequestId);
+        return Json(new
+        {
+            success = true,
+            data = new
+            {
+                a.Id,
+                a.OutboxRequestId,
+                a.RequestNumber,
+                a.WorkProcedureId,
+                a.ProcedureName,
+                a.ProcedureCode,
+                a.ProcedureTypeName,
+                a.ProcedureTypeIcon,
+                a.ProcedureTypeColor,
+                a.StepLabel,
+                a.AssignedVia,
+                a.SenderName,
+                a.SenderDept,
+                a.Status,
+                a.Action,
+                a.ResponseNotes,
+                AssignedAt = a.AssignedAt.ToString("yyyy-MM-dd HH:mm"),
+                ActedAt = a.ActedAt?.ToString("yyyy-MM-dd HH:mm"),
+                FormDataJson = req?.FormDataJson ?? "{}",
+                RequestNotes = req?.Notes ?? "",
+                Priority = req?.Priority ?? "",
+                SubmittedAt = req?.SubmittedAt.ToString("yyyy-MM-dd HH:mm") ?? ""
+            }
+        });
+    }
+
+    public class ActOnAssignmentDto
+    {
+        public int AssignmentId { get; set; }
+        public string Action { get; set; } = "";   // approve | reject | return
+        public string Notes { get; set; } = "";
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ActOnAssignment([FromBody] ActOnAssignmentDto req)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        if (req == null || req.AssignmentId <= 0)
+            return Json(new { success = false, message = "غير صالح" });
+
+        var a = await _ds.GetOutboxAssignmentByIdAsync(req.AssignmentId);
+        if (a == null || a.RecipientUserId != CurrentUserId)
+            return Json(new { success = false, message = "غير مصرح" });
+        if (a.Status != "قيد الانتظار")
+            return Json(new { success = false, message = "تم اتخاذ إجراء على هذا الطلب مسبقاً" });
+
+        var action = (req.Action ?? "").Trim().ToLowerInvariant();
+        string newStatus;
+        string title;
+        if (action == "approve") { newStatus = "تم الاعتماد"; title = "تم اعتماد طلبك"; }
+        else if (action == "reject") { newStatus = "تم الرفض"; title = "تم رفض طلبك"; }
+        else if (action == "return") { newStatus = "تم الإرجاع"; title = "تم إرجاع طلبك"; }
+        else return Json(new { success = false, message = "إجراء غير معروف" });
+
+        var notes = (req.Notes ?? "").Trim();
+        if ((action == "reject" || action == "return") && string.IsNullOrEmpty(notes))
+            return Json(new { success = false, message = "السبب مطلوب عند الرفض/الإرجاع" });
+
+        a.Action = action;
+        a.Status = newStatus;
+        a.ResponseNotes = notes;
+        a.ActedAt = DateTime.Now;
+        a.IsRead = true;
+        a.ReadAt ??= DateTime.Now;
+        await _ds.UpdateOutboxAssignmentAsync(a);
+
+        // إشعار مُقدِّم الطلب
+        await _ds.CreateNotificationAsync(new Notification
+        {
+            RecipientId = a.SenderId,
+            Type = "request_update",
+            Title = $"{title}: {a.RequestNumber}",
+            Message = $"{CurrentUserFullName} {newStatus} طلب «{a.ProcedureName}»" + (notes.Length > 0 ? $" — السبب: {notes}" : ""),
+            SenderName = CurrentUserFullName,
+            SenderDepartment = CurrentDeptName
+        });
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry(newStatus, "OutboxAssignment", a.Id.ToString(), a.RequestNumber));
+        return Json(new { success = true, message = $"تم تنفيذ: {newStatus}" });
+    }
 }

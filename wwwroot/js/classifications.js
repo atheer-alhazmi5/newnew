@@ -39,6 +39,12 @@ function clsFilter() {
     clsRenderTable();
 }
 
+function clsClearFilter() {
+    var inp = document.getElementById('clsSearchInput');
+    if (inp) inp.value = '';
+    clsFilter();
+}
+
 function clsRenderTable() {
     var body = document.getElementById('clsBody');
     if (clsFiltered.length === 0) {
@@ -243,7 +249,7 @@ function clsShowDetails(id) {
         '</div>' +
         '<div class="cls-detail-row">' +
             '<div class="cls-detail-label">أضيف بواسطة</div>' +
-            '<div class="cls-detail-value">' + (cls.createdBy ? esc(cls.createdBy) : '<span style="color:var(--gray-400);">—</span>') + '</div>' +
+            '<div class="cls-detail-value" style="font-weight:700;">' + (cls.createdBy && String(cls.createdBy).trim() ? esc(String(cls.createdBy).trim()) : '<span style="color:var(--gray-400);font-weight:400;">—</span>') + '</div>' +
         '</div>' +
         '<div class="cls-detail-row">' +
             '<div class="cls-detail-label">تاريخ الإنشاء</div>' +

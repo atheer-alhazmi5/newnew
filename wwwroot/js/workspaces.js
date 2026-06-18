@@ -5,6 +5,7 @@ var wsCurrentPage = 1;
 var wsPerPage = 10;
 var wsOuExpandedAdd = {}, wsOuExpandedEdit = {};
 var wsSelectedOuIdAdd = 0, wsSelectedOuIdEdit = 0;
+var wsFilterOuExpanded = {};
 
 document.addEventListener('DOMContentLoaded', function () {
     wsLoad();
@@ -14,6 +15,47 @@ document.addEventListener('DOMContentLoaded', function () {
     if (fs) fs.addEventListener('input', function () { wsFilter(); });
     if (fst) fst.addEventListener('change', function () { wsFilter(); });
     if (clr) clr.addEventListener('click', function () { wsClearFilters(); });
+
+    var wsFilterOuTrigger = document.getElementById('wsFilterOuTrigger');
+    var wsFilterOuPanel = document.getElementById('wsFilterOuPanel');
+    if (wsFilterOuTrigger && wsFilterOuPanel) {
+        wsFilterOuTrigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            wsFilterOuTogglePanel();
+        });
+        wsFilterOuPanel.addEventListener('click', function (e) {
+            var expBtn = e.target.closest('.bnf-ou-tree-exp');
+            if (expBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                var eid = expBtn.getAttribute('data-exp');
+                if (eid)
+                    wsFilterOuExpanded[eid] = !wsFilterOuExpanded[eid];
+                wsRenderFilterOrgUnitTreePanel();
+                return;
+            }
+            var row = e.target.closest('.bnf-ou-tree-row');
+            if (!row || !row.hasAttribute('data-id')) return;
+            var idAttr = row.getAttribute('data-id');
+            document.getElementById('wsFilterUnit').value = idAttr === null ? '' : String(idAttr);
+            if (!idAttr) {
+                document.getElementById('wsFilterOuLabel').textContent = 'الوحدة التنظيمية';
+            } else {
+                var uid = parseInt(idAttr, 10);
+                var u = wsOrgUnits.find(function (x) { return x.id === uid; });
+                document.getElementById('wsFilterOuLabel').textContent = u ? u.name : 'الوحدة التنظيمية';
+            }
+            wsFilterOuClosePanel();
+            wsRenderFilterOrgUnitTreePanel();
+            wsFilter();
+        });
+        document.addEventListener('click', function (e) {
+            var wrap = document.querySelector('#wsFiltersWrap .bnf-filter-ou-wrap');
+            var panel = document.getElementById('wsFilterOuPanel');
+            if (!wrap || !panel || panel.classList.contains('d-none')) return;
+            if (!wrap.contains(e.target)) wsFilterOuClosePanel();
+        });
+    }
 
     var addSw = document.getElementById('wsAddIsActive');
     if (addSw) addSw.addEventListener('change', function () {
@@ -57,6 +99,8 @@ function wsFilter() {
         }
         if (st === '1' && !w.isActive) return false;
         if (st === '0' && w.isActive) return false;
+        var ou = document.getElementById('wsFilterUnit') ? document.getElementById('wsFilterUnit').value.trim() : '';
+        if (ou && String(w.organizationalUnitId || '') !== String(ou)) return false;
         return true;
     });
     wsCurrentPage = 1;
@@ -68,6 +112,12 @@ function wsClearFilters() {
     var fst = document.getElementById('wsFilterStatus');
     if (fs) fs.value = '';
     if (fst) fst.value = '';
+    var fu = document.getElementById('wsFilterUnit');
+    if (fu) fu.value = '';
+    var flab = document.getElementById('wsFilterOuLabel');
+    if (flab) flab.textContent = 'الوحدة التنظيمية';
+    wsFilterOuExpanded = {};
+    wsFilterOuClosePanel();
     wsFilter();
 }
 
@@ -75,7 +125,8 @@ function wsRenderTable() {
     var body = document.getElementById('wsBody');
     if (wsFiltered.length === 0) {
         var hasFilters = (document.getElementById('wsFilterSearch') && document.getElementById('wsFilterSearch').value.trim()) ||
-            (document.getElementById('wsFilterStatus') && document.getElementById('wsFilterStatus').value !== '');
+            (document.getElementById('wsFilterStatus') && document.getElementById('wsFilterStatus').value !== '') ||
+            (document.getElementById('wsFilterUnit') && document.getElementById('wsFilterUnit').value.trim() !== '');
         var sub = hasFilters ? 'عدّل الفلاتر أو اضغط مسح' : 'أنشئ مساحة من الزر أعلاه';
         body.innerHTML = '<tr><td colspan="7">' +
             emptyState('bi-funnel', 'لا توجد نتائج', sub) +
@@ -305,6 +356,83 @@ async function wsSubmitDelete() {
         errEl.textContent = (r && r.message) || 'حدث خطأ';
         errEl.classList.remove('d-none');
     }
+}
+
+/*  فلتر الوحدة الشجري — نفس بنية المستفيدين  */
+function wsRenderOuTreeRowsBnf(byParent, parentKey, depth, selectedId, expandedMap) {
+    var rows = byParent[parentKey] || [];
+    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    var html = '';
+    rows.forEach(function (u) {
+        var idStr = String(u.id);
+        var children = byParent[idStr] || [];
+        var hasChildren = children.length > 0;
+        var expanded = !!expandedMap[idStr];
+        var indent = depth * 22;
+        var rowSel = String(sel) === idStr ? ' is-selected' : '';
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(u.name) + '</span></div>';
+        if (hasChildren && expanded) {
+            html += wsRenderOuTreeRowsBnf(byParent, idStr, depth + 1, sel, expandedMap);
+        }
+    });
+    return html;
+}
+
+function wsFilterOuExpandAncestorsForSelection(selectId) {
+    if (!selectId || isNaN(selectId)) return;
+    var map = {};
+    wsOrgUnits.forEach(function (u) { map[u.id] = u; });
+    var u = map[selectId];
+    while (u && u.parentId != null && u.parentId !== '') {
+        wsFilterOuExpanded[String(u.parentId)] = true;
+        u = map[u.parentId];
+    }
+}
+
+function wsRenderFilterOrgUnitTreePanel() {
+    var panel = document.getElementById('wsFilterOuPanel');
+    if (!panel) return;
+    if (!wsOrgUnits.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    var byParent = wsOuBuildTreeMap();
+    var selectedId = document.getElementById('wsFilterUnit').value;
+    var allSel = !selectedId ? ' is-selected' : '';
+    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
+        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
+        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += wsRenderOuTreeRowsBnf(byParent, '', 0, selectedId, wsFilterOuExpanded);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
+function wsFilterOuTogglePanel() {
+    var panel = document.getElementById('wsFilterOuPanel');
+    var trig = document.getElementById('wsFilterOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        var cur = document.getElementById('wsFilterUnit').value;
+        if (cur) wsFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
+        wsRenderFilterOrgUnitTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.classList.add('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function wsFilterOuClosePanel() {
+    var panel = document.getElementById('wsFilterOuPanel');
+    var trig = document.getElementById('wsFilterOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
 }
 
 /*  Org Unit  Dropdown  */

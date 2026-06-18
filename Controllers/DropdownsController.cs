@@ -9,6 +9,9 @@ public class DropdownsController : BaseController
     private readonly DataService _ds;
     private readonly UiHelperService _ui;
 
+    private const string DropdownListNameDuplicateMessage = "اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.";
+    private const string DropdownItemTextDuplicateMessage = "اسم العنصر موجود مسبقًا، يرجى إدخال اسم مختلف.";
+
     public DropdownsController(DataService ds, UiHelperService ui)
     {
         _ds = ds;
@@ -19,22 +22,34 @@ public class DropdownsController : BaseController
     {
         var auth = RequireAuth();
         if (auth != null) return auth;
-        if (CurrentUserRole != "Admin")
-            return RedirectToAction("Index", "Forms");
+        if (CurrentUserRole != "Admin" && CurrentUserRole != "Employee")
+            return RedirectToAction("Index", "Dashboard");
         SetViewBagUser(_ui);
         ViewBag.PageName = "القوائم المنسدلة";
         return View();
     }
 
+    private bool IsAdminOrEmployee()
+        => CurrentUserRole == "Admin" || CurrentUserRole == "Employee";
+
     [HttpGet]
     public async Task<IActionResult> GetDropdownLists(string? search, string? listType, string? selectionType, string? ownership, int? orgUnitId)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var lists = await _ds.ListDropdownListsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = units.Where(u => u.IsActive).OrderBy(u => u.SortOrder).ToList();
+        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
+
+        // لممثل الوحدة: اعرض العامة + خاصة وحدته فقط
+        var isAdmin = CurrentUserRole == "Admin";
+        var myUnitId = 0;
+        if (!isAdmin)
+        {
+            myUnitId = await GetCreatorOrgUnitIdAsync();
+            lists = lists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myUnitId)).ToList();
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -50,46 +65,74 @@ public class DropdownsController : BaseController
         if (orgUnitId.HasValue && orgUnitId.Value > 0)
             lists = lists.Where(l => l.OrganizationalUnitId == orgUnitId.Value).ToList();
 
-        var result = lists.Select(l => new
+        var result = new List<object>();
+        foreach (var l in lists.OrderBy(x => x.SortOrder))
         {
-            l.Id,
-            l.Name,
-            l.Description,
-            l.SortOrder,
-            l.ListType,
-            l.SelectionType,
-            l.Ownership,
-            l.OrganizationalUnitId,
-            OrganizationalUnitName = units.FirstOrDefault(u => u.Id == l.OrganizationalUnitId)?.Name ?? "",
-            l.IsActive,
-            l.ParentListId,
-            l.LevelCount,
-            l.LevelNamesJson,
-            l.CreatedBy,
-            CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd")
-        }).OrderBy(x => x.SortOrder).ToList();
+            var isLinkedToForm = await _ds.IsDropdownListUsedInFormsAsync(l.Id);
+            result.Add(new
+            {
+                l.Id,
+                l.Name,
+                l.Description,
+                l.SortOrder,
+                l.ListType,
+                l.SelectionType,
+                l.Ownership,
+                l.OrganizationalUnitId,
+                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == l.OrganizationalUnitId)?.Name ?? "",
+                l.IsActive,
+                l.ParentListId,
+                l.LevelCount,
+                l.LevelNamesJson,
+                l.CreatedBy,
+                CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd"),
+                IsLinkedToForm = isLinkedToForm
+            });
+        }
 
-        return Json(new { success = true, data = result, organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name }).ToList(), currentUser = CurrentUserFullName });
+        return Json(new
+        {
+            success = true,
+            data = result,
+            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
+            currentUser = CurrentUserFullName,
+            isAdmin,
+            currentOrgUnitId = myUnitId
+        });
     }
 
     [HttpGet]
     public async Task<IActionResult> GetIndependentLists()
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
-        var lists = await _ds.ListIndependentDropdownListsAsync();
+        var lists = await _ds.ListIndependentDropdownListsAsync(activeOnly: true);
+        // لممثل الوحدة: فلتر العامة + الخاصة لوحدته فقط
+        if (CurrentUserRole != "Admin")
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            lists = lists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myUnitId)).ToList();
+        }
         return Json(new { success = true, data = lists.Select(l => new { l.Id, l.Name }).ToList() });
     }
 
     [HttpGet]
     public async Task<IActionResult> GetDropdownListDetails(int id)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.GetDropdownListByIdAsync(id);
         if (list == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        // ممثل الوحدة لا يرى تفاصيل قائمة خاصة بوحدة أخرى
+        if (CurrentUserRole != "Admin" && list.Ownership == "خاص")
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            if (list.OrganizationalUnitId != myUnitId)
+                return Json(new { success = false, message = "غير مصرح" });
+        }
 
         var units = await _ds.ListOrganizationalUnitsAsync();
         var parentList = list.ParentListId.HasValue ? await _ds.GetDropdownListByIdAsync(list.ParentListId.Value) : null;
@@ -114,18 +157,79 @@ public class DropdownsController : BaseController
                 ParentListName = parentList?.Name ?? "",
                 list.LevelCount,
                 list.LevelNamesJson,
+                list.CreatedBy,
+                CreatedAt = list.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedBy = list.UpdatedBy ?? "",
+                UpdatedAt = list.UpdatedAt.HasValue ? list.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "",
                 Items = items.Select(i => new { i.Id, i.ItemText, i.Description, i.Color, i.IsActive, i.SortOrder, i.ParentItemId, i.LevelNumber, i.LevelValuesJson })
             }
+        });
+    }
+
+    /// <summary>لمعاينة النماذج وبناء الحقول: يعيد عناصر القائمة مع نوعها ونوع الاختيار.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDropdownListItemsForForm(int id)
+    {
+        if (!IsAuthenticated || !IsAdminOrEmployee())
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var list = await _ds.GetDropdownListByIdAsync(id);
+        if (list == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        if (CurrentUserRole != "Admin" && list.Ownership == "خاص")
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            if (list.OrganizationalUnitId != myUnitId)
+                return Json(new { success = false, message = "غير مصرح" });
+        }
+
+        var items = await _ds.ListDropdownItemsByListIdAsync(id);
+        var activeItems = items.Where(i => i.IsActive).OrderBy(i => i.SortOrder).ThenBy(i => i.Id).ToList();
+
+        var parentItems = new List<DropdownItem>();
+        if (list.ListType == "قائمة فرعية" && list.ParentListId.HasValue)
+            parentItems = await _ds.ListDropdownItemsByListIdAsync(list.ParentListId.Value);
+
+        var rows = activeItems.Select(i => new
+        {
+            i.Id,
+            i.ItemText,
+            i.ParentItemId,
+            ParentItemText = i.ParentItemId.HasValue
+                ? parentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
+                : "",
+            i.LevelNumber,
+            i.LevelValuesJson,
+            i.SortOrder
+        }).ToList();
+
+        return Json(new
+        {
+            success = true,
+            list.ListType,
+            list.SelectionType,
+            items = rows
         });
     }
 
     [HttpGet]
     public async Task<IActionResult> GetDropdownItems(int listId)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.GetDropdownListByIdAsync(listId);
+        if (list == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        if (CurrentUserRole != "Admin" && list.Ownership == "خاص")
+        {
+            var myUnitId = await GetCreatorOrgUnitIdAsync();
+            if (list.OrganizationalUnitId != myUnitId)
+                return Json(new { success = false, message = "غير مصرح" });
+        }
+
         var items = await _ds.ListDropdownItemsByListIdAsync(listId);
 
         var parentItems = new List<DropdownItem>();
@@ -158,24 +262,41 @@ public class DropdownsController : BaseController
         if (user != null && !string.IsNullOrEmpty(user.Email))
         {
             var beneficiary = await _ds.GetBeneficiaryByEmailAsync(user.Email);
-            if (beneficiary != null)
-                return beneficiary.OrganizationalUnitId;
+            if (beneficiary != null && beneficiary.OrganizationalUnitId.HasValue)
+                return beneficiary.OrganizationalUnitId.Value;
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
         return units.Count > 0 ? units.First().Id : 0;
     }
 
+    /// <summary>مدير النظام لا يعدّل القوائم الخاصة؛ ممثل الوحدة يعدّل ما أنشأه أو الخاص بوحدته.</summary>
+    private async Task<string?> EnsureDropdownListModifyPermissionAsync(DropdownList list)
+    {
+        if (CurrentUserRole == "Admin")
+        {
+            if (list.Ownership == "خاص")
+                return "لا يمكن لمدير النظام تعديل قائمة منسدلة خاصة";
+            return null;
+        }
+
+        var myUnitId = await GetCreatorOrgUnitIdAsync();
+        var canEdit = list.CreatedBy == CurrentUserFullName ||
+                      (list.Ownership == "خاص" && list.OrganizationalUnitId == myUnitId);
+        return canEdit ? null : "غير مصرح بتعديل هذه القائمة";
+    }
+
     [HttpPost]
     public async Task<IActionResult> AddDropdownList([FromBody] DropdownListRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
 
-        if (string.IsNullOrWhiteSpace(req.Ownership) || (req.Ownership != "عام" && req.Ownership != "خاص"))
-            return Json(new { success = false, message = "الملكية مطلوبة (عام أو خاص)" });
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsDropdownListNameDuplicateAsync(trimmedName))
+            return Json(new { success = false, message = DropdownListNameDuplicateMessage });
 
         if (string.IsNullOrWhiteSpace(req.ListType))
             return Json(new { success = false, message = "نوع القائمة المنسدلة مطلوب" });
@@ -185,10 +306,33 @@ public class DropdownsController : BaseController
         if (req.ListType == "قائمة فرعية" && (!req.ParentListId.HasValue || req.ParentListId.Value <= 0))
             return Json(new { success = false, message = "القائمة المستقلة مطلوبة للقائمة الفرعية" });
 
+        if (req.ListType == "قائمة فرعية" && req.ParentListId.HasValue)
+        {
+            var parentList = await _ds.GetDropdownListByIdAsync(req.ParentListId.Value);
+            if (parentList == null || parentList.ListType != "قائمة مستقلة" || !parentList.IsActive)
+                return Json(new { success = false, message = "يجب اختيار قائمة مستقلة مفعلة" });
+        }
+
         if (req.ListType == "قائمة هرمية")
         {
             if (req.LevelCount < 2 || req.LevelCount > 4)
                 return Json(new { success = false, message = "المستوى يجب أن يكون بين 2 و 4" });
+        }
+
+        // الملكية: الأدمن = عام إجباري، ممثل الوحدة يختار عام أو خاص
+        string ownership;
+        var isAdminUser = CurrentUserRole == "Admin";
+        if (isAdminUser)
+        {
+            ownership = "عام";
+        }
+        else if (string.IsNullOrWhiteSpace(req.Ownership) || (req.Ownership != "عام" && req.Ownership != "خاص"))
+        {
+            return Json(new { success = false, message = "الملكية مطلوبة (عام أو خاص)" });
+        }
+        else
+        {
+            ownership = req.Ownership!;
         }
 
         var all = await _ds.ListDropdownListsAsync();
@@ -199,10 +343,10 @@ public class DropdownsController : BaseController
 
         var d = new DropdownList
         {
-            Name = req.Name.Trim(),
+            Name = trimmedName,
             Description = req.Description?.Trim() ?? "",
             SortOrder = nextOrder,
-            Ownership = req.Ownership,
+            Ownership = ownership,
             OrganizationalUnitId = orgUnitId,
             ListType = req.ListType,
             ParentListId = req.ListType == "قائمة فرعية" ? req.ParentListId : null,
@@ -222,26 +366,48 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> UpdateDropdownList([FromBody] DropdownListUpdateRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var d = await _ds.GetDropdownListByIdAsync(req.Id);
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
+        if (await _ds.IsDropdownListUsedInFormsAsync(d.Id))
+            return Json(new { success = false, message = "لا يمكن تعديل قائمة منسدلة مرتبطة بنموذج" });
+
+        var isAdminUser = CurrentUserRole == "Admin";
+
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم القائمة المنسدلة مطلوب" });
 
-        d.Name = req.Name.Trim();
+        var trimmedName = req.Name.Trim();
+        if (await _ds.IsDropdownListNameDuplicateAsync(trimmedName, req.Id))
+            return Json(new { success = false, message = DropdownListNameDuplicateMessage });
+
+        d.Name = trimmedName;
         d.Description = req.Description?.Trim() ?? "";
-        d.Ownership = req.Ownership ?? d.Ownership;
-        d.ListType = req.ListType ?? d.ListType;
-        d.ParentListId = req.ListType == "قائمة فرعية" ? req.ParentListId : null;
-        d.LevelCount = req.ListType == "قائمة هرمية" ? Math.Clamp(req.LevelCount, 2, 4) : d.LevelCount;
-        if (!string.IsNullOrEmpty(req.LevelNamesJson))
-            d.LevelNamesJson = req.LevelNamesJson;
+
+        // الملكية: الأدمن = عام إجباري، ممثل الوحدة يُسمح له باختيار عام أو خاص
+        if (isAdminUser)
+        {
+            d.Ownership = "عام";
+        }
+        else if (!string.IsNullOrWhiteSpace(req.Ownership) && (req.Ownership == "عام" || req.Ownership == "خاص"))
+        {
+            d.Ownership = req.Ownership!;
+        }
+
+        // لا يُغيَّر نوع القائمة أو الربط الهرمي/الفرعي من شاشة التحديث لتجنّب أخطاء البيانات
         d.SelectionType = req.SelectionType ?? d.SelectionType;
         d.IsActive = req.IsActive;
+
+        d.UpdatedAt = DateTime.Now;
+        d.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
 
         await _ds.UpdateDropdownListAsync(d);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث قائمة منسدلة", "DropdownList", d.Id.ToString(), d.Name));
@@ -252,12 +418,19 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> DeleteDropdownList([FromBody] IdRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var d = await _ds.GetDropdownListByIdAsync(req.Id);
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
+        if (await _ds.IsDropdownListLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteDropdownListAsync(req.Id);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف قائمة منسدلة", "DropdownList", req.Id.ToString(), d.Name));
@@ -268,14 +441,20 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> SaveHierarchyLevelNames([FromBody] SaveLevelNamesRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var d = await _ds.GetDropdownListByIdAsync(req.Id);
         if (d == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
+        var permErr = await EnsureDropdownListModifyPermissionAsync(d);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
         d.LevelNamesJson = req.LevelNamesJson ?? "";
+        d.UpdatedAt = DateTime.Now;
+        d.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
         await _ds.UpdateDropdownListAsync(d);
         return Json(new { success = true, message = "تم حفظ أسماء المستويات بنجاح" });
     }
@@ -283,15 +462,23 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> AddDropdownItem([FromBody] DropdownItemRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var list = await _ds.GetDropdownListByIdAsync(req.DropdownListId);
         if (list == null)
             return Json(new { success = false, message = "القائمة غير موجودة" });
 
+        var permErr = await EnsureDropdownListModifyPermissionAsync(list);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
+
+        var trimmedItemText = req.ItemText.Trim();
+        if (await _ds.IsDropdownItemTextDuplicateAsync(req.DropdownListId, trimmedItemText))
+            return Json(new { success = false, message = DropdownItemTextDuplicateMessage });
 
         var items = await _ds.ListDropdownItemsByListIdAsync(req.DropdownListId);
         var nextOrder = items.Count > 0 ? items.Max(i => i.SortOrder) + 1 : 1;
@@ -299,7 +486,7 @@ public class DropdownsController : BaseController
         var item = new DropdownItem
         {
             DropdownListId = req.DropdownListId,
-            ItemText = req.ItemText.Trim(),
+            ItemText = trimmedItemText,
             Description = req.Description?.Trim() ?? "",
             Color = req.Color ?? "#25935F",
             IsActive = req.IsActive,
@@ -316,7 +503,7 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> UpdateDropdownItem([FromBody] DropdownItemUpdateRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var item = await _ds.GetDropdownItemByIdAsync(req.Id);
@@ -324,13 +511,24 @@ public class DropdownsController : BaseController
             return Json(new { success = false, message = "العنصر غير موجود" });
 
         var ownerList = await _ds.GetDropdownListByIdAsync(item.DropdownListId);
-        if (ownerList != null && !string.IsNullOrEmpty(ownerList.CreatedBy) && ownerList.CreatedBy != CurrentUserFullName)
-            return Json(new { success = false, message = "يمكن تحديث العناصر من قبل منشئ القائمة فقط" });
+        if (ownerList == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        var permErr = await EnsureDropdownListModifyPermissionAsync(ownerList);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
+        if (await _ds.IsDropdownListUsedInFormsAsync(ownerList.Id))
+            return Json(new { success = false, message = "لا يمكن تعديل عناصر قائمة منسدلة مرتبطة بنموذج" });
 
         if (string.IsNullOrWhiteSpace(req.ItemText))
             return Json(new { success = false, message = "العنصر مطلوب" });
 
-        item.ItemText = req.ItemText.Trim();
+        var trimmedItemText = req.ItemText.Trim();
+        if (await _ds.IsDropdownItemTextDuplicateAsync(item.DropdownListId, trimmedItemText, req.Id))
+            return Json(new { success = false, message = DropdownItemTextDuplicateMessage });
+
+        item.ItemText = trimmedItemText;
         item.Description = req.Description?.Trim() ?? "";
         item.Color = req.Color ?? item.Color;
         item.IsActive = req.IsActive;
@@ -346,7 +544,7 @@ public class DropdownsController : BaseController
     [HttpPost]
     public async Task<IActionResult> DeleteDropdownItem([FromBody] IdRequest req)
     {
-        if (!IsAuthenticated || CurrentUserRole != "Admin")
+        if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
 
         var item = await _ds.GetDropdownItemByIdAsync(req.Id);
@@ -354,8 +552,15 @@ public class DropdownsController : BaseController
             return Json(new { success = false, message = "العنصر غير موجود" });
 
         var ownerList = await _ds.GetDropdownListByIdAsync(item.DropdownListId);
-        if (ownerList != null && !string.IsNullOrEmpty(ownerList.CreatedBy) && ownerList.CreatedBy != CurrentUserFullName)
-            return Json(new { success = false, message = "يمكن حذف العناصر من قبل منشئ القائمة فقط" });
+        if (ownerList == null)
+            return Json(new { success = false, message = "القائمة غير موجودة" });
+
+        var permErr = await EnsureDropdownListModifyPermissionAsync(ownerList);
+        if (permErr != null)
+            return Json(new { success = false, message = permErr });
+
+        if (await _ds.IsDropdownItemLinkedAsync(req.Id))
+            return Json(new { success = false, message = LinkedEntityDeleteBlockedMessage });
 
         await _ds.DeleteDropdownItemAsync(req.Id);
         return Json(new { success = true, message = "تم حذف العنصر بنجاح" });

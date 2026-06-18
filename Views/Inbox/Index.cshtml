@@ -3,19 +3,61 @@
     ViewBag.PageName = "صندوق الوارد";
 }
 
+<style>
+.ib-req-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:700; background:var(--info-50); color:var(--info-700); border:1px solid var(--info-100); }
+.ib-req-step { display:inline-block; padding:2px 9px; border-radius:999px; background:var(--gray-50); border:1px solid var(--gray-200); color:var(--gray-600); font-size:11px; font-weight:700; margin-inline-start:6px; }
+.ib-via { font-size:11px; color:var(--gray-500); font-weight:600; }
+.ib-req-row td:first-child { border-inline-start:3px solid var(--info-400); }
+
+/* مودال تفاصيل/اتخاذ إجراء على طلب وارد */
+.ib-modal { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.ib-modal-header { padding:24px 28px; position:relative; background:var(--info-700); }
+.ib-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
+.ib-modal-title { color:#fff; font-weight:800; font-size:20px; margin:0; }
+.ib-modal-subtitle { color:rgba(255,255,255,.85); font-size:13px; margin-top:4px; }
+.ib-modal-body { padding:24px 28px; max-height:75vh; overflow-y:auto; }
+.ib-modal-footer { padding:18px 28px; display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; background:var(--gray-50); }
+.ib-detail-grid { display:grid; grid-template-columns:160px 1fr; gap:8px 14px; font-size:13px; }
+.ib-detail-grid .lbl { font-weight:700; color:var(--gray-500); }
+.ib-detail-grid .val { color:var(--gray-900); font-weight:500; white-space:pre-wrap; }
+.ib-form-summary { background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:12px 14px; margin-top:12px; }
+.ib-form-summary .ttl { font-weight:800; font-size:13px; color:var(--sa-800); margin-bottom:8px; }
+.ib-form-summary .it { padding:6px 0; border-bottom:1px dashed var(--gray-200); font-size:12.5px; display:flex; gap:10px; }
+.ib-form-summary .it:last-child { border-bottom:none; }
+.ib-form-summary .it b { color:var(--gray-700); min-width:140px; }
+.ib-notes-area { margin-top:14px; }
+.ib-notes-area label { font-weight:700; font-size:13px; color:var(--gray-700); margin-bottom:4px; display:block; }
+.ib-notes-area textarea { width:100%; min-height:90px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; font-size:13px; }
+.ib-notes-area textarea:focus { border-color:var(--sa-400); outline:none; }
+
+.ib-btn { padding:10px 22px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:2px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.ib-btn-approve { background:var(--success-600); color:#fff; }
+.ib-btn-approve:hover { background:var(--success-700); }
+.ib-btn-reject { background:var(--error-600); color:#fff; }
+.ib-btn-reject:hover { background:#a50e0e; }
+.ib-btn-return { background:#fff; color:#1d4ed8; border-color:#1d4ed8; }
+.ib-btn-return:hover { background:#eff6ff; }
+.ib-btn-close { background:var(--gray-200); color:var(--gray-700); }
+.ib-btn-close:hover { background:var(--gray-300); }
+</style>
+
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
     <h2 class="page-title" style="margin:0;">صندوق الوارد <span id="inbox-count" style="font-size:14px;color:var(--gray-500);font-weight:400;"></span></h2>
 </div>
 
 <div class="d-flex gap-3 mb-4 flex-wrap">
-    <select class="form-select" style="max-width:200px;" id="categoryFilter" onchange="loadInbox()">
+    <select class="form-select" style="max-width:220px;" id="categoryFilter" onchange="loadInbox()">
         <option value="">جميع الأنواع</option>
+        <option value="request_review">طلبات إجراءات</option>
         <option value="fill_request">طلبات تعبئة</option>
         <option value="approval_request">طلبات اعتماد</option>
     </select>
-    <select class="form-select" style="max-width:200px;" id="statusFilter" onchange="loadInbox()">
+    <select class="form-select" style="max-width:220px;" id="statusFilter" onchange="loadInbox()">
         <option value="">جميع الحالات</option>
         <option value="قيد الانتظار">قيد الانتظار</option>
+        <option value="تم الاعتماد">تم الاعتماد</option>
+        <option value="تم الرفض">تم الرفض</option>
+        <option value="تم الإرجاع">تم الإرجاع</option>
         <option value="تم الملء">تم الملء</option>
         <option value="معتمد">معتمد</option>
         <option value="مرفوض">مرفوض</option>
@@ -46,6 +88,25 @@
 </div>
 
 <div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+
+<!-- مودال طلب إجراء (تفاصيل + اعتماد/رفض/إرجاع) -->
+<div class="modal fade" id="ibReqModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ib-modal">
+            <div class="ib-modal-header">
+                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+                <h5 class="ib-modal-title" id="ibReqTitle">تفاصيل الطلب</h5>
+                <div class="ib-modal-subtitle" id="ibReqSubtitle">طلب وارد من إجراء عمل</div>
+            </div>
+            <div class="ib-modal-body" id="ibReqBody">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="ib-modal-footer" id="ibReqFooter">
+                <button type="button" class="ib-btn ib-btn-close" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
 <script>var __userRole = '@(ViewBag.UserRole)';</script>

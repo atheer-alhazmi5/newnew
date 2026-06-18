@@ -50,6 +50,16 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
+/** إشعار تحقق الحقول الإلزامية في معالج الإضافة/التعديل (بديل alert) — النص يُمرَّر كما هو. */
+function tpShowValidationMessage(msg) {
+    const textEl = document.getElementById('tpValidationMessageText');
+    if (textEl) textEl.textContent = msg != null ? String(msg) : '';
+    const modalEl = document.getElementById('tpValidationModal');
+    if (!modalEl) return;
+    const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    inst.show();
+}
+
 /* ── Load & Render ───────────────────────────────────────────── */
 async function tpLoad() {
     const r = await tpApiFetch('/Templates/GetTemplates');
@@ -74,7 +84,7 @@ function tpRenderTable() {
             <td><span class="tp-color-swatch" style="background:${t.color};"></span></td>
             <td>
                 <label class="tp-toggle">
-                    <input type="checkbox" ${t.isActive ? 'checked' : ''} onchange="tpToggleActive(${t.id})">
+                    <input type="checkbox" ${t.isActive ? 'checked' : ''} onchange="tpToggleActive(this, ${t.id})">
                     <span class="tp-slider"></span>
                 </label>
             </td>
@@ -110,9 +120,182 @@ function tpClearFilters() {
 }
 
 /* ── Toggle Active ───────────────────────────────────────────── */
-async function tpToggleActive(id) {
-    await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id });
-    tpLoad();
+function tpSyncDeactivateReasonVisibility() {
+    const isActive = document.getElementById('tpwIsActive').checked;
+    const wrap = document.getElementById('tpwDeactivateReasonWrap');
+    const reason = document.getElementById('tpwDeactivateReason');
+    if (!wrap || !reason) return;
+    if (isActive) {
+        wrap.classList.add('d-none');
+        reason.value = '';
+    } else {
+        wrap.classList.remove('d-none');
+    }
+}
+
+function tpValidateDeactivateReason() {
+    if (document.getElementById('tpwIsActive').checked) return null;
+    if (!(document.getElementById('tpwDeactivateReason').value || '').trim())
+        return 'سبب التعطيل مطلوب عند اختيار حالة معطل';
+    return null;
+}
+
+async function tpToggleActive(checkbox, id) {
+    if (!checkbox.checked) {
+        checkbox.checked = true;
+        const tpl = tpAllData.find(x => x.id === id);
+        document.getElementById('tpDeactivateId').value = id;
+        document.getElementById('tpDeactivateReason').value = '';
+        document.getElementById('tpDeactivateName').textContent = tpl ? (tpl.name || '') : '';
+        new bootstrap.Modal(document.getElementById('tpDeactivateModal')).show();
+        return;
+    }
+    const r = await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id, deactivateReason: '' });
+    if (r && r.success) tpLoad();
+    else {
+        checkbox.checked = false;
+        tpShowValidationMessage((r && r.message) || 'خطأ');
+    }
+}
+
+async function tpSubmitDeactivate() {
+    const id = parseInt(document.getElementById('tpDeactivateId').value, 10);
+    const reason = (document.getElementById('tpDeactivateReason').value || '').trim();
+    if (!reason) {
+        tpShowValidationMessage('سبب التعطيل مطلوب عند اختيار حالة معطل');
+        return;
+    }
+    const r = await tpApiFetch('/Templates/ToggleTemplate', 'POST', { id, deactivateReason: reason });
+    if (r && r.success) {
+        bootstrap.Modal.getInstance(document.getElementById('tpDeactivateModal'))?.hide();
+        tpLoad();
+        if (typeof showToast === 'function') showToast(r.message || 'تم تعطيل القالب', 'success');
+    } else {
+        tpShowValidationMessage((r && r.message) || 'خطأ');
+    }
+}
+
+/* ── Zone background helpers ─────────────────────────────────── */
+function tpZoneBackgroundStyle(color, imageUrl, defaultColor) {
+    const styles = [];
+    const c = (color || '').trim();
+    const img = (imageUrl || '').trim();
+    if (img) {
+        styles.push(`background-image:url('${escHtml(img)}')`);
+        styles.push('background-size:cover');
+        styles.push('background-position:center');
+        styles.push('background-repeat:no-repeat');
+    }
+    if (c) styles.push(`background-color:${c}`);
+    else if (!img && defaultColor) styles.push(`background-color:${defaultColor}`);
+    return styles.join(';');
+}
+
+function tpGetHeaderBgColor() {
+    return (document.getElementById('tpwHeaderBgColor')?.value || '').trim();
+}
+
+function tpGetFooterBgColor() {
+    return (document.getElementById('tpwFooterBgColor')?.value || '').trim();
+}
+
+function tpGetHeaderBgImage() {
+    return (document.getElementById('tpwHeaderBgImageUrl')?.value || '').trim();
+}
+
+function tpGetFooterBgImage() {
+    return (document.getElementById('tpwFooterBgImageUrl')?.value || '').trim();
+}
+
+function tpSetHeaderBgColor(value) {
+    const hidden = document.getElementById('tpwHeaderBgColor');
+    if (hidden) hidden.value = value || '';
+    tpUpdatePreview('header');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpSetFooterBgColor(value) {
+    const hidden = document.getElementById('tpwFooterBgColor');
+    if (hidden) hidden.value = value || '';
+    tpUpdatePreview('footer');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpClearHeaderBgColor() {
+    const hidden = document.getElementById('tpwHeaderBgColor');
+    const picker = document.getElementById('tpwHeaderBgColorPicker');
+    if (hidden) hidden.value = '';
+    if (picker) picker.value = '#ffffff';
+    tpUpdatePreview('header');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpClearFooterBgColor() {
+    const hidden = document.getElementById('tpwFooterBgColor');
+    const picker = document.getElementById('tpwFooterBgColorPicker');
+    if (hidden) hidden.value = '';
+    if (picker) picker.value = '#ffffff';
+    tpUpdatePreview('footer');
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+function tpSetZoneBgImage(zone, url) {
+    const safeUrl = (url || '').trim();
+    const urlInput = document.getElementById(zone === 'header' ? 'tpwHeaderBgImageUrl' : 'tpwFooterBgImageUrl');
+    const preview = document.getElementById(zone === 'header' ? 'tpwHeaderBgPreview' : 'tpwFooterBgPreview');
+    const empty = document.getElementById(zone === 'header' ? 'tpwHeaderBgEmpty' : 'tpwFooterBgEmpty');
+    const removeBtn = document.getElementById(zone === 'header' ? 'tpwHeaderBgRemoveBtn' : 'tpwFooterBgRemoveBtn');
+    if (urlInput) urlInput.value = safeUrl;
+    if (preview) {
+        if (safeUrl) {
+            preview.src = safeUrl;
+            preview.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            if (empty) empty.style.display = '';
+        }
+    }
+    if (removeBtn) removeBtn.style.display = safeUrl ? 'inline-flex' : 'none';
+    tpUpdatePreview(zone);
+    if (tpCurrentStep === 3) tpBuildFullPreview();
+}
+
+async function tpUploadZoneBg(zone, input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 5_000_000) { alert('حجم الملف يتجاوز 5MB'); input.value = ''; return; }
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/Templates/UploadTemplateImage', { method: 'POST', body: form });
+    const j = await r.json();
+    input.value = '';
+    if (!j.success) { alert(j.message || 'فشل رفع الصورة'); return; }
+    tpSetZoneBgImage(zone, j.url);
+}
+
+function tpRemoveZoneBg(zone) {
+    tpSetZoneBgImage(zone, '');
+}
+
+function tpInitZoneBackgrounds(headerColor, headerImage, footerColor, footerImage) {
+    const hColor = (headerColor || '').trim();
+    const fColor = (footerColor || '').trim();
+    const hHidden = document.getElementById('tpwHeaderBgColor');
+    const hPicker = document.getElementById('tpwHeaderBgColorPicker');
+    const fHidden = document.getElementById('tpwFooterBgColor');
+    const fPicker = document.getElementById('tpwFooterBgColorPicker');
+    if (hHidden) hHidden.value = hColor;
+    if (hPicker) hPicker.value = hColor || '#ffffff';
+    if (fHidden) fHidden.value = fColor;
+    if (fPicker) fPicker.value = fColor || '#ffffff';
+    tpSetZoneBgImage('header', headerImage || '');
+    tpSetZoneBgImage('footer', footerImage || '');
+}
+
+function tpResetZoneBackgrounds() {
+    tpInitZoneBackgrounds('', '', '', '');
 }
 
 /* ═══════════ WIZARD ═══════════════════════════════════════════ */
@@ -130,6 +313,8 @@ function tpShowCreateModal() {
     document.getElementById('tpwColor').value = '#25935F';
     document.getElementById('tpwColorHex').textContent = '#25935F';
     document.getElementById('tpwIsActive').checked = true;
+    document.getElementById('tpwDeactivateReason').value = '';
+    tpSyncDeactivateReasonVisibility();
     document.getElementById('tpwMarginTop').value = 20;
     document.getElementById('tpwMarginBottom').value = 20;
     document.getElementById('tpwMarginRight').value = 20;
@@ -138,6 +323,9 @@ function tpShowCreateModal() {
     document.getElementById('tpwPageSize').value = 'A4';
     document.getElementById('tpwShowHeaderLine').checked = true;
     document.getElementById('tpwShowFooterLine').checked = true;
+    tpSetWatermark('');
+
+    tpResetZoneBackgrounds();
 
     tpHeaderData = [tpDefaultSection(16, true)];
     tpFooterData = [tpDefaultSection(12, false)];
@@ -169,6 +357,8 @@ async function tpShowEditModal(id) {
     document.getElementById('tpwColor').value = t.color;
     document.getElementById('tpwColorHex').textContent = t.color;
     document.getElementById('tpwIsActive').checked = t.isActive;
+    document.getElementById('tpwDeactivateReason').value = String(t.deactivateReason || t.DeactivateReason || '').trim();
+    tpSyncDeactivateReasonVisibility();
     document.getElementById('tpwMarginTop').value = t.marginTop;
     document.getElementById('tpwMarginBottom').value = t.marginBottom;
     document.getElementById('tpwMarginRight').value = t.marginRight;
@@ -177,6 +367,14 @@ async function tpShowEditModal(id) {
     document.getElementById('tpwPageSize').value = t.pageSize;
     document.getElementById('tpwShowHeaderLine').checked = t.showHeaderLine;
     document.getElementById('tpwShowFooterLine').checked = t.showFooterLine;
+    tpSetWatermark(t.watermarkUrl || t.WatermarkUrl || '');
+
+    tpInitZoneBackgrounds(
+        t.headerBackgroundColor || t.HeaderBackgroundColor || '',
+        t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl || '',
+        t.footerBackgroundColor || t.FooterBackgroundColor || '',
+        t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl || ''
+    );
 
     try { tpHeaderData = JSON.parse(t.headerJson); } catch { tpHeaderData = [tpDefaultSection(16, true)]; }
     try { tpFooterData = JSON.parse(t.footerJson); } catch { tpFooterData = [tpDefaultSection(12, false)]; }
@@ -194,7 +392,7 @@ async function tpShowEditModal(id) {
 }
 
 function tpDefaultSection(fontSize, bold) {
-    return { type: 'text', lines: 1, align: 'center', fontSize: fontSize || 14, bold: bold || false, text: [''], imageUrl: '', logoWidth: 4, logoHeight: 2, imageAlign: 'center' };
+    return { type: 'text', lines: 1, align: 'center', fontSize: fontSize || 14, bold: bold || false, color: '#111827', text: [''], imageUrl: '', logoWidth: 4, logoHeight: 2, imageAlign: 'center' };
 }
 
 /* ──  Navigation ───────────────────────────────────────── */
@@ -209,7 +407,9 @@ function tpGoToStep(step) {
 function tpNextStep() {
     if (tpCurrentStep === 0) {
         const name = document.getElementById('tpwName').value.trim();
-        if (!name) { alert('اسم القالب مطلوب'); return; }
+        if (!name) { tpShowValidationMessage('اسم القالب مطلوب'); return; }
+        const deactivateErr = tpValidateDeactivateReason();
+        if (deactivateErr) { tpShowValidationMessage(deactivateErr); return; }
     }
     if (tpCurrentStep < TP_TOTAL_STEPS - 1) {
         tpCollectCurrentSections();
@@ -335,12 +535,14 @@ function tpBuildSectionBody(zone, idx, sec) {
         linesHtml += `<input type="text" class="form-control" style="font-size:12px;padding:6px 10px;border-radius:8px;margin-bottom:4px;" id="tp_text_${pfx}_${l}" value="${escHtml((sec.text && sec.text[l]) || '')}" placeholder="السطر ${l + 1}" oninput="tpCollectAndPreview('${zone}')">`;
     }
 
+    const secColor = sec.color || '#111827';
     return `
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <select class="form-select tp-mini-select" id="tp_lines_${pfx}" onchange="tpOnLinesChange('${zone}',${idx})">
                 <option value="1" ${linesCount === 1 ? 'selected' : ''}>سطر 1</option>
                 <option value="2" ${linesCount === 2 ? 'selected' : ''}>2 أسطر</option>
                 <option value="3" ${linesCount === 3 ? 'selected' : ''}>3 أسطر</option>
+                <option value="4" ${linesCount === 4 ? 'selected' : ''}>4 أسطر</option>
             </select>
             <select class="form-select tp-mini-select" id="tp_align_${pfx}" onchange="tpCollectAndPreview('${zone}')">
                 <option value="right" ${sec.align === 'right' ? 'selected' : ''}>يمين</option>
@@ -350,6 +552,7 @@ function tpBuildSectionBody(zone, idx, sec) {
             <select class="form-select tp-mini-select" id="tp_fsize_${pfx}" onchange="tpCollectAndPreview('${zone}')">
                 ${[10,11,12,13,14,16,18,20,22,24].map(s => `<option value="${s}" ${sec.fontSize === s ? 'selected' : ''}>${s}px</option>`).join('')}
             </select>
+            <input type="color" class="tp-mini-color" id="tp_color_${pfx}" value="${escHtml(secColor)}" onchange="tpCollectAndPreview('${zone}')" title="لون الخط">
             <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;">
                 <input type="checkbox" id="tp_bold_${pfx}" ${sec.bold ? 'checked' : ''} onchange="tpCollectAndPreview('${zone}')" style="accent-color:var(--sa-600);width:16px;height:16px;">
                 غامق
@@ -423,6 +626,7 @@ function tpCollectZone(zone) {
             sec.align = document.getElementById(`tp_align_${pfx}`)?.value || 'center';
             sec.fontSize = parseInt(document.getElementById(`tp_fsize_${pfx}`)?.value) || 14;
             sec.bold = document.getElementById(`tp_bold_${pfx}`)?.checked || false;
+            sec.color = document.getElementById(`tp_color_${pfx}`)?.value || '#111827';
             sec.text = [];
             for (let l = 0; l < sec.lines; l++) {
                 sec.text.push(document.getElementById(`tp_text_${pfx}_${l}`)?.value || '');
@@ -439,19 +643,38 @@ function tpCollectZone(zone) {
 function tpUpdatePreview(zone) {
     const data = zone === 'header' ? tpHeaderData : tpFooterData;
     const previewEl = document.getElementById(zone === 'header' ? 'tpHeaderPreview' : 'tpFooterPreview');
-    previewEl.style.gridTemplateColumns = `repeat(${data.length}, 1fr)`;
-    previewEl.innerHTML = data.map(sec => tpRenderPreviewSection(sec)).join('');
+    if (!previewEl) return;
+    const dir = document.getElementById('tpwPageDirection')?.value || 'RTL';
+    const bgStyle = zone === 'header'
+        ? tpZoneBackgroundStyle(tpGetHeaderBgColor(), tpGetHeaderBgImage(), '#fff')
+        : tpZoneBackgroundStyle(tpGetFooterBgColor(), tpGetFooterBgImage(), 'transparent');
+    previewEl.style.cssText = `display:grid;gap:0;min-height:${zone === 'header' ? '60px' : '40px'};padding:${zone === 'header' ? '12px 16px' : '10px 16px'};align-items:center;grid-template-columns:repeat(${data.length}, 1fr);${bgStyle}`;
+    previewEl.innerHTML = data.map(sec => tpRenderPreviewSection(sec, dir)).join('');
 }
 
-function tpRenderPreviewSection(sec) {
+/** محاذاة الشعار أفقيًا داخل خلية عمودية flex: في RTL يعكس flex-start/flex-end عن LTR فيزيائيًا */
+function tpLogoAlignItemsForDirection(logoAlign, pageDirection) {
+    const dir = (pageDirection || document.getElementById('tpwPageDirection')?.value || 'RTL').toUpperCase();
+    const isRtl = dir === 'RTL';
+    if (logoAlign === 'center') return 'center';
+    if (logoAlign === 'right') return isRtl ? 'flex-start' : 'flex-end';
+    if (logoAlign === 'left') return isRtl ? 'flex-end' : 'flex-start';
+    return 'center';
+}
+
+function tpRenderPreviewSection(sec, pageDirection) {
     if (sec.type === 'logo') {
+        const logoAlign = sec.imageAlign || 'center';
+        const justify = tpLogoAlignItemsForDirection(logoAlign, pageDirection);
         const w = (sec.logoWidth || 4) * 37.8;
         const h = (sec.logoHeight || 2) * 37.8;
-        if (!sec.imageUrl) return `<div class="tp-preview-sec" style="text-align:${sec.imageAlign || 'center'};color:var(--gray-300);font-size:12px;"><i class="bi bi-image" style="font-size:24px;"></i><div style="font-size:11px;">شعار</div></div>`;
-        return `<div class="tp-preview-sec" style="text-align:${sec.imageAlign || 'center'};"><img src="${sec.imageUrl}" style="width:${w}px;height:${h}px;object-fit:contain;border-radius:4px;" alt=""></div>`;
+        if (!sec.imageUrl) return `<div class="tp-preview-sec" style="text-align:${logoAlign};align-items:${justify};color:var(--gray-300);font-size:12px;"><i class="bi bi-image" style="font-size:24px;"></i><div style="font-size:11px;">شعار</div></div>`;
+        return `<div class="tp-preview-sec" style="text-align:${logoAlign};align-items:${justify};"><img src="${sec.imageUrl}" style="width:${w}px;height:${h}px;object-fit:contain;border-radius:4px;" alt=""></div>`;
     }
-    const lines = (sec.text || ['']).map(t => `<div style="font-size:${sec.fontSize || 14}px;font-weight:${sec.bold ? '700' : '400'};line-height:1.5;">${escHtml(t) || '<span style="color:var(--gray-300);">نص</span>'}</div>`).join('');
-    return `<div class="tp-preview-sec" style="text-align:${sec.align || 'center'};">${lines}</div>`;
+    const textAlign = sec.align || 'center';
+    const textColor = sec.color || '#111827';
+    const lines = (sec.text || ['']).map(t => `<div style="font-size:${sec.fontSize || 14}px;font-weight:${sec.bold ? '700' : '400'};color:${textColor};text-align:${textAlign};width:100%;line-height:1.5;">${escHtml(t) || '<span style="color:var(--gray-300);">نص</span>'}</div>`).join('');
+    return `<div class="tp-preview-sec" style="text-align:${textAlign};align-items:stretch;">${lines}</div>`;
 }
 
 function tpBuildFullPreview() {
@@ -463,12 +686,21 @@ function tpBuildFullPreview() {
     const mr = document.getElementById('tpwMarginRight').value;
     const ml = document.getElementById('tpwMarginLeft').value;
     const dir = document.getElementById('tpwPageDirection').value;
+    const wmUrl = (document.getElementById('tpwWatermarkUrl')?.value || '').trim();
+    const headerBg = tpZoneBackgroundStyle(tpGetHeaderBgColor(), tpGetHeaderBgImage(), '#fff');
+    const footerBg = tpZoneBackgroundStyle(tpGetFooterBgColor(), tpGetFooterBgImage(), 'transparent');
 
-    let html = `<div style="direction:${dir.toLowerCase()};padding:${mt}px ${mr}px ${mb}px ${ml}px;">`;
+    let html = `<div style="position:relative;direction:${dir.toLowerCase()};padding:${mt}px ${mr}px ${mb}px ${ml}px;min-height:320px;">`;
+
+    if (wmUrl) {
+        html += `<div class="tp-wm-bg"><img src="${escHtml(wmUrl)}" alt="watermark" style="opacity:${(TP_WATERMARK_OPACITY/100).toFixed(2)};"></div>`;
+    }
+
+    html += '<div style="position:relative;">';
 
     // Header
-    html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;">`;
-    tpHeaderData.forEach(sec => { html += tpRenderPreviewSection(sec); });
+    html += `<div style="display:grid;grid-template-columns:repeat(${tpHeaderData.length},1fr);min-height:50px;align-items:center;${headerBg}">`;
+    tpHeaderData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
     if (showHL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
 
@@ -479,12 +711,57 @@ function tpBuildFullPreview() {
 
     if (showFL) html += '<div class="tp-preview-line" style="margin:8px 0;"></div>';
     // Footer
-    html += `<div style="display:grid;grid-template-columns:repeat(${tpFooterData.length},1fr);min-height:40px;align-items:center;">`;
-    tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec); });
+    html += `<div style="display:grid;grid-template-columns:repeat(${tpFooterData.length},1fr);min-height:40px;align-items:center;${footerBg}">`;
+    tpFooterData.forEach(sec => { html += tpRenderPreviewSection(sec, dir); });
     html += '</div>';
 
-    html += '</div>';
+    html += '</div></div>';
     document.getElementById('tpFullPreview').innerHTML = html;
+}
+
+/* ═══════════ WATERMARK ══════════════════════════════════════════ */
+const TP_WATERMARK_OPACITY = 15; // نسبة شفافية موحّدة لجميع القوالب
+
+function tpSetWatermark(url) {
+    const safeUrl = (url || '').trim();
+    const urlInput = document.getElementById('tpwWatermarkUrl');
+    const opInput = document.getElementById('tpwWatermarkOpacity');
+    const preview = document.getElementById('tpwWmPreview');
+    const empty = document.getElementById('tpwWmEmpty');
+    const removeBtn = document.getElementById('tpwWmRemoveBtn');
+    if (urlInput) urlInput.value = safeUrl;
+    if (opInput) opInput.value = TP_WATERMARK_OPACITY;
+    if (preview) {
+        if (safeUrl) {
+            preview.src = safeUrl;
+            preview.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+        } else {
+            preview.src = '';
+            preview.style.display = 'none';
+            if (empty) empty.style.display = 'flex';
+        }
+    }
+    if (removeBtn) removeBtn.style.display = safeUrl ? 'inline-flex' : 'none';
+}
+
+async function tpUploadWatermark(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (file.size > 5_000_000) { alert('حجم الملف يتجاوز 5MB'); input.value = ''; return; }
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/Templates/UploadTemplateImage', { method: 'POST', body: form });
+    const j = await r.json();
+    input.value = '';
+    if (!j.success) { alert(j.message || 'فشل رفع الصورة'); return; }
+    tpSetWatermark(j.url);
+    tpBuildFullPreview();
+}
+
+function tpRemoveWatermark() {
+    tpSetWatermark('');
+    tpBuildFullPreview();
 }
 
 /* ═══════════ SUBMIT ═══════════════════════════════════════════ */
@@ -492,16 +769,24 @@ async function tpSubmitWizard() {
     tpCollectCurrentSections();
     const name = document.getElementById('tpwName').value.trim();
     if (!name) { alert('اسم القالب مطلوب'); tpGoToStep(0); return; }
+    const deactivateErr = tpValidateDeactivateReason();
+    if (deactivateErr) { tpShowValidationMessage(deactivateErr); tpGoToStep(0); return; }
 
+    const isActive = document.getElementById('tpwIsActive').checked;
     const payload = {
         name,
         description: document.getElementById('tpwDescription').value.trim(),
         color: document.getElementById('tpwColor').value,
-        isActive: document.getElementById('tpwIsActive').checked,
+        isActive,
+        deactivateReason: isActive ? '' : document.getElementById('tpwDeactivateReason').value.trim(),
         headerSections: tpHeaderData.length,
         footerSections: tpFooterData.length,
         headerJson: JSON.stringify(tpHeaderData),
+        headerBackgroundColor: tpGetHeaderBgColor(),
+        headerBackgroundImageUrl: tpGetHeaderBgImage(),
         footerJson: JSON.stringify(tpFooterData),
+        footerBackgroundColor: tpGetFooterBgColor(),
+        footerBackgroundImageUrl: tpGetFooterBgImage(),
         marginTop: parseInt(document.getElementById('tpwMarginTop').value) || 20,
         marginBottom: parseInt(document.getElementById('tpwMarginBottom').value) || 20,
         marginRight: parseInt(document.getElementById('tpwMarginRight').value) || 20,
@@ -509,7 +794,9 @@ async function tpSubmitWizard() {
         pageDirection: document.getElementById('tpwPageDirection').value,
         pageSize: document.getElementById('tpwPageSize').value,
         showHeaderLine: document.getElementById('tpwShowHeaderLine').checked,
-        showFooterLine: document.getElementById('tpwShowFooterLine').checked
+        showFooterLine: document.getElementById('tpwShowFooterLine').checked,
+        watermarkUrl: (document.getElementById('tpwWatermarkUrl')?.value || '').trim(),
+        watermarkOpacity: TP_WATERMARK_OPACITY
     };
 
     let url, reqBody;
@@ -546,6 +833,23 @@ async function tpShowDetails(id) {
     const showHL = t.showHeaderLine;
     const showFL = t.showFooterLine;
 
+    const createdAtDisp = (t.createdAtDisplay || t.CreatedAtDisplay || '').trim();
+    const updatedAtDisp = (t.updatedAtDisplay || t.UpdatedAtDisplay || '').trim();
+    const deletedAtDisp = (t.deletedAtDisplay || t.DeletedAtDisplay || '').trim();
+    const createdByDisp = (t.createdByDisplay || t.CreatedByDisplay || t.createdBy || t.CreatedBy || '').trim();
+    const updatedByDisp = (t.updatedByDisplay || t.UpdatedByDisplay || t.updatedBy || t.UpdatedBy || '').trim();
+    const deactivateReason = t.deactivateReason || t.DeactivateReason || '';
+    const headerBg = tpZoneBackgroundStyle(
+        t.headerBackgroundColor || t.HeaderBackgroundColor || '',
+        t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl || '',
+        '#fff'
+    );
+    const footerBg = tpZoneBackgroundStyle(
+        t.footerBackgroundColor || t.FooterBackgroundColor || '',
+        t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl || '',
+        'transparent'
+    );
+
     let html = `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-info-circle-fill"></i> البيانات الأساسية</div>
         <div class="tp-detail-grid">
@@ -553,30 +857,43 @@ async function tpShowDetails(id) {
             <div class="tp-detail-label">الوصف</div><div class="tp-detail-value">${escHtml(t.description) || '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">اللون</div><div class="tp-detail-value"><span class="tp-color-swatch" style="background:${t.color};"></span> ${t.color}</div>
             <div class="tp-detail-label">الحالة</div><div class="tp-detail-value">${t.isActive ? '<span class="tp-badge-active">مفعل</span>' : '<span class="tp-badge-inactive">معطل</span>'}</div>
+            ${!t.isActive && String(deactivateReason).trim() ? `<div class="tp-detail-label">سبب التعطيل</div><div class="tp-detail-value">${escHtml(String(deactivateReason).trim())}</div>` : ''}
+            <div class="tp-detail-label">خلفية الرأس</div><div class="tp-detail-value">${(t.headerBackgroundColor || t.HeaderBackgroundColor) ? escHtml(t.headerBackgroundColor || t.HeaderBackgroundColor) + ' ' : ''}${(t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl) ? `<img src="${escHtml(t.headerBackgroundImageUrl || t.HeaderBackgroundImageUrl)}" alt="" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">خلفية التذييل</div><div class="tp-detail-value">${(t.footerBackgroundColor || t.FooterBackgroundColor) ? escHtml(t.footerBackgroundColor || t.FooterBackgroundColor) + ' ' : ''}${(t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl) ? `<img src="${escHtml(t.footerBackgroundImageUrl || t.FooterBackgroundImageUrl)}" alt="" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
             <div class="tp-detail-label">اتجاه الصفحة</div><div class="tp-detail-value">${t.pageDirection}</div>
             <div class="tp-detail-label">حجم الورق</div><div class="tp-detail-value">${t.pageSize}</div>
             <div class="tp-detail-label">الهوامش</div><div class="tp-detail-value">أعلى: ${t.marginTop}mm | أسفل: ${t.marginBottom}mm | يمين: ${t.marginRight}mm | يسار: ${t.marginLeft}mm</div>
             <div class="tp-detail-label">خط فاصل هيدر</div><div class="tp-detail-value">${t.showHeaderLine ? 'نعم' : 'لا'}</div>
             <div class="tp-detail-label">خط فاصل فوتر</div><div class="tp-detail-value">${t.showFooterLine ? 'نعم' : 'لا'}</div>
-            <div class="tp-detail-label">أنشأه</div><div class="tp-detail-value">${escHtml(t.createdBy)}</div>
+            <div class="tp-detail-label">العلامة المائية</div><div class="tp-detail-value">${(t.watermarkUrl || t.WatermarkUrl) ? `<img src="${escHtml(t.watermarkUrl || t.WatermarkUrl)}" alt="watermark" style="max-width:120px;max-height:60px;object-fit:contain;border:1px solid var(--gray-200);border-radius:6px;padding:4px;background:#fff;">` : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">تاريخ الإنشاء</div><div class="tp-detail-value">${createdAtDisp ? escHtml(createdAtDisp) : '—'}</div>
+            <div class="tp-detail-label">تاريخ آخر تحديث</div><div class="tp-detail-value">${updatedAtDisp ? escHtml(updatedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">تاريخ الحذف</div><div class="tp-detail-value">${deletedAtDisp ? escHtml(deletedAtDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
+            <div class="tp-detail-label">أضيف بواسطة</div><div class="tp-detail-value">${createdByDisp ? escHtml(createdByDisp) : '—'}</div>
+            <div class="tp-detail-label">آخر تحديث بواسطة</div><div class="tp-detail-value">${updatedByDisp ? escHtml(updatedByDisp) : '<span style="color:var(--gray-400);">—</span>'}</div>
         </div>
     </div>`;
 
     // Full preview
+    const wmUrlDet = (t.watermarkUrl || t.WatermarkUrl || '').trim();
+    const wmOpDet = TP_WATERMARK_OPACITY / 100;
     html += `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-eye"></i> معاينة القالب</div>
         <div style="border:2px solid var(--gray-200);border-radius:12px;overflow:hidden;background:#fff;">
-            <div style="direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;">
-                <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;">
-                    ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s)).join('')}
-                </div>
-                ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
-                <div style="min-height:180px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:14px;padding:30px;">
-                    <div style="text-align:center;"><i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:8px;"></i> محتوى النموذج</div>
-                </div>
-                ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
-                <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;">
-                    ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s)).join('')}
+            <div style="position:relative;direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;min-height:320px;">
+                ${wmUrlDet ? `<div class="tp-wm-bg"><img src="${escHtml(wmUrlDet)}" alt="watermark" style="opacity:${wmOpDet.toFixed(2)};"></div>` : ''}
+                <div style="position:relative;">
+                    <div style="display:grid;grid-template-columns:repeat(${headerData.length || 1},1fr);min-height:50px;align-items:center;${headerBg}">
+                        ${(headerData.length ? headerData : [tpDefaultSection(16,true)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
+                    </div>
+                    ${showHL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
+                    <div style="min-height:180px;display:flex;align-items:center;justify-content:center;color:var(--gray-300);font-size:14px;padding:30px;">
+                        <div style="text-align:center;"><i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:8px;"></i> محتوى النموذج</div>
+                    </div>
+                    ${showFL ? '<div class="tp-preview-line" style="margin:8px 0;"></div>' : ''}
+                    <div style="display:grid;grid-template-columns:repeat(${footerData.length || 1},1fr);min-height:40px;align-items:center;${footerBg}">
+                        ${(footerData.length ? footerData : [tpDefaultSection(12,false)]).map(s => tpRenderPreviewSection(s, t.pageDirection)).join('')}
+                    </div>
                 </div>
             </div>
         </div>
@@ -590,22 +907,41 @@ async function tpShowDetails(id) {
 function tpShowDeleteModal(id) {
     const t = tpAllData.find(x => x.id === id);
     if (!t) return;
+    const errEl = document.getElementById('tpDeleteError');
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('d-none');
+    }
     document.getElementById('tpDeleteId').value = id;
     document.getElementById('tpDeleteName').textContent = t.name;
     new bootstrap.Modal(document.getElementById('tpDeleteModal')).show();
 }
 
 async function tpSubmitDelete() {
-    const id = parseInt(document.getElementById('tpDeleteId').value);
+    const id = parseInt(document.getElementById('tpDeleteId').value, 10);
+    const errEl = document.getElementById('tpDeleteError');
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('d-none');
+    }
     const r = await tpApiFetch('/Templates/DeleteTemplate', 'POST', { id });
-    if (r.success) {
+    if (r && r.success) {
         bootstrap.Modal.getInstance(document.getElementById('tpDeleteModal'))?.hide();
-        tpLoad();
+        await tpLoad();
+        if (typeof showToast === 'function') showToast(r.message || 'تم حذف القالب بنجاح', 'success');
     } else {
-        alert(r.message || 'حدث خطأ');
+        const msg = (r && r.message) || 'حدث خطأ';
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.classList.remove('d-none');
+        } else {
+            alert(msg);
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const activeEl = document.getElementById('tpwIsActive');
+    if (activeEl) activeEl.addEventListener('change', tpSyncDeactivateReasonVisibility);
     tpLoad();
 });
