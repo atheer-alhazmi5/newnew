@@ -64,7 +64,7 @@ public class DashboardController : BaseController
 
         var orgUnits = await _ds.ListOrganizationalUnitsAsync();
         var depts = await _ds.ListDepartmentsAsync();
-        var orgUnitName = ResolveOrgUnitName(user.DepartmentId, beneficiary?.OrganizationalUnitId, depts, orgUnits);
+        var orgUnitName = ResolveOrgUnitName(beneficiary?.OrganizationalUnitId, user.DepartmentId, depts, orgUnits);
         var roleInUnit = beneficiary?.RoleDisplayTable ?? user.RoleLabel;
         var canEditEndorsementSignature = beneficiary != null
             && string.IsNullOrWhiteSpace(beneficiary.EndorsementFile)
@@ -86,10 +86,21 @@ public class DashboardController : BaseController
                 roleInUnit,
                 email = beneficiary?.Email ?? user.Email ?? "",
                 nationalId = beneficiary?.NationalId ?? user.NationalId ?? "",
+                gender = beneficiary?.Gender ?? "",
+                dateOfBirth = beneficiary?.DateOfBirth?.ToString("yyyy-MM-dd") ?? "",
+                employeeNumber = beneficiary?.EmployeeNumber ?? "",
+                rank = beneficiary?.Rank ?? "",
+                jobTitle = beneficiary?.JobTitle ?? "",
+                jobNumber = beneficiary?.JobNumber ?? "",
+                educationQualification = beneficiary?.EducationQualification ?? "",
+                maritalStatus = beneficiary?.MaritalStatus ?? "",
+                honorific = beneficiary?.Honorific ?? "",
+                honorificOrgUnit = FormAutoDataHelper.BuildProfileMap(beneficiary, user, orgUnitName)["honorificOrgUnit"],
                 endorsementType = beneficiary?.EndorsementType ?? "",
                 endorsementFile = beneficiary?.EndorsementFile ?? "",
                 signatureType = beneficiary?.SignatureType ?? "",
-                signatureFile = beneficiary?.SignatureFile ?? ""
+                signatureFile = beneficiary?.SignatureFile ?? "",
+                todayDate = DateTime.Now.ToString("yyyy-MM-dd")
             },
             canEditEndorsementSignature,
             executorRoles = executorRoles.Select((r, idx) => new
@@ -170,14 +181,18 @@ public class DashboardController : BaseController
         });
     }
 
-    private static string ResolveOrgUnitName(int? userDeptId, int? beneficiaryOuId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    private static string ResolveOrgUnitName(int? beneficiaryOuId, int? userDeptId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
     {
-        var ouId = beneficiaryOuId ?? userDeptId;
-        if (!ouId.HasValue || ouId.Value <= 0) return "";
-        var d = depts.FirstOrDefault(x => x.Id == ouId.Value);
+        if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
+        {
+            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
+            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+        }
+        if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
+        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
         if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
-        var ou = orgUnits.FirstOrDefault(x => x.Id == ouId.Value);
-        return ou?.Name?.Trim() ?? "";
+        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
+        return ouFallback?.Name?.Trim() ?? "";
     }
 }
 

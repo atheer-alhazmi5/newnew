@@ -1,76 +1,73 @@
 @{
-    ViewBag.Title = "دليل الاستخدام";
-    ViewBag.PageName = "دليل الاستخدام";
+    Layout = "~/Views/Shared/_GuideLayout.cshtml";
+    ViewBag.Title = "دليل المستخدم";
 }
 
-<h2 class="page-title">دليل الاستخدام</h2>
+@section Styles {
+<link rel="stylesheet" href="~/css/guide-reader.css" asp-append-version="true" />
+}
 
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div style="width:48px;height:48px;background:var(--sa-100);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--sa-700);">
-                        <i class="bi bi-file-earmark-text"></i>
-                    </div>
-                    <h5 style="font-weight:700;margin:0;">النماذج الجاهزة</h5>
+<div class="gr-root" id="grRoot">
+    <div class="gr-zoom-overlay" id="grZoomOverlay" aria-hidden="true">
+        <button type="button" class="gr-zoom-close" id="grZoomClose" aria-label="إغلاق"><i class="bi bi-x-lg"></i></button>
+        <div class="gr-zoom-content" id="grZoomContent"></div>
+    </div>
+
+    <button type="button" class="gr-mobile-toggle d-lg-none" id="grMobileToggle" aria-label="فتح الفهرس">
+        <i class="bi bi-list-ul"></i>
+    </button>
+
+    <aside class="gr-sidebar" id="grSidebar">
+        <div class="gr-sidebar-head">
+            <h2 class="gr-sidebar-title">دليل المستخدم</h2>
+            <button type="button" class="gr-sidebar-close d-lg-none" id="grSidebarClose" aria-label="إغلاق"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="gr-search-wrap">
+            <input type="search" id="grSearch" class="gr-search-input" placeholder="بحث سريع في العناوين..." autocomplete="off" />
+        </div>
+        <nav class="gr-tree" id="grTree" aria-label="فهرس الدليل">
+            <div class="gr-tree-loading"><div class="spinner-border spinner-border-sm"></div> جاري التحميل...</div>
+        </nav>
+    </aside>
+
+    <div class="gr-main">
+        <div class="gr-progress-wrap">
+            <div class="gr-progress-bar" id="grProgressBar" style="width:0%;"></div>
+        </div>
+
+        <div class="gr-reader" id="grReader">
+            <div class="gr-empty" id="grEmpty">
+                <i class="bi bi-journal-x"></i>
+                <p>لا توجد صفحات في دليل المستخدم حالياً.</p>
+                <span class="gr-empty-hint">يمكن للمسؤول إضافة المحتوى من الإعدادات العامة ← دليل المستخدم.</span>
+            </div>
+
+            <div class="gr-book d-none" id="grBook">
+                <div class="gr-book-spread system-section active">
+                    <article class="gr-page book-page page-right" id="grPageContent">
+                        <div class="gr-content-body" id="grContentBody"></div>
+                        <footer class="page-number-footer" id="grPageFootRight"></footer>
+                    </article>
+                    <article class="gr-page book-page page-left" id="grPageMedia">
+                        <div class="gr-media-panel" id="grMediaPanel"></div>
+                        <footer class="page-number-footer" id="grPageFootLeft"></footer>
+                    </article>
                 </div>
-                <p style="color:var(--gray-600);line-height:1.8;">
-                    يمكنك الاطلاع على النماذج الجاهزة المتاحة، وتعبئتها وإرسالها إلى المستلمين المحددين.
-                    تتوفر إمكانية البحث والتصفية للعثور على النموذج المناسب.
-                </p>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div style="width:48px;height:48px;background:var(--gold-100);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold-700);">
-                        <i class="bi bi-inbox"></i>
-                    </div>
-                    <h5 style="font-weight:700;margin:0;">صندوق الوارد</h5>
-                </div>
-                <p style="color:var(--gray-600);line-height:1.8;">
-                    يعرض صندوق الوارد جميع النماذج والطلبات الواردة إليك.
-                    يمكنك تصفيتها حسب الحالة أو النوع، والرد عليها أو اعتمادها.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div style="width:48px;height:48px;background:var(--info-100);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--info-700);">
-                        <i class="bi bi-send"></i>
-                    </div>
-                    <h5 style="font-weight:700;margin:0;">النماذج المنشأة</h5>
-                </div>
-                <p style="color:var(--gray-600);line-height:1.8;">
-                    تتبع جميع النماذج التي أرسلتها، وحالتها الحالية، والردود الواردة عليها من المستلمين.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div style="width:48px;height:48px;background:var(--success-100);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--success-700);">
-                        <i class="bi bi-check-circle"></i>
-                    </div>
-                    <h5 style="font-weight:700;margin:0;">الاعتمادات</h5>
-                </div>
-                <p style="color:var(--gray-600);line-height:1.8;">
-                    يختص هذا القسم بمديري الوحدات لاعتماد أو رفض النماذج المقدمة من الموظفين قبل نشرها.
-                </p>
-            </div>
+
+        <div class="gr-controls controls" id="grControls">
+            <button type="button" class="gr-btn gr-btn-nav" id="grPrevBtn" disabled>السابق</button>
+            <button type="button" class="gr-btn gr-btn-theme" id="grThemeBtn" title="تبديل الوضع المظلم">
+                <i class="bi bi-moon-stars-fill" id="grThemeIcon"></i> تبديل الوضع المظلم
+            </button>
+            <button type="button" class="gr-btn gr-btn-nav" id="grNextBtn" disabled>التالي</button>
         </div>
     </div>
 </div>
 
-<div class="info-box mt-4">
-    <i class="bi bi-info-circle"></i>
-    <span>للمساعدة الفنية أو الاستفسار، يرجى التواصل مع إدارة تقنية المعلومات.</span>
-</div>
+@section Scripts {
+<script>window.GR_USER_ID = @(ViewBag.UserId ?? 0);</script>
+<script src="~/js/guide-reader.js" asp-append-version="true"></script>
+<script>grInit();</script>
+}

@@ -285,10 +285,27 @@ public partial class InboxController
         if (a == null || a.RecipientUserId != CurrentUserId)
             return Json(new { success = false, message = "غير موجود" });
 
-        // علِّمه مقروءاً عند الفتح
         await _ds.MarkOutboxAssignmentReadAsync(id, CurrentUserId);
 
         var req = await _ds.GetOutboxRequestByIdAsync(a.OutboxRequestId);
+        var proc = req != null ? await _ds.GetWorkProcedureByIdAsync(req.WorkProcedureId) : null;
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var fdById = fdAll.ToDictionary(f => f.Id);
+        var step = proc != null ? WorkflowExecutionHelper.GetStepById(proc, a.StepId) : null;
+        var stepContext = (proc != null && step != null)
+            ? WorkflowExecutionHelper.BuildStepFormContext(proc, step, fdById, hideOtherSections: false)
+            : null;
+
+        object? formPayload = null;
+        object? templateData = null;
+        if (stepContext?.FormDefinitionId is int fid && fdById.TryGetValue(fid, out var fd))
+        {
+            var templates = await _ds.ListFormTemplatesAsync();
+            var tpl = templates.FirstOrDefault(x => x.Id == fd.TemplateId);
+            templateData = FormDefinitionTemplateHelper.BuildTemplateData(fd, tpl);
+            formPayload = new { fd.Id, fd.Name, fd.Description, fd.FieldsJson, fd.TemplateId };
+        }
+
         return Json(new
         {
             success = true,
@@ -303,6 +320,7 @@ public partial class InboxController
                 a.ProcedureTypeName,
                 a.ProcedureTypeIcon,
                 a.ProcedureTypeColor,
+                a.StepId,
                 a.StepLabel,
                 a.AssignedVia,
                 a.SenderName,
@@ -315,7 +333,19 @@ public partial class InboxController
                 FormDataJson = req?.FormDataJson ?? "{}",
                 RequestNotes = req?.Notes ?? "",
                 Priority = req?.Priority ?? "",
-                SubmittedAt = req?.SubmittedAt.ToString("yyyy-MM-dd HH:mm") ?? ""
+                SubmittedAt = req?.SubmittedAt.ToString("yyyy-MM-dd HH:mm") ?? "",
+                stepContext = stepContext == null ? null : new
+                {
+                    stepId = stepContext.StepId,
+                    stepLabel = stepContext.StepLabel,
+                    formDefinitionId = stepContext.FormDefinitionId,
+                    formSectionId = stepContext.FormSectionId,
+                    sectionTitle = stepContext.SectionTitle,
+                    editableFieldIds = stepContext.EditableFieldIds,
+                    hideOtherSections = stepContext.HideOtherSections
+                },
+                form = formPayload,
+                templateData
             }
         });
     }
@@ -323,8 +353,9 @@ public partial class InboxController
     public class ActOnAssignmentDto
     {
         public int AssignmentId { get; set; }
-        public string Action { get; set; } = "";   // approve | reject | return
+        public string Action { get; set; } = "";
         public string Notes { get; set; } = "";
+        public string? FormDataJson { get; set; }
     }
 
     [HttpPost]
@@ -360,6 +391,57 @@ public partial class InboxController
         a.ReadAt ??= DateTime.Now;
         await _ds.UpdateOutboxAssignmentAsync(a);
 
+        if (action == "approve")
+        {
+            var obReq = await _ds.GetOutboxRequestByIdAsync(a.OutboxRequestId);
+            if (obReq != null)
+            {
+                var proc = await _ds.GetWorkProcedureByIdAsync(obReq.WorkProcedureId);
+                if (proc != null)
+                {
+                    var fdAll = await _ds.ListFormDefinitionsAsync();
+                    var fdById = fdAll.ToDictionary(f => f.Id);
+                    var step = WorkflowExecutionHelper.GetStepById(proc, a.StepId);
+                    HashSet<int>? allowedFieldIds = null;
+                    FormDefinition? fd = null;
+                    if (step != null)
+                    {
+                        var ctx = WorkflowExecutionHelper.BuildStepFormContext(proc, step, fdById);
+                        if (ctx?.FormDefinitionId is int fid && fdById.TryGetValue(fid, out var stepFd))
+                        {
+                            fd = stepFd;
+                            allowedFieldIds = WorkflowSectionHelper.FieldIdsInSection(fd.FieldsJson, ctx.FormSectionId ?? 0);
+                        }
+                    }
+                    if (fd == null)
+                    {
+                        var usedFdIds = ParseOutboxIntArray(proc.UsedFormDefinitionsJson);
+                        fd = fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id));
+                    }
+
+                    var mergedJson = obReq.FormDataJson;
+                    if (!string.IsNullOrWhiteSpace(req.FormDataJson))
+                        mergedJson = WorkflowExecutionHelper.MergeSectionFormAnswers(obReq.FormDataJson, req.FormDataJson, allowedFieldIds);
+
+                    var user = await _ds.GetUserByIdAsync(CurrentUserId);
+                    if (fd != null && user != null)
+                    {
+                        var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+                        var units = await _ds.ListOrganizationalUnitsAsync();
+                        var depts = await _ds.ListDepartmentsAsync();
+                        var orgUnitName = ResolveInboxOrgUnitName(beneficiary?.OrganizationalUnitId, user.DepartmentId, depts, units);
+                        var profileMap = FormAutoDataHelper.BuildProfileMap(beneficiary, user, orgUnitName);
+                        mergedJson = FormAutoDataHelper.MergeCertificationOnApprove(mergedJson, fd.FieldsJson, profileMap, allowedFieldIds);
+                    }
+
+                    obReq.FormDataJson = mergedJson;
+                    obReq.UpdatedAt = DateTime.Now;
+                    obReq.UpdatedBy = CurrentUserFullName;
+                    await AdvanceRequestAfterApprovalAsync(obReq, a, proc, step);
+                }
+            }
+        }
+
         // إشعار مُقدِّم الطلب
         await _ds.CreateNotificationAsync(new Notification
         {
@@ -373,5 +455,130 @@ public partial class InboxController
 
         await _ds.AddAuditLogAsync(BuildAuditEntry(newStatus, "OutboxAssignment", a.Id.ToString(), a.RequestNumber));
         return Json(new { success = true, message = $"تم تنفيذ: {newStatus}" });
+    }
+
+    private async Task AdvanceRequestAfterApprovalAsync(
+        OutboxRequest obReq,
+        OutboxAssignment completedAssignment,
+        WorkProcedure proc,
+        WorkflowExecutionHelper.WorkflowStepRuntime? currentStep)
+    {
+        var statuses = await _ds.ListFormStatusesAsync();
+        var procTypes = await _ds.ListProcedureActionTypesAsync();
+        var procType = procTypes.FirstOrDefault(t => t.Id == proc.ProcedureActionTypeId);
+        var now = DateTime.Now;
+
+        currentStep ??= WorkflowExecutionHelper.GetStepById(proc, completedAssignment.StepId);
+        var next = currentStep != null
+            ? WorkflowExecutionHelper.GetNextStep(proc, currentStep.SortOrder)
+            : null;
+
+        if (next != null)
+        {
+            obReq.CurrentStepId = next.Id;
+            obReq.CurrentStepSortOrder = next.SortOrder;
+            obReq.CurrentFormStatusId = next.FormStatusId;
+            obReq.ExpectedDueAt = WorkflowExecutionHelper.ComputeDueAt(obReq.SubmittedAt, next);
+            var fs = next.FormStatusId.HasValue ? statuses.FirstOrDefault(s => s.Id == next.FormStatusId.Value) : null;
+            if (fs != null) obReq.StatusCategory = (fs.StatusCategory ?? "مفتوح").Trim();
+            await _ds.UpdateOutboxRequestAsync(obReq);
+
+            var recipients = await WorkflowExecutionHelper.ResolveStepRecipientsAsync(_ds, proc, next, obReq.SubmittedById);
+            foreach (var rc in recipients)
+            {
+                await _ds.AddOutboxAssignmentAsync(new OutboxAssignment
+                {
+                    OutboxRequestId = obReq.Id,
+                    RequestNumber = obReq.RequestNumber,
+                    WorkProcedureId = proc.Id,
+                    ProcedureName = proc.Name ?? "",
+                    ProcedureCode = proc.Code ?? "",
+                    ProcedureTypeName = procType?.Name ?? "",
+                    ProcedureTypeIcon = procType?.Icon ?? "",
+                    ProcedureTypeColor = procType?.Color ?? "#25935F",
+                    StepSortOrder = next.SortOrder,
+                    StepId = next.Id,
+                    StepLabel = next.StepLabel ?? "",
+                    AssignedVia = rc.AssignedVia,
+                    RecipientUserId = rc.UserId,
+                    RecipientName = rc.FullName,
+                    RecipientUsername = rc.Username,
+                    RecipientDept = rc.Dept,
+                    SenderId = obReq.SubmittedById,
+                    SenderName = obReq.SubmittedByName,
+                    SenderDept = obReq.SubmittedByDept,
+                    Status = "قيد الانتظار",
+                    AssignedAt = now
+                });
+
+                await _ds.CreateNotificationAsync(new Notification
+                {
+                    RecipientId = rc.UserId,
+                    Type = "request_received",
+                    Title = $"طلب جديد: {obReq.RequestNumber}",
+                    Message = $"تم توجيه طلب «{proc.Name}» إليك — {next.StepLabel}.",
+                    SenderName = CurrentUserFullName,
+                    SenderDepartment = CurrentDeptName
+                });
+            }
+        }
+        else
+        {
+            if (obReq.CurrentFormStatusId.HasValue)
+            {
+                var fs = statuses.FirstOrDefault(s => s.Id == obReq.CurrentFormStatusId.Value);
+                if (fs != null && string.Equals(fs.StatusCategory, "مغلق", StringComparison.Ordinal))
+                {
+                    obReq.StatusCategory = "مغلق";
+                    obReq.ClosedAt ??= now;
+                }
+            }
+            await _ds.UpdateOutboxRequestAsync(obReq);
+        }
+    }
+
+    private static List<int> ParseOutboxIntArray(string? json)
+    {
+        var result = new List<int>();
+        if (string.IsNullOrWhiteSpace(json)) return result;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return result;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.ValueKind == System.Text.Json.JsonValueKind.Number && el.TryGetInt32(out var n))
+                    result.Add(n);
+                else if (el.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    foreach (var key in new[] { "formDefinitionId", "FormDefinitionId", "id", "Id" })
+                    {
+                        if (el.TryGetProperty(key, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number && p.TryGetInt32(out var v))
+                        {
+                            result.Add(v);
+                            break;
+                        }
+                    }
+                }
+                else if (el.ValueKind == System.Text.Json.JsonValueKind.String && int.TryParse(el.GetString(), out var sn))
+                    result.Add(sn);
+            }
+        }
+        catch { /* ignore */ }
+        return result;
+    }
+
+    private static string ResolveInboxOrgUnitName(int? beneficiaryOuId, int? userDeptId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
+        {
+            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
+            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+        }
+        if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
+        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
+        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
+        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
+        return ouFallback?.Name?.Trim() ?? "";
     }
 }

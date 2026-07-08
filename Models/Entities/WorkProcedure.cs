@@ -46,6 +46,9 @@ public class WorkProcedure
 
     public string TargetOrganizationalUnitIdsJson { get; set; } = "[]";
 
+    /// <summary>معرّفات منسوبي الوحدات المستهدفة (المستهدفين المعنيين) — اختياري.</summary>
+    public string TargetBeneficiaryIdsJson { get; set; } = "[]";
+
     public string PreviousProcedureIdsJson { get; set; } = "[]";
     public string NextProcedureIdsJson { get; set; } = "[]";
     public string ImplicitProcedureIdsJson { get; set; } = "[]";

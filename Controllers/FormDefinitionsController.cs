@@ -44,14 +44,13 @@ public class FormDefinitionsController : BaseController
         all = await _ds.ListFormDefinitionsAsync();
         var isAdmin = CurrentUserRole == "Admin";
 
-        // Role filter
-        if (!isAdmin)
+        // Role + visibility filter
+        if (isAdmin)
+            all = FormDefinitionVisibility.FilterForAdmin(all, CurrentUserFullName).ToList();
+        else
         {
             var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
-            all = all.Where(f =>
-                f.Ownership == "عام" ||
-                (f.Ownership == "خاص" && f.OrganizationalUnitId == myOrgUnitId)
-            ).ToList();
+            all = FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId).ToList();
         }
 
         // Search filters
@@ -145,7 +144,7 @@ public class FormDefinitionsController : BaseController
             currentUser = CurrentUserFullName,
             formClasses = formClasses.Select(c => new { c.Id, c.Name }),
             formTypes = formTypes.Select(t => new { t.Id, t.Name }),
-            orgUnitsForSelect = orgUnitsForSelect.Select(u => new { u.Id, u.Name }),
+            orgUnitsForSelect = orgUnitsForSelect.Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder }),
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
             templateFilters,
             orgUnitFilters,
@@ -159,6 +158,11 @@ public class FormDefinitionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false });
         var f = await _ds.GetFormDefinitionByIdAsync(id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+
+        var isAdminSingle = CurrentUserRole == "Admin";
+        var myOrgForAccess = await GetCreatorOrgUnitIdAsync();
+        if (!FormDefinitionVisibility.IsVisibleToUser(f, isAdminSingle, CurrentUserFullName, myOrgForAccess))
+            return Json(new { success = false, message = "غير موجود" });
 
         var formClassesAll = await _ds.ListFormClassesAsync();
         var activeFormClasses = await _ds.ListActiveFormClassesAsync();
@@ -174,7 +178,6 @@ public class FormDefinitionsController : BaseController
             formClassesForSelect.Add(new { id = curFormClass.Id, name = curFormClass.Name + " (غير مفعّل)" });
 
         // لغير الأدمن: يقتصر اختيار الوحدة التنظيمية على وحدته التنظيمية
-        var isAdminSingle = CurrentUserRole == "Admin";
         var orgUnitsScoped = units.AsEnumerable();
         if (!isAdminSingle)
         {
@@ -192,7 +195,6 @@ public class FormDefinitionsController : BaseController
         }
 
         var tpl = templates.FirstOrDefault(t => t.Id == f.TemplateId);
-        var hasSnapshot = !string.IsNullOrWhiteSpace(f.TemplateHeaderJsonSnapshot) || !string.IsNullOrWhiteSpace(f.TemplateFooterJsonSnapshot);
         var versions = await _ds.ListFormDefinitionVersionsAsync(f.Id);
         var activeVersion = versions.FirstOrDefault(v => v.IsActive);
         var latestVersion = versions.OrderByDescending(v => v.VersionNumber).FirstOrDefault();
@@ -206,7 +208,7 @@ public class FormDefinitionsController : BaseController
                 PublicId = string.IsNullOrWhiteSpace(f.PublicId) ? "" : f.PublicId,
                 ActiveVersionLabel = activeVersion?.VersionName ?? latestVersion?.VersionName ?? "",
                 f.Name, f.Description, f.Ownership,
-                f.FormClassId, f.FormTypeId, f.WorkspaceId, f.TemplateId,
+                f.FormClassId, f.FormTypeId, f.TemplateId,
                 f.OrganizationalUnitId, f.Status, f.IsActive,
                 f.FieldsJson, f.RejectionReason,
                 f.CreatedBy, f.ApprovedBy,
@@ -218,41 +220,8 @@ public class FormDefinitionsController : BaseController
                 TemplateName = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot) ? f.TemplateNameSnapshot : (tpl?.Name ?? ""),
                 OrgUnitName = units.FirstOrDefault(u => u.Id == f.OrganizationalUnitId)?.Name ?? "",
                 
-                // العلامة المائية تُؤخذ دائماً من القالب المرتبط الحي (مثل شاشة إدارة القوالب)، مع بقاء لقطة الرأس/التذييل كما هي
-                TemplateData = hasSnapshot ? new
-                {
-                    Id = f.TemplateId,
-                    Name = !string.IsNullOrWhiteSpace(f.TemplateNameSnapshot) ? f.TemplateNameSnapshot : (tpl?.Name ?? ""),
-                    Color = !string.IsNullOrWhiteSpace(f.TemplateColorSnapshot) ? f.TemplateColorSnapshot : (tpl?.Color ?? "#14573A"),
-                    HeaderJson = string.IsNullOrWhiteSpace(f.TemplateHeaderJsonSnapshot) ? "[]" : f.TemplateHeaderJsonSnapshot,
-                    HeaderBackgroundColor = f.TemplateHeaderBackgroundColorSnapshot ?? "",
-                    HeaderBackgroundImageUrl = f.TemplateHeaderBackgroundImageUrlSnapshot ?? "",
-                    FooterJson = string.IsNullOrWhiteSpace(f.TemplateFooterJsonSnapshot) ? "[]" : f.TemplateFooterJsonSnapshot,
-                    FooterBackgroundColor = f.TemplateFooterBackgroundColorSnapshot ?? "",
-                    FooterBackgroundImageUrl = f.TemplateFooterBackgroundImageUrlSnapshot ?? "",
-                    HeaderSections = 0,
-                    FooterSections = 0,
-                    MarginTop = f.TemplateMarginTopSnapshot,
-                    MarginBottom = f.TemplateMarginBottomSnapshot,
-                    MarginRight = f.TemplateMarginRightSnapshot,
-                    MarginLeft = f.TemplateMarginLeftSnapshot,
-                    PageDirection = string.IsNullOrWhiteSpace(f.TemplatePageDirectionSnapshot) ? "RTL" : f.TemplatePageDirectionSnapshot,
-                    ShowHeaderLine = f.TemplateShowHeaderLineSnapshot,
-                    ShowFooterLine = f.TemplateShowFooterLineSnapshot,
-                    WatermarkUrl = tpl?.WatermarkUrl ?? "",
-                    WatermarkOpacity = tpl?.WatermarkOpacity ?? 15
-                } : (tpl == null ? null : new
-                {
-                    tpl.Id, tpl.Name, tpl.Color,
-                    tpl.HeaderJson,
-                    tpl.HeaderBackgroundColor, tpl.HeaderBackgroundImageUrl,
-                    tpl.FooterJson,
-                    tpl.FooterBackgroundColor, tpl.FooterBackgroundImageUrl,
-                    tpl.HeaderSections, tpl.FooterSections,
-                    tpl.MarginTop, tpl.MarginBottom, tpl.MarginRight, tpl.MarginLeft,
-                    tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine,
-                    tpl.WatermarkUrl, tpl.WatermarkOpacity
-                })
+                // null عند «بدون قالب» — لا رأس/تذييل/إطار في المعاينة
+                TemplateData = FormDefinitionTemplateHelper.BuildTemplateData(f, tpl)
             },
             orgUnitsForSelect = orgUnitsForSelectSingle,
             formClasses = formClassesForSelect
@@ -268,6 +237,8 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         if (string.IsNullOrWhiteSpace(req.Name))
             return Json(new { success = false, message = "اسم النموذج مطلوب" });
+        var nameDup = await ValidateFormDefinitionNameUniqueAsync(req.Name, null);
+        if (nameDup != null) return Json(new { success = false, message = nameDup });
         if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.OrganizationalUnitId <= 0) return Json(new { success = false, message = "الوحدة التنظيمية مطلوبة" });
@@ -350,11 +321,16 @@ public class FormDefinitionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!await CanAccessFormDefinitionAsync(f))
+            return Json(new { success = false, message = "غير موجود" });
         if (f.Status == "approved" && CurrentUserRole != "Admin")
             return Json(new { success = false, message = "لا يمكن تعديل نموذج معتمد" });
         if (req.FormClassId <= 0) return Json(new { success = false, message = "أصناف النماذج مطلوبة" });
         if (req.FormTypeId <= 0) return Json(new { success = false, message = "نوع النموذج مطلوب" });
         if (req.OrganizationalUnitId <= 0) return Json(new { success = false, message = "الوحدة التنظيمية مطلوبة" });
+
+        var nameDupUpd = await ValidateFormDefinitionNameUniqueAsync(req.Name, req.Id);
+        if (nameDupUpd != null) return Json(new { success = false, message = nameDupUpd });
 
         FormTemplate? selectedTemplate = null;
         if (req.TemplateId > 0)
@@ -441,6 +417,8 @@ public class FormDefinitionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!await CanAccessFormDefinitionAsync(f))
+            return Json(new { success = false, message = "غير موجود" });
         if (f.Status == "approved" && CurrentUserRole != "Admin")
             return Json(new { success = false, message = "لا يمكن حذف نموذج معتمد" });
 
@@ -459,6 +437,8 @@ public class FormDefinitionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!await CanAccessFormDefinitionAsync(f))
+            return Json(new { success = false, message = "غير موجود" });
         if (f.Status != "draft" && f.Status != "rejected")
             return Json(new { success = false, message = "لا يمكن إرساله للاعتماد بالحالة الحالية" });
 
@@ -479,6 +459,8 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!FormDefinitionVisibility.IsVisibleToAdmin(f, CurrentUserFullName))
+            return Json(new { success = false, message = "غير موجود" });
 
         f.Status = "approved";
         f.RejectionReason = "";
@@ -499,6 +481,8 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!FormDefinitionVisibility.IsVisibleToAdmin(f, CurrentUserFullName))
+            return Json(new { success = false, message = "غير موجود" });
 
         f.Status = "rejected";
         f.RejectionReason = req.Reason ?? "";
@@ -517,6 +501,8 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
         var f = await _ds.GetFormDefinitionByIdAsync(req.Id);
         if (f == null) return Json(new { success = false, message = "غير موجود" });
+        if (!FormDefinitionVisibility.IsVisibleToAdmin(f, CurrentUserFullName))
+            return Json(new { success = false, message = "غير موجود" });
         if (f.Status != "approved")
             return Json(new { success = false, message = "يمكن التفعيل فقط للنماذج المعتمدة" });
 
@@ -567,6 +553,13 @@ public class FormDefinitionsController : BaseController
         var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
         return unit?.Id ?? CurrentDeptId;
     }
+
+    private async Task<bool> CanAccessFormDefinitionAsync(FormDefinition f) =>
+        FormDefinitionVisibility.IsVisibleToUser(
+            f,
+            CurrentUserRole == "Admin",
+            CurrentUserFullName,
+            await GetCreatorOrgUnitIdAsync());
 
     private static void ApplyNoTemplateSnapshot(FormDefinition f)
     {
@@ -682,6 +675,20 @@ public class FormDefinitionsController : BaseController
     {
         if (isAdmin) return true;
         return l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myOrgId);
+    }
+
+    private async Task<string?> ValidateFormDefinitionNameUniqueAsync(string? name, int? excludeFormDefinitionId)
+    {
+        var nameT = (name ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(nameT)) return "اسم النموذج مطلوب";
+        var all = await _ds.ListFormDefinitionsAsync();
+        foreach (var x in all)
+        {
+            if (excludeFormDefinitionId.HasValue && x.Id == excludeFormDefinitionId.Value) continue;
+            if (string.Equals((x.Name ?? "").Trim(), nameT, StringComparison.OrdinalIgnoreCase))
+                return "اسم النموذج مستخدم بالفعل — لا يُسمح بالتكرار";
+        }
+        return null;
     }
 
     // ── TEMPLATE PREVIEW DATA (accessible by Admin + Employee) ───────────────

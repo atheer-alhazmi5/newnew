@@ -26,6 +26,8 @@ public class FormDefinitionVersionsController : BaseController
 
         var form = await _ds.GetFormDefinitionByIdAsync(id);
         if (form == null) return RedirectToAction("Index", "FormDefinitions");
+        if (!await CanAccessFormDefinitionAsync(form))
+            return RedirectToAction("Index", "FormDefinitions");
 
         // ملء تلقائي إن لم يكن المعرف موجوداً أو لا توجد إصدارات
         var pubBackfilled = false;
@@ -66,6 +68,8 @@ public class FormDefinitionVersionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var form = await _ds.GetFormDefinitionByIdAsync(formId);
         if (form == null) return Json(new { success = false, message = "النموذج غير موجود" });
+        if (!await CanAccessFormDefinitionAsync(form))
+            return Json(new { success = false, message = "غير مصرح" });
 
         var versions = await _ds.ListFormDefinitionVersionsAsync(formId);
         var data = versions
@@ -112,6 +116,8 @@ public class FormDefinitionVersionsController : BaseController
         var v = await _ds.GetFormDefinitionVersionByIdAsync(id);
         if (v == null) return Json(new { success = false, message = "غير موجود" });
         var form = await _ds.GetFormDefinitionByIdAsync(v.FormDefinitionId);
+        if (form == null || !await CanAccessFormDefinitionAsync(form))
+            return Json(new { success = false, message = "غير مصرح" });
         return Json(new
         {
             success = true,
@@ -146,8 +152,13 @@ public class FormDefinitionVersionsController : BaseController
             // fallback: استخدم محتوى النموذج نفسه
             var f = await _ds.GetFormDefinitionByIdAsync(formId);
             if (f == null) return Json(new { success = false, message = "النموذج غير موجود" });
+            if (!await CanAccessFormDefinitionAsync(f))
+                return Json(new { success = false, message = "غير مصرح" });
             return Json(new { success = true, data = new { fieldsJson = f.FieldsJson, formName = f.Name } });
         }
+        var parentForm = await _ds.GetFormDefinitionByIdAsync(v.FormDefinitionId);
+        if (parentForm == null || !await CanAccessFormDefinitionAsync(parentForm))
+            return Json(new { success = false, message = "غير مصرح" });
         return Json(new { success = true, data = new { fieldsJson = v.FieldsJson, versionName = v.VersionName } });
     }
 
@@ -160,6 +171,12 @@ public class FormDefinitionVersionsController : BaseController
 
         var form = await _ds.GetFormDefinitionByIdAsync(req.FormDefinitionId);
         if (form == null) return Json(new { success = false, message = "النموذج غير موجود" });
+        if (!await CanAccessFormDefinitionAsync(form))
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var existingVersions = await _ds.ListFormDefinitionVersionsAsync(form.Id);
+        if (existingVersions.Any(v => v.Status == "draft"))
+            return Json(new { success = false, message = "يوجد إصدار بحالة \"مسودة\". يرجى اعتماد أو حذف النسخة الحالية قبل إنشاء إصدار جديد." });
 
         var nextNum = await _ds.NextFormDefinitionVersionNumberAsync(form.Id);
         var isAdmin = CurrentUserRole == "Admin";
@@ -196,6 +213,9 @@ public class FormDefinitionVersionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var v = await _ds.GetFormDefinitionVersionByIdAsync(req.Id);
         if (v == null) return Json(new { success = false, message = "غير موجود" });
+        var formForUpdate = await _ds.GetFormDefinitionByIdAsync(v.FormDefinitionId);
+        if (formForUpdate == null || !await CanAccessFormDefinitionAsync(formForUpdate))
+            return Json(new { success = false, message = "غير مصرح" });
         if (v.Status == "approved")
             return Json(new { success = false, message = "لا يمكن تعديل إصدار معتمد" });
 
@@ -234,6 +254,9 @@ public class FormDefinitionVersionsController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var v = await _ds.GetFormDefinitionVersionByIdAsync(req.Id);
         if (v == null) return Json(new { success = false, message = "غير موجود" });
+        var formForDelete = await _ds.GetFormDefinitionByIdAsync(v.FormDefinitionId);
+        if (formForDelete == null || !await CanAccessFormDefinitionAsync(formForDelete))
+            return Json(new { success = false, message = "غير مصرح" });
         if (v.Status == "approved")
             return Json(new { success = false, message = "لا يمكن حذف إصدار معتمد" });
 
@@ -241,6 +264,20 @@ public class FormDefinitionVersionsController : BaseController
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف إصدار", "FormDefinitionVersion", v.Id.ToString(), v.VersionName));
         return Json(new { success = true });
     }
+
+    private async Task<int> GetCreatorOrgUnitIdAsync()
+    {
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
+        return unit?.Id ?? CurrentDeptId;
+    }
+
+    private async Task<bool> CanAccessFormDefinitionAsync(FormDefinition form) =>
+        FormDefinitionVisibility.IsVisibleToUser(
+            form,
+            CurrentUserRole == "Admin",
+            CurrentUserFullName,
+            await GetCreatorOrgUnitIdAsync());
 
     private static (int fields, int sections, int rules) CountFromFieldsJson(string json)
     {

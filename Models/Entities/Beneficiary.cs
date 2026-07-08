@@ -13,6 +13,15 @@ public class Beneficiary
     public string SecondName { get; set; } = "";
     public string ThirdName { get; set; } = "";
     public string FourthName { get; set; } = "";
+    public string Gender { get; set; } = "";
+    public string MaritalStatus { get; set; } = "";
+    public DateTime? DateOfBirth { get; set; }
+    public string EmployeeNumber { get; set; } = "";
+    public string Rank { get; set; } = "";
+    public string JobTitle { get; set; } = "";
+    public string JobNumber { get; set; } = "";
+    public string EducationQualification { get; set; } = "";
+    public string Honorific { get; set; } = "";
     public int? OrganizationalUnitId { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
@@ -63,4 +72,11 @@ public class Beneficiary
             return string.Join(" - ", parts);
         }
     }
+
+    /// <summary>مكتمل إذا وُجد تأشير وتوقيع محفوظان.</summary>
+    public bool IsProfileComplete =>
+        !string.IsNullOrWhiteSpace(EndorsementFile) && !string.IsNullOrWhiteSpace(SignatureFile);
+
+    /// <summary>حالة اكتمال بيانات التأشير والتوقيع للعرض في الجدول.</summary>
+    public string ProfileStatus => IsProfileComplete ? "مكتمل" : "غير مكتمل";
 }

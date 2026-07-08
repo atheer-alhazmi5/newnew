@@ -257,7 +257,17 @@ public class OutboxController : BaseController
 
         var usedFdIds = ParseIntArray(p.UsedFormDefinitionsJson);
         var fdAll = await _ds.ListFormDefinitionsAsync();
-        var fd = fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id) && f.IsActive && string.Equals(f.Status, "approved", StringComparison.OrdinalIgnoreCase))
+        var fdById = fdAll.ToDictionary(f => f.Id);
+        var firstStep = WorkflowExecutionHelper.GetFirstStep(p);
+        var stepContext = firstStep != null
+            ? WorkflowExecutionHelper.BuildStepFormContext(p, firstStep, fdById, hideOtherSections: true)
+            : null;
+
+        FormDefinition? fd = null;
+        if (stepContext?.FormDefinitionId is int stepFdId && fdById.TryGetValue(stepFdId, out var stepFd))
+            fd = stepFd;
+        else
+            fd = fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id) && f.IsActive && string.Equals(f.Status, "approved", StringComparison.OrdinalIgnoreCase))
                  ?? fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id));
 
         // الوحدات التنظيمية المستهدفة والمنفذين (لرسالة التأكيد)
@@ -277,15 +287,13 @@ public class OutboxController : BaseController
             .ToList();
 
         // أول معتمِد: منفذو الخطوة الأولى من سير العمل
-        var steps = ParseWorkflowSteps(p);
-        var firstStep = steps.OrderBy(s => s.SortOrder).FirstOrDefault();
         var firstApproverNames = new List<string>();
         if (firstStep != null)
         {
-            // اسم تعريفي للخطوة (دور المنفذين) — يُعرض في رسالة التأكيد
             var execRolesAll = await _ds.ListExecutorRolesAsync();
             var role = execRolesAll.FirstOrDefault(r => r.Id == firstStep.ExecutorRoleId);
             if (role != null && !string.IsNullOrWhiteSpace(role.Name)) firstApproverNames.Add(role.Name);
+            else if (!string.IsNullOrWhiteSpace(firstStep.StepLabel)) firstApproverNames.Add(firstStep.StepLabel);
         }
 
         if (fd == null)
@@ -308,47 +316,7 @@ public class OutboxController : BaseController
 
         var templates = await _ds.ListFormTemplatesAsync();
         var tpl = templates.FirstOrDefault(x => x.Id == fd.TemplateId);
-
-        // قالب — بنية مماثلة لـ GetFormDefinition.TemplateData لتفعيل عرض القالب المرتبط
-        object? templateData = null;
-        var hasSnapshot = !string.IsNullOrWhiteSpace(fd.TemplateHeaderJsonSnapshot) || !string.IsNullOrWhiteSpace(fd.TemplateFooterJsonSnapshot);
-        if (hasSnapshot)
-        {
-            templateData = new
-            {
-                Id = fd.TemplateId,
-                Name = !string.IsNullOrWhiteSpace(fd.TemplateNameSnapshot) ? fd.TemplateNameSnapshot : (tpl?.Name ?? ""),
-                Color = !string.IsNullOrWhiteSpace(fd.TemplateColorSnapshot) ? fd.TemplateColorSnapshot : (tpl?.Color ?? "#14573A"),
-                HeaderJson = string.IsNullOrWhiteSpace(fd.TemplateHeaderJsonSnapshot) ? "[]" : fd.TemplateHeaderJsonSnapshot,
-                HeaderBackgroundColor = fd.TemplateHeaderBackgroundColorSnapshot ?? "",
-                HeaderBackgroundImageUrl = fd.TemplateHeaderBackgroundImageUrlSnapshot ?? "",
-                FooterJson = string.IsNullOrWhiteSpace(fd.TemplateFooterJsonSnapshot) ? "[]" : fd.TemplateFooterJsonSnapshot,
-                FooterBackgroundColor = fd.TemplateFooterBackgroundColorSnapshot ?? "",
-                FooterBackgroundImageUrl = fd.TemplateFooterBackgroundImageUrlSnapshot ?? "",
-                MarginTop = fd.TemplateMarginTopSnapshot,
-                MarginBottom = fd.TemplateMarginBottomSnapshot,
-                MarginRight = fd.TemplateMarginRightSnapshot,
-                MarginLeft = fd.TemplateMarginLeftSnapshot,
-                PageDirection = string.IsNullOrWhiteSpace(fd.TemplatePageDirectionSnapshot) ? "RTL" : fd.TemplatePageDirectionSnapshot,
-                ShowHeaderLine = fd.TemplateShowHeaderLineSnapshot,
-                ShowFooterLine = fd.TemplateShowFooterLineSnapshot,
-                WatermarkUrl = tpl?.WatermarkUrl ?? "",
-                WatermarkOpacity = tpl?.WatermarkOpacity ?? 15
-            };
-        }
-        else if (tpl != null)
-        {
-            templateData = new
-            {
-                tpl.Id, tpl.Name, tpl.Color,
-                tpl.HeaderJson, tpl.FooterJson,
-                tpl.HeaderBackgroundColor, tpl.HeaderBackgroundImageUrl,
-                tpl.FooterBackgroundColor, tpl.FooterBackgroundImageUrl,
-                tpl.MarginTop, tpl.MarginBottom, tpl.MarginRight, tpl.MarginLeft,
-                tpl.PageDirection, tpl.ShowHeaderLine, tpl.ShowFooterLine,
-                tpl.WatermarkUrl, tpl.WatermarkOpacity
-            };
-        }
+        var templateData = FormDefinitionTemplateHelper.BuildTemplateData(fd, tpl);
 
         return Json(new
         {
@@ -363,7 +331,17 @@ public class OutboxController : BaseController
             templateData,
             targetOrgUnits,
             executors,
-            firstApprover = firstApproverNames.FirstOrDefault() ?? ""
+            firstApprover = firstApproverNames.FirstOrDefault() ?? "",
+            stepContext = stepContext == null ? null : new
+            {
+                stepId = stepContext.StepId,
+                stepLabel = stepContext.StepLabel,
+                formDefinitionId = stepContext.FormDefinitionId,
+                formSectionId = stepContext.FormSectionId,
+                sectionTitle = stepContext.SectionTitle,
+                editableFieldIds = stepContext.EditableFieldIds,
+                hideOtherSections = stepContext.HideOtherSections
+            }
         });
     }
 
@@ -407,6 +385,48 @@ public class OutboxController : BaseController
         return result;
     }
 
+    private async Task<string> EnrichOutboxFormDataAsync(string? rawJson, WorkProcedure proc)
+    {
+        var formDataJson = string.IsNullOrWhiteSpace(rawJson) ? "{}" : rawJson;
+        var usedFdIds = ParseIntArray(proc.UsedFormDefinitionsJson);
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var fdById = fdAll.ToDictionary(f => f.Id);
+        FormDefinition? fd = null;
+        var firstStep = WorkflowExecutionHelper.GetFirstStep(proc);
+        if (firstStep != null)
+        {
+            var (formId, _) = WorkflowExecutionHelper.ResolveStepFormBinding(firstStep, proc, fdById);
+            if (formId.HasValue) fdById.TryGetValue(formId.Value, out fd);
+        }
+        if (fd == null)
+            fd = fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id) && f.IsActive && string.Equals(f.Status, "approved", StringComparison.OrdinalIgnoreCase))
+                 ?? fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id));
+        if (fd == null) return formDataJson;
+
+        var user = await _ds.GetUserByIdAsync(CurrentUserId);
+        if (user == null) return formDataJson;
+        var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+        var units = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
+        var orgUnitName = ResolveOrgUnitNameForProfile(beneficiary?.OrganizationalUnitId, user.DepartmentId, depts, units);
+        var profileMap = FormAutoDataHelper.BuildProfileMap(beneficiary, user, orgUnitName);
+        return FormAutoDataHelper.EnrichSubmitFormDataJson(formDataJson, fd.FieldsJson, profileMap);
+    }
+
+    private static string ResolveOrgUnitNameForProfile(int? beneficiaryOuId, int? userDeptId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
+        {
+            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
+            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+        }
+        if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
+        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
+        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
+        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
+        return ouFallback?.Name?.Trim() ?? "";
+    }
+
     // ─── CREATE / UPDATE / DELETE ─────────────────────────────────────────────
     public class OutboxSubmitDto
     {
@@ -429,15 +449,14 @@ public class OutboxController : BaseController
 
         var priority = NormalizePriority(proc.ConfidentialityLevel);
 
-        var steps = ParseWorkflowSteps(proc);
-        var first = steps.OrderBy(s => s.SortOrder).FirstOrDefault();
+        var first = WorkflowExecutionHelper.GetFirstStep(proc);
         var statuses = await _ds.ListFormStatusesAsync();
         var fs = first?.FormStatusId.HasValue == true
             ? statuses.FirstOrDefault(s => s.Id == first.FormStatusId!.Value)
             : null;
 
         var now = DateTime.Now;
-        var due = ComputeDueAt(now, first);
+        var due = WorkflowExecutionHelper.ComputeDueAt(now, first);
         var requestNumber = await _ds.GenerateOutboxRequestNumberAsync(now);
 
         var entity = new OutboxRequest
@@ -451,7 +470,7 @@ public class OutboxController : BaseController
             StatusCategory = (fs?.StatusCategory ?? "مفتوح").Trim(),
             ExpectedDueAt = due,
             SubmittedAt = now,
-            FormDataJson = string.IsNullOrWhiteSpace(req.FormDataJson) ? "{}" : req.FormDataJson,
+            FormDataJson = await EnrichOutboxFormDataAsync(req.FormDataJson, proc),
             Notes = (req.Notes ?? "").Trim(),
             SubmittedById = CurrentUserId,
             SubmittedByName = CurrentUserFullName,
@@ -464,7 +483,9 @@ public class OutboxController : BaseController
         // ─── Routing الفعلي: تحديد المستلمين + إنشاء assignments + إشعارات داخلية ───
         var procTypes = await _ds.ListProcedureActionTypesAsync();
         var procType = procTypes.FirstOrDefault(t => t.Id == proc.ProcedureActionTypeId);
-        var recipients = await ResolveFirstStepRecipientsAsync(proc, first!);
+        var recipients = first != null
+            ? await WorkflowExecutionHelper.ResolveStepRecipientsAsync(_ds, proc, first, CurrentUserId)
+            : new List<WorkflowExecutionHelper.RecipientCandidate>();
 
         var deliveredTo = new List<object>();
         foreach (var rc in recipients)
@@ -621,11 +642,11 @@ public class OutboxController : BaseController
     public async Task<IActionResult> GetProcedureDetails(int id, int? outboxRequestId = null)
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        await _ds.ApplyAutoCloseExpiredWorkProceduresAsync();
         var p = await _ds.GetWorkProcedureByIdAsync(id);
         if (p == null) return Json(new { success = false, message = "غير موجود" });
 
         var procTypes = await _ds.ListProcedureActionTypesAsync();
-        var workspaces = await _ds.ListWorkspacesAsync();
         var templates = await _ds.ListFormTemplatesAsync();
         var orgUnits = await _ds.ListOrganizationalUnitsAsync();
         var statuses = await _ds.ListFormStatusesAsync();
@@ -635,43 +656,24 @@ public class OutboxController : BaseController
         var procsAll = await _ds.ListWorkProceduresAsync();
 
         var t = procTypes.FirstOrDefault(x => x.Id == p.ProcedureActionTypeId);
-        var ws = workspaces.FirstOrDefault(w => w.Id == p.WorkspaceId);
         var tpl = templates.FirstOrDefault(x => x.Id == p.FormTemplateId);
         var ou = orgUnits.FirstOrDefault(u => u.Id == p.OrganizationalUnitId);
         var stages = ProcedureStages(p, statuses).ToList();
 
         var targetOrgIds = ParseIntArray(p.TargetOrganizationalUnitIdsJson);
+        var targetBenIds = ParseIntArray(p.TargetBeneficiaryIdsJson);
         var prevIds = ParseIntArray(p.PreviousProcedureIdsJson);
         var implicitIds = ParseIntArray(p.ImplicitProcedureIdsJson);
         var nextIds = ParseIntArray(p.NextProcedureIdsJson);
 
         var targetOrgUnits = orgUnits.Where(u => targetOrgIds.Contains(u.Id)).Select(u => new { id = u.Id, name = u.Name }).ToList();
+        var targetBeneficiaries = beneficiaries.Where(b => targetBenIds.Contains(b.Id)).Select(b => new { id = b.Id, name = b.FullName }).ToList();
         List<object> ProcRefs(List<int> ids) => procsAll
             .Where(x => ids.Contains(x.Id))
             .Select(x => (object)new { id = x.Id, name = x.Name, code = x.Code }).ToList();
 
-        // الأنظمة واللوائح: قد تُحفظ كـ JSON مرفقات (label/url/name) — نُسطّحها لأسماء فقط
-        var regulations = new List<string>();
-        if (!string.IsNullOrWhiteSpace(p.RegulationsAttachmentsJson))
-        {
-            try
-            {
-                using var rdoc = JsonDocument.Parse(p.RegulationsAttachmentsJson);
-                if (rdoc.RootElement.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var el in rdoc.RootElement.EnumerateArray())
-                    {
-                        if (el.ValueKind == JsonValueKind.String) regulations.Add(el.GetString() ?? "");
-                        else if (el.ValueKind == JsonValueKind.Object)
-                        {
-                            foreach (var k in new[] { "name", "label", "title", "fileName" })
-                                if (el.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String) { regulations.Add(v.GetString() ?? ""); break; }
-                        }
-                    }
-                }
-            }
-            catch { /* ignore */ }
-        }
+        // الأنظمة واللوائح والتعليمات — مرفقات قابلة للتنزيل
+        var regulations = ParseRegulationAttachments(p.RegulationsAttachmentsJson);
 
         // خطوات سير العمل بكامل التفاصيل
         var steps = ParseWorkflowStepsFull(p);
@@ -700,10 +702,16 @@ public class OutboxController : BaseController
                 else concurrentLabel = "متزامنة";
             }
             var formName = "—";
+            var sectionName = "—";
             if (st.FormDefinitionId.HasValue && st.FormDefinitionId.Value > 0)
             {
                 var fd = fdAll.FirstOrDefault(x => x.Id == st.FormDefinitionId.Value);
-                if (fd != null) formName = fd.Name;
+                if (fd != null)
+                {
+                    formName = fd.Name;
+                    if (st.FormSectionId.HasValue && st.FormSectionId.Value > 0)
+                        sectionName = WorkflowSectionHelper.SectionTitle(fd, st.FormSectionId.Value) ?? "—";
+                }
             }
             var channels = (st.NotificationChannels != null && st.NotificationChannels.Count > 0)
                 ? st.NotificationChannels
@@ -730,6 +738,7 @@ public class OutboxController : BaseController
                 returnLabel = canReturn ? returnStepLabel : "غير مسموح",
                 concurrentLabel,
                 formName,
+                sectionName,
                 channelLabel,
                 statusLabel,
                 statusColor
@@ -765,12 +774,12 @@ public class OutboxController : BaseController
                 p.Objectives,
                 StatusCode = p.Status ?? "",
                 StatusLabel = statusLabelProc,
-                IsActive = p.IsActive,
+                RejectionReason = p.RejectionReason ?? "",
+                IsActive = DataService.GetEffectiveIsActive(p),
                 TypeName = t?.Name ?? "",
                 TypeIcon = t?.Icon ?? "",
                 TypeColor = t?.Color ?? "#25935F",
-                Priority = priority ?? "",
-                WorkspaceName = ws?.Name ?? "",
+                Priority = priority ?? p.ConfidentialityLevel ?? "",
                 FormTemplateName = tpl?.Name ?? "",
                 OwnerOrgName = ou?.Name ?? "",
                 p.UsageFrequency,
@@ -784,9 +793,14 @@ public class OutboxController : BaseController
                 Regulations = regulations,
                 VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel,
                 TargetOrgUnits = targetOrgUnits,
+                TargetBeneficiaries = targetBeneficiaries,
                 PreviousProcedures = ProcRefs(prevIds),
                 ImplicitProcedures = ProcRefs(implicitIds),
-                NextProcedures = ProcRefs(nextIds)
+                NextProcedures = ProcRefs(nextIds),
+                CreatedBy = p.CreatedBy ?? "",
+                CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedBy = p.UpdatedBy ?? "",
+                UpdatedAt = p.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")
             },
             stages,
             workflow = workflowRows
@@ -794,6 +808,37 @@ public class OutboxController : BaseController
     }
 
     // ─── Workflow helpers ────────────────────────────────────────────────────
+    private static List<object> ParseRegulationAttachments(string? json)
+    {
+        var list = new List<object>();
+        if (string.IsNullOrWhiteSpace(json)) return list;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return list;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                if (el.ValueKind == JsonValueKind.String)
+                {
+                    var s = el.GetString() ?? "";
+                    if (!string.IsNullOrWhiteSpace(s)) list.Add(new { name = s, path = "" });
+                    continue;
+                }
+                if (el.ValueKind != JsonValueKind.Object) continue;
+                var name = "";
+                var path = "";
+                foreach (var k in new[] { "name", "label", "title", "fileName" })
+                    if (el.TryGetProperty(k, out var nv) && nv.ValueKind == JsonValueKind.String) { name = nv.GetString() ?? ""; break; }
+                foreach (var k in new[] { "path", "url", "filePath" })
+                    if (el.TryGetProperty(k, out var pv) && pv.ValueKind == JsonValueKind.String) { path = pv.GetString() ?? ""; break; }
+                if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(path))
+                    list.Add(new { name = string.IsNullOrWhiteSpace(name) ? "مرفق" : name, path });
+            }
+        }
+        catch { /* ignore */ }
+        return list;
+    }
+
     private static List<WorkflowStepFullDto> ParseWorkflowStepsFull(WorkProcedure? p)
     {
         if (p == null || string.IsNullOrWhiteSpace(p.WorkflowStepsJson)) return new();
@@ -814,6 +859,7 @@ public class OutboxController : BaseController
             "managers_chain" => "سلسلة المدراء",
             "unit_manager" => "مدير الوحدة التنظيمية",
             "unit_representative" => "ممثل الوحدة التنظيمية",
+            "system_admin" => "مدير النظام",
             _ => "—"
         };
     }
@@ -875,6 +921,7 @@ public class OutboxController : BaseController
         public string ExpectedDurationHours { get; set; } = "";
         public int? FormStatusId { get; set; }
         public int? FormDefinitionId { get; set; }
+        public int? FormSectionId { get; set; }
         public int? ReturnStepId { get; set; }
         public int? ConcurrentStepId { get; set; }
         public bool IsConcurrentStep { get; set; }
@@ -1055,6 +1102,15 @@ public class OutboxController : BaseController
                     var u = UserOfBeneficiary(b);
                     if (u == null) continue;
                     AddIfNew(results, u, b, "unit_representative", unitsAll);
+                }
+            }
+            else if (ft == "system_admin")
+            {
+                foreach (var b in beneficiaries.Where(x => x.IsActive && string.Equals((x.SubRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal)))
+                {
+                    var u = UserOfBeneficiary(b);
+                    if (u == null) continue;
+                    AddIfNew(results, u, b, "system_admin", unitsAll);
                 }
             }
             // باقي الأنماط (employee/direct_manager/managers_chain) — خارج النطاق المتفق عليه حالياً.

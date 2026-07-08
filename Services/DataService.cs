@@ -2349,6 +2349,35 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    /// <summary>إجراء مؤقت منتهٍ يُعتبر غير مفعّل حتى لو لم يُحدَّث السجل بعد.</summary>
+    public static bool GetEffectiveIsActive(WorkProcedure p)
+    {
+        if (p.ValidityType == "مؤقت" && p.ValidityEndDate.HasValue && p.ValidityEndDate.Value.Date < DateTime.Today)
+            return false;
+        return p.IsActive;
+    }
+
+    /// <summary>تعطيل الإجراءات المعتمدة ذات الصلاحية المؤقتة المنتهية تلقائياً.</summary>
+    public Task ApplyAutoCloseExpiredWorkProceduresAsync()
+    {
+        var list = _db.WorkProcedures;
+        var today = DateTime.Today;
+        var changed = false;
+        foreach (var p in list)
+        {
+            if (p.Status == "approved" && p.ValidityType == "مؤقت" && p.ValidityEndDate.HasValue
+                && p.ValidityEndDate.Value.Date < today && p.IsActive)
+            {
+                p.IsActive = false;
+                p.UpdatedAt = DateTime.Now;
+                p.UpdatedBy = "النظام";
+                changed = true;
+            }
+        }
+        if (changed) _db.SaveWorkProcedures(list);
+        return Task.CompletedTask;
+    }
+
     // ─── OUTBOX REQUESTS ──────────────────────────────────────────────────────
     public Task<List<OutboxRequest>> ListOutboxRequestsAsync()
         => Task.FromResult(_db.OutboxRequests.OrderByDescending(r => r.SubmittedAt).ToList());

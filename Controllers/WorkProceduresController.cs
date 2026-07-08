@@ -66,7 +66,6 @@ public class WorkProceduresController : BaseController
         string? search,
         string? status,
         string? validity,
-        int? workspaceId,
         int? formDefinitionId,
         int? targetOrgUnitId,
         int? executorBeneficiaryId,
@@ -83,18 +82,16 @@ public class WorkProceduresController : BaseController
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
-        if (!isAdmin)
-        {
+        if (isAdmin)
+            all = WorkProcedureVisibility.FilterForAdmin(all, CurrentUserFullName).ToList();
+        else
             all = all.Where(p => allowedOrgIds.Contains(p.OrganizationalUnitId)).ToList();
-        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLower();
             all = all.Where(p => (p.Name ?? "").ToLower().Contains(s)).ToList();
         }
-        if (workspaceId.HasValue && workspaceId.Value > 0)
-            all = all.Where(p => p.WorkspaceId == workspaceId.Value).ToList();
         if (formDefinitionId.HasValue && formDefinitionId.Value > 0)
             all = all.Where(p => ProcedureUsesFormDefinition(p, formDefinitionId.Value)).ToList();
         if (!string.IsNullOrWhiteSpace(validity))
@@ -118,10 +115,9 @@ public class WorkProceduresController : BaseController
         if (!string.IsNullOrWhiteSpace(isActive))
         {
             var want = isActive == "1";
-            all = all.Where(p => p.IsActive == want).ToList();
+            all = all.Where(p => DataService.GetEffectiveIsActive(p) == want).ToList();
         }
 
-        var workspacesAll = await _ds.ListWorkspacesAsync();
         var procTypesAll = await _ds.ListProcedureActionTypesAsync();
         var templatesAll = await _ds.ListFormTemplatesAsync();
 
@@ -139,7 +135,7 @@ public class WorkProceduresController : BaseController
             FormTemplateName = templatesAll.FirstOrDefault(t => t.Id == p.FormTemplateId)?.Name ?? "",
             VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel.Trim(),
             p.Status,
-            p.IsActive,
+            IsActive = DataService.GetEffectiveIsActive(p),
             p.CreatedBy,
             p.ApprovedBy,
             CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd"),
@@ -147,7 +143,6 @@ public class WorkProceduresController : BaseController
             p.RejectionReason
         }).ToList();
 
-        var workspacesForFilter = await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll);
         var formDefsForFilter = await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true);
         var orgUnitsForFilter = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll);
         var execRoles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
@@ -164,8 +159,7 @@ public class WorkProceduresController : BaseController
             data,
             isAdmin,
             currentUserId = CurrentUserId,
-            workspaces = workspacesForFilter.Select(w => new { w.Id, w.Name }).ToList(),
-            formDefinitions = formDefsForFilter.Select(f => new { f.Id, f.Name, f.WorkspaceId }).ToList(),
+            formDefinitions = formDefsForFilter.Select(f => new { f.Id, f.Name, f.OrganizationalUnitId }).ToList(),
             organizationalUnits = orgUnitsForFilter.Select(u => new { id = u.Id, name = u.Name }).ToList(),
             executorBeneficiaries = executorBenForFilter.Select(b => new { id = b.Id, fullName = b.FullName }).ToList()
         });
@@ -180,10 +174,8 @@ public class WorkProceduresController : BaseController
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
-        var workspaces = (await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll))
-            .Select(w => new { w.Id, w.Name }).ToList();
         var formDefs = (await ListFormDefinitionsForUserAsync(isAdmin, myOrgUnitId, activeApprovedOnly: true))
-            .Select(f => new { f.Id, f.Name, f.Ownership, f.OrganizationalUnitId, f.WorkspaceId }).ToList();
+            .Select(f => new { f.Id, f.Name, f.Ownership, f.OrganizationalUnitId }).ToList();
         var execRoles = await ListExecutorRolesForProcedureExecutorsPicklistAsync(isAdmin, allowedOrgIds);
         var allowedBenIds = ParseBeneficiaryIdsFromExecutorRoles(execRoles);
         var beneficiaries = await _ds.ListBeneficiariesAsync();
@@ -223,7 +215,6 @@ public class WorkProceduresController : BaseController
         return Json(new
         {
             success = true,
-            workspaces,
             formDefinitions = formDefs,
             executorBeneficiaries,
             executorRoles,
@@ -249,7 +240,7 @@ public class WorkProceduresController : BaseController
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
-        if (!isAdmin && !allowedOrgIds.Contains(src.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(src, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
 
         var rootId = src.VersionRootProcedureId > 0 ? src.VersionRootProcedureId : src.Id;
@@ -261,6 +252,7 @@ public class WorkProceduresController : BaseController
     public async Task<IActionResult> GetWorkProcedure(int id)
     {
         if (!IsAuthenticated) return Json(new { success = false });
+        await ApplyAutoCloseExpiredAsync();
         var p = await _ds.GetWorkProcedureByIdAsync(id);
         if (p == null) return Json(new { success = false, message = "غير موجود" });
 
@@ -268,15 +260,8 @@ public class WorkProceduresController : BaseController
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
-        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(p, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
-
-        var workspacesAll = await _ds.ListWorkspacesAsync();
-        var wsList = await ListWorkspacesForUserAsync(isAdmin, myOrgUnitId, unitsAll);
-        var wsForSelect = wsList.Select(w => new { id = w.Id, name = w.Name }).ToList();
-        var curWs = workspacesAll.FirstOrDefault(w => w.Id == p.WorkspaceId);
-        if (curWs != null && wsForSelect.All(x => x.id != curWs.Id))
-            wsForSelect.Insert(0, new { id = curWs.Id, name = curWs.Name + (curWs.IsActive ? "" : " (غير مفعّل)") });
 
         var usedFormPickerExtras = await BuildUsedFormPickerExtrasAsync(p, isAdmin, myOrgUnitId);
 
@@ -303,7 +288,6 @@ public class WorkProceduresController : BaseController
                 FormTemplateName = tpl?.Name ?? "",
                 VersionLabel = string.IsNullOrWhiteSpace(p.VersionLabel) ? "V1.0" : p.VersionLabel.Trim(),
                 p.VersionRootProcedureId,
-                p.WorkspaceId,
                 p.UsedFormDefinitionsJson,
                 p.ExecutorBeneficiaryIdsJson,
                 p.UsageFrequency,
@@ -314,6 +298,7 @@ public class WorkProceduresController : BaseController
                 ValidityEndDate = p.ValidityEndDate?.ToString("yyyy-MM-dd"),
                 p.OrganizationalUnitId,
                 p.TargetOrganizationalUnitIdsJson,
+                p.TargetBeneficiaryIdsJson,
                 p.PreviousProcedureIdsJson,
                 p.NextProcedureIdsJson,
                 p.ImplicitProcedureIdsJson,
@@ -321,17 +306,57 @@ public class WorkProceduresController : BaseController
                 p.AdditionalOutputs,
                 p.Status,
                 p.RejectionReason,
-                p.IsActive,
+                IsActive = DataService.GetEffectiveIsActive(p),
                 p.CreatedBy,
+                p.UpdatedBy,
                 p.ApprovedBy,
                 CreatedAt = p.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+                UpdatedAt = p.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),
                 ApprovedAt = p.ApprovedAt?.ToString("yyyy-MM-dd HH:mm"),
-                WorkspaceName = workspacesAll.FirstOrDefault(w => w.Id == p.WorkspaceId)?.Name ?? "",
                 OrgUnitName = unitsAll.FirstOrDefault(u => u.Id == p.OrganizationalUnitId)?.Name ?? "",
                 WorkflowStepsJson = p.WorkflowStepsJson ?? "[]"
             },
-            workspaces = wsForSelect,
             usedFormPickerExtras
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UploadRegulationAttachment(IFormFile file)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        if (file == null || file.Length == 0)
+            return Json(new { success = false, message = "لم يتم اختيار ملف" });
+
+        var allowed = new[]
+        {
+            "image/jpeg", "image/png", "image/gif", "image/webp",
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/plain"
+        };
+        var ct = file.ContentType.ToLower();
+        if (!allowed.Contains(ct))
+            return Json(new { success = false, message = "نوع الملف غير مدعوم" });
+        if (file.Length > 10_000_000)
+            return Json(new { success = false, message = "حجم الملف يتجاوز 10 MB" });
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "work-procedures");
+        Directory.CreateDirectory(uploadsDir);
+        var ext = Path.GetExtension(file.FileName);
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+        await using (var stream = System.IO.File.Create(filePath))
+            await file.CopyToAsync(stream);
+
+        return Json(new
+        {
+            success = true,
+            url = $"/uploads/work-procedures/{fileName}",
+            path = $"/uploads/work-procedures/{fileName}",
+            name = file.FileName
         });
     }
 
@@ -353,14 +378,14 @@ public class WorkProceduresController : BaseController
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
-        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(p, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
 
         var procBenIds = ParseProcedureBeneficiaryIds(p);
         var allRoles = await _ds.ListExecutorRolesAsync();
         var beneficiariesAll = await _ds.ListBeneficiariesAsync();
         var allowedExecutorRoles = allRoles
-            .Where(r => r.IsActive && ParseCsvIntIds(r.ExecutorIds).Any(id => procBenIds.Contains(id)))
+            .Where(r => r.IsActive && IsExecutorRoleFullySelectedForProcedure(r, procBenIds))
             .OrderBy(r => r.SortOrder)
             .Select(r => new
             {
@@ -376,7 +401,13 @@ public class WorkProceduresController : BaseController
         var formDefinitions = fdAll
             .Where(f => usedFdIds.Contains(f.Id))
             .OrderBy(f => f.Name)
-            .Select(f => new { id = f.Id, name = f.Name })
+            .Select(f =>
+            {
+                var sections = WorkflowSectionHelper.ParseSections(f.FieldsJson)
+                    .Select(s => new { id = s.Id, title = s.Title })
+                    .ToList();
+                return new { id = f.Id, name = f.Name, sections };
+            })
             .ToList();
 
         var statuses = (await _ds.ListFormStatusesAsync())
@@ -412,7 +443,8 @@ public class WorkProceduresController : BaseController
             new { code = "direct_manager", name = "المدير المباشر", needsOrgUnit = false },
             new { code = "managers_chain", name = "سلسلة المدراء المباشرين", needsOrgUnit = false },
             new { code = "unit_manager", name = "مدير الوحدة التنظيمية", needsOrgUnit = true },
-            new { code = "unit_representative", name = "ممثل الوحدة التنظيمية", needsOrgUnit = true }
+            new { code = "unit_representative", name = "ممثل الوحدة التنظيمية", needsOrgUnit = true },
+            new { code = "system_admin", name = "مدير النظام", needsOrgUnit = false }
         };
 
         var allowedStepActions = new[]
@@ -455,14 +487,15 @@ public class WorkProceduresController : BaseController
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
-        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(p, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
 
         var beneficiariesAll = await _ds.ListBeneficiariesAsync();
-        var err = ValidateWorkflowStepsPayload(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), await _ds.ListFormDefinitionsAsync(), await _ds.ListFormStatusesAsync(), unitsAll);
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var err = ValidateWorkflowStepsPayload(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), fdAll, await _ds.ListFormStatusesAsync(), unitsAll);
         if (err != null) return Json(new { success = false, message = err });
 
-        var normalized = NormalizeWorkflowStepsForSave(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync());
+        var normalized = NormalizeWorkflowStepsForSave(p, req.Steps ?? new(), beneficiariesAll, await _ds.ListExecutorRolesAsync(), fdAll);
         p.WorkflowStepsJson = JsonSerializer.Serialize(normalized, WorkflowJsonOpts);
         p.UpdatedBy = CurrentUserFullName;
         p.UpdatedAt = DateTime.Now;
@@ -501,7 +534,7 @@ public class WorkProceduresController : BaseController
 
     private static readonly HashSet<string> AllowedFixedAssigneeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
-        "employee", "direct_manager", "managers_chain", "unit_manager", "unit_representative"
+        "employee", "direct_manager", "managers_chain", "unit_manager", "unit_representative", "system_admin"
     };
 
     private static readonly HashSet<string> AllowedStepActionCodes = new(StringComparer.OrdinalIgnoreCase)
@@ -525,7 +558,7 @@ public class WorkProceduresController : BaseController
     {
         var procBenIds = ParseProcedureBeneficiaryIds(p);
         var allowedRoleIds = allRoles
-            .Where(r => r.IsActive && ParseCsvIntIds(r.ExecutorIds).Any(id => procBenIds.Contains(id)))
+            .Where(r => r.IsActive && IsExecutorRoleFullySelectedForProcedure(r, procBenIds))
             .Select(r => r.Id)
             .ToHashSet();
         var usedFdIds = ParseUsedFormDefinitionIds(p).ToHashSet();
@@ -589,6 +622,26 @@ public class WorkProceduresController : BaseController
 
             if (!st.IsDecision)
             {
+                var fdById = fdAll.ToDictionary(f => f.Id);
+                var (resolvedFd, resolvedSec) = WorkflowSectionHelper.ResolveStepBinding(
+                    st.FormDefinitionId, st.FormSectionId, usedFdIds.ToList(), fdById);
+
+                if (usedFdIds.Count > 1 && (!resolvedFd.HasValue || resolvedFd.Value <= 0))
+                    return $"يجب اختيار النموذج في خطوة «{st.StepLabel}» عند وجود أكثر من نموذج مستخدم";
+
+                if (resolvedFd.HasValue && resolvedFd.Value > 0 && fdById.TryGetValue(resolvedFd.Value, out var fdRow))
+                {
+                    var sectionList = WorkflowSectionHelper.ParseSections(fdRow.FieldsJson);
+                    if (sectionList.Count > 1 && (!resolvedSec.HasValue || resolvedSec.Value <= 0))
+                        return $"يجب اختيار القسم في خطوة «{st.StepLabel}»";
+                    if (st.FormSectionId.HasValue && st.FormSectionId.Value > 0)
+                    {
+                        var sectionIds = sectionList.Select(s => s.Id).ToHashSet();
+                        if (!sectionIds.Contains(st.FormSectionId.Value))
+                            return "القسم المختار غير موجود في النموذج";
+                    }
+                }
+
                 if (st.FormDefinitionId.HasValue && st.FormDefinitionId.Value > 0 && !usedFdIds.Contains(st.FormDefinitionId.Value))
                     return "النموذج المختار غير ضمن النماذج المستخدمة للإجراء";
                 if (st.FormStatusId.HasValue && st.FormStatusId.Value > 0 && !fsIds.Contains(st.FormStatusId.Value))
@@ -596,28 +649,23 @@ public class WorkProceduresController : BaseController
 
                 if (assigneeMode == "specific" || assigneeMode == "fixed")
                 {
-                    // الإجراءات المسموحة إلزامية
-                    if (st.AllowedActions == null || st.AllowedActions.Count == 0)
-                        return "الإجراءات المسموحة مطلوبة";
-                    foreach (var a in st.AllowedActions)
+                    if (st.AllowedActions != null && st.AllowedActions.Count > 0)
                     {
-                        if (!string.IsNullOrWhiteSpace(a) && !AllowedStepActionCodes.Contains(a.Trim()))
-                            return "إجراء غير صالح ضمن الإجراءات المسموحة";
+                        foreach (var a in st.AllowedActions)
+                        {
+                            if (!string.IsNullOrWhiteSpace(a) && !AllowedStepActionCodes.Contains(a.Trim()))
+                                return "إجراء غير صالح ضمن الإجراءات المسموحة";
+                        }
+                        var hasReturn = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "return", StringComparison.OrdinalIgnoreCase));
+                        if (hasReturn && (!st.ReturnStepId.HasValue || st.ReturnStepId.Value <= 0))
+                            return "خطوة الرجوع مطلوبة عند تفعيل إجراء «إرجاع»";
+                        var hasConcurrent = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "concurrent_approvals", StringComparison.OrdinalIgnoreCase));
+                        if (hasConcurrent && (!st.ConcurrentStepId.HasValue || st.ConcurrentStepId.Value <= 0))
+                            return "خطوة التزامن مطلوبة عند تفعيل «موافقات متزامنة»";
                     }
-                    var hasReturn = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "return", StringComparison.OrdinalIgnoreCase));
-                    if (hasReturn && (!st.ReturnStepId.HasValue || st.ReturnStepId.Value <= 0))
-                        return "خطوة الرجوع مطلوبة عند تفعيل إجراء «إرجاع»";
-                    var hasConcurrent = st.AllowedActions.Any(a => string.Equals(a?.Trim(), "concurrent_approvals", StringComparison.OrdinalIgnoreCase));
-                    if (hasConcurrent && (!st.ConcurrentStepId.HasValue || st.ConcurrentStepId.Value <= 0))
-                        return "خطوة التزامن مطلوبة عند تفعيل «موافقات متزامنة»";
                     // الحالة إلزامية للخطوات غير القرارية
                     if (!st.FormStatusId.HasValue || st.FormStatusId.Value <= 0)
                         return "الحالة مطلوبة";
-                    // قناة إشعار واحدة على الأقل
-                    var hasChannels = (st.NotificationChannels != null && st.NotificationChannels.Any(c => !string.IsNullOrWhiteSpace(c)))
-                        || !string.IsNullOrWhiteSpace(st.NotificationChannel);
-                    if (!hasChannels)
-                        return "قناة الإشعار مطلوبة";
                 }
             }
 
@@ -644,9 +692,12 @@ public class WorkProceduresController : BaseController
         WorkProcedure p,
         List<WorkflowStepSaveDto> steps,
         List<Beneficiary> beneficiariesAll,
-        List<ExecutorRole> allRoles)
+        List<ExecutorRole> allRoles,
+        List<FormDefinition> fdAll)
     {
         var procBenIds = ParseProcedureBeneficiaryIds(p);
+        var usedIds = ParseUsedFormDefinitionIds(p).ToList();
+        var fdById = fdAll.ToDictionary(f => f.Id);
         var ordered = steps.OrderBy(s => s.SortOrder).ToList();
         var result = new List<WorkflowStepSaveDto>();
         foreach (var st in ordered)
@@ -669,7 +720,7 @@ public class WorkProceduresController : BaseController
             }
             var primaryChannel = normalizedChannels != null && normalizedChannels.Count > 0
                 ? normalizedChannels.First()
-                : (string.IsNullOrWhiteSpace(st.NotificationChannel) ? "in_app" : st.NotificationChannel.Trim().ToLowerInvariant());
+                : (string.IsNullOrWhiteSpace(st.NotificationChannel) ? "" : st.NotificationChannel.Trim().ToLowerInvariant());
 
             List<string>? normalizedActions = null;
             if (st.AllowedActions != null && st.AllowedActions.Count > 0)
@@ -682,6 +733,9 @@ public class WorkProceduresController : BaseController
                     .ToList();
                 if (normalizedActions.Count == 0) normalizedActions = null;
             }
+
+            var (resolvedFd, resolvedSec) = WorkflowSectionHelper.ResolveStepBinding(
+                st.FormDefinitionId, st.FormSectionId, usedIds, fdById);
 
             var copy = new WorkflowStepSaveDto
             {
@@ -696,7 +750,8 @@ public class WorkProceduresController : BaseController
                 EscalationSyncFlags = st.EscalationSyncFlags,
                 ReturnStepId = st.ReturnStepId,
                 ProgressStepId = st.ProgressStepId,
-                FormDefinitionId = st.FormDefinitionId,
+                FormDefinitionId = resolvedFd,
+                FormSectionId = resolvedSec,
                 FormStatusId = st.FormStatusId,
                 NotificationChannel = primaryChannel,
                 NotificationChannels = normalizedChannels,
@@ -720,11 +775,16 @@ public class WorkProceduresController : BaseController
                 copy.IsConcurrentStep = false;
                 copy.EscalationSyncFlags = null;
                 copy.FormDefinitionId = null;
+                copy.FormSectionId = null;
                 copy.FormStatusId = null;
                 copy.NotificationChannel = "in_app";
                 copy.NotificationChannels = null;
                 copy.OverdueNotificationText = "";
                 copy.ExecutionNotificationText = "";
+            }
+            else if (!copy.FormDefinitionId.HasValue || copy.FormDefinitionId.Value <= 0)
+            {
+                copy.FormSectionId = null;
             }
             else if (copy.AssigneeMode == "specific")
             {
@@ -791,7 +851,10 @@ public class WorkProceduresController : BaseController
         if (!ValidateTargetOrganizationalUnitsActive(req.TargetOrganizationalUnitIds ?? new List<int>(), unitsAll))
             return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير موجودة أو غير مفعّلة" });
 
-        await ApplyDerivedWorkspaceIdAsync(req);
+        var tgtBenErr = await ValidateTargetBeneficiaryIdsAsync(req.TargetBeneficiaryIds, req.TargetOrganizationalUnitIds ?? new List<int>());
+        if (tgtBenErr != null) return Json(new { success = false, message = tgtBenErr });
+
+        req.WorkspaceId = 0;
 
         WorkProcedure? versionSource = null;
         if (isVersionMode)
@@ -799,13 +862,19 @@ public class WorkProceduresController : BaseController
             versionSource = await _ds.GetWorkProcedureByIdAsync(req.BaseProcedureId!.Value);
             if (versionSource == null)
                 return Json(new { success = false, message = "الإجراء المرجعي للإصدار غير موجود" });
-            if (!isAdmin && !allowedOrgIds.Contains(versionSource.OrganizationalUnitId))
+            if (!CanUserAccessWorkProcedure(versionSource, isAdmin, CurrentUserFullName, allowedOrgIds))
                 return Json(new { success = false, message = "غير مصرح بإنشاء إصدار من هذا الإجراء" });
         }
 
         var send = req.SendForApproval;
         var w = BuildEntityFromRequest(req, new WorkProcedure(), isAdmin, send);
         w.CreatedBy = CurrentUserFullName;
+
+        if (send)
+        {
+            var wfErr = ValidateWorkflowStepsForPublish(w.WorkflowStepsJson);
+            if (wfErr != null) return Json(new { success = false, message = wfErr });
+        }
 
         if (versionSource != null)
         {
@@ -876,7 +945,7 @@ public class WorkProceduresController : BaseController
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
-        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(p, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
 
         if (!isAdmin)
@@ -899,7 +968,10 @@ public class WorkProceduresController : BaseController
         if (!ValidateTargetOrganizationalUnitsActive(req.TargetOrganizationalUnitIds ?? new List<int>(), unitsAll))
             return Json(new { success = false, message = "إحدى الوحدات المستهدفة غير موجودة أو غير مفعّلة" });
 
-        await ApplyDerivedWorkspaceIdAsync(req);
+        var tgtBenErr = await ValidateTargetBeneficiaryIdsAsync(req.TargetBeneficiaryIds, req.TargetOrganizationalUnitIds ?? new List<int>());
+        if (tgtBenErr != null) return Json(new { success = false, message = tgtBenErr });
+
+        req.WorkspaceId = 0;
 
         BuildEntityFromRequest(req, p, isAdmin, req.SendForApproval);
         p.UpdatedBy = CurrentUserFullName;
@@ -907,6 +979,9 @@ public class WorkProceduresController : BaseController
 
         if (req.SendForApproval)
         {
+            var wfErr = ValidateWorkflowStepsForPublish(p.WorkflowStepsJson);
+            if (wfErr != null) return Json(new { success = false, message = wfErr });
+
             if (isAdmin)
             {
                 p.Status = "approved";
@@ -944,7 +1019,7 @@ public class WorkProceduresController : BaseController
         var unitsAll = await _ds.ListOrganizationalUnitsAsync();
         var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
-        if (!isAdmin && !allowedOrgIds.Contains(p.OrganizationalUnitId))
+        if (!CanUserAccessWorkProcedure(p, isAdmin, CurrentUserFullName, allowedOrgIds))
             return Json(new { success = false, message = "غير مصرح" });
 
         if (await _ds.IsWorkProcedureLinkedAsync(req.Id))
@@ -1031,8 +1106,39 @@ public class WorkProceduresController : BaseController
         return Json(new { success = true, isActive = p.IsActive });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> GetBeneficiariesByOrgUnits([FromBody] OrgUnitsBeneficiariesRequest req)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        var ids = (req.OrganizationalUnitIds ?? new List<int>()).Where(x => x > 0).Distinct().ToList();
+        if (ids.Count == 0)
+            return Json(new { success = true, data = new List<object>() });
+
+        var unitsAll = await _ds.ListOrganizationalUnitsAsync();
+        var activeUnitIds = DataService.FilterEffectivelyActiveOrganizationalUnits(unitsAll).Select(u => u.Id).ToHashSet();
+        var validIds = ids.Where(activeUnitIds.Contains).ToHashSet();
+        var ouMap = unitsAll.ToDictionary(u => u.Id, u => u.Name);
+
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        var data = beneficiaries
+            .Where(b => b.IsActive && b.OrganizationalUnitId.HasValue && validIds.Contains(b.OrganizationalUnitId.Value))
+            .OrderBy(b => b.FullName)
+            .Select(b => new
+            {
+                id = b.Id,
+                fullName = b.FullName,
+                organizationalUnitId = b.OrganizationalUnitId,
+                departmentName = b.OrganizationalUnitId.HasValue && ouMap.TryGetValue(b.OrganizationalUnitId.Value, out var ouName)
+                    ? ouName
+                    : "",
+                isUnitManager = b.IsUnitManager
+            })
+            .ToList();
+        return Json(new { success = true, data });
+    }
+
     [HttpGet]
-    public async Task<IActionResult> ListRelatedProcedures(int? excludeId, bool approvedOnly = false)
+    public async Task<IActionResult> ListRelatedProcedures(int? excludeId, bool approvedOnly = false, bool activeOnly = true)
     {
         if (!IsAuthenticated) return Json(new { success = false });
         var isAdmin = CurrentUserRole == "Admin";
@@ -1041,10 +1147,14 @@ public class WorkProceduresController : BaseController
         var allowedOrgIds = DescendantOrgUnitIdsIncludingSelf(myOrgUnitId, unitsAll);
 
         var all = await _ds.ListWorkProceduresAsync();
-        if (!isAdmin)
+        if (isAdmin)
+            all = WorkProcedureVisibility.FilterForAdmin(all, CurrentUserFullName).ToList();
+        else
             all = all.Where(p => allowedOrgIds.Contains(p.OrganizationalUnitId)).ToList();
         if (approvedOnly)
             all = all.Where(p => p.Status == "approved").ToList();
+        if (activeOnly)
+            all = all.Where(IsProcedureCurrentlyActive).ToList();
         if (excludeId.HasValue && excludeId.Value > 0)
             all = all.Where(p => p.Id != excludeId.Value).ToList();
 
@@ -1065,20 +1175,13 @@ public class WorkProceduresController : BaseController
 
     // ─── helpers ─────────────────────────────────────────────────────────────
 
-    private async Task ApplyAutoCloseExpiredAsync()
+    private Task ApplyAutoCloseExpiredAsync() => _ds.ApplyAutoCloseExpiredWorkProceduresAsync();
+
+    private static bool CanUserAccessWorkProcedure(WorkProcedure p, bool isAdmin, string? userFullName, HashSet<int> allowedOrgIds)
     {
-        var list = await _ds.ListWorkProceduresAsync();
-        var today = DateTime.Today;
-        foreach (var p in list)
-        {
-            if (p.Status == "approved" && p.ValidityType == "مؤقت" && p.ValidityEndDate.HasValue
-                && p.ValidityEndDate.Value.Date < today && p.IsActive)
-            {
-                p.IsActive = false;
-                p.UpdatedAt = DateTime.Now;
-                await _ds.UpdateWorkProcedureAsync(p);
-            }
-        }
+        if (isAdmin)
+            return WorkProcedureVisibility.IsVisibleToAdmin(p, userFullName);
+        return allowedOrgIds.Contains(p.OrganizationalUnitId);
     }
 
     private async Task<string?> ValidateUsedFormsAsync(List<UsedFormDefItem>? items, bool isAdmin, int myOrgUnitId, int organizationalUnitId, HashSet<int>? grandfatheredUsedFormDefIds)
@@ -1198,7 +1301,9 @@ public class WorkProceduresController : BaseController
             if (selfId.HasValue && id == selfId.Value) return "لا يمكن ربط الإجراء بنفسه";
             var o = all.FirstOrDefault(x => x.Id == id);
             if (o == null) return "إجراء مرتبط غير موجود";
-            if (!isAdmin && !allowedOrgIds.Contains(o.OrganizationalUnitId))
+            if (!IsProcedureCurrentlyActive(o))
+                return "يمكن ربط الإجراءات المفعلة فقط";
+            if (!CanUserAccessWorkProcedure(o, isAdmin, CurrentUserFullName, allowedOrgIds))
                 return "إجراء مرتبط غير مسموح به";
         }
         return null;
@@ -1247,7 +1352,7 @@ public class WorkProceduresController : BaseController
         w.RegulationsAttachmentsJson = string.IsNullOrWhiteSpace(req.RegulationsAttachmentsJson) ? "[]" : req.RegulationsAttachmentsJson!;
         w.ProcedureActionTypeId = req.ProcedureActionTypeId;
         w.FormTemplateId = req.FormTemplateId;
-        w.WorkspaceId = req.WorkspaceId;
+        w.WorkspaceId = 0;
         w.UsedFormDefinitionsJson = SerializeUsedForms(req.UsedForms);
         w.ExecutorBeneficiaryIdsJson = JsonSerializer.Serialize(req.ExecutorBeneficiaryIds ?? new List<int>(), JsonOpts);
         w.UsageFrequency = req.UsageFrequency ?? "شهري";
@@ -1258,6 +1363,7 @@ public class WorkProceduresController : BaseController
         w.ValidityEndDate = w.ValidityType == "مؤقت" ? ParseDate(req.ValidityEndDate) : null;
         w.OrganizationalUnitId = req.OrganizationalUnitId;
         w.TargetOrganizationalUnitIdsJson = JsonSerializer.Serialize(req.TargetOrganizationalUnitIds ?? new List<int>(), JsonOpts);
+        w.TargetBeneficiaryIdsJson = JsonSerializer.Serialize(req.TargetBeneficiaryIds ?? new List<int>(), JsonOpts);
         w.PreviousProcedureIdsJson = JsonSerializer.Serialize(req.PreviousProcedureIds ?? new List<int>(), JsonOpts);
         w.NextProcedureIdsJson = JsonSerializer.Serialize(req.NextProcedureIds ?? new List<int>(), JsonOpts);
         w.ImplicitProcedureIdsJson = JsonSerializer.Serialize(req.ImplicitProcedureIds ?? new List<int>(), JsonOpts);
@@ -1338,7 +1444,7 @@ public class WorkProceduresController : BaseController
         if (string.IsNullOrWhiteSpace(req.ProcedureClassification)) return "التصنيف مطلوب";
         if (string.IsNullOrWhiteSpace(req.ConfidentialityLevel)) return "مستوى السرية مطلوب";
         if (string.IsNullOrWhiteSpace(req.ValidityType)) return "صلاحية الإجراء مطلوبة";
-        if (req.OrganizationalUnitId <= 0) return "الوحدة التنظيمية المالكة مطلوبة";
+        if (req.OrganizationalUnitId <= 0) return "الوحدة التنظيمية المالكة للإجراء مطلوبة";
         if (req.TargetOrganizationalUnitIds == null || req.TargetOrganizationalUnitIds.Count == 0)
             return "الوحدات التنظيمية المستهدفة مطلوبة";
         if (req.ExecutorBeneficiaryIds == null || req.ExecutorBeneficiaryIds.Count == 0)
@@ -1415,6 +1521,53 @@ public class WorkProceduresController : BaseController
         catch { return false; }
     }
 
+    private static bool IsProcedureCurrentlyActive(WorkProcedure p)
+    {
+        if (!p.IsActive || p.Status != "approved") return false;
+        if (p.ValidityType == "مؤقت" && p.ValidityEndDate.HasValue && p.ValidityEndDate.Value.Date < DateTime.Today)
+            return false;
+        return true;
+    }
+
+    private static bool IsExecutorRoleFullySelectedForProcedure(ExecutorRole role, HashSet<int> procBenIds)
+    {
+        var bids = ParseCsvIntIds(role.ExecutorIds);
+        return bids.Count > 0 && bids.All(procBenIds.Contains);
+    }
+
+    private static string? ValidateWorkflowStepsForPublish(string? workflowStepsJson)
+    {
+        try
+        {
+            var steps = JsonSerializer.Deserialize<List<WorkflowStepSaveDto>>(workflowStepsJson ?? "[]", WorkflowJsonOpts) ?? new();
+            if (!steps.Any())
+                return "يجب إضافة خطوة واحدة على الأقل في سير العمل قبل النشر";
+        }
+        catch
+        {
+            return "سير العمل غير صالح";
+        }
+        return null;
+    }
+
+    private async Task<string?> ValidateTargetBeneficiaryIdsAsync(List<int>? ids, List<int> targetOrgUnitIds)
+    {
+        if (ids == null || ids.Count == 0) return null;
+        var targetSet = targetOrgUnitIds.Where(x => x > 0).ToHashSet();
+        if (targetSet.Count == 0)
+            return "يجب اختيار الوحدات التنظيمية المستهدفة قبل تحديد المستهدفين المعنيين";
+        var beneficiaries = await _ds.ListBeneficiariesAsync();
+        foreach (var bid in ids.Distinct())
+        {
+            var b = beneficiaries.FirstOrDefault(x => x.Id == bid);
+            if (b == null || !b.IsActive)
+                return "أحد المستهدفين المعنيين غير صالح أو غير مفعّل";
+            if (!b.OrganizationalUnitId.HasValue || !targetSet.Contains(b.OrganizationalUnitId.Value))
+                return "المستهدفون المعنيون يجب أن ينتموا إلى الوحدات التنظيمية المستهدفة المختارة";
+        }
+        return null;
+    }
+
     private async Task ApplyDerivedWorkspaceIdAsync(WorkProcedureRequest req)
     {
         if (req.WorkspaceId > 0) return;
@@ -1451,11 +1604,9 @@ public class WorkProceduresController : BaseController
     private async Task<List<FormDefinition>> ListFormDefinitionsForUserAsync(bool isAdmin, int myOrgUnitId, bool activeApprovedOnly = false)
     {
         var all = await _ds.ListFormDefinitionsAsync();
-        IEnumerable<FormDefinition> q = all;
-        if (!isAdmin)
-            q = q.Where(f =>
-                f.Ownership == "عام" ||
-                (f.Ownership == "خاص" && f.OrganizationalUnitId == myOrgUnitId));
+        IEnumerable<FormDefinition> q = isAdmin
+            ? FormDefinitionVisibility.FilterForAdmin(all, CurrentUserFullName)
+            : FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId);
         if (activeApprovedOnly)
             q = q.Where(FormDefinitionIsActiveApproved);
         return q.OrderByDescending(f => f.CreatedAt).ToList();
@@ -1548,6 +1699,7 @@ public class WorkProceduresController : BaseController
         public string? ValidityEndDate { get; set; }
         public int OrganizationalUnitId { get; set; }
         public List<int>? TargetOrganizationalUnitIds { get; set; }
+        public List<int>? TargetBeneficiaryIds { get; set; }
         public List<int>? PreviousProcedureIds { get; set; }
         public List<int>? NextProcedureIds { get; set; }
         public List<int>? ImplicitProcedureIds { get; set; }
@@ -1574,6 +1726,11 @@ public class WorkProceduresController : BaseController
         public string? Reason { get; set; }
     }
 
+    public class OrgUnitsBeneficiariesRequest
+    {
+        public List<int>? OrganizationalUnitIds { get; set; }
+    }
+
     public class WorkflowStepSaveDto
     {
         public int Id { get; set; }
@@ -1588,6 +1745,8 @@ public class WorkProceduresController : BaseController
         public int? ReturnStepId { get; set; }
         public int? ProgressStepId { get; set; }
         public int? FormDefinitionId { get; set; }
+        /// <summary>قسم النموذج المرتبط بالخطوة (اختيار مفرد) عند وجود أقسام في النموذج.</summary>
+        public int? FormSectionId { get; set; }
         public int? FormStatusId { get; set; }
         public string NotificationChannel { get; set; } = "in_app";
         public string OverdueNotificationText { get; set; } = "";
@@ -1596,7 +1755,7 @@ public class WorkProceduresController : BaseController
 
         /// <summary>"specific" (دور من «أدوار المنفذين») أو "fixed" (نوع ثابت كالموظف/المدير...).</summary>
         public string AssigneeMode { get; set; } = "specific";
-        /// <summary>عند AssigneeMode = "fixed": employee | direct_manager | managers_chain | unit_manager | unit_representative</summary>
+        /// <summary>عند AssigneeMode = "fixed": employee | direct_manager | managers_chain | unit_manager | unit_representative | system_admin</summary>
         public string AssigneeFixedType { get; set; } = "";
         /// <summary>الوحدة التنظيمية المصاحبة عند fixed-type = unit_manager / unit_representative.</summary>
         public int? AssigneeOrgUnitId { get; set; }

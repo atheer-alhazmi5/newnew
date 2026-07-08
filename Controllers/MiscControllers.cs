@@ -74,14 +74,71 @@ public class FeedbackRequest { public int Rating { get; set; } public string? Co
 
 public class GuideController : BaseController
 {
+    private readonly DataService _ds;
     private readonly UiHelperService _ui;
-    public GuideController(UiHelperService ui) { _ui = ui; }
+
+    public GuideController(DataService ds, UiHelperService ui)
+    {
+        _ds = ds;
+        _ui = ui;
+    }
 
     public IActionResult Index()
     {
-        var auth = RequireAuth(); if (auth != null) return auth;
-        SetViewBagUser(_ui);
+        var auth = RequireAuth();
+        if (auth != null) return auth;
+        ViewBag.UserId = CurrentUserId;
+        ViewBag.Title = "دليل المستخدم";
         return View();
+    }
+
+    /// <summary>محتوى الدليل للقراءة — عناصر مفعّلة فقط، لجميع المستخدمين المصادقين.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetReaderItems()
+    {
+        if (!IsAuthenticated)
+            return Json(new { success = false, message = "غير مصرح" });
+
+        var all = await _ds.ListUserGuideItemsAsync();
+        if (all.Any(x => string.IsNullOrWhiteSpace(x.OrderPath)))
+            await _ds.RecalculateUserGuideHierarchyAsync();
+        all = await _ds.ListUserGuideItemsAsync();
+
+        var active = all.Where(x => x.IsActive).ToList();
+        var childCounts = active
+            .Where(x => x.ParentId.HasValue)
+            .GroupBy(x => x.ParentId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var data = active
+            .Select(r => new
+            {
+                r.Id,
+                r.ParentId,
+                r.Name,
+                r.Content,
+                r.AttachmentUrl,
+                Icon = string.IsNullOrWhiteSpace(r.Icon) ? "bi-journal-text" : r.Icon.Trim(),
+                Color = string.IsNullOrWhiteSpace(r.Color) ? "#25935F" : r.Color.Trim(),
+                r.Notes,
+                r.OrderPath,
+                DisplayOrder = FormatGuideDisplayOrder(r.OrderPath),
+                HasChildren = childCounts.ContainsKey(r.Id)
+            })
+            .OrderBy(x => x.OrderPath, StringComparer.Create(new System.Globalization.CultureInfo("ar-SA"), false))
+            .ToList();
+
+        return Json(new { success = true, data });
+    }
+
+    private static string FormatGuideDisplayOrder(string? orderPath)
+    {
+        if (string.IsNullOrWhiteSpace(orderPath)) return "";
+        var parts = orderPath.Split('،', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0) return "";
+        if (parts.Length == 1) return parts[0];
+        if (parts.Length == 2) return parts[0] + "،" + parts[1];
+        return parts[0] + "،" + parts[1] + "-" + string.Join("-", parts.Skip(2));
     }
 }
 

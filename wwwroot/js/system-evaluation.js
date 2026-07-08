@@ -5,6 +5,8 @@ var seOverallChart = null;
 var seIsAdmin = false;
 var seCanSubmit = true;
 var seEvaluateModal = null;
+var seNotesViewModal = null;
+var seRowsCache = [];
 var seForm = { overall: '', ease: '', design: '', performance: '', support: '' };
 
 var sePickedLabelMap = { ease: 'sePickedEase', design: 'sePickedDesign', performance: 'sePickedPerformance', support: 'sePickedSupport' };
@@ -266,7 +268,39 @@ function sePublishStatusBadge(isPublished) {
     return '<span class="se-publish-badge se-publish-badge-off"><i class="bi bi-hourglass-split"></i> بانتظار النشر</span>';
 }
 
+function seNotesCellHtml(r) {
+    var notes = String(seProp(r, 'notes', 'Notes') || '').trim();
+    if (!notes) {
+        return '<td class="se-notes-cell"><span class="text-muted">—</span></td>';
+    }
+    var rowId = seRowId(r);
+    return '<td class="se-notes-cell">'
+        + '<button type="button" class="se-notes-view-btn" title="عرض الملاحظات والرأي الإضافي" '
+        + 'onclick="seShowNotes(' + rowId + ')">'
+        + '<i class="bi bi-chat-left-text-fill"></i></button></td>';
+}
+
+function seShowNotes(id) {
+    var row = seRowsCache.find(function (r) { return Number(seRowId(r)) === Number(id); });
+    var notes = row ? String(seProp(row, 'notes', 'Notes') || '').trim() : '';
+    if (!notes) return;
+
+    var bodyEl = document.getElementById('seNotesViewBody');
+    var subEl = document.getElementById('seNotesViewSubmitter');
+    if (bodyEl) bodyEl.textContent = notes;
+    if (subEl) {
+        var name = seProp(row, 'submitterName', 'SubmitterName') || '—';
+        subEl.textContent = 'مقدم التقييم: ' + name;
+    }
+
+    var el = document.getElementById('seNotesViewModal');
+    if (!el) return;
+    if (!seNotesViewModal && typeof bootstrap !== 'undefined') seNotesViewModal = new bootstrap.Modal(el);
+    if (seNotesViewModal) seNotesViewModal.show();
+}
+
 function seRenderTable(rows) {
+    seRowsCache = rows || [];
     var body = document.getElementById('seBody');
     if (!body) return;
     var colSpan = seIsAdmin ? 12 : 10;
@@ -291,7 +325,7 @@ function seRenderTable(rows) {
             + '<td>' + seRatingBadge(seProp(r, 'design', 'Design')) + '</td>'
             + '<td>' + seRatingBadge(seProp(r, 'performance', 'Performance')) + '</td>'
             + '<td>' + seRatingBadge(seProp(r, 'technicalSupport', 'TechnicalSupport')) + '</td>'
-            + '<td class="se-notes-cell">' + seEsc(seProp(r, 'notes', 'Notes') || '—') + '</td>';
+            + seNotesCellHtml(r);
 
         if (seIsAdmin) {
             html += '<td>' + sePublishStatusBadge(published) + '</td>'
@@ -358,4 +392,5 @@ window.sePickDim = sePickDim;
 window.seSubmitFeedback = seSubmitFeedback;
 window.seSetPublish = seSetPublish;
 window.seTogglePublish = seTogglePublish;
+window.seShowNotes = seShowNotes;
 window.seLoad = seLoad;

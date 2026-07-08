@@ -9,11 +9,13 @@
 <style>
 .fdv-page-wrap { width:100%; }
 .fdv-page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+.fdv-page-header > div:first-child { min-width:0; flex:1 1 auto; }
 .fdv-title-pub { display:inline-flex; align-items:center; gap:8px; padding:3px 12px; border-radius:8px; font-size:13px; font-weight:700; background:var(--gray-100); color:var(--gray-700); font-family:'Cairo',sans-serif; }
 .fdv-form-name { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
-.fdv-back-btn { background:var(--gray-100); border:2px solid var(--gray-200); color:var(--gray-700); border-radius:12px; padding:8px 18px; font-weight:700; font-size:13px; }
-.fdv-back-btn:hover { background:var(--gray-200); }
-.fdv-create-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.fdv-back-btn { display:inline-flex; align-items:center; gap:6px; margin-top:10px; background:var(--gray-100); border:2px solid var(--gray-200); color:var(--gray-700); border-radius:12px; padding:8px 18px; font-weight:700; font-size:13px; text-decoration:none; }
+.fdv-back-btn:hover { background:var(--gray-200); color:var(--gray-800); }
+.fdv-create-btn { flex-shrink:0; border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; background:var(--sa-600); border-color:var(--sa-600); color:#fff; }
+.fdv-create-btn:hover { background:var(--sa-700); border-color:var(--sa-700); color:#fff; }
 
 /* Reuse fd-* table action button styles defined inline */
 .fdv-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
@@ -176,13 +178,11 @@
                 <span class="fdv-title-pub"><i class="bi bi-hash"></i> @formPublicId</span>
                 <span style="margin-inline-start:10px;">@formName</span>
             </p>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
             <a href="/FormDefinitions/Index" class="fdv-back-btn"><i class="bi bi-arrow-right-short"></i> رجوع للنماذج</a>
-            <button type="button" class="btn btn-primary fdv-create-btn" onclick="fdvCreateNewVersion()">
-                <i class="bi bi-plus-lg"></i> إنشاء نسخة إصدار جديدة
-            </button>
         </div>
+        <button type="button" class="btn btn-primary fdv-create-btn" id="fdvCreateBtn" onclick="fdvCreateNewVersion()">
+            <i class="bi bi-plus-lg"></i> إنشاء نسخة إصدار جديدة
+        </button>
     </div>
 
     <div class="card">

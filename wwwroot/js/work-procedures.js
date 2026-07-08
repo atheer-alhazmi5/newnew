@@ -2,7 +2,6 @@
 
 let wpData = [];
 let wpLookups = {
-    workspaces: [],
     formDefinitions: [],
     executorBeneficiaries: [],
     executorRoles: [],
@@ -20,6 +19,7 @@ let wpEditId = null;
 let wpRejectId = null;
 let wpDeleteId = null;
 let wpRelated = [];
+let wpConcernedBeneficiaries = [];
 /** نمط النموذج: 'create' | 'edit' | 'version' */
 let wpModeKind = 'create';
 /** قائمة الإجراءات الكاملة (للاستخدام كمصدر في وضع «إصدار نسخة»). */
@@ -33,6 +33,7 @@ let wpUsedFormPickerExtras = [];
 let wpWfProcedureId = null;
 let wpWfCtx = null;
 let wpWfSteps = [];
+let wpWfDragFromId = null;
 let wpCurrentTab = 1;
 
 let wpOuExpandedOwner = {};
@@ -189,6 +190,7 @@ function wpToggleAllTargetOrgs() {
         wpExpandAllTargetOuBranches();
         wpRenderTargetOrgCb(allIds);
     }
+    wpRefreshConcernedBeneficiaries();
 }
 
 function wpFilterOuClosePanel() {
@@ -261,7 +263,6 @@ function wpRenderFilterOuTreePanel() {
 }
 
 const wpWizModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpEditModal'));
-const wpDetModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpDetailsModal'));
 const wpRejModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpRejectModal'));
 const wpDelModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpDeleteModal'));
 const wpWfDetModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpWorkflowStepDetailModal'));
@@ -271,13 +272,11 @@ async function wpLoad() {
     const search = document.getElementById('wpSearch')?.value || '';
     const status = document.getElementById('wpFilterStatus')?.value || '';
     const validity = document.getElementById('wpFilterValidity')?.value || '';
-    const workspaceId = document.getElementById('wpFilterWorkspace')?.value || '';
     const formDefinitionId = document.getElementById('wpFilterFormDef')?.value || '';
     const targetOrgUnitId = document.getElementById('wpFilterTargetOrg')?.value || '';
     const executorRoleId = document.getElementById('wpFilterExecutor')?.value || '';
     const isActive = document.getElementById('wpFilterActive')?.value || '';
     const p = new URLSearchParams({ search, status, validity, isActive });
-    if (workspaceId) p.set('workspaceId', workspaceId);
     if (formDefinitionId) p.set('formDefinitionId', formDefinitionId);
     if (targetOrgUnitId) p.set('targetOrgUnitId', targetOrgUnitId);
     if (executorRoleId) p.set('executorRoleId', executorRoleId);
@@ -288,7 +287,6 @@ async function wpLoad() {
         ]);
         if (lu.success) {
             wpLookups = {
-                workspaces: lu.workspaces || [],
                 formDefinitions: lu.formDefinitions || [],
                 executorBeneficiaries: lu.executorBeneficiaries || [],
                 executorRoles: lu.executorRoles || [],
@@ -309,7 +307,6 @@ async function wpLoad() {
 }
 
 function wpFillFilters(res) {
-    const wsList = res.workspaces || [];
     const fdList = res.formDefinitions || [];
     const orgList = res.organizationalUnits || wpLookups.organizationalUnits || [];
     const refill = (sel, placeholder, items, getLabel, getVal) => {
@@ -326,13 +323,6 @@ function wpFillFilters(res) {
         if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
     };
 
-    refill(
-        document.getElementById('wpFilterWorkspace'),
-        'مساحة العمل',
-        wsList,
-        (w) => w.name ?? w.Name ?? '',
-        (w) => w.id ?? w.Id
-    );
     refill(
         document.getElementById('wpFilterFormDef'),
         'النماذج المستخدمة',
@@ -365,7 +355,7 @@ function wpFillFilters(res) {
 }
 
 function wpClear() {
-    ['wpSearch', 'wpFilterWorkspace', 'wpFilterFormDef', 'wpFilterValidity', 'wpFilterExecutor', 'wpFilterStatus', 'wpFilterActive'].forEach(id => {
+    ['wpSearch', 'wpFilterFormDef', 'wpFilterValidity', 'wpFilterExecutor', 'wpFilterStatus', 'wpFilterActive'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -392,7 +382,7 @@ function wpRenderTable() {
     const tbody = document.getElementById('wpBody');
     if (!tbody) return;
     if (!wpData.length) {
-        tbody.innerHTML = `<tr><td colspan="13"><div class="fd-empty-state"><i class="bi bi-diagram-3"></i><p>لا توجد إجراءات بعد</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-diagram-3"></i><p>لا توجد إجراءات بعد</p></div></td></tr>`;
         return;
     }
     const disp = wpIsAdmin ? '' : 'display:none;';
@@ -408,9 +398,6 @@ function wpRenderTable() {
             <td style="font-weight:600;">${esc(f.code)}</td>
             <td>${esc(f.name)}</td>
             <td style="font-size:13px;">${patName === '—' ? '<span class="text-muted">—</span>' : esc(patName)}</td>
-            <td style="text-align:center;font-size:13px;">${esc(f.usageFrequency || f.UsageFrequency || '—')}</td>
-            <td style="text-align:center;font-size:13px;">${esc(f.confidentialityLevel || f.ConfidentialityLevel || '—')}</td>
-            <td>${esc(f.procedureClassification)}</td>
             <td style="font-size:13px;">${esc(f.orgUnitName)}</td>
             <td style="text-align:center;">${esc(f.validityType)}</td>
             <td style="font-size:13px;">${tplName === '—' ? '<span class="text-muted">—</span>' : esc(tplName)}</td>
@@ -428,12 +415,8 @@ function wpActions(f) {
     parts.push(`<button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`);
     if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`);
-    if (!wpIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
-        parts.push(`<button type="button" class="fd-action-btn fd-action-btn-send" onclick="wpSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`);
-    if (wpIsAdmin && f.status === 'pending') {
-        parts.push(`<button type="button" class="fd-action-btn fd-action-btn-approve" onclick="wpApprove(${f.id})"><i class="bi bi-check-lg"></i> اعتماد</button>`);
+    if (wpIsAdmin && f.status === 'pending')
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-reject" onclick="wpShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`);
-    }
     if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         parts.push(`<button type="button" class="fd-action-btn fd-action-btn-delete" onclick="wpShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`);
     return `<div class="wp-action-grid">${parts.join('')}</div>`;
@@ -719,7 +702,7 @@ function wpRenderOwnerOrgDd(selectedId) {
     const syncLbl = () => {
         const v = parseInt(hid.value, 10) || 0;
         const u = units.find((x) => wpOuUnitId(x) === v);
-        lbl.textContent = u ? wpOuName(u) : 'اختر الوحدة التنظيمية المالكة...';
+        lbl.textContent = u ? wpOuName(u) : 'اختر الوحدة التنظيمية المالكة للإجراء...';
     };
     syncLbl();
     host.querySelectorAll('input[name="wpOwnerOuRadio"]').forEach((r) => {
@@ -751,11 +734,37 @@ function wpFormsForCurrentOwnerOrg() {
     return all.filter((f) => (f.organizationalUnitId ?? f.OrganizationalUnitId) === ou);
 }
 
+function wpResetMultiSelectSearch() {
+    const ufs = document.getElementById('wpUsedFormsSearch');
+    const exs = document.getElementById('wpExecSearch');
+    if (ufs) ufs.value = '';
+    if (exs) exs.value = '';
+}
+
+function wpCollectCheckedExecutorRoleIds() {
+    const host = document.getElementById('wpExecCbHost');
+    if (!host) return [];
+    const out = [];
+    host.querySelectorAll('.wp-exec-role-cb:checked').forEach((cb) => {
+        const v = parseInt(cb.value || '0', 10);
+        if (v > 0) out.push(v);
+    });
+    return out;
+}
+
 function wpRenderExecutorCb(selectedIds) {
     const host = document.getElementById('wpExecCbHost');
     if (!host) return;
-    const sel = new Set(selectedIds || []);
     const roles = wpLookups.executorRoles || [];
+    let sel = new Set(selectedIds || []);
+    const liveRoleIds = wpCollectCheckedExecutorRoleIds();
+    if (liveRoleIds.length) {
+        sel = new Set();
+        liveRoleIds.forEach((rid) => {
+            const role = roles.find((r) => (r.id ?? r.Id) === rid);
+            (role?.beneficiaryIds || []).forEach((id) => sel.add(id));
+        });
+    }
     const roleFullySelected = (r) => {
         const bids = r.beneficiaryIds || [];
         return bids.length > 0 && bids.every((id) => sel.has(id));
@@ -766,15 +775,26 @@ function wpRenderExecutorCb(selectedIds) {
         if (lbl) lbl.textContent = 'لا توجد أدوار';
         return;
     }
-    host.innerHTML = roles.map((r) => {
-        const rid = r.id ?? r.Id;
-        const name = r.name ?? r.Name ?? '';
-        const bids = r.beneficiaryIds || [];
-        const idsAttr = bids.join(',');
-        const checked = roleFullySelected(r);
-        return wpDdCheckboxRow('wp-exec-role-cb', `wper_${rid}`, rid, name, checked, ` data-ben-ids="${idsAttr}"`);
-    }).join('');
+    const q = (document.getElementById('wpExecSearch')?.value || '').trim().toLowerCase();
+    let visibleRoles = roles;
+    if (q) {
+        visibleRoles = roles.filter((r) => String(r.name ?? r.Name ?? '').toLowerCase().includes(q));
+    }
+    if (!visibleRoles.length) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد نتائج</div>';
+    } else {
+        host.innerHTML = visibleRoles.map((r) => {
+            const rid = r.id ?? r.Id;
+            const name = r.name ?? r.Name ?? '';
+            const bids = r.beneficiaryIds || [];
+            const idsAttr = bids.join(',');
+            const checked = roleFullySelected(r);
+            return wpDdCheckboxRow('wp-exec-role-cb', `wper_${rid}`, rid, name, checked, ` data-ben-ids="${idsAttr}"`);
+        }).join('');
+    }
     wpWireCbLabel('wpExecCbHost', 'wp-exec-role-cb', 'wpExecDdLbl', 'اختر المنفذين...', 'محدد:');
+    const searchEl = document.getElementById('wpExecSearch');
+    if (searchEl) searchEl.oninput = () => wpRenderExecutorCb(selectedIds);
 }
 
 function wpCollectExecutorBeneficiaryIdsFromRoles() {
@@ -799,13 +819,15 @@ function wpCollectExecutorBeneficiaryIdsFromRoles() {
 function wpRenderUsedFormsCb(selectedNorm) {
     const host = document.getElementById('wpUsedFormsCbHost');
     if (!host) return;
-    const sel = new Set(
+    let sel = new Set(
         (selectedNorm || []).map(x => {
             const raw = x.formDefinitionId != null ? x.formDefinitionId : x;
             const id = typeof raw === 'number' ? raw : parseInt(raw, 10);
             return id > 0 ? id : null;
         }).filter(v => v != null)
     );
+    const live = wpCollectUsedFormsFromCb();
+    if (live.length) sel = new Set(live.map((u) => u.formDefinitionId));
     const ou = parseInt(document.getElementById('wpOrganizationalUnitId')?.value || '0', 10);
     const lbl = document.getElementById('wpUsedDdLbl');
     if (!ou) {
@@ -827,10 +849,14 @@ function wpRenderUsedFormsCb(selectedNorm) {
         const name = ex ? (ex.name ?? ex.Name ?? '') : '';
         synthetic.push({ id: fid, name: name || `نموذج #${fid}`, _extra: true });
     });
-    const forms = formsBase.concat(synthetic);
+    let forms = formsBase.concat(synthetic);
+    const q = (document.getElementById('wpUsedFormsSearch')?.value || '').trim().toLowerCase();
+    if (q) {
+        forms = forms.filter((f) => String(f.name ?? f.Name ?? '').toLowerCase().includes(q));
+    }
     if (!forms.length) {
-        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد نماذج معتمدة ومفعّلة لهذه الوحدة التنظيمية ضمن صلاحيتك.</div>';
-        if (lbl) lbl.textContent = 'لا توجد نماذج';
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">' + (q ? 'لا توجد نتائج' : 'لا توجد نماذج معتمدة ومفعّلة لهذه الوحدة التنظيمية ضمن صلاحيتك.') + '</div>';
+        if (lbl) lbl.textContent = q ? 'لا توجد نتائج' : 'لا توجد نماذج';
         return;
     }
     host.innerHTML = forms.map(f => {
@@ -841,6 +867,8 @@ function wpRenderUsedFormsCb(selectedNorm) {
         return wpDdCheckboxRow(cbCls, `wpu_${fid}`, fid, fname, checked, ` data-fid="${fid}"`);
     }).join('');
     wpWireCbLabel('wpUsedFormsCbHost', 'wp-form-cb', 'wpUsedDdLbl', 'اختر النماذج...', 'محدد:');
+    const searchEl = document.getElementById('wpUsedFormsSearch');
+    if (searchEl) searchEl.oninput = () => wpRenderUsedFormsCb(selectedNorm);
 }
 
 function wpCollectUsedFormsFromCb() {
@@ -873,9 +901,147 @@ function wpRenderTargetOrgCb(selectedIds) {
     host.innerHTML = wpOuRenderTargetRows(byParent, '', 0, sel);
     wpWireCbLabel('wpTargetOrgCbHost', 'wp-target-ou-cb', 'wpTargetDdLbl', 'اختر الوحدات المستهدفة...', 'محدد:');
     host.querySelectorAll('.wp-target-ou-cb').forEach((cb) => {
-        cb.addEventListener('change', () => wpUpdateTargetOuAllLabel());
+        cb.addEventListener('change', () => {
+            wpUpdateTargetOuAllLabel();
+            wpRefreshConcernedBeneficiaries();
+        });
     });
     wpUpdateTargetOuAllLabel();
+}
+
+async function wpRefreshConcernedBeneficiaries(preserveSelectedIds) {
+    const host = document.getElementById('wpConcernedBenCbHost');
+    if (!host) return;
+    const ouIds = wpCollectCheckedIds('wpTargetOrgCbHost', 'wp-target-ou-cb');
+    const prevSel = preserveSelectedIds || wpCollectCheckedIds('wpConcernedBenCbHost', 'wp-concerned-ben-cb');
+    if (!ouIds.length) {
+        wpConcernedBeneficiaries = [];
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">اختر <strong>وحدة تنظيمية مستهدفة</strong> أولاً لعرض المنسوبين.</div>';
+        const lbl = document.getElementById('wpConcernedBenDdLbl');
+        if (lbl) lbl.textContent = 'المستهدفين المعنيين...';
+        return;
+    }
+    try {
+        const res = await apiFetch('/WorkProcedures/GetBeneficiariesByOrgUnits', 'POST', { organizationalUnitIds: ouIds });
+        wpConcernedBeneficiaries = res.success ? (res.data || []) : [];
+    } catch {
+        wpConcernedBeneficiaries = [];
+    }
+    wpRenderConcernedBeneficiaryCb(prevSel);
+}
+
+function wpRenderConcernedBeneficiaryCb(selectedIds) {
+    const host = document.getElementById('wpConcernedBenCbHost');
+    const lbl = document.getElementById('wpConcernedBenDdLbl');
+    if (!host) return;
+    const selected = (selectedIds || []).map((x) => (typeof x === 'number' ? x : parseInt(x, 10))).filter((n) => n > 0);
+    const list = wpConcernedBeneficiaries || [];
+    if (!list.length) {
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا يوجد منسوبون في الوحدات المستهدفة المختارة.</div>';
+        if (lbl) lbl.textContent = 'المستهدفين المعنيين...';
+        wpUpdateConcernedBenAllLabel();
+        return;
+    }
+
+    const groups = {};
+    list.forEach((b) => {
+        const dName = b.departmentName || b.DepartmentName || 'بدون وحدة';
+        const dId = b.organizationalUnitId || b.OrganizationalUnitId || 0;
+        const key = dId + '_' + dName;
+        if (!groups[key]) groups[key] = { id: dId, name: dName, users: [] };
+        groups[key].users.push(b);
+    });
+    const sorted = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+    let html = '';
+    sorted.forEach((g, gi) => {
+        const expanded = selected.length > 0 && g.users.some((u) => selected.includes(u.id ?? u.Id)) ? ' expanded' : '';
+        const checkedCount = g.users.filter((u) => selected.includes(u.id ?? u.Id)).length;
+        html += `<div class="pn-dept-group${expanded}" data-dept-idx="${gi}">`;
+        html += `<div class="pn-dept-group-head" onclick="wpToggleConcernedDeptGroup(this)">`;
+        html += `<span class="pn-dept-group-toggle">${expanded ? '−' : '+'}</span>`;
+        html += `<span class="pn-dept-group-name"><i class="bi bi-building" style="color:var(--sa-500);margin-left:4px;font-size:12px;"></i> ${esc(g.name)}</span>`;
+        html += `<span class="pn-dept-group-count">${checkedCount ? checkedCount + '/' : ''}${g.users.length}</span>`;
+        html += `</div>`;
+        html += `<div class="pn-dept-group-body">`;
+        g.users.forEach((u) => {
+            const uid = u.id ?? u.Id;
+            const name = u.fullName ?? u.FullName ?? '';
+            const isMgr = !!(u.isUnitManager || u.IsUnitManager);
+            const badge = isMgr ? '<span class="pn-user-mgr-badge">مدير وحده تنظيمية</span>' : '';
+            const checked = selected.includes(uid) ? 'checked' : '';
+            html += `<label${isMgr ? ' class="pn-user-row-manager"' : ''}><input type="checkbox" class="form-check-input wp-concerned-ben-cb" value="${uid}" ${checked} onclick="event.stopPropagation()"> <span>${esc(name)}</span>${badge}</label>`;
+        });
+        html += `</div></div>`;
+    });
+    host.innerHTML = html;
+    wpWireCbLabel('wpConcernedBenCbHost', 'wp-concerned-ben-cb', 'wpConcernedBenDdLbl', 'المستهدفين المعنيين...', 'محدد:');
+    host.querySelectorAll('.wp-concerned-ben-cb').forEach((cb) => {
+        cb.addEventListener('change', () => {
+            wpUpdateConcernedBenGroupCounts();
+            wpUpdateConcernedBenAllLabel();
+        });
+    });
+    wpUpdateConcernedBenAllLabel();
+}
+
+function wpToggleConcernedDeptGroup(head) {
+    const group = head.closest('.pn-dept-group');
+    if (!group) return;
+    group.classList.toggle('expanded');
+    const toggle = head.querySelector('.pn-dept-group-toggle');
+    if (toggle) toggle.textContent = group.classList.contains('expanded') ? '−' : '+';
+}
+
+function wpToggleAllConcernedBeneficiaries() {
+    const host = document.getElementById('wpConcernedBenCbHost');
+    if (!host) return;
+    const cbs = host.querySelectorAll('.wp-concerned-ben-cb');
+    const allChecked = cbs.length > 0 && [...cbs].every((c) => c.checked);
+    cbs.forEach((c) => { c.checked = !allChecked; });
+    if (!allChecked) {
+        host.querySelectorAll('.pn-dept-group').forEach((g) => {
+            g.classList.add('expanded');
+            const t = g.querySelector('.pn-dept-group-toggle');
+            if (t) t.textContent = '−';
+        });
+    }
+    wpUpdateConcernedBenGroupCounts();
+    wpUpdateConcernedBenAllLabel();
+    const lbl = document.getElementById('wpConcernedBenDdLbl');
+    if (lbl) {
+        const n = host.querySelectorAll('.wp-concerned-ben-cb:checked').length;
+        lbl.textContent = n ? `محدد: ${n}` : 'المستهدفين المعنيين...';
+    }
+}
+
+function wpUpdateConcernedBenAllLabel() {
+    const host = document.getElementById('wpConcernedBenCbHost');
+    const el = document.getElementById('wpConcernedBenAllLabel');
+    if (!host || !el) return;
+    const cbs = host.querySelectorAll('.wp-concerned-ben-cb');
+    const allChecked = cbs.length > 0 && [...cbs].every((c) => c.checked);
+    el.textContent = allChecked ? 'إلغاء الكل' : 'تحديد الكل';
+}
+
+function wpUpdateConcernedBenGroupCounts() {
+    const host = document.getElementById('wpConcernedBenCbHost');
+    if (!host) return;
+    host.querySelectorAll('.pn-dept-group').forEach((g) => {
+        const cbs = g.querySelectorAll('.wp-concerned-ben-cb');
+        const checkedCount = [...cbs].filter((c) => c.checked).length;
+        const cnt = g.querySelector('.pn-dept-group-count');
+        if (cnt) cnt.textContent = (checkedCount ? checkedCount + '/' : '') + cbs.length;
+    });
+}
+
+function wpParseTargetBeneficiaryIds(d) {
+    let ids = [];
+    try {
+        const raw = d.targetBeneficiaryIdsJson || d.TargetBeneficiaryIdsJson;
+        if (raw) ids = JSON.parse(raw);
+    } catch { ids = []; }
+    return Array.isArray(ids) ? ids.filter((x) => x > 0) : [];
 }
 
 /** الإجراءات السابقة / اللاحقة / الضمنية: لا يُختار نفس الإجراء في أكثر من قائمة (معطّل في القوائم الأخرى). */
@@ -928,9 +1094,10 @@ function wpInitRelCbDelegation() {
 }
 
 async function wpLoadRelated(excludeId) {
-    const q = excludeId ? `excludeId=${excludeId}` : '';
+    const params = new URLSearchParams({ activeOnly: 'true' });
+    if (excludeId) params.set('excludeId', String(excludeId));
     try {
-        const r = await apiFetch(`/WorkProcedures/ListRelatedProcedures${q ? `?${q}` : ''}`);
+        const r = await apiFetch(`/WorkProcedures/ListRelatedProcedures?${params}`);
         wpRelated = r.success ? (r.data || []) : [];
     } catch { wpRelated = []; }
 }
@@ -1004,21 +1171,20 @@ function wpTab2Html() {
             <table class="table table-sm mb-0">
                 <thead>
                     <tr>
+                        <th style="text-align:center;width:36px;"></th>
                         <th style="text-align:center;">الترتيب</th>
                         <th>الخطوة</th>
                         <th style="text-align:center;">المكلف</th>
                         <th>المنفذ</th>
                         <th>مدة الإنجاز</th>
                         <th style="text-align:center;">الإرجاع</th>
-                        <th>خطوة الرجوع</th>
-                        <th style="text-align:center;">موافقات متزامنة</th>
                         <th>النموذج المستخدم</th>
+                        <th>القسم</th>
                         <th>الحالة</th>
-                        <th>قناة الإشعار</th>
                         <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="wpWfBody"><tr><td colspan="12" class="text-center py-3 text-muted">لا توجد خطوات بعد — أضف خطوة لسير العمل</td></tr></tbody>
+                <tbody id="wpWfBody"><tr><td colspan="11" class="text-center py-3 text-muted">لا توجد خطوات بعد — أضف خطوة لسير العمل</td></tr></tbody>
             </table>
         </div>
     </div>`;
@@ -1034,6 +1200,7 @@ function wpMountEditShell(formHtml) {
     wpUpdateStepBar();
     wpRenderEditFooter();
     wpConfigureValidityDates();
+    wpRenderRegFilesList();
 }
 
 function wpUpdateStepBar() {
@@ -1063,13 +1230,12 @@ function wpRenderEditFooter() {
     foot.innerHTML = `<div><button type="button" class="fd-cancel-btn" onclick="wpGoTab(1)"><i class="bi bi-arrow-right"></i> رجوع</button></div>
         <div class="d-flex gap-2 flex-wrap">
             <button type="button" class="fd-save-btn draft" id="wpVerSaveDraft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
-            <button type="button" class="fd-save-btn send" id="wpVerSaveSend" onclick="wpSave(true)"><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
+            <button type="button" class="fd-save-btn send publish publish-muted" id="wpVerSaveSend" disabled onclick="wpSave(true)"><i class="bi ${wpIsAdmin ? 'bi-rocket-takeoff-fill' : 'bi-send-fill'}"></i> ${primaryLabel}</button>
         </div>`;
     wpUpdateVersionSaveButtons();
 }
 
 async function wpEnsureDraftForWorkflow() {
-    if (wpEditId) return true;
     if (wpModeKind === 'version' && !wpVersionSourceId) {
         showToast('اختر إجراءً من القائمة قبل المتابعة', 'error');
         return false;
@@ -1081,11 +1247,18 @@ async function wpEnsureDraftForWorkflow() {
     if (!payload.formTemplateId) { showToast('القالب المستخدم مطلوب', 'error'); return false; }
     payload.sendForApproval = false;
     try {
-        const res = await apiFetch('/WorkProcedures/AddWorkProcedure', 'POST', payload);
-        if (res.success && res.id) {
-            wpEditId = res.id;
-            if (wpModeKind === 'create') wpModeKind = 'edit';
-            showToast('تم حفظ مسودة الإجراء — يمكنك الآن ضبط سير العمل', 'success');
+        let res;
+        if (wpEditId) {
+            payload.id = wpEditId;
+            res = await apiFetch('/WorkProcedures/UpdateWorkProcedure', 'POST', payload);
+        } else {
+            res = await apiFetch('/WorkProcedures/AddWorkProcedure', 'POST', payload);
+        }
+        if (res.success) {
+            if (!wpEditId && res.id) {
+                wpEditId = res.id;
+                if (wpModeKind === 'create') wpModeKind = 'edit';
+            }
             return true;
         }
         showToast(res.message || 'أكمل البيانات الأساسية قبل سير العمل', 'error');
@@ -1212,9 +1385,9 @@ function wpBuildFormHtml(d, mode) {
     </div>
     <div class="fd-form-row cols-1">
         <div class="fd-form-group"><label>الأنظمة واللوائح والتعليمات المنظمة لعمل الإجراء </label>
-            <input type="file" class="form-control" id="wpRegFiles" multiple onchange="wpSyncFileJson('wpRegFiles','wpRegulationsAttachmentsJson')">
+            <input type="file" class="form-control" id="wpRegFiles" multiple onchange="wpSyncRegFiles()">
             <input type="hidden" id="wpRegulationsAttachmentsJson" value="${esc(d.regulationsAttachmentsJson || '[]')}">
-           
+            <div id="wpRegFilesList" class="mt-2"></div>
         </div>
     </div>
 </div>
@@ -1254,9 +1427,9 @@ function wpBuildFormHtml(d, mode) {
     </div>
 </div>
 <div class="fd-section">
-    <div class="fd-section-title"><i class="bi bi-grid-3x3-gap"></i> الوحدة التنظيمية المالكة والنماذج المستخدمة</div>
+    <div class="fd-section-title"><i class="bi bi-grid-3x3-gap"></i> الوحدة التنظيمية المالكة للإجراء والنماذج المستخدمة</div>
     <div class="fd-form-row cols-1">
-        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> الوحدة التنظيمية المالكة</label>
+        <div class="fd-form-group fd-form-group--wp-dd"><label><span class="required-star">*</span> الوحدة التنظيمية المالكة للإجراء</label>
             ${wpOwnerOrgFieldHtml(d)}
         </div>
     </div>
@@ -1268,6 +1441,9 @@ function wpBuildFormHtml(d, mode) {
                 <span id="wpUsedDdLbl">اختر النماذج...</span>
             </button>
             <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                <div class="wp-dd-search">
+                    <input type="text" class="form-control form-control-sm" id="wpUsedFormsSearch" placeholder="بحث في النماذج..." autocomplete="off" dir="rtl">
+                </div>
                 <div id="wpUsedFormsCbHost"></div>
             </div>
         </div>
@@ -1283,6 +1459,9 @@ function wpBuildFormHtml(d, mode) {
                     <span id="wpExecDdLbl">اختر المنفذين...</span>
                 </button>
                 <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div class="wp-dd-search">
+                        <input type="text" class="form-control form-control-sm" id="wpExecSearch" placeholder="بحث في المنفذين..." autocomplete="off" dir="rtl">
+                    </div>
                     <div id="wpExecCbHost"></div>
                 </div>
             </div>
@@ -1325,6 +1504,25 @@ function wpBuildFormHtml(d, mode) {
                         </button>
                     </div>
                     <div id="wpTargetOrgCbHost"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="fd-form-row cols-1">
+        <div class="fd-form-group fd-form-group--wp-dd">
+            <label>المستهدفين المعنيين</label>
+            <div class="dropdown wp-dd w-100">
+                <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <span id="wpConcernedBenDdLbl">المستهدفين المعنيين...</span>
+                </button>
+                <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                    <div class="wp-target-ou-toolbar d-flex align-items-center justify-content-between gap-2 px-2 py-2 border-bottom" style="border-color:var(--gray-200)!important;background:var(--gray-50);">
+                        <span class="text-muted mb-0" style="font-size:11px;font-weight:700;">اختيار سريع</span>
+                        <button type="button" class="wp-select-all-btn" id="wpConcernedBenSelectAllBtn" onclick="event.preventDefault();event.stopPropagation();wpToggleAllConcernedBeneficiaries();">
+                            <i class="bi bi-check2-all"></i> <span id="wpConcernedBenAllLabel">تحديد الكل</span>
+                        </button>
+                    </div>
+                    <div class="pn-target-list" id="wpConcernedBenCbHost"></div>
                 </div>
             </div>
         </div>
@@ -1380,6 +1578,72 @@ function wpBuildFormHtml(d, mode) {
 </div>`;
 }
 
+function wpGetRegFilesArr() {
+    const hid = document.getElementById('wpRegulationsAttachmentsJson');
+    if (!hid) return [];
+    try { return JSON.parse(hid.value || '[]'); } catch { return []; }
+}
+
+function wpSetRegFilesArr(arr) {
+    const hid = document.getElementById('wpRegulationsAttachmentsJson');
+    if (hid) hid.value = JSON.stringify(arr || []);
+    wpRenderRegFilesList();
+}
+
+function wpRenderRegFilesList() {
+    const host = document.getElementById('wpRegFilesList');
+    if (!host) return;
+    const arr = wpGetRegFilesArr();
+    if (!arr.length) { host.innerHTML = ''; return; }
+    host.innerHTML = arr.map((f, i) => {
+        const name = esc(f.name || 'مرفق');
+        const path = f.path || f.url || '';
+        const dl = path
+            ? `<a href="${esc(path)}" download class="text-decoration-none ms-1" target="_blank" rel="noopener"><i class="bi bi-download"></i></a>`
+            : '';
+        return `<span class="badge bg-light text-dark border me-1 mb-1 py-2 px-2" style="font-weight:600;font-size:12px;">
+            <i class="bi bi-paperclip"></i> ${name} ${dl}
+            <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-danger" style="font-size:14px;vertical-align:middle;" onclick="wpRemoveRegFile(${i})" title="إزالة">&times;</button>
+        </span>`;
+    }).join('');
+}
+
+function wpRemoveRegFile(index) {
+    const arr = wpGetRegFilesArr();
+    arr.splice(index, 1);
+    wpSetRegFilesArr(arr);
+}
+
+async function wpSyncRegFiles() {
+    const inp = document.getElementById('wpRegFiles');
+    if (!inp || !inp.files || !inp.files.length) return;
+    const arr = wpGetRegFilesArr();
+    const base = typeof appResolveUrl === 'function' ? appResolveUrl : (u) => u;
+    const csrf = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+    for (let i = 0; i < inp.files.length; i++) {
+        const file = inp.files[i];
+        const form = new FormData();
+        form.append('file', file);
+        try {
+            const res = await fetch(base('/WorkProcedures/UploadRegulationAttachment'), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf },
+                body: form
+            });
+            const r = await res.json();
+            if (r && r.success) {
+                arr.push({ name: r.name || file.name, path: r.url || r.path || '' });
+            } else {
+                showToast(r?.message || 'فشل رفع الملف', 'error');
+            }
+        } catch {
+            showToast('خطأ في رفع الملف', 'error');
+        }
+    }
+    inp.value = '';
+    wpSetRegFilesArr(arr);
+}
+
 function wpSyncFileJson(inputId, hiddenId) {
     const inp = document.getElementById(inputId);
     const hid = document.getElementById(hiddenId);
@@ -1408,6 +1672,7 @@ function wpCollectPayload() {
         validityEndDate: document.getElementById('wpValidityEnd')?.value || '',
         organizationalUnitId: parseInt(document.getElementById('wpOrganizationalUnitId')?.value || '0', 10),
         targetOrganizationalUnitIds: wpCollectCheckedIds('wpTargetOrgCbHost', 'wp-target-ou-cb'),
+        targetBeneficiaryIds: wpCollectCheckedIds('wpConcernedBenCbHost', 'wp-concerned-ben-cb'),
         procedureActionTypeId: parseInt(document.getElementById('wpProcedureActionTypeId')?.value || '0', 10),
         formTemplateId: parseInt(document.getElementById('wpFormTemplateId')?.value || '0', 10),
         previousProcedureIds: wpCollectCheckedIds('wpPrevCbHost', 'wp-rel-prev-cb'),
@@ -1457,6 +1722,9 @@ function wpResolveExecutorRoleNames(beneficiaryIds) {
 async function wpShowCreate() {
     wpModeKind = 'create';
     wpEditId = null;
+    wpCurrentTab = 1;
+    wpWfSteps = [];
+    wpWfProcedureId = null;
     wpUsedFormPickerExtras = [];
     wpEditActionTypeExtra = null;
     wpEditTemplateExtra = null;
@@ -1471,12 +1739,14 @@ async function wpShowCreate() {
     wpMountEditShell(wpBuildFormHtml({}, 'create'));
     wpInitFormStaticDds({});
     wpWireProcedureActionTemplatePickers({});
+    wpResetMultiSelectSearch();
     if (wpIsAdmin) wpRenderOwnerOrgDd(0);
     else wpOnOwnerOrgChange();
     wpOnValidityChange();
     wpRenderUsedFormsCb([]);
     wpRenderExecutorCb([]);
     wpRenderTargetOrgCb([]);
+    await wpRefreshConcernedBeneficiaries([]);
     await wpLoadRelated(null);
     wpInitRelCbDelegation();
     wpRenderAllRelCbs([], [], []);
@@ -1507,12 +1777,14 @@ async function wpShowVersionMode(sourceId) {
     wpMountEditShell(wpBuildFormHtml({ _versionSourceId: 0 }, 'version'));
     wpInitFormStaticDds({});
     wpWireProcedureActionTemplatePickers({});
+    wpResetMultiSelectSearch();
     if (wpIsAdmin) wpRenderOwnerOrgDd(0);
     else wpOnOwnerOrgChange();
     wpOnValidityChange();
     wpRenderUsedFormsCb([]);
     wpRenderExecutorCb([]);
     wpRenderTargetOrgCb([]);
+    await wpRefreshConcernedBeneficiaries([]);
     await wpLoadRelated(null);
     wpInitRelCbDelegation();
     wpRenderAllRelCbs([], [], []);
@@ -1525,13 +1797,29 @@ async function wpShowVersionMode(sourceId) {
     }
 }
 
-/** يُحدِّث حالة أزرار الحفظ في وضع الإصدار حسب اختيار المصدر. */
+/** يُحدِّث حالة أزرار الحفظ/النشر في وضع الإصدار وسير العمل. */
 function wpUpdateVersionSaveButtons() {
     const btnDraft = document.getElementById('wpVerSaveDraft');
     const btnSend = document.getElementById('wpVerSaveSend');
-    const ok = wpModeKind !== 'version' || wpVersionSourceId > 0;
-    if (btnDraft) btnDraft.disabled = wpModeKind === 'version' && !ok;
-    if (btnSend) btnSend.disabled = wpModeKind === 'version' && !ok;
+    const versionBlocked = wpModeKind === 'version' && !wpVersionSourceId;
+    const hasWorkflowSteps = !!(wpWfSteps && wpWfSteps.length);
+    const publishBlocked = wpCurrentTab === 2 && !hasWorkflowSteps;
+    const sendDisabled = versionBlocked || publishBlocked;
+
+    if (btnDraft) btnDraft.disabled = versionBlocked;
+    if (btnSend) {
+        btnSend.disabled = sendDisabled;
+        btnSend.classList.remove('publish-ready', 'publish-muted');
+        if (sendDisabled) {
+            btnSend.classList.add('publish-muted');
+            if (publishBlocked) btnSend.title = 'أضف خطوة واحدة على الأقل في سير العمل';
+            else if (versionBlocked) btnSend.title = 'اختر الإجراء المصدر أولاً';
+            else btnSend.removeAttribute('title');
+        } else {
+            btnSend.classList.add('publish-ready');
+            btnSend.removeAttribute('title');
+        }
+    }
 }
 
 function wpVersionSourceItemsAll() {
@@ -1692,16 +1980,13 @@ async function wpOnVersionSourcePicked(sourceId, isInitial) {
             wpVersionNextLabel = (peek && peek.success && peek.nextVersionLabel) ? peek.nextVersionLabel : 'V2.0';
         } catch { wpVersionNextLabel = 'V2.0'; }
 
-        if (res.workspaces && res.workspaces.length) {
-            wpLookups.workspaces = res.workspaces.map((x) => ({ id: x.id, name: x.name }));
-        }
-
         document.getElementById('wpEditSub').textContent = `سيُسجَّل الإصدار الجديد كـ ${wpVersionNextLabel} — جميع الحقول قابلة للتعديل ما عدا «ترميز الإجراء»`;
         const dForForm = Object.assign({}, d, { _versionSourceId: sourceId });
         wpMountEditShell(wpBuildFormHtml(dForForm, 'version'));
 
         wpInitFormStaticDds(d);
         wpWireProcedureActionTemplatePickers(d);
+        wpResetMultiSelectSearch();
         if (wpIsAdmin) wpRenderOwnerOrgDd(d.organizationalUnitId || d.OrganizationalUnitId || 0);
         else wpOnOwnerOrgChange();
         wpOnValidityChange();
@@ -1720,6 +2005,7 @@ async function wpOnVersionSourcePicked(sourceId, isInitial) {
         try { next = JSON.parse(d.nextProcedureIdsJson || '[]'); } catch {}
         try { imp = JSON.parse(d.implicitProcedureIdsJson || '[]'); } catch {}
         wpRenderTargetOrgCb(tgt);
+        await wpRefreshConcernedBeneficiaries(wpParseTargetBeneficiaryIds(d));
         await wpLoadRelated(sourceId);
         wpInitRelCbDelegation();
         wpRenderAllRelCbs(prev, next, imp);
@@ -1747,15 +2033,13 @@ async function wpShowEdit(id) {
         wpOuExpandedOwner = {};
         wpOuExpandedTarget = {};
         await wpLoad();
-        if (res.workspaces && res.workspaces.length) {
-            wpLookups.workspaces = res.workspaces.map(x => ({ id: x.id, name: x.name }));
-        }
         document.getElementById('wpEditTitle').textContent = 'تعديل إجراء العمل';
         document.getElementById('wpEditSub').textContent = d.name || '';
         document.getElementById('wpEditHead').className = 'fd-modal-header edit';
         wpMountEditShell(wpBuildFormHtml(d, 'edit'));
         wpInitFormStaticDds(d);
         wpWireProcedureActionTemplatePickers(d);
+        wpResetMultiSelectSearch();
         if (wpIsAdmin) wpRenderOwnerOrgDd(d.organizationalUnitId || d.OrganizationalUnitId || 0);
         else wpOnOwnerOrgChange();
         wpOnValidityChange();
@@ -1772,6 +2056,7 @@ async function wpShowEdit(id) {
         try { next = JSON.parse(d.nextProcedureIdsJson || '[]'); } catch {}
         try { imp = JSON.parse(d.implicitProcedureIdsJson || '[]'); } catch {}
         wpRenderTargetOrgCb(tgt);
+        await wpRefreshConcernedBeneficiaries(wpParseTargetBeneficiaryIds(d));
         await wpLoadRelated(id);
         wpInitRelCbDelegation();
         wpRenderAllRelCbs(prev, next, imp);
@@ -1802,9 +2087,6 @@ async function _wpShowCreateNewVersion_UNUSED(sourceId) {
         wpOuExpandedOwner = {};
         wpOuExpandedTarget = {};
         await wpLoad();
-        if (res.workspaces && res.workspaces.length) {
-            wpLookups.workspaces = res.workspaces.map((x) => ({ id: x.id, name: x.name }));
-        }
         document.getElementById('wpEditTitle').textContent = 'إصدار جديد من إجراء العمل';
         document.getElementById('wpEditSub').textContent = `يُسجَّل تلقائياً كـ ${nextVer} — راجع الترميز والاسم (يجب ألا يتكررا)`;
         document.getElementById('wpEditHead').className = 'fd-modal-header create';
@@ -1826,6 +2108,7 @@ async function _wpShowCreateNewVersion_UNUSED(sourceId) {
 
         wpInitFormStaticDds(d);
         wpWireProcedureActionTemplatePickers(d);
+        wpResetMultiSelectSearch();
         if (wpIsAdmin) wpRenderOwnerOrgDd(d.organizationalUnitId || d.OrganizationalUnitId || 0);
         else wpOnOwnerOrgChange();
         wpOnValidityChange();
@@ -1845,9 +2128,10 @@ async function _wpShowCreateNewVersion_UNUSED(sourceId) {
 
         const primaryLabel = wpIsAdmin ? 'نشر الإصدار' : 'إرسال للاعتماد';
         document.getElementById('wpEditFoot').innerHTML = `<div></div><div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="fd-save-btn draft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
-            <button type="button" class="fd-save-btn send" onclick="wpSave(true)"><i class="bi bi-send-fill"></i> ${primaryLabel}</button>
+            <button type="button" class="fd-save-btn draft" id="wpVerSaveDraft" onclick="wpSave(false)"><i class="bi bi-floppy2-fill"></i> حفظ كمسودة</button>
+            <button type="button" class="fd-save-btn send publish publish-muted" id="wpVerSaveSend" disabled onclick="wpSave(true)"><i class="bi ${wpIsAdmin ? 'bi-rocket-takeoff-fill' : 'bi-send-fill'}"></i> ${primaryLabel}</button>
         </div>`;
+        wpUpdateVersionSaveButtons();
         wpWizModal().show();
     } catch (e) {
         console.error(e);
@@ -1880,6 +2164,10 @@ function wpValidateCodeNameUnique() {
 async function wpSave(sendForApproval) {
     if (wpModeKind === 'version' && !wpVersionSourceId) {
         showToast('اختر إجراءً من القائمة قبل الحفظ', 'error');
+        return;
+    }
+    if (sendForApproval && wpCurrentTab === 2 && (!wpWfSteps || !wpWfSteps.length)) {
+        showToast('يجب إضافة خطوة واحدة على الأقل في سير العمل قبل النشر', 'error');
         return;
     }
     if (!wpValidateCodeNameUnique()) return;
@@ -1968,106 +2256,12 @@ async function wpSubmitDelete() {
     } catch { showToast('خطأ', 'error'); }
 }
 
-async function wpShowDetails(id) {
-    try {
-        const res = await apiFetch(`/WorkProcedures/GetWorkProcedure?id=${id}`);
-        if (!res.success) return showToast(res.message, 'error');
-        const d = res.data;
-        await wpLoad();
-        await wpLoadRelated(id);
-        const activeBadge = d.isActive
-            ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle-fill"></i> مفعّل</span>'
-            : '<span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-dash-circle"></i> غير مفعل</span>';
-
-        let used = [];
-        try { used = JSON.parse(d.usedFormDefinitionsJson || '[]'); } catch { used = []; }
-        const usedLines = used.map(u => {
-            const fid = u.formDefinitionId != null ? u.formDefinitionId : u.formdefinitionId;
-            const fd = wpLookups.formDefinitions.find(x => (x.id ?? x.Id) === fid);
-            return fd ? esc(fd.name ?? fd.Name) : String(fid);
-        }).join('، ') || '—';
-
-        const exBen = wpParseExecutorBeneficiaryIds(d);
-        const exNames = wpResolveExecutorRoleNames(exBen);
-
-        let tgt = [], prev = [], next = [], imp = [];
-        try { tgt = JSON.parse(d.targetOrganizationalUnitIdsJson || '[]'); } catch { tgt = []; }
-        try { prev = JSON.parse(d.previousProcedureIdsJson || '[]'); } catch {}
-        try { next = JSON.parse(d.nextProcedureIdsJson || '[]'); } catch {}
-        try { imp = JSON.parse(d.implicitProcedureIdsJson || '[]'); } catch {}
-
-        const tgtNames = tgt.map(oid => {
-            const u = wpLookups.organizationalUnits.find(x => x.id === oid);
-            return u ? esc(u.name) : oid;
-        }).join('، ') || '—';
-
-        const rel = (ids) => ids.map(rid => {
-            const pr = wpRelated.find(x => x.id === rid) || wpData.find(x => x.id === rid);
-            return pr ? esc(pr.code) : rid;
-        }).join('، ') || '—';
-
-        let html = `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-info-circle-fill"></i> المعلومات الأساسية</div>
-            <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">الترميز</span><span class="fd-detail-val" style="font-weight:700;">${esc(d.code)}</span>
-                <span class="fd-detail-lbl">الاسم</span><span class="fd-detail-val">${esc(d.name)}</span>
-                <span class="fd-detail-lbl">الحالة</span><span class="fd-detail-val">${wpStatusBadge(d.status)}</span>
-                <span class="fd-detail-lbl">التفعيل</span><span class="fd-detail-val">${activeBadge}</span>
-                <span class="fd-detail-lbl">معدل الاستخدام</span><span class="fd-detail-val">${esc(d.usageFrequency)}</span>
-                <span class="fd-detail-lbl">التصنيف</span><span class="fd-detail-val">${esc(d.procedureClassification)}</span>
-                <span class="fd-detail-lbl">مستوى الاولوية</span><span class="fd-detail-val">${esc(d.confidentialityLevel)}</span>
-                <span class="fd-detail-lbl">نوع الإجراء</span><span class="fd-detail-val">${esc(d.procedureActionTypeName || d.ProcedureActionTypeName) || '—'}</span>
-                <span class="fd-detail-lbl">القالب المستخدم</span><span class="fd-detail-val">${esc(d.formTemplateName || d.FormTemplateName) || '—'}</span>
-                <span class="fd-detail-lbl">رقم الإصدار</span><span class="fd-detail-val" style="font-weight:700;color:var(--sa-700);">${esc(d.versionLabel || d.VersionLabel || 'V1.0')}</span>
-                <span class="fd-detail-lbl">صلاحية الإجراء</span><span class="fd-detail-val">${esc(d.validityType)}</span>
-                ${d.validityType === 'مؤقت' ? `<span class="fd-detail-lbl">الفترة</span><span class="fd-detail-val">${esc(d.validityStartDate)} → ${esc(d.validityEndDate)}</span>` : ''}
-                <span class="fd-detail-lbl">الوحدة المالكة</span><span class="fd-detail-val">${esc(d.orgUnitName)}</span>
-                <span class="fd-detail-lbl">الهدف من الاجراء</span><span class="fd-detail-val">${esc(d.objectives) || '—'}</span>
-            </div></div>`;
-
-        html += `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-file-earmark-check"></i> النماذج المستخدمة</div>
-            <p class="fd-detail-val">${usedLines}</p></div>`;
-
-        html += `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-person-badge"></i> المنفذون والوحدات</div>
-            <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">أدوار المنفذين</span><span class="fd-detail-val">${exNames}</span>
-                <span class="fd-detail-lbl">المستهدفون</span><span class="fd-detail-val">${tgtNames}</span>
-            </div></div>`;
-
-        html += `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-link-45deg"></i> العلاقات</div>
-            <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">سابقة</span><span class="fd-detail-val">${rel(prev)}</span>
-                <span class="fd-detail-lbl">لاحقة</span><span class="fd-detail-val">${rel(next)}</span>
-                <span class="fd-detail-lbl">ضمنية</span><span class="fd-detail-val">${rel(imp)}</span>
-            </div></div>`;
-
-        html += `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-input-cursor-text"></i> إضافي</div>
-            <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">المدخلات</span><span class="fd-detail-val">${esc(d.additionalInputs) || '—'}</span>
-                <span class="fd-detail-lbl">المخرجات</span><span class="fd-detail-val">${esc(d.additionalOutputs) || '—'}</span>
-            </div></div>`;
-
-        html += `<div class="fd-section">
-            <div class="fd-section-title"><i class="bi bi-clock-history"></i> التدقيق</div>
-            <div class="fd-detail-grid">
-                <span class="fd-detail-lbl">أنشأه</span><span class="fd-detail-val">${esc(d.createdBy)}</span>
-                <span class="fd-detail-lbl">تاريخ الإنشاء</span><span class="fd-detail-val">${esc(d.createdAt)}</span>
-                ${d.approvedBy ? `<span class="fd-detail-lbl">اعتمده</span><span class="fd-detail-val">${esc(d.approvedBy)}</span><span class="fd-detail-lbl">التاريخ</span><span class="fd-detail-val">${esc(d.approvedAt || '')}</span>` : ''}
-                ${d.rejectionReason ? `<span class="fd-detail-lbl" style="color:var(--error-600);">سبب الرفض</span><span class="fd-detail-val" style="color:var(--error-700);">${esc(d.rejectionReason)}</span>` : ''}
-            </div></div>`;
-
-        document.getElementById('wpDetailsBody').innerHTML = html
-            + `<div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
-                <button type="button" class="fd-action-btn fd-action-btn-flow" onclick="wpShowWorkflow(${id})"><i class="bi bi-diagram-3"></i> سير العمل</button>
-            </div>`;
-        wpDetModal().show();
-    } catch {
-        showToast('خطأ في تحميل التفاصيل', 'error');
+function wpShowDetails(id) {
+    if (typeof window.opdShow === 'function') {
+        window.opdShow(id);
+        return;
     }
+    showToast('تعذر فتح تفاصيل الإجراء', 'error');
 }
 
 function wpWorkflowPageUrl(id) {
@@ -2122,6 +2316,7 @@ async function wpWfLoad() {
         if (sub) sub.textContent = `${res.procedureCode || ''} — ${res.procedureName || ''}`;
         wpWfRenderTable();
         wpWfHideForm();
+        wpUpdateVersionSaveButtons();
     } catch (e) {
         console.error('wpWfLoad', e);
         showToast('خطأ في تحميل سير العمل', 'error');
@@ -2170,6 +2365,11 @@ function wpWfNormalizeStep(s) {
             const v = s.concurrentStepId != null ? s.concurrentStepId : s.ConcurrentStepId;
             const n = typeof v === 'number' ? v : parseInt(String(v || '0'), 10);
             return n > 0 ? n : null;
+        })(),
+        formSectionId: (() => {
+            const v = s.formSectionId != null ? s.formSectionId : s.FormSectionId;
+            const n = typeof v === 'number' ? v : parseInt(String(v || '0'), 10);
+            return n > 0 ? n : null;
         })()
     };
 }
@@ -2193,12 +2393,26 @@ function wpWfFdName(fdId) {
     return f ? (f.name || f.Name || '') : '—';
 }
 
+function wpWfSectionName(fdId, sectionId) {
+    const sid = parseInt(String(sectionId || ''), 10) || 0;
+    if (!sid) return '—';
+    const secs = wpWfGetFormDefSections(fdId);
+    const s = secs.find((x) => (x.id != null ? x.id : x.Id) === sid);
+    return s ? (s.title || s.Title || '—') : '—';
+}
+
+function wpWfGetUsedFormDefinitions() {
+    return (wpWfCtx && wpWfCtx.formDefinitions) || [];
+}
+
 function wpWfFormatDuration(daysRaw, hoursRaw) {
+    return wpWfFormatDurationDaysOnly(daysRaw);
+}
+
+function wpWfFormatDurationDaysOnly(daysRaw) {
     let d = parseInt(String(daysRaw ?? '').trim(), 10);
-    let h = parseInt(String(hoursRaw ?? '').trim(), 10);
     if (isNaN(d)) d = 0;
-    if (isNaN(h)) h = 0;
-    return `<span class="wp-wf-dur-display"><span class="wp-wf-dur-part"><b>${d}</b> يوم</span><span class="wp-wf-dur-dot">·</span><span class="wp-wf-dur-part"><b>${h}</b> ساعة</span></span>`;
+    return `<span class="wp-wf-dur-display"><span class="wp-wf-dur-part"><b>${d}</b> يوم</span></span>`;
 }
 
 function wpWfFsName(fsId) {
@@ -2225,36 +2439,37 @@ function wpWfRenderTable() {
     if (!tbody) return;
     const sorted = [].concat(wpWfSteps).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     if (!sorted.length) {
-        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">لا توجد خطوات مسجّلة بعد</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">لا توجد خطوات مسجّلة بعد</td></tr>';
         return;
     }
     tbody.innerHTML = sorted.map((s, i) => {
         const dec = !!s.isDecision;
         const mu = () => (dec ? ' class="wp-wf-muted"' : '');
         const na = dec ? '<span class="wp-wf-na">—</span>' : '';
-        const dur = dec ? na : wpWfFormatDuration(s.expectedDurationDays, s.expectedDurationHours);
+        const dur = dec ? na : wpWfFormatDurationDaysOnly(s.expectedDurationDays);
         const fd = dec ? na : esc(wpWfFdName(s.formDefinitionId));
+        const sec = dec ? na : esc(wpWfSectionName(s.formDefinitionId, s.formSectionId));
         const fs = dec ? na : esc(wpWfFsName(s.formStatusId));
-        const ch = dec ? na : esc(wpWfChannelsLabel(s));
         const allowed = Array.isArray(s.allowedActions) ? s.allowedActions : [];
         const hasReturn = allowed.includes('return');
-        const hasConc = allowed.includes('concurrent_approvals');
         const assigneeMode = s.assigneeMode === 'fixed' ? 'ثابت' : 'محدد';
         const returnYesNo = dec ? na : (hasReturn ? 'نعم' : 'لا');
-        const concYesNo = dec ? na : (hasConc ? 'نعم' : 'لا');
-        const returnStepCell = hasReturn ? wpWfStepNameById(s.returnStepId) : '—';
-        return `<tr>
+        return `<tr class="wp-wf-step-row" data-step-id="${s.id}"
+            ondragover="wpWfOnStepDragOver(event)" ondragleave="wpWfOnStepDragLeave(event)"
+            ondrop="wpWfOnStepDrop(event, ${s.id})">
+            <td style="text-align:center;">
+                <i class="bi bi-grip-vertical wp-wf-step-drag" draggable="true" title="اسحب لإعادة الترتيب"
+                    ondragstart="wpWfOnStepDragStart(event, ${s.id})" ondragend="wpWfOnStepDragEnd(event)"></i>
+            </td>
             <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i + 1}</td>
             <td${mu()}>${esc(s.stepLabel || '')}${dec ? ' <span class="badge bg-secondary">قرار</span>' : ''}</td>
             <td style="text-align:center;">${assigneeMode}</td>
             <td>${wpWfAssigneeLabel(s)}</td>
             <td${mu()}>${dur}</td>
             <td class="${dec ? 'wp-wf-muted' : ''}" style="text-align:center;">${returnYesNo}</td>
-            <td>${returnStepCell}</td>
-            <td class="${dec ? 'wp-wf-muted' : ''}" style="text-align:center;">${concYesNo}</td>
             <td${mu()}>${fd}</td>
+            <td${mu()}>${sec}</td>
             <td${mu()}>${fs}</td>
-            <td${mu()}>${ch}</td>
             <td style="text-align:center;white-space:nowrap;">
                 <button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpWfShowDetails(${s.id})"><i class="bi bi-eye"></i></button>
                 <button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpWfShowEditForm(${s.id})"><i class="bi bi-pencil-square"></i></button>
@@ -2356,7 +2571,8 @@ function wpWfRenderForm(editId) {
     const initialChannels = wpWfResolveInitialChannels(st);
     const initialReturnId = st ? (st.returnStepId || 0) : 0;
     const initialConcurrentStepId = st ? (st.concurrentStepId || 0) : 0;
-    const initialDays = st ? (st.expectedDurationDays || '0') : '0';
+    const initialDays = st ? (st.expectedDurationDays || '') : '';
+    const initialFormSectionId = st ? (st.formSectionId || st.FormSectionId || 0) : 0;
 
     const ttl = document.getElementById('wpWfStepModalTitle');
     const sub = document.getElementById('wpWfStepModalSub');
@@ -2397,13 +2613,24 @@ function wpWfRenderForm(editId) {
     <!-- يُملأ ديناميكياً حسب وضع المكلف -->
   </div>
 
+  <div class="fd-form-row" id="wpWfFormBindingRow">
+    <div class="fd-form-group" id="wpWfFormDefGroup">
+      <label>النموذج المستخدم</label>
+      <select class="form-select" id="wpWfFormDef"><option value="">— لا يوجد —</option></select>
+    </div>
+    <div class="fd-form-group" id="wpWfFormSectionGroup" style="display:none;">
+      <label>القسم</label>
+      <select class="form-select" id="wpWfFormSection"><option value="">— اختر —</option></select>
+    </div>
+  </div>
+
   <div class="fd-form-row">
     <div class="fd-form-group">
       <label><span class="required-star">*</span> الحالة</label>
       <select class="form-select" id="wpWfFormStatus"><option value="">—</option></select>
     </div>
     <div class="fd-form-group wp-wf-duration-block">
-      <span class="wp-wf-duration-section-label"><span class="required-star">*</span> المدة المتوقعة للإنجاز</span>
+      <span class="wp-wf-duration-section-label">المدة المتوقعة للإنجاز</span>
       <div class="wp-wf-duration-pair">
         <div class="wp-wf-duration-unit">
           <div class="wp-wf-stepper-wrap">
@@ -2427,27 +2654,23 @@ function wpWfRenderForm(editId) {
   </div>
 
   <div class="fd-form-row">
-    <div class="fd-form-group">
-      <label>النموذج المستخدم</label>
-      <select class="form-select" id="wpWfFormDef"><option value="">— لا يوجد —</option></select>
-    </div>
     <div class="fd-form-group" id="wpWfChannelGroup">
-      <label><span class="required-star">*</span> قناة الإشعار</label>
+      <label>قناة الإشعار</label>
       <div class="wp-wf-channel-list" id="wpWfChannelHost"></div>
       <div class="wp-wf-channel-note" id="wpWfChannelHint" style="display:none;">قنوات البريد الإلكتروني / SMS جاهزة للربط مستقبلاً (التفعيل الفعلي للإشعارات داخل النظام).</div>
     </div>
   </div>
 
-  <div class="fd-form-row cols-1">
+  <div class="fd-form-row cols-1" id="wpWfExecNoteGroup">
     <div class="fd-form-group">
       <label>نص إشعار تنفيذ الخطوة</label>
-      <textarea class="form-control" id="wpWfExecNote" rows="3">${st ? esc(st.executionNotificationText) : ''}</textarea>
+      <textarea class="form-control" id="wpWfExecNote" rows="3" disabled placeholder="اختر قناة إشعار واحدة على الأقل لتفعيل هذا الحقل">${st ? esc(st.executionNotificationText) : ''}</textarea>
     </div>
   </div>
 
   <div class="fd-form-row cols-1">
     <div class="fd-form-group">
-      <label><span class="required-star">*</span> الإجراءات المسموحة</label>
+      <label>الإجراءات المسموحة</label>
       <div class="wp-wf-actions-list" id="wpWfActionsHost"></div>
       <!-- قوالب صفوف فرعية تُنقل بعد الزر المناسب وقت الرسم -->
       <template id="wpWfReturnRowTpl">
@@ -2487,7 +2710,15 @@ function wpWfRenderForm(editId) {
 
     // تعبئة قائمة الحالات والنماذج
     wpWfFillSelect('wpWfFormStatus', (wpWfCtx && wpWfCtx.formStatuses) || [], st ? st.formStatusId : null, '—');
-    wpWfFillSelect('wpWfFormDef', (wpWfCtx && wpWfCtx.formDefinitions) || [], st ? st.formDefinitionId : null, '— لا يوجد —');
+    wpWfFillSelect('wpWfFormDef', wpWfGetUsedFormDefinitions(), st ? st.formDefinitionId : null, '— لا يوجد —');
+    wpWfRefreshFormBindingUI(st ? st.formDefinitionId : null, initialFormSectionId);
+
+    const formDefEl = document.getElementById('wpWfFormDef');
+    if (formDefEl) {
+        formDefEl.onchange = () => {
+            wpWfRefreshFormBindingUI(formDefEl.value, null);
+        };
+    }
 
     // قنوات الإشعار + الإجراءات المسموحة
     wpWfRenderChannels(initialChannels);
@@ -2518,10 +2749,96 @@ function wpWfRenderForm(editId) {
     wpWfUpdateReturnStepVisibility();
     wpWfUpdateConcurrentStepVisibility();
     wpWfUpdateChannelHint();
+    wpWfUpdateExecNoteState();
 
     try {
         wpWfStepFormModal().show();
     } catch (e) { console.error(e); }
+}
+
+function wpWfGetFormDefSections(formDefId) {
+    const id = parseInt(String(formDefId || ''), 10) || 0;
+    if (!id) return [];
+    const list = wpWfGetUsedFormDefinitions();
+    const fd = list.find((x) => (x.id != null ? x.id : x.Id) === id);
+    if (!fd) return [];
+    const secs = fd.sections || fd.Sections || [];
+    return Array.isArray(secs) ? secs : [];
+}
+
+/** يُحدّث قائمة النموذج المستخدم وحقل القسم (يُخفى القسم فقط عند قسم واحد). */
+function wpWfRefreshFormBindingUI(selectedFormDefId, selectedSectionId) {
+    const defs = wpWfGetUsedFormDefinitions();
+    const formGrp = document.getElementById('wpWfFormDefGroup');
+    const formSel = document.getElementById('wpWfFormDef');
+    const bindingRow = document.getElementById('wpWfFormBindingRow');
+    let fid = parseInt(String(selectedFormDefId || ''), 10) || 0;
+
+    if (defs.length === 0) {
+        if (bindingRow) bindingRow.style.display = 'none';
+        wpWfRefreshFormSectionSelect(0, null);
+        return;
+    }
+    if (bindingRow) bindingRow.style.display = '';
+    if (formGrp) formGrp.style.display = '';
+
+    if (defs.length === 1) {
+        fid = defs[0].id != null ? defs[0].id : defs[0].Id;
+        if (formSel) formSel.value = String(fid);
+    } else if (!fid && formSel) {
+        fid = parseInt(formSel.value || '0', 10) || 0;
+    }
+
+    wpWfRefreshFormSectionSelect(fid, selectedSectionId);
+}
+
+/** يُظهر حقل القسم (اختيار مفرد) فقط عند وجود أكثر من قسم في النموذج. */
+function wpWfRefreshFormSectionSelect(formDefId, selectedSectionId) {
+    const grp = document.getElementById('wpWfFormSectionGroup');
+    const sel = document.getElementById('wpWfFormSection');
+    if (!grp || !sel) return;
+    const sections = wpWfGetFormDefSections(formDefId);
+    if (sections.length <= 1) {
+        grp.style.display = 'none';
+        if (sections.length === 1) {
+            const onlyId = sections[0].id != null ? sections[0].id : sections[0].Id;
+            sel.innerHTML = `<option value="${onlyId}" selected>${esc(sections[0].title || sections[0].Title || '')}</option>`;
+        } else {
+            sel.innerHTML = '<option value="">—</option>';
+        }
+        return;
+    }
+    grp.style.display = '';
+    const sid = parseInt(String(selectedSectionId || ''), 10) || 0;
+    sel.innerHTML = '<option value="">— اختر —</option>' + sections.map((s) => {
+        const id = s.id != null ? s.id : s.Id;
+        const title = s.title != null ? s.title : (s.Title || '');
+        const picked = sid > 0 && id === sid ? 'selected' : '';
+        return `<option value="${id}" ${picked}>${esc(title)}</option>`;
+    }).join('');
+}
+
+function wpWfResolveStepFormBinding() {
+    const defs = wpWfGetUsedFormDefinitions();
+    const formSel = document.getElementById('wpWfFormDef');
+    let fd = parseInt(formSel?.value || '0', 10) || 0;
+    if (defs.length === 1) fd = defs[0].id != null ? defs[0].id : defs[0].Id;
+    if (defs.length > 1 && fd <= 0) return { error: 'يجب اختيار النموذج المستخدم' };
+
+    const sections = wpWfGetFormDefSections(fd);
+    let formSectionId = null;
+    if (sections.length > 1) {
+        const secId = parseInt(document.getElementById('wpWfFormSection')?.value || '0', 10);
+        if (secId <= 0) return { error: 'يجب اختيار القسم' };
+        formSectionId = secId;
+    } else if (sections.length === 1) {
+        formSectionId = sections[0].id != null ? sections[0].id : sections[0].Id;
+    }
+
+    return {
+        formDefinitionId: fd > 0 ? fd : null,
+        formSectionId
+    };
 }
 
 function wpWfFillSelect(id, items, selectedId, placeholder) {
@@ -2802,12 +3119,12 @@ function wpWfOnFixedTypeChange() {
 
 /** يحدد القنوات الابتدائية مع التوافق مع التخزين القديم (channel مفرد). */
 function wpWfResolveInitialChannels(st) {
-    if (!st) return ['in_app'];
-    if (Array.isArray(st.notificationChannels) && st.notificationChannels.length) {
-        return st.notificationChannels.slice();
+    if (!st) return [];
+    if (Array.isArray(st.notificationChannels)) {
+        return st.notificationChannels.length ? st.notificationChannels.slice() : [];
     }
-    const single = (st.notificationChannel || 'in_app').toString();
-    return [single];
+    const single = (st.notificationChannel || '').toString().trim();
+    return single ? [single] : [];
 }
 
 function wpWfRenderChannels(selected) {
@@ -2834,6 +3151,20 @@ function wpWfOnChannelChange(cb) {
     const lab = cb.closest('.wp-wf-channel-chip');
     if (lab) lab.classList.toggle('is-on', cb.checked);
     wpWfUpdateChannelHint();
+    wpWfUpdateExecNoteState();
+}
+
+/** يفعّل «نص إشعار تنفيذ الخطوة» فقط عند اختيار قناة إشعار واحدة على الأقل. */
+function wpWfUpdateExecNoteState() {
+    const host = document.getElementById('wpWfChannelHost');
+    const note = document.getElementById('wpWfExecNote');
+    const grp = document.getElementById('wpWfExecNoteGroup');
+    if (!note) return;
+    const count = host ? host.querySelectorAll('.wp-wf-channel-cb:checked').length : 0;
+    const on = count > 0;
+    note.disabled = !on;
+    if (grp) grp.style.opacity = on ? '1' : '0.55';
+    if (!on) note.value = '';
 }
 
 function wpWfUpdateChannelHint() {
@@ -3003,15 +3334,21 @@ async function wpWfSubmitForm() {
     if (fs <= 0) return showToast('الحالة مطلوبة', 'error');
 
     const daysRaw = (document.getElementById('wpWfDays')?.value || '').trim();
-    const daysNum = parseInt(daysRaw, 10);
-    if (isNaN(daysNum) || daysNum < 0) return showToast('المدة المتوقعة للإنجاز مطلوبة وبأرقام موجبة', 'error');
+    let daysStr = '';
+    if (daysRaw !== '') {
+        const daysNum = parseInt(daysRaw, 10);
+        if (isNaN(daysNum) || daysNum < 0) return showToast('المدة المتوقعة للإنجاز يجب أن تكون رقماً موجباً أو صفراً', 'error');
+        daysStr = String(daysNum);
+    }
 
-    const fd = parseInt(document.getElementById('wpWfFormDef')?.value || '0', 10);
+    const binding = wpWfResolveStepFormBinding();
+    if (binding.error) return showToast(binding.error, 'error');
+    const fd = binding.formDefinitionId || 0;
+    const formSectionId = binding.formSectionId;
     const channels = Array.from(document.querySelectorAll('.wp-wf-channel-cb:checked')).map((cb) => cb.value);
-    if (!channels.length) return showToast('قناة الإشعار مطلوبة', 'error');
+    const execNote = channels.length ? (document.getElementById('wpWfExecNote')?.value?.trim() || '') : '';
 
     const allowed = Array.from(document.querySelectorAll('.wp-wf-action-cb:checked')).map((cb) => cb.value);
-    if (!allowed.length) return showToast('الإجراءات المسموحة مطلوبة', 'error');
 
     let returnStepId = null;
     if (allowed.includes('return')) {
@@ -3033,18 +3370,19 @@ async function wpWfSubmitForm() {
         assigneeMode,
         assigneeFixedType,
         assigneeOrgUnitId,
-        expectedDurationDays: String(daysNum),
+        expectedDurationDays: daysStr,
         expectedDurationHours: '',
         isConcurrentStep: false,
         escalationSyncFlags: null,
         returnStepId,
         progressStepId: null,
         formDefinitionId: fd > 0 ? fd : null,
+        formSectionId,
         formStatusId: fs,
-        notificationChannel: channels.includes('in_app') ? 'in_app' : channels[0],
-        notificationChannels: channels,
+        notificationChannel: channels.length ? (channels.includes('in_app') ? 'in_app' : channels[0]) : '',
+        notificationChannels: channels.length ? channels : null,
         overdueNotificationText: document.getElementById('wpWfOverdue')?.value?.trim() || '',
-        executionNotificationText: document.getElementById('wpWfExecNote')?.value?.trim() || '',
+        executionNotificationText: execNote,
         notes: document.getElementById('wpWfNotes')?.value?.trim() || null,
         allowedActions: allowed,
         concurrentStepId
@@ -3054,12 +3392,16 @@ async function wpWfSubmitForm() {
         const ix = wpWfSteps.findIndex((x) => x.id === editId);
         if (ix >= 0) {
             step.id = editId;
+            step.sortOrder = wpWfSteps[ix].sortOrder || 0;
             wpWfSteps[ix] = step;
         }
     } else {
+        const maxOrder = wpWfSteps.reduce((m, x) => Math.max(m, x.sortOrder || 0), 0);
+        step.sortOrder = maxOrder + 1;
         wpWfSteps.push(step);
     }
     wpWfReindexSortOrder();
+    wpUpdateVersionSaveButtons();
     await wpWfSaveAll();
 }
 
@@ -3088,8 +3430,9 @@ async function wpWfSaveAll() {
             returnStepId: s.returnStepId,
             progressStepId: s.progressStepId,
             formDefinitionId: (s.formDefinitionId != null && s.formDefinitionId > 0) ? s.formDefinitionId : null,
+            formSectionId: (s.formSectionId != null && s.formSectionId > 0) ? s.formSectionId : null,
             formStatusId: s.formStatusId,
-            notificationChannel: s.notificationChannel || 'in_app',
+            notificationChannel: s.notificationChannel || '',
             notificationChannels: Array.isArray(s.notificationChannels) && s.notificationChannels.length ? s.notificationChannels : null,
             overdueNotificationText: s.overdueNotificationText || '',
             executionNotificationText: s.executionNotificationText || '',
@@ -3112,11 +3455,169 @@ async function wpWfSaveAll() {
     }
 }
 
+function wpWfStepDeleteBlockedReason(stepId) {
+    const refs = [];
+    for (const s of wpWfSteps) {
+        if (s.id === stepId) continue;
+        const lbl = (s.stepLabel || '').trim() || `خطوة ${s.sortOrder || ''}`;
+        if (s.returnStepId === stepId)
+            refs.push(`مستخدمة كخطوة رجوع في «${lbl}»`);
+        if (s.concurrentStepId === stepId)
+            refs.push(`مستخدمة ضمن الموافقات المتزامنة في «${lbl}»`);
+    }
+    if (!refs.length) return null;
+    return `لا يمكن حذف هذه الخطوة لأنها ${refs.join(' و')}`;
+}
+
+function wpWfOnStepDragStart(ev, stepId) {
+    wpWfDragFromId = stepId;
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', String(stepId));
+    const row = ev.target && ev.target.closest ? ev.target.closest('.wp-wf-step-row') : null;
+    if (row) row.classList.add('wp-wf-step-row-dragging');
+}
+
+function wpWfOnStepDragEnd() {
+    wpWfDragFromId = null;
+    document.querySelectorAll('.wp-wf-step-row-dragging, .wp-wf-step-row-drop-target').forEach((el) => {
+        el.classList.remove('wp-wf-step-row-dragging', 'wp-wf-step-row-drop-target');
+    });
+}
+
+function wpWfOnStepDragOver(ev) {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    const row = ev.currentTarget;
+    if (row && row.classList.contains('wp-wf-step-row')) row.classList.add('wp-wf-step-row-drop-target');
+}
+
+function wpWfOnStepDragLeave(ev) {
+    const row = ev.currentTarget;
+    if (row) row.classList.remove('wp-wf-step-row-drop-target');
+}
+
+async function wpWfOnStepDrop(ev, toStepId) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const fromId = wpWfDragFromId;
+    wpWfOnStepDragEnd();
+    if (fromId == null || fromId === toStepId) return;
+    const sorted = [].concat(wpWfSteps).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const fromIdx = sorted.findIndex((x) => x.id === fromId);
+    let toIdx = sorted.findIndex((x) => x.id === toStepId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const moved = sorted.splice(fromIdx, 1)[0];
+    if (fromIdx < toIdx) toIdx--;
+    sorted.splice(toIdx, 0, moved);
+    sorted.forEach((s, i) => {
+        const x = wpWfSteps.find((z) => z.id === s.id);
+        if (x) x.sortOrder = i + 1;
+    });
+    wpWfRenderTable();
+    wpUpdateVersionSaveButtons();
+    await wpWfSaveAll();
+}
+
 async function wpWfDeleteStep(id) {
+    const block = wpWfStepDeleteBlockedReason(id);
+    if (block) return showToast(block, 'error');
     if (!confirm('حذف هذه الخطوة؟')) return;
     wpWfSteps = wpWfSteps.filter((x) => x.id !== id);
     wpWfReindexSortOrder();
+    wpUpdateVersionSaveButtons();
     await wpWfSaveAll();
+}
+
+function wpWfDetailVal(v) {
+    if (v == null || String(v).trim() === '') return '<span class="wp-wf-det-empty">—</span>';
+    return v;
+}
+
+function wpWfBuildDetailsHtml(s) {
+    const dec = !!s.isDecision;
+    const sorted = [].concat(wpWfSteps).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    const orderNum = Math.max(1, sorted.findIndex((x) => x.id === s.id) + 1);
+    const modeLbl = s.assigneeMode === 'fixed' ? 'ثابت' : 'محدد';
+    const allowed = Array.isArray(s.allowedActions) ? s.allowedActions : [];
+    const hasReturn = allowed.includes('return');
+    const hasConc = allowed.includes('concurrent_approvals');
+    const list = (wpWfCtx && wpWfCtx.allowedStepActions) || [];
+
+    let actionsHtml = '<span class="wp-wf-det-empty">—</span>';
+    if (!dec && allowed.length) {
+        actionsHtml = allowed.map((code) => {
+            const m = list.find((a) => (a.code != null ? a.code : a.Code) === code);
+            const nm = m ? esc(m.name != null ? m.name : m.Name) : esc(code);
+            const color = m ? (m.color != null ? m.color : m.Color) : '#6b7280';
+            return `<span class="wp-wf-det-pill" style="--pill-color:${color};">${nm}</span>`;
+        }).join('');
+    }
+
+    let html = `<div class="wp-wf-det-wrap">
+        <div class="wp-wf-det-hero">
+            <div class="wp-wf-det-hero-icon"><i class="bi bi-diagram-3-fill"></i></div>
+            <div class="wp-wf-det-hero-text">
+                <div class="wp-wf-det-hero-title">${esc(s.stepLabel || '—')}</div>
+                <div class="wp-wf-det-hero-sub">الترتيب: ${orderNum}${dec ? ' · <span class="badge bg-secondary">خطوة قرار</span>' : ''}</div>
+            </div>
+        </div>`;
+
+    html += `<div class="wp-wf-det-card">
+        <div class="wp-wf-det-card-hd"><i class="bi bi-person-badge"></i> التكليف والمنفذ</div>
+        <div class="wp-wf-det-grid">
+            <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">نوع المكلف</span><span class="wp-wf-det-val">${esc(modeLbl)}</span></div>
+            <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">المنفذ</span><span class="wp-wf-det-val">${wpWfAssigneeLabel(s)}</span></div>
+        </div>
+    </div>`;
+
+    if (!dec) {
+        html += `<div class="wp-wf-det-card">
+            <div class="wp-wf-det-card-hd"><i class="bi bi-clock-history"></i> التنفيذ والمدة</div>
+            <div class="wp-wf-det-grid">
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">مدة الإنجاز</span><span class="wp-wf-det-val">${wpWfFormatDurationDaysOnly(s.expectedDurationDays)}</span></div>
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">الحالة</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(wpWfFsName(s.formStatusId)))}</span></div>
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">النموذج المستخدم</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(wpWfFdName(s.formDefinitionId)))}</span></div>
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">القسم</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(wpWfSectionName(s.formDefinitionId, s.formSectionId)))}</span></div>
+            </div>
+        </div>`;
+
+        html += `<div class="wp-wf-det-card">
+            <div class="wp-wf-det-card-hd"><i class="bi bi-bell"></i> الإشعارات</div>
+            <div class="wp-wf-det-grid">
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">قنوات الإشعار</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(wpWfChannelsLabel(s)))}</span></div>
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">إشعار تجاوز المدة</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(s.overdueNotificationText))}</span></div>
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">إشعار تنفيذ الخطوة</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(s.executionNotificationText))}</span></div>
+            </div>
+        </div>`;
+
+        html += `<div class="wp-wf-det-card">
+            <div class="wp-wf-det-card-hd"><i class="bi bi-ui-checks-grid"></i> الإجراءات والارتباطات</div>
+            <div class="wp-wf-det-grid">
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">الإجراءات المسموحة</span><span class="wp-wf-det-val wp-wf-det-pills">${actionsHtml}</span></div>
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">الإرجاع</span><span class="wp-wf-det-val">${hasReturn ? 'نعم' : 'لا'}</span></div>
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">خطوة الرجوع</span><span class="wp-wf-det-val">${hasReturn ? wpWfDetailVal(esc(wpWfStepNameById(s.returnStepId))) : '—'}</span></div>
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">موافقات متزامنة</span><span class="wp-wf-det-val">${hasConc ? 'نعم' : 'لا'}</span></div>
+                <div class="wp-wf-det-item"><span class="wp-wf-det-lbl">خطوة التزامن</span><span class="wp-wf-det-val">${hasConc ? wpWfDetailVal(esc(wpWfStepNameById(s.concurrentStepId))) : '—'}</span></div>
+            </div>
+        </div>`;
+    } else {
+        html += `<div class="wp-wf-det-card">
+            <div class="wp-wf-det-card-hd"><i class="bi bi-signpost-split"></i> خطوة القرار</div>
+            <div class="wp-wf-det-grid">
+                <div class="wp-wf-det-item wp-wf-det-full"><span class="wp-wf-det-lbl">خطوة الرجوع</span><span class="wp-wf-det-val">${wpWfDetailVal(esc(wpWfStepNameById(s.returnStepId)))}</span></div>
+            </div>
+        </div>`;
+    }
+
+    if (s.notes) {
+        html += `<div class="wp-wf-det-card">
+            <div class="wp-wf-det-card-hd"><i class="bi bi-chat-left-text"></i> ملاحظات</div>
+            <div class="wp-wf-det-notes">${esc(s.notes)}</div>
+        </div>`;
+    }
+
+    html += '</div>';
+    return html;
 }
 
 function wpWfShowDetails(id) {
@@ -3126,34 +3627,7 @@ function wpWfShowDetails(id) {
     if (sub) sub.textContent = esc(s.stepLabel || '');
     const body = document.getElementById('wpWfDetBody');
     if (!body) return;
-    const dec = !!s.isDecision;
-    let html = '<div class="fd-detail-grid">';
-    const modeLbl = s.assigneeMode === 'fixed' ? 'ثابت' : 'محدد';
-    html += `<span class="fd-detail-lbl">نوع المكلف</span><span class="fd-detail-val">${esc(modeLbl)}</span>`;
-    html += `<span class="fd-detail-lbl">المنفذ</span><span class="fd-detail-val">${wpWfAssigneeLabel(s)}</span>`;
-    if (!dec) {
-        html += `<span class="fd-detail-lbl">المدة</span><span class="fd-detail-val">${wpWfFormatDuration(s.expectedDurationDays, s.expectedDurationHours)}</span>`;
-        html += `<span class="fd-detail-lbl">النموذج</span><span class="fd-detail-val">${esc(wpWfFdName(s.formDefinitionId))}</span>`;
-        html += `<span class="fd-detail-lbl">الحالة</span><span class="fd-detail-val">${esc(wpWfFsName(s.formStatusId))}</span>`;
-        html += `<span class="fd-detail-lbl">قنوات الإشعار</span><span class="fd-detail-val">${esc(wpWfChannelsLabel(s))}</span>`;
-        html += `<span class="fd-detail-lbl">إشعار تجاوز</span><span class="fd-detail-val">${esc(s.overdueNotificationText) || '—'}</span>`;
-        html += `<span class="fd-detail-lbl">إشعار التنفيذ</span><span class="fd-detail-val">${esc(s.executionNotificationText) || '—'}</span>`;
-        if (Array.isArray(s.allowedActions) && s.allowedActions.length) {
-            const list = (wpWfCtx && wpWfCtx.allowedStepActions) || [];
-            const html2 = s.allowedActions.map((code) => {
-                const m = list.find((a) => (a.code != null ? a.code : a.Code) === code);
-                const nm = m ? esc(m.name != null ? m.name : m.Name) : esc(code);
-                const color = m ? (m.color != null ? m.color : m.Color) : '#6b7280';
-                return `<span class="fd-badge" style="background:${color}1a;color:${color};border:1px solid ${color}55;">${nm}</span>`;
-            }).join(' ');
-            html += `<span class="fd-detail-lbl">الإجراءات المسموحة</span><span class="fd-detail-val">${html2}</span>`;
-        }
-    }
-    html += `<span class="fd-detail-lbl">خطوة الرجوع</span><span class="fd-detail-val">${wpWfStepNameById(s.returnStepId)}</span>`;
-    html += `<span class="fd-detail-lbl">خطوة التزامن</span><span class="fd-detail-val">${wpWfStepNameById(s.concurrentStepId)}</span>`;
-    if (s.notes) html += `<span class="fd-detail-lbl">ملاحظة</span><span class="fd-detail-val">${esc(s.notes)}</span>`;
-    html += '</div>';
-    body.innerHTML = html;
+    body.innerHTML = wpWfBuildDetailsHtml(s);
     wpWfDetModal().show();
 }
 

@@ -1,0 +1,625 @@
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\web.config
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\web.config
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\appsettings.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\audit_logs.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\backup_records.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\beneficiaries.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\categories.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\classifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\delegations.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\departments.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\dropdown_items.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\dropdown_lists.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\executor_roles.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_classes.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_definitions.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_definition_versions.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_sections.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_statuses.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\form_templates.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\login_attempts.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\notifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\organizational_units.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\outbox_requests.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\popup_notifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\procedure_action_types.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\ready_tables.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\ready_table_fields.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\received_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\replies.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\sent_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\support_tickets.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\system_feedbacks.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\users.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\user_guide_items.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\user_notes.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\workspaces.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\Data\work_procedures.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\appsettings.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\audit_logs.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\beneficiaries.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\categories.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\classifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\departments.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\dropdown_items.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\dropdown_lists.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\notifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\organizational_units.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\ready_tables.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\ready_table_fields.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\received_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\replies.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\sent_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\users.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\Data\workspaces.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\FormsSystem.deps.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\appsettings.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\audit_logs.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\categories.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\classifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\departments.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\notifications.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\organizational_units.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\ready_tables.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\received_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\replies.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\sent_forms.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\Data\users.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.exe
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.deps.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.runtimeconfig.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.dll
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\bin\Debug\net8.0\win-x64\FormsSystem.pdb
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\rpswa.dswa.cache.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.AssemblyInfoInputs.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.AssemblyInfo.cs
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.csproj.CoreCompileInputs.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.RazorAssemblyInfo.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.RazorAssemblyInfo.cs
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.sourcelink.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\rjimswa.dswa.cache.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\rjsmrazor.dswa.cache.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\rjsmcshtml.dswa.cache.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\scopedcss\bundle\FormsSystem.styles.css
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\staticwebassets.build.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\staticwebassets.build.json.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\staticwebassets.development.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\staticwebassets.build.endpoints.json
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\swae.build.ex.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.dll
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\refint\FormsSystem.dll
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.pdb
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\FormsSystem.genruntimeconfig.cache
+C:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\forms\obj\Debug\net8.0\win-x64\ref\FormsSystem.dll
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\web.config
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\web.config
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\appsettings.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\audit_logs.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\backup_records.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\beneficiaries.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\categories.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\classifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\delegations.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\departments.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\dropdown_items.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\dropdown_lists.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\executor_roles.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_classes.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_definitions.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_definition_versions.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_sections.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_statuses.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\form_templates.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\login_attempts.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\notifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\organizational_units.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\outbox_requests.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\popup_notifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\procedure_action_types.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\ready_tables.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\ready_table_fields.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\received_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\replies.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\sent_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\support_tickets.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\system_feedbacks.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\users.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\user_guide_items.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\user_notes.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\workspaces.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\Data\work_procedures.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\appsettings.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\audit_logs.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\beneficiaries.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\categories.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\classifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\departments.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\dropdown_items.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\dropdown_lists.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\notifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\organizational_units.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\ready_tables.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\ready_table_fields.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\received_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\replies.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\sent_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\users.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\Data\workspaces.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\FormsSystem.deps.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\FormsSystem.runtimeconfig.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\FormsSystem.staticwebassets.endpoints.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\appsettings.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\audit_logs.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\beneficiaries.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\categories.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\classifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\departments.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\dropdown_items.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\dropdown_lists.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\notifications.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\organizational_units.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\ready_tables.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\ready_table_fields.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\received_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\replies.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\sent_forms.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\Data\users.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\FormsSystem.deps.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\FormsSystem.runtimeconfig.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\publish\publish\FormsSystem.staticwebassets.endpoints.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.staticwebassets.runtime.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.staticwebassets.endpoints.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.exe
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.deps.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.runtimeconfig.json
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.dll
+c:\Users\iosam\Downloads\es -lastversionNo18june\es -lastversionNo18june\es\Forms\bin\build-check\FormsSystem.pdb
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\backup_records.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\delegations.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\executor_roles.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_classes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_definitions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_definition_versions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_sections.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_statuses.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\form_templates.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\login_attempts.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\outbox_requests.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\popup_notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\procedure_action_types.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\support_tickets.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\system_feedbacks.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\user_guide_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\user_notes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\Data\work_procedures.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.exe
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.dll
+C:\Users\iosam\AppData\Local\Temp\forms-build-check\FormsSystem.pdb
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\backup_records.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\delegations.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\executor_roles.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_classes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_definitions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_definition_versions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_sections.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_statuses.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\form_templates.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\login_attempts.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\outbox_requests.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\popup_notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\procedure_action_types.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\support_tickets.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\system_feedbacks.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\user_guide_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\user_notes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\Data\work_procedures.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.exe
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.dll
+C:\Users\iosam\AppData\Local\Temp\forms-build-check2\FormsSystem.pdb
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\backup_records.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\delegations.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\executor_roles.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_classes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_definitions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_definition_versions.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_sections.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_statuses.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\form_templates.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\login_attempts.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\outbox_requests.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\popup_notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\procedure_action_types.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\support_tickets.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\system_feedbacks.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\user_guide_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\user_notes.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\Data\work_procedures.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.exe
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.dll
+C:\Users\iosam\AppData\Local\Temp\forms-build-check3\FormsSystem.pdb
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\backup_records.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\delegations.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\executor_roles.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_classes.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_definitions.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_definition_versions.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_sections.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_statuses.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\form_templates.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\login_attempts.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\outbox_requests.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\popup_notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\procedure_action_types.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\support_tickets.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\system_feedbacks.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\user_guide_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\user_notes.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\Data\work_procedures.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.exe
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.dll
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild2\FormsSystem.pdb
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\web.config
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\backup_records.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\delegations.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\executor_roles.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_classes.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_definitions.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_definition_versions.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_sections.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_statuses.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\form_templates.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\login_attempts.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\outbox_requests.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\popup_notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\procedure_action_types.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\support_tickets.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\system_feedbacks.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\user_guide_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\user_notes.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\Data\work_procedures.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\Data\workspaces.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\appsettings.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\audit_logs.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\beneficiaries.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\categories.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\classifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\departments.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\dropdown_items.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\dropdown_lists.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\notifications.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\organizational_units.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\ready_tables.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\ready_table_fields.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\received_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\replies.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\sent_forms.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\Data\users.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\publish\publish\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.staticwebassets.runtime.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.staticwebassets.endpoints.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.exe
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.deps.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.runtimeconfig.json
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.dll
+C:\Users\iosam\AppData\Local\Temp\FormsSystemBuild3\FormsSystem.pdb

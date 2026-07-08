@@ -291,9 +291,33 @@
 /* وضع المكلف الثابت — تنسيق المنفذ + الوحدة التنظيمية */
 .wp-wf-step-form[data-mode="fixed"] #wpWfAssigneeBlock { grid-template-columns:repeat(2, 1fr); }
 
+.wp-wf-step-drag { cursor:grab; color:var(--gray-400); font-size:16px; padding:2px; }
+.wp-wf-step-drag:active { cursor:grabbing; }
+.wp-wf-step-row-dragging { opacity:.55; background:var(--sa-50) !important; }
+.wp-wf-step-row-drop-target td { box-shadow:inset 0 3px 0 var(--sa-500); }
+
+.wp-wf-det-wrap { display:flex; flex-direction:column; gap:14px; }
+.wp-wf-det-hero { display:flex; align-items:center; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius:12px; }
+.wp-wf-det-hero-icon { width:44px; height:44px; border-radius:12px; background:var(--sa-700); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.wp-wf-det-hero-title { font-weight:800; font-size:16px; color:var(--gray-900); }
+.wp-wf-det-hero-sub { font-size:12px; color:var(--gray-500); font-weight:600; margin-top:4px; }
+.wp-wf-det-card { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; background:#fff; }
+.wp-wf-det-card-hd { padding:10px 14px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); font-weight:800; font-size:13px; color:var(--sa-800); display:flex; align-items:center; gap:8px; }
+.wp-wf-det-card-hd i { color:var(--sa-600); }
+.wp-wf-det-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; padding:14px 16px; }
+.wp-wf-det-item { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.wp-wf-det-item.wp-wf-det-full { grid-column:1 / -1; }
+.wp-wf-det-lbl { font-size:11.5px; font-weight:700; color:var(--gray-500); }
+.wp-wf-det-val { font-size:13px; font-weight:600; color:var(--gray-800); line-height:1.55; word-break:break-word; }
+.wp-wf-det-empty { color:var(--gray-400); font-weight:500; }
+.wp-wf-det-pills { display:flex; flex-wrap:wrap; gap:6px; }
+.wp-wf-det-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; background:color-mix(in srgb, var(--pill-color,#6b7280) 12%, #fff); color:var(--pill-color,#6b7280); border:1px solid color-mix(in srgb, var(--pill-color,#6b7280) 35%, #fff); }
+.wp-wf-det-notes { padding:12px 16px; font-size:13px; line-height:1.7; color:var(--gray-800); white-space:pre-wrap; }
+
 @@media (max-width:768px) {
     .fd-form-row { grid-template-columns:1fr; }
     .fd-detail-grid { grid-template-columns:1fr; }
+    .wp-wf-det-grid { grid-template-columns:1fr; }
     .wp-wf-sub-row { width:100%; }
     .wp-wf-action-row { flex-direction:column; align-items:stretch; }
     .wp-wf-action-chip { max-width:none; }
@@ -320,22 +344,20 @@
             <table class="table mb-0">
                 <thead>
                     <tr>
+                        <th style="text-align:center;width:36px;"></th>
                         <th style="text-align:center;white-space:nowrap;min-width:4.5rem;">الترتيب</th>
                         <th>الخطوة</th>
                         <th style="text-align:center;">المكلف</th>
                         <th>المنفذ</th>
                         <th>مدة الانجاز</th>
                         <th style="text-align:center;">الإرجاع</th>
-                        <th>خطوة الرجوع</th>
-                        <th style="text-align:center;">موافقات متزامنة</th>
                         <th>النموذج المستخدم</th>
                         <th>الحالة</th>
-                        <th>قناة الإشعار</th>
                         <th style="text-align:center;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="wpWfBody">
-                    <tr><td colspan="12" class="text-center py-4">
+                    <tr><td colspan="10" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>
@@ -358,7 +380,7 @@
 </div>
 
 <div class="modal fade" id="wpWorkflowStepDetailModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div class="modal-content fd-modal">
             <div class="fd-modal-header details">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>

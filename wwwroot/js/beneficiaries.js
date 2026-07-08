@@ -21,9 +21,69 @@ function bnfResolveSubRoleForSubmit() {
 
 function bnfApplyRoleVisibility() {
     var sys = bnfIsSysAdminRole();
-    document.querySelectorAll('.bnf-rep-only').forEach(function (el) {
+    document.querySelectorAll('.bnf-rep-only, .bnf-actual-only').forEach(function (el) {
         el.classList.toggle('d-none', sys);
     });
+}
+
+function bnfClearActualProfileFields() {
+    var ids = ['bnfGender', 'bnfMaritalStatus', 'bnfDateOfBirth', 'bnfEmployeeNumber', 'bnfRank', 'bnfJobTitle', 'bnfJobNumber', 'bnfEducationQualification', 'bnfHonorific'];
+    ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+function bnfFillActualProfileFields(b) {
+    if (!b) {
+        bnfClearActualProfileFields();
+        return;
+    }
+    var g = document.getElementById('bnfGender');
+    if (g) g.value = b.gender || '';
+    var ms = document.getElementById('bnfMaritalStatus');
+    if (ms) ms.value = b.maritalStatus || '';
+    var dob = document.getElementById('bnfDateOfBirth');
+    if (dob) dob.value = b.dateOfBirth || '';
+    var en = document.getElementById('bnfEmployeeNumber');
+    if (en) en.value = b.employeeNumber || '';
+    var rk = document.getElementById('bnfRank');
+    if (rk) rk.value = b.rank || '';
+    var jt = document.getElementById('bnfJobTitle');
+    if (jt) jt.value = b.jobTitle || '';
+    var jn = document.getElementById('bnfJobNumber');
+    if (jn) jn.value = b.jobNumber || '';
+    var eq = document.getElementById('bnfEducationQualification');
+    if (eq) eq.value = b.educationQualification || '';
+    var ho = document.getElementById('bnfHonorific');
+    if (ho) ho.value = b.honorific || '';
+}
+
+function bnfCollectActualProfileFields(isSys) {
+    if (isSys) {
+        return {
+            gender: '',
+            maritalStatus: '',
+            dateOfBirth: '',
+            employeeNumber: '',
+            rank: '',
+            jobTitle: '',
+            jobNumber: '',
+            educationQualification: '',
+            honorific: ''
+        };
+    }
+    return {
+        gender: (document.getElementById('bnfGender') || {}).value || '',
+        maritalStatus: (document.getElementById('bnfMaritalStatus') || {}).value || '',
+        dateOfBirth: (document.getElementById('bnfDateOfBirth') || {}).value || '',
+        employeeNumber: (document.getElementById('bnfEmployeeNumber') || {}).value || '',
+        rank: (document.getElementById('bnfRank') || {}).value || '',
+        jobTitle: (document.getElementById('bnfJobTitle') || {}).value || '',
+        jobNumber: (document.getElementById('bnfJobNumber') || {}).value || '',
+        educationQualification: (document.getElementById('bnfEducationQualification') || {}).value || '',
+        honorific: (document.getElementById('bnfHonorific') || {}).value || ''
+    };
 }
 
 function bnfSyncDeactivateReasonVisibility() {
@@ -97,6 +157,7 @@ function bnfSetPhotoPlaceholderVisible(visible) {
 document.addEventListener('DOMContentLoaded', function () {
     bnfBindDigitsOnly('bnfNationalId', 10);
     bnfBindDigitsOnly('bnfPhone', 10);
+    bnfBindDigitsOnly('bnfEmployeeNumber', null);
     bnfLoad();
 
     var filterIds = ['bnfFilterName', 'bnfFilterNationalId', 'bnfFilterSubRole'];
@@ -118,7 +179,10 @@ document.addEventListener('DOMContentLoaded', function () {
     bnfBindDigitsOnly('bnfFilterNationalId', 10);
 
     document.querySelectorAll('input[name="bnfSubRole"]').forEach(function (r) {
-        r.addEventListener('change', function () { bnfApplyRoleVisibility(); });
+        r.addEventListener('change', function () {
+            if (bnfIsSysAdminRole()) bnfClearActualProfileFields();
+            bnfApplyRoleVisibility();
+        });
     });
     (function bnfBindSubRoleRadioUncheckToggle() {
         var radios = document.querySelectorAll('input[name="bnfSubRole"]');
@@ -571,11 +635,11 @@ async function bnfLoad() {
             bnfRenderTable();
         } else {
             document.getElementById('bnfBody').innerHTML =
-                '<tr><td colspan="11">' + emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'أضف مستفيدين للبدء') + '</td></tr>';
+                '<tr><td colspan="12">' + emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'أضف مستفيدين للبدء') + '</td></tr>';
         }
     } catch (e) {
         document.getElementById('bnfBody').innerHTML =
-            '<tr><td colspan="11" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
+            '<tr><td colspan="12" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
     }
 }
 
@@ -647,16 +711,37 @@ function bnfGetFilteredBeneficiaries() {
     });
 }
 
+function bnfHasSignatureAsset(val) {
+    var s = String(val || '').trim();
+    return s.length > 0;
+}
+
+/** مكتمل = لديه تأشير وتوقيع محفوظان */
+function bnfIsProfileComplete(b) {
+    if (!b) return false;
+    if (b.isProfileComplete != null) return !!b.isProfileComplete;
+    if (b.IsProfileComplete != null) return !!b.IsProfileComplete;
+    var endorsement = b.endorsementFile || b.EndorsementFile || '';
+    var signature = b.signatureFile || b.SignatureFile || '';
+    return bnfHasSignatureAsset(endorsement) && bnfHasSignatureAsset(signature);
+}
+
+function bnfProfileStatusHtml(b) {
+    var text = b.profileStatus || b.ProfileStatus || (bnfIsProfileComplete(b) ? 'مكتمل' : 'غير مكتمل');
+    var cls = text === 'مكتمل' ? 'complete' : 'incomplete';
+    return '<span class="bnf-profile-pill ' + cls + '">' + esc(text) + '</span>';
+}
+
 function bnfRenderTable() {
     var body = document.getElementById('bnfBody');
     if (bnfAll.length === 0) {
-        body.innerHTML = '<tr><td colspan="11">' +
+        body.innerHTML = '<tr><td colspan="12">' +
             emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'اضغط إضافة لإدخال مستفيد جديد') + '</td></tr>';
         return;
     }
     var rows = bnfGetFilteredBeneficiaries();
     if (rows.length === 0) {
-        body.innerHTML = '<tr><td colspan="11">' +
+        body.innerHTML = '<tr><td colspan="12">' +
             emptyState('bi-search', 'لا توجد نتائج', 'جرّب تعديل معايير البحث أو مسح الفلاتر') + '</td></tr>';
         return;
     }
@@ -680,6 +765,7 @@ function bnfRenderTable() {
             '<td style="font-size:12px;">' + esc(b.roleDisplayTable || b.RoleDisplayTable || b.roleDisplay || '') + '</td>' +
             '<td style="font-size:12px;">' + esc(b.organizationalUnitName || '') + '</td>' +
             '<td style="text-align:center;"><span class="bnf-status-pill ' + statusClass + '"><span class="bnf-status-dot"></span>' + statusText + '</span></td>' +
+            '<td style="text-align:center;">' + bnfProfileStatusHtml(b) + '</td>' +
             '<td>' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;">' +
                     '<button class="bnf-action-btn bnf-action-btn-detail" onclick="bnfShowDetails(' + b.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
@@ -843,6 +929,7 @@ function bnfShowAddModal() {
     document.getElementById('bnfSecondName').value = '';
     document.getElementById('bnfThirdName').value = '';
     document.getElementById('bnfFourthName').value = '';
+    bnfClearActualProfileFields();
     bnfOuExpanded = {};
     bnfOuSetSelection('', '');
     bnfOuClosePanel();
@@ -947,6 +1034,9 @@ function bnfShowEditModal(id) {
     var ouRep = document.getElementById('bnfOuRelationRep');
     if (ouMgr) ouMgr.checked = isUm;
     if (ouRep) ouRep.checked = subRole === 'ممثل الوحدة التنظيمية';
+    if (isSys) bnfClearActualProfileFields();
+    else bnfFillActualProfileFields(b);
+    bnfApplyRoleVisibility();
     document.getElementById('bnfUsername').value = b.username || '';
     document.getElementById('bnfPassword').value = '';
     document.getElementById('bnfConfirmPassword').value = '';
@@ -990,6 +1080,7 @@ function bnfSubmit() {
     var mgrCb = document.getElementById('bnfOuRelationMgr');
     var isUnitMgr = !isSys && !!(mgrCb && mgrCb.checked);
     var subRoleSaved = bnfResolveSubRoleForSubmit();
+    var profileFields = bnfCollectActualProfileFields(isSys);
     var ouVal = parseInt(document.getElementById('bnfOrganizationalUnitId').value, 10) || 0;
     var sysAdd = isSys && isAdd;
 
@@ -1013,6 +1104,15 @@ function bnfSubmit() {
         secondName: document.getElementById('bnfSecondName').value.trim(),
         thirdName: document.getElementById('bnfThirdName').value.trim(),
         fourthName: document.getElementById('bnfFourthName').value.trim(),
+        gender: profileFields.gender,
+        maritalStatus: profileFields.maritalStatus,
+        dateOfBirth: profileFields.dateOfBirth || undefined,
+        employeeNumber: profileFields.employeeNumber,
+        rank: profileFields.rank,
+        jobTitle: profileFields.jobTitle,
+        jobNumber: profileFields.jobNumber,
+        educationQualification: profileFields.educationQualification,
+        honorific: profileFields.honorific,
         organizationalUnitId: sysAdd ? 0 : ouVal,
         phone: sysAdd ? '' : document.getElementById('bnfPhone').value.trim(),
         email: sysAdd ? '' : document.getElementById('bnfEmail').value.trim(),
@@ -1073,6 +1173,20 @@ function bnfShowDetails(id) {
         '<div class="row mb-3"><div class="col-md-2"><strong>التوقيع:</strong></div><div class="col-md-10">' + signatureHtml + signaturePreview + '</div></div></div>' +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-person-lines-fill"></i>الأسماء</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الاسم الكامل:</strong></div><div class="col-md-10">' + esc(b.fullName) + '</div></div></div>' +
+        (function () {
+            var sr = (b.subRole || '').trim();
+            if (sr === 'مدير النظام') return '';
+            var row = function (lbl, val) {
+                var v = (val || '').trim();
+                if (!v) return '';
+                return '<div class="row mb-3"><div class="col-md-2"><strong>' + lbl + ':</strong></div><div class="col-md-10">' + esc(v) + '</div></div>';
+            };
+            var block = row('الجنس', b.gender) + row('الحالة الاجتماعية', b.maritalStatus) + row('تاريخ الميلاد', b.dateOfBirth)
+                + row('الرقم الوظيفي', b.employeeNumber) + row('المرتبة', b.rank) + row('المسمى الوظيفي', b.jobTitle)
+                + row('رقم الوظيفة', b.jobNumber) + row('المؤهل التعليمي', b.educationQualification) + row('اللقب', b.honorific);
+            if (!block) return '';
+            return '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-card-list"></i>البيانات الشخصية والوظيفية</div>' + block + '</div>';
+        })() +
         '<div class="bnf-section"><div class="bnf-section-title"><i class="bi bi-building"></i>الوحدة والاتصال</div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الوحدة التنظيمية:</strong></div><div class="col-md-10">' + esc(b.organizationalUnitName || '—') + '</div></div>' +
         '<div class="row mb-3"><div class="col-md-2"><strong>الجوال:</strong></div><div class="col-md-10">' + esc(b.phone) + '</div></div>' +

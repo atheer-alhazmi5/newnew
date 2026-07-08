@@ -37,8 +37,8 @@
 .ib-btn-reject:hover { background:#a50e0e; }
 .ib-btn-return { background:#fff; color:#1d4ed8; border-color:#1d4ed8; }
 .ib-btn-return:hover { background:#eff6ff; }
-.ib-btn-close { background:var(--gray-200); color:var(--gray-700); }
-.ib-btn-close:hover { background:var(--gray-300); }
+.ib-form-edit-host { margin-top:14px; border:1px solid var(--gray-200); border-radius:12px; padding:12px; background:#fff; }
+.ib-form-edit-host .ib-form-edit-title { font-weight:800; font-size:13px; color:var(--sa-800); margin-bottom:10px; }
 </style>
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
@@ -110,5 +110,6 @@
 
 @section Scripts {
 <script>var __userRole = '@(ViewBag.UserRole)';</script>
+<script src="~/js/form-definitions.js?v=@DateTime.Now.Ticks"></script>
 <script src="~/js/inbox.js?v=@DateTime.Now.Ticks"></script>
 }

@@ -639,10 +639,17 @@ function dashDelFiltered() {
         if (type === 'delegatee' && !isDelegatee) return false;
 
         if (org) {
-            var ou = (type === 'delegatee' || (!type && isDelegatee && !isDelegator))
-                ? (d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '')
-                : (d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '');
-            if (ou !== org) return false;
+            var delegatorOu = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '';
+            var delegateeOu = d.delegateeOrgUnitName || d.DelegateeOrgUnitName || '';
+            var ouMatch = false;
+            if (type === 'delegator') {
+                ouMatch = delegateeOu === org;
+            } else if (type === 'delegatee') {
+                ouMatch = delegatorOu === org;
+            } else {
+                ouMatch = (isDelegator && delegateeOu === org) || (isDelegatee && delegatorOu === org);
+            }
+            if (!ouMatch) return false;
         }
         if (st && (d.statusCode || d.StatusCode || '').toLowerCase() !== st) return false;
         if (!dashDelDateBetween(d.startDate || d.StartDate, d.endDate || d.EndDate, from, to)) return false;
@@ -668,7 +675,7 @@ function dashDelRenderTable(bodyId, rows, mode) {
         var person, ou;
         if (mode === 'delegator') {
             person = d.delegateeName || d.DelegateeName || '—';
-            ou = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '—';
+            ou = d.delegateeOrgUnitName || d.DelegateeOrgUnitName || '—';
         } else {
             person = d.delegatorName || d.DelegatorName || '—';
             ou = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '—';

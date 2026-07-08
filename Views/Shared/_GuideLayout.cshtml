@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@(ViewBag.Title ?? "دليل المستخدم")</title>
+    <meta name="csrf-token" content="@(Antiforgery.GetAndStoreTokens(Context).RequestToken)" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #f8fafc;
+            font-family: 'Cairo', sans-serif;
+        }
+        .guide-standalone-wrap {
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+        .guide-standalone-wrap .gr-root {
+            min-height: 100vh;
+            height: 100vh;
+            margin: 0;
+        }
+    </style>
+    @RenderSection("Styles", required: false)
+</head>
+<body class="guide-standalone">
+    <div class="guide-standalone-wrap">
+        @RenderBody()
+    </div>
+    <script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

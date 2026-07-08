@@ -3,6 +3,10 @@ var ITEMS_PER_PAGE = 10;
 var allItems = [], currentPage = 1;
 var userRole = window.__userRole || '';
 var ibCurrentAssignment = null;
+var ibFormDef = null;
+var ibStepContext = null;
+var ibTemplateData = null;
+var ibSavedFormFields = [];
 
 function ibEscAttr(s) {
     if (s == null) return '';
@@ -188,6 +192,10 @@ async function ibOpenRequest(assignmentId) {
     }
     var d = r.data || {};
     ibCurrentAssignment = d;
+    ibStepContext = d.stepContext || null;
+    ibSavedFormFields = [];
+    ibFormDef = null;
+    ibTemplateData = d.templateData || null;
 
     document.getElementById('ibReqTitle').textContent = d.requestNumber || 'تفاصيل الطلب';
     document.getElementById('ibReqSubtitle').textContent = d.procedureName || '';
@@ -195,21 +203,31 @@ async function ibOpenRequest(assignmentId) {
     var typeIc = d.procedureTypeIcon ? (String(d.procedureTypeIcon).indexOf('bi-') === 0 ? d.procedureTypeIcon : 'bi-' + d.procedureTypeIcon) : 'bi-send';
     var typeColor = d.procedureTypeColor || '#25935F';
 
-    var formItems = '';
+    var editableIds = {};
+    if (ibStepContext) {
+        (ibStepContext.editableFieldIds || []).forEach(function (id) { editableIds[String(id)] = true; });
+    }
+
+    var formSummaryHtml = '';
     try {
         var fd = JSON.parse(d.formDataJson || '{}');
         var fields = Array.isArray(fd.fields) ? fd.fields : [];
-        if (fields.length) {
-            formItems = '<div class="ib-form-summary"><div class="ttl"><i class="bi bi-file-earmark-text"></i> بيانات النموذج المُعبّأ</div>';
-            fields.forEach(function (f) {
+        ibSavedFormFields = fields.slice();
+        var readonlyFields = fields.filter(function (f) {
+            return !editableIds[String(f.id)] && f.fieldType !== 'عنوان' && f.fieldType !== 'خط فاصل' && f.fieldType !== 'فاصل صفحات' && f.fieldType !== 'صورة عرض';
+        });
+        if (readonlyFields.length) {
+            formSummaryHtml = '<div class="ib-form-summary"><div class="ttl"><i class="bi bi-file-earmark-text"></i> بيانات الأقسام السابقة</div>';
+            readonlyFields.forEach(function (f) {
                 var v = ibFormatValue(f);
-                formItems += '<div class="it"><b>' + esc(f.fieldName || '—') + ':</b><span>' + v + '</span></div>';
+                formSummaryHtml += '<div class="it"><b>' + esc(f.fieldName || '—') + ':</b><span>' + v + '</span></div>';
             });
-            formItems += '</div>';
+            formSummaryHtml += '</div>';
         }
     } catch (e) {}
 
     var isPending = (d.status === 'قيد الانتظار');
+    var sectionTitle = ibStepContext ? (ibStepContext.sectionTitle || ibStepContext.stepLabel || '—') : '';
 
     body.innerHTML =
         '<div class="d-flex align-items-center gap-3 mb-3">'
@@ -219,7 +237,7 @@ async function ibOpenRequest(assignmentId) {
         + '</div>'
         + '<div class="ib-detail-grid">'
         +   '<div class="lbl">المرسل</div><div class="val">' + esc(d.senderName || '—') + (d.senderDept ? ' <span class="text-muted">— ' + esc(d.senderDept) + '</span>' : '') + '</div>'
-        +   '<div class="lbl">المرحلة الحالية</div><div class="val">' + esc(d.stepLabel || '—') + '</div>'
+        +   '<div class="lbl">المرحلة الحالية</div><div class="val">' + esc(d.stepLabel || '—') + (sectionTitle ? ' <span class="text-muted">— ' + esc(sectionTitle) + '</span>' : '') + '</div>'
         +   '<div class="lbl">طريقة التسليم</div><div class="val">' + ibAssignedViaLabel(d.assignedVia) + '</div>'
         +   '<div class="lbl">الأولوية</div><div class="val">' + esc(d.priority || '—') + '</div>'
         +   '<div class="lbl">تاريخ التسليم</div><div class="val" style="direction:ltr;text-align:right;">' + esc(d.assignedAt || '—') + '</div>'
@@ -229,8 +247,13 @@ async function ibOpenRequest(assignmentId) {
         + (d.responseNotes ? '<div class="lbl">ملاحظات المستلم</div><div class="val">' + esc(d.responseNotes) + '</div>' : '')
         + (d.requestNotes ? '<div class="lbl">ملاحظات الطلب</div><div class="val">' + esc(d.requestNotes) + '</div>' : '')
         + '</div>'
-        + formItems
+        + formSummaryHtml
+        + (isPending && d.form ? '<div class="ib-form-edit-host" id="ibReqFormHost"><div class="ib-form-edit-title"><i class="bi bi-pencil-square"></i> تعبئة/اعتماد القسم: ' + esc(sectionTitle || d.stepLabel || '') + '</div><div class="text-center py-3"><div class="spinner-border" style="color:var(--sa-600);"></div></div></div>' : '')
         + (isPending ? '<div class="ib-notes-area"><label>ملاحظات (مطلوبة للرفض/الإرجاع)</label><textarea id="ibReqNotes" placeholder="اكتب ملاحظاتك هنا..."></textarea></div>' : '');
+
+    if (isPending && d.form) {
+        await ibRenderAssignmentForm(d.form, d.formDataJson || '{}');
+    }
 
     var foot = document.getElementById('ibReqFooter');
     if (isPending) {
@@ -267,6 +290,197 @@ function ibFormatValue(f) {
     return esc(String(v));
 }
 
+async function ibRenderAssignmentForm(formMeta, formDataJson) {
+    var hostWrap = document.getElementById('ibReqFormHost');
+    if (!hostWrap || !formMeta) return;
+
+    var fdInfo = (typeof fdParseFieldsJsonPayload === 'function')
+        ? fdParseFieldsJsonPayload(formMeta.fieldsJson || formMeta.FieldsJson || '')
+        : { sections: [{ id: 1, title: 'القسم الأول' }], fields: [], rules: [] };
+
+    ibFormDef = {
+        id: formMeta.id || formMeta.Id,
+        name: formMeta.name || formMeta.Name || '',
+        description: formMeta.description || formMeta.Description || '',
+        fields: fdInfo.fields || [],
+        sections: fdInfo.sections || [{ id: 1, title: 'القسم الأول' }],
+        rules: fdInfo.rules || [],
+        titleAppearance: fdInfo.titleAppearance
+    };
+
+    var tplId = parseInt(String(formMeta.templateId ?? formMeta.TemplateId ?? ''), 10) || 0;
+    if (tplId <= 0) ibTemplateData = null;
+
+    var spin = hostWrap.querySelector('.text-center');
+    if (spin) spin.remove();
+
+    var innerHost = document.createElement('div');
+    innerHost.className = 'ib-form-edit-inner';
+    hostWrap.appendChild(innerHost);
+
+    if (typeof fdBuildFormPreview === 'function') {
+        innerHost.innerHTML = fdBuildFormPreview(
+            ibTemplateData,
+            ibFormDef.name,
+            ibFormDef.description,
+            ibFormDef.fields,
+            true,
+            ibFormDef.sections,
+            ibFormDef.titleAppearance || null
+        );
+    } else {
+        innerHost.innerHTML = '<div class="text-muted py-2">تعذّر تحميل محرر النموذج</div>';
+        return;
+    }
+
+    try {
+        var pr = await apiFetch('/Dashboard/GetProfile');
+        if (pr && pr.success && pr.profile) window.fdBeneficiaryFillProfile = pr.profile;
+    } catch (e) { /* ignore */ }
+    window.fdFormFillPhase = 'approve';
+
+    try { if (typeof fdInitDynamicWidgets === 'function') fdInitDynamicWidgets(innerHost); } catch (e) {}
+    try {
+        if (typeof fdInitConditionalLogic === 'function') {
+            fdInitConditionalLogic(innerHost, {
+                fields: ibFormDef.fields,
+                sections: ibFormDef.sections,
+                rules: ibFormDef.rules
+            });
+        }
+    } catch (e) {}
+
+    ibApplySavedFormValues(innerHost, formDataJson);
+    ibApplyWorkflowSectionScope(innerHost);
+}
+
+function ibApplySavedFormValues(host, formDataJson) {
+    if (!host || !ibFormDef) return;
+    var saved = {};
+    try {
+        var parsed = JSON.parse(formDataJson || '{}');
+        (parsed.fields || []).forEach(function (f) { if (f.id != null) saved[String(f.id)] = f.value; });
+    } catch (e) { return; }
+
+    (ibFormDef.fields || []).forEach(function (f) {
+        if (saved[String(f.id)] == null) return;
+        var wrap = host.querySelector('[data-fd-field-id="' + f.id + '"]');
+        if (!wrap) return;
+        ibSetFieldValue(wrap, f, saved[String(f.id)]);
+    });
+}
+
+function ibSetFieldValue(wrap, f, value) {
+    if (value == null) return;
+    var t = f.fieldType;
+    if (t === 'البيانات التلقائية للمستفيد' || t === 'بيانات التصديق') {
+        var store = wrap.querySelector('.fd-auto-data-store');
+        if (store) store.value = typeof value === 'string' ? value : JSON.stringify(value);
+        return;
+    }
+    if (t === 'تبديل') {
+        var sw = wrap.querySelector('input[type="checkbox"], input.fd-switch-input');
+        if (sw) sw.checked = !!value;
+        return;
+    }
+    if (t === 'قائمة اختيار الواحد') {
+        var r = wrap.querySelector('input[type="radio"][value="' + String(value).replace(/"/g, '\\"') + '"]');
+        if (r) r.checked = true;
+        return;
+    }
+    if (t === 'قائمة منسدلة') {
+        var sel = wrap.querySelector('select');
+        if (sel) sel.value = String(value);
+        return;
+    }
+    var inp = wrap.querySelector('input:not([type="hidden"]), textarea');
+    if (inp) inp.value = Array.isArray(value) ? value.join(', ') : String(value);
+}
+
+function ibApplyWorkflowSectionScope(host) {
+    if (!ibStepContext || !host) return;
+    var editable = {};
+    (ibStepContext.editableFieldIds || []).forEach(function (id) { editable[String(id)] = true; });
+    var activeSectionId = ibStepContext.formSectionId || null;
+
+    host.querySelectorAll('[data-fd-section-id]').forEach(function (secEl) {
+        var sid = secEl.getAttribute('data-fd-section-id');
+        var sectionHasEditable = false;
+        secEl.querySelectorAll('[data-fd-field-id]').forEach(function (wrap) {
+            var fid = wrap.getAttribute('data-fd-field-id');
+            var canEdit = !!editable[fid];
+            if (canEdit) sectionHasEditable = true;
+            if (typeof fdClSetFieldDisabled === 'function') fdClSetFieldDisabled(wrap, !canEdit);
+        });
+        if (activeSectionId && String(activeSectionId) !== String(sid) && !sectionHasEditable) {
+            secEl.style.display = 'none';
+        }
+    });
+}
+
+function ibCollectSectionFormData() {
+    var hostWrap = document.getElementById('ibReqFormHost');
+    if (!hostWrap || !ibFormDef) return null;
+    var inner = hostWrap.querySelector('.ib-form-edit-inner') || hostWrap;
+
+    if (typeof fdValidateInteractivePreview === 'function') {
+        var err = fdValidateInteractivePreview(inner);
+        if (err) { showToast(err, 'danger'); return null; }
+    }
+
+    var editable = {};
+    if (ibStepContext) (ibStepContext.editableFieldIds || []).forEach(function (id) { editable[String(id)] = true; });
+
+    var entries = [];
+    var firstMissing = null;
+    (ibFormDef.fields || []).forEach(function (f) {
+        if (f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل' || f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض') return;
+        if (ibStepContext && !editable[String(f.id)]) return;
+        var value = ibExtractFieldValue(inner, f);
+        var isEmpty = value == null || (Array.isArray(value) ? !value.length : String(value).trim() === '');
+        if (f.isRequired && isEmpty && f.fieldType !== 'بيانات التصديق' && !firstMissing) firstMissing = f;
+        entries.push({
+            id: f.id,
+            sectionId: f.sectionId || (ibFormDef.sections[0] ? ibFormDef.sections[0].id : 1),
+            fieldType: f.fieldType,
+            fieldName: f.fieldName || '',
+            subName: f.subName || '',
+            isRequired: !!f.isRequired,
+            value: value
+        });
+    });
+
+    if (firstMissing) {
+        showToast('الحقل «' + (firstMissing.fieldName || '—') + '» مطلوب', 'warning');
+        return null;
+    }
+    return JSON.stringify({ fields: entries });
+}
+
+function ibExtractFieldValue(host, f) {
+    var wrap = host.querySelector('[data-fd-field-id="' + f.id + '"]');
+    if (!wrap) return null;
+    if (f.fieldType === 'البيانات التلقائية للمستفيد' || f.fieldType === 'بيانات التصديق') {
+        var store = wrap.querySelector('.fd-auto-data-store');
+        if (!store || !store.value) return null;
+        try { return JSON.parse(store.value); } catch (e) { return store.value; }
+    }
+    if (f.fieldType === 'تبديل') {
+        var sw = wrap.querySelector('input[type="checkbox"], input.fd-switch-input');
+        return sw ? !!sw.checked : false;
+    }
+    if (f.fieldType === 'قائمة اختيار الواحد') {
+        var r = wrap.querySelector('input[type="radio"]:checked');
+        return r ? (r.value || '') : '';
+    }
+    if (f.fieldType === 'قائمة منسدلة') {
+        var sel = wrap.querySelector('select');
+        return sel ? (sel.value || '') : '';
+    }
+    var inp = wrap.querySelector('input:not([type="hidden"]), textarea');
+    return inp ? (inp.value || '') : null;
+}
+
 async function ibActAssignment(action) {
     if (!ibCurrentAssignment) return;
     var notes = (document.getElementById('ibReqNotes')?.value || '').trim();
@@ -277,11 +491,18 @@ async function ibActAssignment(action) {
     var confirmMsg = action === 'approve' ? 'اعتماد هذا الطلب؟' : (action === 'reject' ? 'رفض هذا الطلب؟' : 'إرجاع هذا الطلب؟');
     if (!confirm(confirmMsg)) return;
 
-    var r = await apiFetch('/Inbox/ActOnAssignment', 'POST', {
+    var payload = {
         assignmentId: ibCurrentAssignment.id,
         action: action,
         notes: notes
-    });
+    };
+    if (action === 'approve' && ibFormDef && ibStepContext) {
+        var formJson = ibCollectSectionFormData();
+        if (formJson === null) return;
+        payload.formDataJson = formJson;
+    }
+
+    var r = await apiFetch('/Inbox/ActOnAssignment', 'POST', payload);
     if (!r || !r.success) { showToast((r && r.message) || 'تعذّر التنفيذ', 'danger'); return; }
     showToast(r.message || 'تم', 'success');
     bootstrap.Modal.getInstance(document.getElementById('ibReqModal')).hide();

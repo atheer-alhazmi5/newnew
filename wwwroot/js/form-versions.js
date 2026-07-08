@@ -11,6 +11,8 @@ let fdvDeleteId = null;
 let fdvDeleteName = '';
 let fdvFormMeta = { id: 0, name: '', publicId: '' };
 
+const FDV_DRAFT_BLOCK_MSG = 'يوجد إصدار بحالة "مسودة". يرجى اعتماد أو حذف النسخة الحالية قبل إنشاء إصدار جديد.';
+
 function fdvInit() {
     const hidEl = document.getElementById('fdvFormId');
     const fid = hidEl ? parseInt(hidEl.value || '0', 10) : 0;
@@ -71,6 +73,10 @@ function fdvRenderTable() {
     tbody.innerHTML = html;
 }
 
+function fdvHasDraftVersion() {
+    return (fdvData || []).some(v => (v.status || v.Status) === 'draft');
+}
+
 function fdvActions(v) {
     let h = '<div class="d-flex gap-1 justify-content-center flex-wrap">';
     if (v.status === 'approved') {
@@ -88,6 +94,9 @@ function fdvActions(v) {
 async function fdvCreateNewVersion() {
     const fid = fdvFormMeta.id;
     if (!fid) return showToast('النموذج غير محدد', 'error');
+    if (fdvHasDraftVersion()) {
+        return showToast(FDV_DRAFT_BLOCK_MSG, 'error');
+    }
     try {
         // جلب بيانات النموذج (للقالب) + لقطة الإصدار النشط (لبدء التعديل عليها)
         const formRes = await apiFetch(`/FormDefinitions/GetFormDefinition?id=${fid}`);
@@ -160,13 +169,16 @@ async function fdvOpenWizardForVersion(opts) {
     };
 
     // معاينة القالب (الرأس/التذييل + العلامة المائية) – نفس آلية تحرير النموذج
+    const tplIdNum = parseInt(String(formData.templateId || ''), 10) || 0;
     try {
-        if (typeof fdEnrichTemplateDataWatermark === 'function') {
+        if (tplIdNum <= 0) {
+            fdCurrentTemplate = null;
+        } else if (typeof fdEnrichTemplateDataWatermark === 'function') {
             fdCurrentTemplate = await fdEnrichTemplateDataWatermark(formData.templateData || null, formData.templateId);
         } else {
             fdCurrentTemplate = formData.templateData || null;
         }
-    } catch (e) { fdCurrentTemplate = formData.templateData || null; }
+    } catch (e) { fdCurrentTemplate = tplIdNum > 0 ? (formData.templateData || null) : null; }
 
     // تحميل بيانات الحقول/الأقسام/قواعد المنطق إلى المتغيرات العامة
     fdApplyParsedFieldsData(fdParseFieldsJsonPayload(baseFieldsJson));

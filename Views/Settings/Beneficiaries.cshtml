@@ -83,6 +83,9 @@
 .bnf-status-dot { width:7px; height:7px; border-radius:999px; display:inline-block; }
 .bnf-status-pill.active .bnf-status-dot { background:#0f9f5c; }
 .bnf-status-pill.inactive .bnf-status-dot { background:#ef4444; }
+.bnf-profile-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:11px; white-space:nowrap; }
+.bnf-profile-pill.complete { background:#dcf5e8; color:#0f9f5c; }
+.bnf-profile-pill.incomplete { background:#fef3c7; color:#b45309; }
 @@media (max-width:992px) { .bnf-form-row { grid-template-columns:repeat(2,1fr); } }
 @@media (max-width:576px) { .bnf-form-row { grid-template-columns:1fr; } }
 </style>
@@ -137,11 +140,12 @@
                         <th>الدور</th>
                         <th>الوحدة التنظيمية</th>
                         <th style="width:100px;">التفعيل</th>
+                        <th style="width:100px;">الحالة</th>
                         <th style="width:220px;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="bnfBody">
-                    <tr><td colspan="11" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
+                    <tr><td colspan="12" class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -274,6 +278,68 @@
                             <label class="form-label">الاسم الرابع<span class="required-star">*</span></label>
                             <input type="text" class="form-control" id="bnfFourthName">
                         </div>
+                    </div>
+                </div>
+
+                <!-- بيانات شخصية ووظيفية — مستفيد فعلي فقط -->
+                <div class="bnf-section bnf-actual-only" id="bnfSectionActualProfile">
+                    <div class="bnf-section-title"><i class="bi bi-card-list"></i>البيانات الشخصية والوظيفية</div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">الجنس</label>
+                            <select class="form-select" id="bnfGender">
+                                <option value="">— اختر —</option>
+                                <option value="ذكر">ذكر</option>
+                                <option value="أنثى">أنثى</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">الحالة الاجتماعية</label>
+                            <select class="form-select" id="bnfMaritalStatus">
+                                <option value="">— اختر —</option>
+                                <option value="أعزب">أعزب</option>
+                                <option value="متزوج">متزوج</option>
+                                <option value="أرمل">أرمل</option>
+                                <option value="مطلق">مطلق</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">تاريخ الميلاد</label>
+                            <input type="date" class="form-control" id="bnfDateOfBirth">
+                        </div>
+                        <div>
+                            <label class="form-label">الرقم الوظيفي</label>
+                            <input type="text" class="form-control" id="bnfEmployeeNumber" inputmode="numeric" autocomplete="off" placeholder="أرقام فقط">
+                        </div>
+                    </div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">المرتبة</label>
+                            <input type="text" class="form-control" id="bnfRank">
+                        </div>
+                        <div>
+                            <label class="form-label">المسمى الوظيفي</label>
+                            <input type="text" class="form-control" id="bnfJobTitle">
+                        </div>
+                    </div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">رقم الوظيفة</label>
+                            <input type="text" class="form-control" id="bnfJobNumber">
+                        </div>
+                        <div>
+                            <label class="form-label">المؤهل التعليمي</label>
+                            <input type="text" class="form-control" id="bnfEducationQualification">
+                        </div>
+                    </div>
+                    <div class="bnf-form-row bnf-form-row-2">
+                        <div>
+                            <label class="form-label">اللقب</label>
+                            <input type="text" class="form-control" id="bnfHonorific">
+                        </div>
+                        <div></div>
                     </div>
                 </div>
 

@@ -100,6 +100,11 @@
 + '.opd-pill-high  { background:#fff1e6; color:#b54708; border-color:#fed7aa; }'
 + '.opd-pill-med   { background:#fef9c3; color:#854d0e; border-color:#fde047; }'
 + '.opd-pill-low   { background:#e0f2fe; color:#075985; border-color:#bae6fd; }'
++ '.opd-dl-link { display:inline-flex; align-items:center; gap:6px; color:var(--sa-700); font-weight:700; text-decoration:none; padding:2px 0; }'
++ '.opd-dl-link:hover { color:var(--sa-800); text-decoration:underline; }'
++ '.opd-dl-link i { font-size:13px; }'
+
++ '.opd-reject-reason { background:var(--error-50); border:1px solid var(--error-200); border-radius:8px; padding:10px 12px; color:var(--error-800); font-weight:600; }'
 
 + '@media (max-width:768px) { .opd-table .opd-th, .opd-table .opd-td { font-size:12px; padding:6px 8px; } .opd-modal-body { padding:14px 16px; } }';
 
@@ -144,9 +149,28 @@
             if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
             return list.map(function (x, i) { return (i + 1) + '- ' + escH(x.name || ''); }).join('<br>');
         }
-        function reglist(list) {
+        function regFilesList(list) {
             if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
-            return list.map(function (s, i) { return (i + 1) + '- ' + escH(String(s || '')); }).join('<br>');
+            var base = (typeof window !== 'undefined' && window.APP_PATH_BASE) ? window.APP_PATH_BASE : '';
+            return list.map(function (x, i) {
+                var name, path;
+                if (typeof x === 'string') {
+                    name = x;
+                    path = '';
+                } else {
+                    name = x.name || x.fileName || x.label || 'مرفق';
+                    path = x.path || x.url || x.filePath || '';
+                }
+                if (path) {
+                    if (path.indexOf('http') !== 0 && path.indexOf('/') === 0) path = base + path;
+                    return (i + 1) + '- <a class="opd-dl-link" href="' + escA(path) + '" download="' + escA(name) + '" target="_blank" rel="noopener"><i class="bi bi-download"></i> ' + escH(name) + '</a>';
+                }
+                return (i + 1) + '- ' + escH(name);
+            }).join('<br>');
+        }
+        function peopleList(list) {
+            if (!Array.isArray(list) || list.length === 0) return '<span class="opd-empty">…</span>';
+            return list.map(function (x, i) { return (i + 1) + '- ' + escH(x.name || x.fullName || ''); }).join('<br>');
         }
         function row(cells) {
             return '<tr>' + cells.map(function (c) {
@@ -158,6 +182,11 @@
 
         var icon = normBi(d.typeIcon);
         var tColor = d.typeColor || '#25935F';
+        var statusCode = String(d.statusCode || '').toLowerCase();
+        var rejReason = String(d.rejectionReason || d.RejectionReason || '').trim();
+        var rejectionRow = (statusCode === 'rejected' && rejReason)
+            ? row([{ lbl: 'سبب الرفض', val: '<div class="opd-pre opd-reject-reason">' + escH(rejReason) + '</div>', span: 3 }])
+            : '';
 
         var head =
             '<div class="opd-head">'
@@ -180,6 +209,7 @@
                     { lbl: 'اسم الإجراء', val: dash(d.name) },
                     { lbl: 'حالة الإجراء', val: statusBadge(d.statusCode, d.statusLabel, d.isActive) }
                 ])
+            +   rejectionRow
             +   row([
                     { lbl: 'صلاحية الإجراء', val: dash(d.validityType) },
                     { lbl: 'تاريخ بدء الصلاحية', val: d.validityStartDate ? escH(d.validityStartDate) : '<span class="opd-empty">…</span>' },
@@ -195,7 +225,7 @@
                 ])
             +   row([
                     { lbl: 'الأولوية', val: d.priority ? priorityBadge(d.priority) : '<span class="opd-empty">…</span>' },
-                    { lbl: 'مساحة العمل', val: dash(d.workspaceName) },
+                    { lbl: 'القالب المستخدم', val: dash(d.formTemplateName) },
                     { lbl: 'الوحدة التنظيمية المالكة للإجراء', val: dash(d.ownerOrgName) }
                 ])
             +   row([
@@ -217,7 +247,10 @@
                     { lbl: 'المخرجات', val: d.additionalOutputs ? '<div class="opd-pre">' + escH(d.additionalOutputs) + '</div>' : '<span class="opd-empty">…</span>', span: 3 }
                 ])
             +   row([
-                    { lbl: 'الأنظمة واللوائح والتعليمات المنظمة لعمل الإجراء', val: reglist(d.regulations), span: 3 }
+                    { lbl: 'الأنظمة واللوائح والتعليمات المنظمة لعمل الإجراء', val: regFilesList(d.regulations), span: 3 }
+                ])
+            +   row([
+                    { lbl: 'المستهدفين المعنيين', val: peopleList(d.targetBeneficiaries), span: 3 }
                 ])
             + '</tbody></table>'
             + '</div>';
@@ -271,7 +304,22 @@
             + '<div class="opd-table-scroll"><table class="opd-table opd-wf-table">' + wfHead + wfBody + '</table></div>'
             + '</div>';
 
-        return head + detailsTbl + workflowTbl;
+        var auditTbl =
+            '<div class="opd-section">'
+            + '<div class="opd-section-ttl">بيانات التدقيق</div>'
+            + '<table class="opd-table"><tbody>'
+            +   row([
+                    { lbl: 'أنشئ بواسطة', val: dash(d.createdBy) },
+                    { lbl: 'تاريخ الإنشاء', val: dash(d.createdAt) },
+                    { lbl: 'آخر تحديث بواسطة', val: dash(d.updatedBy) }
+                ])
+            +   row([
+                    { lbl: 'تاريخ آخر تحديث', val: dash(d.updatedAt), span: 3 }
+                ])
+            + '</tbody></table>'
+            + '</div>';
+
+        return head + detailsTbl + workflowTbl + auditTbl;
     }
 
     async function opdShow(procedureId, opts) {

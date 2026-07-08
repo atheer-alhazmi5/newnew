@@ -60,7 +60,7 @@ public class ExecutorRolesController : BaseController
         if (!string.IsNullOrWhiteSpace(isActive))
             filtered = filtered.Where(r => r.IsActive == (isActive == "1"));
 
-        string ResolveNames(string ids, Dictionary<int, string> map)
+        string ResolveNames(string? ids, Dictionary<int, string> map)
         {
             if (string.IsNullOrWhiteSpace(ids)) return "";
             return string.Join("، ", ids.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -106,7 +106,7 @@ public class ExecutorRolesController : BaseController
         var ouMap = units.ToDictionary(u => u.Id, u => u.Name);
         var benMap = bens.ToDictionary(b => b.Id, b => b.FullName);
 
-        string Resolve(string ids, Dictionary<int, string> map)
+        string Resolve(string? ids, Dictionary<int, string> map)
         {
             if (string.IsNullOrWhiteSpace(ids)) return "";
             return string.Join("، ", ids.Split(',', StringSplitOptions.RemoveEmptyEntries)

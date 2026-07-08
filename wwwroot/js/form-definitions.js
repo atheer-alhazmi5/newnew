@@ -12,6 +12,15 @@ let fdLookups       = { formClasses:[], formTypes:[], templates:[], templateFilt
 let fdOrgUnits      = [];
 let fdFilterOuExpanded = {};
 
+function fdMapOrgUnits(list) {
+    return (list || []).map(u => ({
+        id: u.id ?? u.Id,
+        name: u.name ?? u.Name,
+        parentId: u.parentId ?? u.ParentId ?? null,
+        sortOrder: u.sortOrder ?? u.SortOrder ?? 0
+    }));
+}
+
 function fdFilterOuTogglePanel() {
     const panel = document.getElementById('fdFilterOuPanel');
     const trig = document.getElementById('fdFilterOuTrigger');
@@ -380,12 +389,46 @@ const FD_FIELD_TYPES = {
         { key:"widthPx", label:"العرض بالبيكسل", type:"number", placeholder:"320" },
         { key:"heightPx", label:"الارتفاع بالبيكسل", type:"number", placeholder:"200" },
         { key:"imageAlign", label:"محاذاة الصورة", type:"select", options:["يمين","وسط","يسار"] }
+    ]},
+    "البيانات التلقائية للمستفيد": { props: [
+        { key:"selectedKeys", label:"البيانات المعروضة", type:"autoDataPick", pickGroup:"beneficiary", col:"col-12 mb-3" }
+    ]},
+    "بيانات التصديق": { props: [
+        { key:"selectedKeys", label:"بيانات التصديق المعروضة", type:"autoDataPick", pickGroup:"certification", col:"col-12 mb-3" }
     ]}
 };
 
+const FD_AUTO_DATA_GROUPS = {
+    beneficiary: [
+        { key: 'photo', label: 'الصورة' },
+        { key: 'nationalId', label: 'رقم الهوية' },
+        { key: 'fullName', label: 'الاسم الرباعي' },
+        { key: 'organizationalUnit', label: 'الوحدة التنظيمية' },
+        { key: 'phone', label: 'الجوال' },
+        { key: 'email', label: 'البريد الإلكتروني' },
+        { key: 'gender', label: 'الجنس' },
+        { key: 'dateOfBirth', label: 'تاريخ الميلاد' },
+        { key: 'employeeNumber', label: 'الرقم الوظيفي' },
+        { key: 'rank', label: 'المرتبة' },
+        { key: 'jobTitle', label: 'المسمى الوظيفي' },
+        { key: 'jobNumber', label: 'رقم الوظيفة' },
+        { key: 'educationQualification', label: 'المؤهل العلمي' },
+        { key: 'maritalStatus', label: 'الحالة الاجتماعية' },
+        { key: 'honorific', label: 'اللقب' }
+    ],
+    certification: [
+        { key: 'honorificOrgUnit', label: 'اللقب (الوحدة التنظيمية)' },
+        { key: 'fullName', label: 'الاسم الرباعي' },
+        { key: 'signature', label: 'التوقيع' },
+        { key: 'todayDate', label: 'تاريخ اليوم الحالي' }
+    ]
+};
+
+const FD_AUTO_FIELD_TYPES = new Set(['البيانات التلقائية للمستفيد', 'بيانات التصديق']);
+
 (function fdAugmentFieldTypesReadOnly() {
     const roProp = { key:'readOnly', label:'للقراءة فقط', type:'checkbox', checkboxLabel:'حقل للقراءة فقط', col:'col-md-6 col-sm-6 mb-3' };
-    const skip = new Set(['عنوان', 'خط فاصل', 'فاصل صفحات', 'صورة عرض']);
+    const skip = new Set(['عنوان', 'خط فاصل', 'فاصل صفحات', 'صورة عرض', 'البيانات التلقائية للمستفيد', 'بيانات التصديق']);
     Object.keys(FD_FIELD_TYPES).forEach(k => { if (!skip.has(k)) FD_FIELD_TYPES[k].props.push({ ...roProp }); });
 })();
 
@@ -419,7 +462,9 @@ const FD_FIELD_TYPE_UI = {
     'تبديل': { icon: 'bi-toggle2-on', tone: 'bool' },
     'رابط': { icon: 'bi-link-45deg', tone: 'meta' },
     'فاصل صفحات': { icon: 'bi-files', tone: 'structure' },
-    'صورة عرض': { icon: 'bi-image', tone: 'media' }
+    'صورة عرض': { icon: 'bi-image', tone: 'media' },
+    'البيانات التلقائية للمستفيد': { icon: 'bi-person-badge', tone: 'text' },
+    'بيانات التصديق': { icon: 'bi-patch-check', tone: 'file' }
 };
 
 let _fdFieldTypeBadgeStylesDone = false;
@@ -1021,7 +1066,119 @@ function fdMergeSpecialProps(type, pfx, result) {
         if (p.perOptionOther && o.choiceOtherMarks != null) result.choiceOtherMarks = o.choiceOtherMarks;
     });
     if (def.props.some(p => p.type === 'fileTypesPick')) result.fileTypes = fdCollectFileTypesPick(pfx);
+    if (def.props.some(p => p.type === 'autoDataPick')) result.selectedKeys = fdCollectAutoDataPick(pfx);
     return result;
+}
+
+function fdCollectAutoDataPick(pfx) {
+    const wrap = document.getElementById(pfx + '_autoData_pick');
+    if (!wrap) return [];
+    return Array.from(wrap.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value).filter(Boolean);
+}
+
+function fdApplyAutoDataPickFromProps(pfx, po) {
+    const wrap = document.getElementById(pfx + '_autoData_pick');
+    if (!wrap) return;
+    const set = {};
+    const raw = po && po.selectedKeys;
+    if (Array.isArray(raw)) raw.forEach(k => { if (k) set[String(k)] = true; });
+    else if (raw != null && String(raw).trim()) String(raw).split(/[,\s]+/).forEach(k => { if (k) set[k.trim()] = true; });
+    wrap.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = !!set[c.value]; });
+}
+
+function fdParseSelectedAutoKeys(props) {
+    if (!props) return [];
+    let keys = props.selectedKeys;
+    if (Array.isArray(keys)) return keys.map(String).filter(Boolean);
+    if (keys != null && String(keys).trim()) return String(keys).split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+    return [];
+}
+
+function fdMapProfileToAutoValues(profile, keys) {
+    profile = profile || {};
+    const out = {};
+    keys.forEach(k => {
+        if (k === 'photo') out[k] = String(profile.photoUrl ?? profile.photo ?? profile.PhotoUrl ?? '').trim();
+        else if (k === 'phone') out[k] = String(profile.phone ?? profile.Phone ?? '').trim();
+        else if (k === 'email') out[k] = String(profile.email ?? profile.Email ?? '').trim();
+        else if (k === 'fullName') out[k] = String(profile.fullName ?? profile.FullName ?? '').trim();
+        else if (k === 'nationalId') out[k] = String(profile.nationalId ?? profile.NationalId ?? '').trim();
+        else if (k === 'organizationalUnit') out[k] = String(profile.organizationalUnit ?? profile.organizationalUnitName ?? '').trim();
+        else if (k === 'gender') out[k] = String(profile.gender ?? profile.Gender ?? '').trim();
+        else if (k === 'dateOfBirth') out[k] = String(profile.dateOfBirth ?? profile.DateOfBirth ?? '').trim();
+        else if (k === 'employeeNumber') out[k] = String(profile.employeeNumber ?? profile.EmployeeNumber ?? '').trim();
+        else if (k === 'rank') out[k] = String(profile.rank ?? profile.Rank ?? '').trim();
+        else if (k === 'jobTitle') out[k] = String(profile.jobTitle ?? profile.JobTitle ?? '').trim();
+        else if (k === 'jobNumber') out[k] = String(profile.jobNumber ?? profile.JobNumber ?? '').trim();
+        else if (k === 'educationQualification') out[k] = String(profile.educationQualification ?? profile.EducationQualification ?? '').trim();
+        else if (k === 'maritalStatus') out[k] = String(profile.maritalStatus ?? profile.MaritalStatus ?? '').trim();
+        else if (k === 'honorific') out[k] = String(profile.honorific ?? profile.Honorific ?? '').trim();
+        else if (k === 'honorificOrgUnit') out[k] = String(profile.honorificOrgUnit ?? profile.HonorificOrgUnit ?? '').trim();
+        else if (k === 'signature') out[k] = String(profile.signatureFile ?? profile.signature ?? profile.SignatureFile ?? '').trim();
+        else if (k === 'todayDate') out[k] = String(profile.todayDate ?? profile.TodayDate ?? fdFormatTodayDate()).trim();
+        else out[k] = String(profile[k] ?? '').trim();
+    });
+    return out;
+}
+
+function fdFormatTodayDate() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function fdAutoDataLabelForKey(group, key) {
+    const list = FD_AUTO_DATA_GROUPS[group] || [];
+    const hit = list.find(x => x.key === key);
+    return hit ? hit.label : key;
+}
+
+function fdBuildAutoDataFieldHtml(f, props, opt) {
+    opt = opt || {};
+    const isCert = f.fieldType === 'بيانات التصديق';
+    const group = isCert ? 'certification' : 'beneficiary';
+    const keys = fdParseSelectedAutoKeys(props);
+    const uid = `fdAuto_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
+    const fillPhase = opt.fillPhase || 'submit';
+    const profile = opt.beneficiaryProfile || (typeof window !== 'undefined' ? window.fdBeneficiaryFillProfile : null) || null;
+    const showPending = isCert && fillPhase !== 'certification';
+    let values = {};
+    if (!showPending && profile) values = fdMapProfileToAutoValues(profile, keys);
+    else if (showPending) keys.forEach(k => { values[k] = ''; });
+
+    let rows = '';
+    if (!keys.length) {
+        rows = '<p class="text-muted small mb-0" style="font-style:normal;">لم يُحدد أي عنصر للعرض.</p>';
+    } else if (showPending) {
+        rows = '<div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius:10px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div>';
+        keys.forEach(k => {
+            rows += `<div class="fd-auto-data-row fd-auto-data-row-pending" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:#fff;border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);">${esc(fdAutoDataLabelForKey(group, k))}</span><span class="fd-auto-data-val text-muted">—</span></div>`;
+        });
+    } else {
+        keys.forEach(k => {
+            const lbl = fdAutoDataLabelForKey(group, k);
+            const val = values[k] || '';
+            let valHtml;
+            if (k === 'photo' && val && val.indexOf('data:image') === 0) {
+                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-photo" style="max-width:72px;max-height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200);">`;
+            } else if (k === 'signature' && val && val.indexOf('data:image') === 0) {
+                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-signature" style="max-height:64px;max-width:180px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;background:#fff;padding:4px;">`;
+            } else if (k === 'signature' && val.length > 40) {
+                valHtml = '<span class="badge bg-success" style="font-size:11px;"><i class="bi bi-patch-check-fill"></i> توقيع معتمد</span>';
+            } else {
+                valHtml = val ? esc(val) : '<span class="text-muted">—</span>';
+            }
+            rows += `<div class="fd-auto-data-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 10px;background:#fff;border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);min-width:38%;">${esc(lbl)}</span><span class="fd-auto-data-val" style="flex:1;text-align:end;font-weight:600;color:var(--gray-800);">${valHtml}</span></div>`;
+        });
+    }
+
+    const storeJson = fdEscAttr(JSON.stringify(values));
+    return `<div class="fd-auto-data-block border rounded-3 p-3" style="background:var(--gray-50);border-color:var(--gray-200)!important;" data-fd-auto-type="${fdEscAttr(f.fieldType)}">
+        <div class="fd-auto-data-rows d-flex flex-column gap-2">${rows}</div>
+        <input type="hidden" class="fd-auto-data-store" id="${fdEscAttr(uid)}" value="${storeJson}" data-fd-auto-readonly="1">
+    </div>`;
 }
 
 function fdApplyPropsSpecialEditors(type, pfx, po) {
@@ -1029,6 +1186,7 @@ function fdApplyPropsSpecialEditors(type, pfx, po) {
     def.props.forEach(p => { if (p.type === 'optionList') fdInitOptionListEditor(pfx, p.choiceMode||'single', po||{}, p.key); });
     fdApplyFileTypesFromProps(pfx, po||{});
     if (type === 'صورة عرض') fdWireDisplayImageProp(pfx, 'imageUrl');
+    fdApplyAutoDataPickFromProps(pfx, po||{});
 }
 
 function fdBuildSinglePropHtml(p, pfx) {
@@ -1079,6 +1237,18 @@ function fdBuildSinglePropHtml(p, pfx) {
         <div id="${pfx}_fileTypes_pick" class="d-flex flex-wrap gap-3 border rounded-3 p-3 bg-white">`;
         FD_FILE_TYPE_CHOICES.forEach(ft => {
             h += `<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="${ft.ext}" id="${pfx}_ft_${ft.ext}"><label class="form-check-label" for="${pfx}_ft_${ft.ext}" style="font-size:12.5px;">${ft.label}</label></div>`;
+        });
+        return h + '</div></div>';
+    }
+    if (p.type === 'autoDataPick') {
+        const group = p.pickGroup || 'beneficiary';
+        const items = FD_AUTO_DATA_GROUPS[group] || [];
+        let h = `<div class="${p.col || 'col-12 mb-3'}"><label class="d-block fw-bold mb-2" style="color:var(--gray-600);font-size:12px;">${p.label} <span class="required-star">*</span></label>
+        <p class="text-muted small mb-2" style="font-size:11px;">اختر البيانات التي ستظهر تلقائياً في النموذج (يمكن اختيار أكثر من عنصر).</p>
+        <div id="${pfx}_autoData_pick" class="d-flex flex-column gap-2 border rounded-3 p-3 bg-white" data-fd-pick-group="${fdEscAttr(group)}">`;
+        items.forEach(it => {
+            const cid = `${pfx}_auto_${it.key}`;
+            h += `<div class="form-check m-0"><input class="form-check-input" type="checkbox" value="${fdEscAttr(it.key)}" id="${cid}"><label class="form-check-label" for="${cid}" style="font-size:12.5px;font-weight:600;">${esc(it.label)}</label></div>`;
         });
         return h + '</div></div>';
     }
@@ -3001,6 +3171,8 @@ function fdBuildFieldInput(f, opt) {
         } else {
             inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border:2px dashed var(--gray-300);border-radius:10px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف صورة من خصائص الحقل (إرفاق من الجهاز)</div></div>`;
         }
+    } else if (f.fieldType === 'البيانات التلقائية للمستفيد' || f.fieldType === 'بيانات التصديق') {
+        inp = fdBuildAutoDataFieldHtml(f, props, opt || {});
     } else {
         inp = `<input type="text" class="form-control" placeholder="${ph}" value="${defVal}"${reqAttr}${maxL}${roAttr}${ttAttr}${mk()}>`;
     }
@@ -3445,8 +3617,30 @@ function fdSerializeFieldsJson() {
     return JSON.stringify({
         sections: fdSections,
         fields: fdFields,
-        rules: fdConditionalRules,
+        rules: fdRulesForSave(),
         meta: { titleAppearance: ta }
+    });
+}
+
+function fdRulesForSave() {
+    return (fdConditionalRules || []).map(r => {
+        const src = fdParseRuleRef(r.sourceRef);
+        const tgt = fdParseRuleRef(r.targetRef);
+        const srcField = src && src.kind === 'field' ? fdFields.find(f => f.id === src.id) : null;
+        return {
+            id: r.id,
+            isEnabled: r.isEnabled !== false,
+            sourceRef: r.sourceRef || '',
+            sourceFieldType: srcField ? srcField.fieldType : (r.sourceFieldType || ''),
+            operator: r.operator || FD_RULE_OPERATORS[0],
+            value: r.value != null ? String(r.value) : '',
+            action: r.action || FD_RULE_ACTIONS[0],
+            targetRef: r.targetRef || '',
+            targetKind: tgt ? tgt.kind : (r.targetKind || ''),
+            targetId: tgt ? tgt.id : (r.targetId != null ? r.targetId : null),
+            fieldId: src && src.kind === 'field' ? src.id : null,
+            sectionId: tgt && tgt.kind === 'section' ? tgt.id : null
+        };
     });
 }
 
@@ -3487,14 +3681,18 @@ function fdApplyParsedFieldsData(parsed) {
 
         const rawAction = r.action || FD_RULE_ACTIONS[0];
         const migratedAction = FD_RULE_ACTION_LEGACY[rawAction] || rawAction;
+        const srcField = src.kind === 'field' ? fdFields.find(f => f.id === src.id) : null;
         return {
             id: r.id || (i + 1),
             isEnabled: r.isEnabled !== false,
             sourceRef: fdSerializeRuleRef(src),
+            sourceFieldType: r.sourceFieldType || (srcField ? srcField.fieldType : ''),
             operator: FD_RULE_OPERATORS.includes(r.operator) ? r.operator : FD_RULE_OPERATORS[0],
             value: r.value || '',
             action: FD_RULE_ACTIONS.includes(migratedAction) ? migratedAction : FD_RULE_ACTIONS[0],
-            targetRef: fdSerializeRuleRef(tgt)
+            targetRef: fdSerializeRuleRef(tgt),
+            targetKind: r.targetKind || tgt.kind,
+            targetId: r.targetId != null ? r.targetId : tgt.id
         };
     });
     const ruleIds = fdConditionalRules.map(r => r.id);
@@ -3767,14 +3965,13 @@ function fdRenderStep1OuTreeRows(byParent, parentKey, depth, selectedId, expande
         const expanded = !!expandedMap[idStr];
         const indent = depth * 22;
         const rowSel = String(sel) === idStr ? ' is-selected' : '';
-        html += `<div class="bnf-ou-tree-row d-flex align-items-center${rowSel}" data-id="${u.id}" role="option" dir="rtl" style="padding:8px 12px;padding-right:${12 + indent}px;cursor:pointer;border-radius:4px;user-select:none;" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor='transparent'">`;
+        html += `<div class="bnf-ou-tree-row d-flex align-items-center${rowSel}" data-id="${u.id}" role="option" dir="rtl" style="padding:8px 10px;padding-right:${12 + indent}px;">`;
         if (hasChildren) {
-            const icon = expanded ? '▼' : '▶';
-            html += `<button type="button" class="bnf-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}" title="${expanded ? 'طي' : 'توسيع'}" style="border:0;background:0;padding:2px 4px;cursor:pointer;font-size:11px;color:var(--bs-gray-600);">${icon}</button>`;
+            html += `<button type="button" class="bnf-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}" title="${expanded ? 'طي' : 'توسيع'}">${expanded ? '−' : '+'}</button>`;
         } else {
-            html += '<span class="bnf-ou-tree-exp-spacer" style="width:20px;"></span>';
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
         }
-        html += `<span class="bnf-ou-tree-name flex-grow-1" style="font-size:14px;">${esc(u.name || '')}</span></div>`;
+        html += `<span class="bnf-ou-tree-name flex-grow-1">${esc(u.name || '')}</span></div>`;
         if (hasChildren && expanded) html += fdRenderStep1OuTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
     });
     return html;
@@ -3789,11 +3986,7 @@ function fdRenderStep1OrgUnitTreePanel() {
     }
     const byParent = fdStep1OrgUnitByParent();
     const selectedId = document.getElementById('fdStep1OuInput')?.value || '';
-    const allSel = !selectedId ? ' is-selected' : '';
-    let html = `<div class="bnf-ou-tree-row d-flex align-items-center${allSel}" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;font-weight:700;">` 
-        + '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>'
-        + '<span class="bnf-ou-tree-name flex-grow-1" style="color:var(--gray-700);">كل الوحدات</span></div>';
-    html += fdRenderStep1OuTreeRows(byParent, '', 0, selectedId, fdStep1OuExpanded);
+    const html = fdRenderStep1OuTreeRows(byParent, '', 0, selectedId, fdStep1OuExpanded);
     panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
 }
 
@@ -3801,74 +3994,74 @@ function fdStep1OuSetSelection(id, name) {
     const hid = document.getElementById('fdStep1OuInput');
     const lab = document.getElementById('fdStep1OuLabel');
     if (hid) hid.value = id != null && id !== '' ? String(id) : '';
-    if (lab) lab.textContent = name && String(name).trim() ? name : 'الوحدة التنظيمية';
+    if (lab) lab.textContent = name && String(name).trim() ? name : '-- اختر --';
     fdStep1OuClosePanel();
+    if (fdIsAdmin) fdRenderStep1OrgUnitTreePanel();
 }
 
 function fdInitStep1OrgUnitTree() {
     const trig = document.getElementById('fdStep1OuTrigger');
     const panel = document.getElementById('fdStep1OuPanel');
-    const dropdown = document.getElementById('fdStep1OuDropdown');
     if (!trig || !panel) return;
-    
-    // الاختيار التلقائي للممثلين (غير الإداريين)
-    if (!fdIsAdmin && fdOrgUnits.length > 0) {
-        const currentOuId = parseInt(document.getElementById('fdStep1OuInput')?.value || '0');
-        let myOu = null;
-        if (currentOuId > 0) {
-            myOu = fdOrgUnits.find(u => u.id == currentOuId);
-        }
-        if (!myOu && fdOrgUnits.length > 0) {
-            myOu = fdOrgUnits[0];
-        }
-        if (myOu) {
-            fdStep1OuSetSelection(myOu.id, myOu.name);
-            // لا نعرض الشجرة للممثلين - فقط اختر تلقائياً
-            if (trig) trig.style.cursor = 'default';
-            return;
-        }
+
+    // ممثل الوحدة التنظيمية: تعبئة تلقائية ومنع التعديل
+    if (!fdIsAdmin) {
+        const currentOuId = parseInt(document.getElementById('fdStep1OuInput')?.value || '0', 10);
+        let myOu = currentOuId > 0 ? fdOrgUnits.find(u => u.id == currentOuId) : null;
+        if (!myOu && fdOrgUnits.length) myOu = fdOrgUnits[0];
+        if (myOu) fdStep1OuSetSelection(myOu.id, myOu.name);
+        trig.disabled = true;
+        trig.setAttribute('aria-disabled', 'true');
+        trig.classList.add('bnf-ou-tree-trigger-readonly');
+        trig.style.backgroundColor = 'var(--gray-100, #f8f9fa)';
+        trig.style.cursor = 'default';
+        trig.onclick = null;
+        panel.classList.add('d-none');
+        return;
     }
-    
-    // عرض الشجرة للإداريين
+
+    // مدير النظام:    لشاشة إضافة مستفيد
+    const currentOuId = parseInt(document.getElementById('fdStep1OuInput')?.value || '0', 10);
+    if (currentOuId > 0) fdStep1OuExpandAncestorsForSelection(currentOuId);
     fdRenderStep1OrgUnitTreePanel();
-    
-    // إضافة event listeners
-    if (trig && !trig._fdStep1OuBound) {
-        trig._fdStep1OuBound = true;
-        trig.onclick = fdStep1OuTogglePanel;
-    }
-    
-    // إغلاق عند الضغط خارج الـ dropdown
+
+    trig.disabled = false;
+    trig.removeAttribute('aria-disabled');
+    trig.classList.remove('bnf-ou-tree-trigger-readonly');
+    trig.style.backgroundColor = '';
+    trig.style.cursor = '';
+    trig.onclick = fdStep1OuTogglePanel;
+
     if (!window._fdStep1OuClickBound) {
         window._fdStep1OuClickBound = true;
         document.addEventListener('click', (e) => {
-            if (dropdown && !dropdown.contains(e.target)) {
+            const dropdown = document.getElementById('fdStep1OuDropdown');
+            const ouPanel = document.getElementById('fdStep1OuPanel');
+            if (dropdown && ouPanel && !ouPanel.classList.contains('d-none') && !dropdown.contains(e.target)) {
                 fdStep1OuClosePanel();
             }
         });
     }
-    
-    // معالجة النقرات داخل الشجرة
-    if (panel && !panel._fdStep1OuTreeBound) {
-        panel._fdStep1OuTreeBound = true;
-        panel.addEventListener('click', (e) => {
-            const expBtn = e.target.closest('.bnf-ou-tree-exp');
-            if (expBtn) {
-                const id = expBtn.getAttribute('data-exp');
-                if (id) {
-                    fdStep1OuExpanded[id] = !fdStep1OuExpanded[id];
-                    fdRenderStep1OrgUnitTreePanel();
-                }
-                return;
+
+    panel.onclick = (e) => {
+        const expBtn = e.target.closest('.bnf-ou-tree-exp');
+        if (expBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = expBtn.getAttribute('data-exp');
+            if (id) {
+                fdStep1OuExpanded[id] = !fdStep1OuExpanded[id];
+                fdRenderStep1OrgUnitTreePanel();
             }
-            const row = e.target.closest('.bnf-ou-tree-row');
-            if (row) {
-                const id = row.getAttribute('data-id');
-                const name = row.querySelector('.bnf-ou-tree-name')?.textContent || 'الوحدة التنظيمية';
-                fdStep1OuSetSelection(id || '', name);
-            }
-        });
-    }
+            return;
+        }
+        const row = e.target.closest('.bnf-ou-tree-row');
+        if (row && row.getAttribute('data-id')) {
+            const uid = parseInt(row.getAttribute('data-id'), 10);
+            const u = fdOrgUnits.find(x => x.id === uid);
+            if (u) fdStep1OuSetSelection(u.id, u.name);
+        }
+    };
 }
 
 async function fdLoad() {
@@ -3895,14 +4088,13 @@ async function fdLoad() {
         fdLookups = {
             formClasses:res.formClasses||[],
             formTypes:res.formTypes||[],
-            workspaces:res.workspaces||[],
             templates:res.templates||[],
             templateFilters:res.templateFilters||[],
             orgUnitFilters:res.orgUnitFilters||[]
         };
-        fdOrgUnits = (fdLookups.orgUnitFilters || []).map(u => ({
-            id: u.id, name: u.name, parentId: u.parentId ?? u.ParentId ?? null, sortOrder: u.sortOrder ?? u.SortOrder ?? 0
-        }));
+        fdOrgUnits = fdIsAdmin
+            ? fdMapOrgUnits(fdLookups.orgUnitFilters)
+            : fdMapOrgUnits(res.orgUnitsForSelect);
         fdFillFilters(); fdRenderTable();
     } catch(e) { console.error('fdLoad',e); }
 }
@@ -3989,10 +4181,7 @@ function fdActions(f) {
     if (isApproved)
         h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
 
-    if (!fdIsAdmin && (f.status === 'draft' || f.status === 'rejected'))
-        h += `<button class="fd-action-btn fd-action-btn-send" onclick="fdSendApproval(${f.id})"><i class="bi bi-send-fill"></i> إرسال</button>`;
     if (fdIsAdmin && f.status === 'pending') {
-        h += `<button class="fd-action-btn fd-action-btn-approve" onclick="fdShowApprove(${f.id},'${esc(f.name)}')"><i class="bi bi-check-lg"></i> اعتماد</button>`;
         h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
     }
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
@@ -4022,6 +4211,7 @@ function fdShowCreate() {
     fdDropdownItemsCache = {};
     fdReadyTableGridCache = {};
     fdResetSectionsState();
+    fdStep1OuExpanded = {};
     fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, ouId:0, tplId:0, titleAppearance: fdDefaultTitleAppearance() };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
@@ -4038,10 +4228,13 @@ async function fdShowEdit(id) {
         fdDropdownItemsCache = {};
         fdReadyTableGridCache = {};
         const d = res.data;
+        if (res.orgUnitsForSelect && res.orgUnitsForSelect.length)
+            fdOrgUnits = fdMapOrgUnits(res.orgUnitsForSelect);
         // orgUnitFilters already populated above
         if (res.formClasses && res.formClasses.length)
             fdLookups.formClasses = res.formClasses;
         fdEditId = id; fdStep = 1; fdEditingIdx = -1;
+        fdStep1OuExpanded = {};
         fdStep1State = {
             name: d.name || '',
             desc: d.description || '',
@@ -4076,6 +4269,7 @@ function fdRenderStep(data) {
     if (fdStep===1) {
         body.innerHTML = fdStep1Html(data);
         fdWireTitleAppearanceControls();
+        fdInitStep1OrgUnitTree();
         foot.innerHTML = `<div></div><div class="d-flex gap-2"><button class="fd-save-btn send" onclick="fdGoStep2()"><i class="bi bi-arrow-left-short"></i> التالي</button></div>`;
     } else if (fdStep===2) {
         body.innerHTML = fdStep2Html();
@@ -4090,11 +4284,19 @@ function fdRenderStep(data) {
     } else if (fdStep===3) {
         body.innerHTML = fdStep3Html();
         fdRenderRules();
+        fdPrefetchBindingCachesForFields().then(() => {
+            if (fdStep === 3) fdRenderRules();
+        }).catch(() => {});
         foot.innerHTML = `<button class="fd-cancel-btn" onclick="fdGoStepBack(3)"><i class="bi bi-arrow-right-short"></i> السابق</button>
         <button class="fd-save-btn send" onclick="fdGoStep4()"><i class="bi bi-arrow-left-short"></i> التالي</button>`;
     } else {
         body.innerHTML = fdStep4Html();
         fdInitDynamicWidgets(body);
+        try {
+            if (typeof fdInitConditionalLogic === 'function') {
+                fdInitConditionalLogic(body, { fields: fdFields, sections: fdSections, rules: fdConditionalRules });
+            }
+        } catch (e) { console.warn('fdInitConditionalLogic', e); }
         let primaryActionLabel, primaryActionIcon;
         if (fdVersionMode) {
             primaryActionLabel = fdIsAdmin ? 'اعتماد وتفعيل الإصدار' : 'اعتماد الإصدار';
@@ -4118,6 +4320,10 @@ function fdStep1Html(d) {
     const fcIdVal = d.formClassId != null && d.formClassId !== '' ? d.formClassId : (fdStep1State?.formClassId || 0);
     const typeIdVal = d.formTypeId != null ? d.formTypeId : d.typeId;
     const ouIdVal = d.organizationalUnitId != null && d.organizationalUnitId !== '' ? d.organizationalUnitId : (d.ouId || 0);
+    const ouFromList = fdOrgUnits.find(u => u.id == ouIdVal);
+    const ouLabel = (d.orgUnitName && String(d.orgUnitName).trim())
+        ? d.orgUnitName
+        : (ouFromList?.name || (ouIdVal > 0 ? 'الوحدة التنظيمية' : '-- اختر --'));
     const tplIdVal = d.templateId != null ? d.templateId : d.tplId;
     const fcs = fdLookups.formClasses || [];
     const fcOpts = fcs.map(c=>`<option value="${c.id}" ${c.id==fcIdVal?'selected':''}>${esc(c.name)}</option>`).join('');
@@ -4171,13 +4377,13 @@ function fdStep1Html(d) {
         <div class="fd-form-row">
             <div class="fd-form-group">
                 <label><span class="required-star">*</span> الوحدة التنظيمية المالكة</label>
-                <div id="fdStep1OuDropdown" style="position:relative;">
-                    <button class="form-select text-start" type="button" id="fdStep1OuTrigger" style="background-color:#fff;border:1px solid var(--bs-border-color);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:right;padding:6px 12px;" aria-expanded="false">
-                        <span id="fdStep1OuLabel">-- اختر --</span>
+                <div class="bnf-ou-tree-wrap" id="fdStep1OuDropdown">
+                    <input type="hidden" id="fdStep1OuInput" value="${ouIdVal || ''}">
+                    <button type="button" class="form-select bnf-ou-tree-trigger text-end w-100" id="fdStep1OuTrigger" aria-expanded="false" aria-haspopup="listbox">
+                        <span class="bnf-ou-tree-label text-truncate d-block" id="fdStep1OuLabel">${esc(ouLabel)}</span>
                     </button>
-                    <div id="fdStep1OuPanel" class="d-none position-absolute w-100 mt-1 border rounded shadow-sm" style="top:100%;z-index:1000;max-height:300px;overflow-y:auto;background:#fff;padding:8px;"></div>
+                    <div class="bnf-ou-tree-panel d-none" id="fdStep1OuPanel" role="listbox"></div>
                 </div>
-                <input type="hidden" id="fdStep1OuInput" value="">
             </div>
             <div class="fd-form-group"><label>القالب المستخدم <span style="font-weight:400;color:var(--gray-500);font-size:12px;"></span></label><select class="form-select" id="fdFTpl"><option value="">— بدون قالب —</option>${tpl}</select></div>
         </div>
@@ -4384,7 +4590,7 @@ function fdNormalizeTitleAppearance(raw) {
 /** عند عرض نموذج محفوظ: تُستمد إعدادات العلامة المائية من القالب المرتبط فقط (GetTemplateForPreview). إن لم يضع القالب علامة — يُرجَع tplBase دون تعديل. */
 async function fdEnrichTemplateDataWatermark(tplBase, templateId) {
     const tid = parseInt(String(templateId || ''), 10) || 0;
-    if (tid <= 0) return tplBase || null;
+    if (tid <= 0) return null;
     if (!tplBase || typeof tplBase !== 'object') return tplBase || null;
     try {
         const res = await apiFetch(`/FormDefinitions/GetTemplateForPreview?id=${tid}`);
@@ -4503,6 +4709,14 @@ function fdTplZoneBackgroundStyle(tpl, zone) {
 }
 
 // ─── SHARED FORM PREVIEW BUILDER ─────────────────────────────────────────────
+/** يُرجع true فقط عند وجود قالب مرتبط (معرّف > 0) — «بدون قالب» لا يُعرض رأس/تذييل/إطار. */
+function fdHasFormTemplate(tplData) {
+    if (!tplData || typeof tplData !== 'object') return false;
+    const id = parseInt(String(tplData.id ?? tplData.Id ?? tplData.templateId ?? tplData.TemplateId ?? ''), 10) || 0;
+    return id > 0;
+}
+if (typeof window !== 'undefined') window.fdHasFormTemplate = fdHasFormTemplate;
+
 // Renders Header + Body (fields) + Footer from a real saved template object.
 // tplData   – object with headerJson/footerJson/color/margins (or null = fallback)
 // formName  – string
@@ -4514,7 +4728,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
 
     const sections = (sectionsOverride && sectionsOverride.length) ? sectionsOverride : fdDefaultSections();
     fields = fdSortFieldsList(fields, sections);
-    const hasTpl = !!tplData;
+    const hasTpl = fdHasFormTemplate(tplData);
     const ta = fdNormalizeTitleAppearance(titleAppearanceOpt || fdDefaultTitleAppearance());
     const tAlign = ta.align === 'center' ? 'center' : (ta.align === 'left' ? 'left' : 'right');
     const tWeight = ta.bold ? '700' : '400';
@@ -4536,19 +4750,27 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         const tipAttr   = tipMerged ? ` title="${fdEscAttr(tipMerged)}"` : '';
         const infoIcon  = tipMerged ? `<i class="bi bi-info-circle ms-1" style="font-size:11px;color:${hasTpl ? 'var(--gray-400)' : 'var(--sa-400)'};"${tipAttr}></i>` : '';
         const subName   = f.subName ? `<small style="display:block;color:var(--gray-400);font-size:11px;margin-top:6px;font-style:normal;">${esc(f.subName)}</small>` : '';
+        const isAutoData = FD_AUTO_FIELD_TYPES.has(f.fieldType);
+        const fillOpt = {
+            forceReadOnly: true,
+            beneficiaryProfile: (typeof window !== 'undefined' && window.fdBeneficiaryFillProfile) ? window.fdBeneficiaryFillProfile : null,
+            fillPhase: (typeof window !== 'undefined' && window.fdFormFillPhase) ? window.fdFormFillPhase : 'submit'
+        };
         const inputHtml = interactive
-            ? fdBuildFieldInput(f, f.isReadOnly ? { forceReadOnly: true } : undefined)
-            : fdBuildFieldInput(f, { forceReadOnly: true });
+            ? fdBuildFieldInput(f, (isAutoData || f.isReadOnly) ? fillOpt : undefined)
+            : fdBuildFieldInput(f, { forceReadOnly: true, beneficiaryProfile: fillOpt.beneficiaryProfile, fillPhase: fillOpt.fillPhase });
         let renderedInput = inputHtml;
-        if (!isStructural && interactive && !f.isReadOnly && fdIvUsesInlineValidation(f)) {
+        if (!isStructural && interactive && !f.isReadOnly && !isAutoData && fdIvUsesInlineValidation(f)) {
             renderedInput = `<div class="fd-iv-wrap" data-fd-iv="1" data-fd-ft="${fdEscAttr(f.fieldType)}" data-fd-props="${fdEscAttr(f.propertiesJson || '{}')}"><div class="fd-iv-slot">${inputHtml}</div><p class="fd-iv-msg small text-danger mt-1 mb-0" style="display:none;" aria-live="polite"></p></div>`;
         }
         if (isStructural) {
-            return `<div class="${colClass}" style="font-style:normal;">${inputHtml}</div>`;
+            return `<div class="${colClass} fd-form-field-wrap" data-fd-field-id="${f.id}" data-fd-field-type="${fdEscAttr(f.fieldType)}" style="font-style:normal;">${inputHtml}</div>`;
         }
-        return `<div class="${colClass}" style="font-style:normal;">
+        const reqFlag = f.isRequired ? '1' : '0';
+        const roFlag = (f.isReadOnly || isAutoData) ? '1' : '0';
+        return `<div class="${colClass} fd-form-field-wrap" data-fd-field-id="${f.id}" data-fd-field-type="${fdEscAttr(f.fieldType)}" data-fd-field-required="${reqFlag}" data-fd-field-readonly="${roFlag}" style="font-style:normal;">
             <label style="font-size:13px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:4px;font-style:normal;"${tipAttr}>
-                ${esc(f.fieldName)}${f.isRequired ? '<span style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
+                ${esc(f.fieldName)}${f.isRequired ? '<span class="fd-cl-req-star" style="color:#ef4444;margin-right:4px;">*</span>' : ''}${infoIcon}
             </label>
             ${renderedInput}
             ${subName}
@@ -4595,8 +4817,8 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
                 ? 'margin:12px 0 8px;padding:8px 12px;background:var(--gray-50);border-inline-start:4px solid var(--gray-300);border-radius:8px;font-weight:800;font-size:14px;color:var(--gray-800);font-style:normal;'
                 : 'margin:12px 0 8px;padding:8px 12px;background:var(--sa-50);border-inline-start:4px solid var(--sa-500);border-radius:8px;font-weight:800;font-size:14px;color:var(--sa-800);font-style:normal;';
             const head = showSectionTitles ? `<div style="${secRibbon}">${esc(sec.title)}</div>` : '';
-            if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
-            return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
+            if (!items.length) return `<div class="fd-form-section-block" data-fd-section-id="${sec.id}">${head}<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div></div>`;
+            return `<div class="fd-form-section-block" data-fd-section-id="${sec.id}">${head}<div class="row g-3">` + items.map(renderField).join('') + '</div></div>';
         }).join('');
         const labelHtml = pageObj.label
             ? `<div style="font-size:12.5px;font-weight:700;color:var(--info-700);background:var(--info-50);padding:4px 12px;border-radius:999px;display:inline-block;margin-bottom:8px;">${esc(pageObj.label)}</div>`
@@ -4624,8 +4846,8 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
                 const head = showSectionTitles
                     ? `<div style="${secRibbon}">${esc(sec.title)}</div>`
                     : '';
-                if (!items.length) return head + `<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div>`;
-                return head + '<div class="row g-3">' + items.map(renderField).join('') + '</div>';
+                if (!items.length) return `<div class="fd-form-section-block" data-fd-section-id="${sec.id}">${head}<div class="text-center py-2" style="color:var(--gray-300);font-size:12px;font-style:normal;">لا توجد حقول في هذا القسم</div></div>`;
+                return `<div class="fd-form-section-block" data-fd-section-id="${sec.id}">${head}<div class="row g-3">` + items.map(renderField).join('') + '</div></div>';
             }).join('');
         } else {
             const pagesHtml = pages.map((p, i) => fdRenderPageContent(p, i, pages.length)).join('');
@@ -4730,6 +4952,7 @@ function fdAddRule() {
         id: fdRuleSeq++,
         isEnabled: true,
         sourceRef,
+        sourceFieldType: fdFields[0] ? fdFields[0].fieldType : '',
         operator: FD_RULE_OPERATORS[0],
         value: '',
         action: FD_RULE_ACTIONS[0],
@@ -4754,16 +4977,112 @@ function fdUpdateRule(id, patch) {
     if (!r) return;
     Object.assign(r, patch);
     if (FD_RULE_NO_VALUE.has(r.operator)) r.value = '';
-    // عند تغيير المصدر: إذا تطابق مع الهدف نختار أول مرجع مختلف للهدف
     if (patch && Object.prototype.hasOwnProperty.call(patch, 'sourceRef')) {
         const src = fdParseRuleRef(r.sourceRef);
+        const srcField = src && src.kind === 'field' ? fdFields.find(f => f.id === src.id) : null;
+        r.sourceFieldType = srcField ? srcField.fieldType : '';
+        if (!FD_RULE_NO_VALUE.has(r.operator)) r.value = '';
         const tgt = fdParseRuleRef(r.targetRef);
         if (src && tgt && fdRuleRefEqual(src, tgt)) {
             const alt = fdRuleFirstRefExcluding(src, fdFields, fdSections);
             if (alt) r.targetRef = fdSerializeRuleRef(alt);
         }
+        const finish = () => fdRenderRules();
+        if (srcField) {
+            let p = {};
+            try { p = JSON.parse(srcField.propertiesJson || '{}'); } catch (e) {}
+            if (p.dropdownListId) {
+                fdFetchDropdownItemsForField(p.dropdownListId).then(finish).catch(finish);
+                return;
+            }
+        }
     }
     fdRenderRules();
+}
+
+function fdRuleIsLogicExcludedField(f) {
+    if (!f) return true;
+    return f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض' || f.fieldType === 'خط فاصل' || f.fieldType === 'عنوان';
+}
+
+function fdRuleResolveSourceField(r) {
+    const src = fdParseRuleRef(r.sourceRef);
+    if (!src || src.kind !== 'field') return null;
+    return fdFields.find(f => f.id === src.id) || null;
+}
+
+function fdRuleFieldOptions(field, props) {
+    props = props || {};
+    try { if (typeof props === 'string') props = JSON.parse(props); } catch (e) { props = {}; }
+    if (!field) return [];
+    const ft = field.fieldType;
+    if (ft === 'قائمة منسدلة' && props.dropdownListId) {
+        const items = fdDropdownItemsCache[props.dropdownListId] || [];
+        return items.map(it => String(it.text ?? it.name ?? it.label ?? it.value ?? it).trim()).filter(Boolean);
+    }
+    if (ft === 'قائمة اختيار الواحد' || ft === 'قائمة اختيار متعدد' || ft === 'شبكة خيارات متعددة' || ft === 'شبكة مربعات اختيار') {
+        if (props.options) return String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+    if (ft === 'تبديل') {
+        return [String(props.onText || 'نعم').trim(), String(props.offText || 'لا').trim()];
+    }
+    return [];
+}
+
+function fdRuleValueInputHtml(r) {
+    const valDisabled = FD_RULE_NO_VALUE.has(r.operator);
+    const field = fdRuleResolveSourceField(r);
+    const val = r.value != null ? String(r.value) : '';
+    if (valDisabled) {
+        return `<input type="text" class="form-control form-control-sm" disabled placeholder="لا يحتاج قيمة">`;
+    }
+    if (!field) {
+        return `<input type="text" class="form-control form-control-sm" value="${fdEscAttr(val)}" placeholder="أدخل القيمة" oninput="fdUpdateRuleValue(${r.id}, this.value)">`;
+    }
+    let props = {};
+    try { props = JSON.parse(field.propertiesJson || '{}'); } catch (e) {}
+    const ft = field.fieldType;
+    const choiceTypes = new Set(['قائمة منسدلة', 'قائمة اختيار الواحد', 'قائمة اختيار متعدد', 'شبكة خيارات متعددة', 'شبكة مربعات اختيار', 'تبديل']);
+    if (choiceTypes.has(ft) || (props.options && String(props.options).trim())) {
+        const opts = fdRuleFieldOptions(field, props);
+        if (opts.length) {
+            let h = `<select class="form-select form-select-sm" onchange="fdUpdateRuleValue(${r.id}, this.value)"><option value="">— اختر —</option>`;
+            opts.forEach(o => { h += `<option value="${fdEscAttr(o)}"${o === val ? ' selected' : ''}>${esc(o)}</option>`; });
+            return h + '</select>';
+        }
+    }
+    if (ft === 'رقم' || ft === 'دوار رقمي' || ft === 'عملة' || ft === 'التقييم بالأرقام') {
+        return `<input type="number" class="form-control form-control-sm" value="${fdEscAttr(val)}" placeholder="0" oninput="fdUpdateRuleValue(${r.id}, this.value)">`;
+    }
+    if (ft === 'تاريخ') {
+        return `<input type="date" class="form-control form-control-sm" value="${fdEscAttr(val)}" onchange="fdUpdateRuleValue(${r.id}, this.value)">`;
+    }
+    if (ft === 'تاريخ ووقت') {
+        return `<input type="datetime-local" class="form-control form-control-sm" value="${fdEscAttr(val)}" onchange="fdUpdateRuleValue(${r.id}, this.value)">`;
+    }
+    if (ft === 'وقت') {
+        return `<input type="time" class="form-control form-control-sm" value="${fdEscAttr(val)}" onchange="fdUpdateRuleValue(${r.id}, this.value)">`;
+    }
+    return `<input type="text" class="form-control form-control-sm" value="${fdEscAttr(val)}" placeholder="أدخل القيمة" oninput="fdUpdateRuleValue(${r.id}, this.value)">`;
+}
+
+/** قائمة المصدر: الحقول فقط — مجمّعة حسب الأقسام. */
+function fdRuleBuildSourceOptions(selectedRef) {
+    let html = '';
+    let any = false;
+    fdSections.forEach(s => {
+        const secFields = fdFields.filter(f => (f.sectionId || fdSections[0]?.id) === s.id && !fdRuleIsLogicExcludedField(f));
+        if (!secFields.length) return;
+        any = true;
+        html += `<optgroup label="${esc(s.title || ('القسم ' + s.id))}">`;
+        secFields.forEach(f => {
+            const ref = `field:${f.id}`;
+            const sel = ref === selectedRef ? ' selected' : '';
+            html += `<option value="${ref}"${sel}>${esc(f.fieldName || ('حقل ' + f.id))}</option>`;
+        });
+        html += '</optgroup>';
+    });
+    return html || '<option value="">— لا توجد حقول —</option>';
 }
 
 function fdRenderRules() {
@@ -4792,8 +5111,8 @@ function fdRuleBuildUnifiedOptions(selectedRef, excludeRef) {
     if (fdFields.length) {
         html += '<optgroup label="الحقول">';
         fdFields.forEach(f => {
-            // فاصل الصفحات وصورة العرض هياكل عرض فقط — لا تظهر في المنطق الشرطي
-            if (f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض' || f.fieldType === 'خط فاصل' || f.fieldType === 'عنوان') return;
+            if (fdRuleIsLogicExcludedField(f)) return;
+            if (FD_AUTO_FIELD_TYPES && FD_AUTO_FIELD_TYPES.has(f.fieldType)) return;
             const ref = `field:${f.id}`;
             if (excludeRef && ref === excludeRef) return;
             const sel = ref === selectedRef ? ' selected' : '';
@@ -4808,9 +5127,8 @@ function fdRuleBuildUnifiedOptions(selectedRef, excludeRef) {
 function fdRuleCardHtml(r, n) {
     const opOpts = FD_RULE_OPERATORS.map(op => `<option value="${esc(op)}" ${op === r.operator ? 'selected' : ''}>${esc(op)}</option>`).join('');
     const actOpts = FD_RULE_ACTIONS.map(a => `<option value="${esc(a)}" ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('');
-    const sourceOpts = fdRuleBuildUnifiedOptions(r.sourceRef || '', null);
+    const sourceOpts = fdRuleBuildSourceOptions(r.sourceRef || '');
     const targetOpts = fdRuleBuildUnifiedOptions(r.targetRef || '', r.sourceRef || '');
-    const valDisabled = FD_RULE_NO_VALUE.has(r.operator);
     return `<div class="fd-rule-card" style="background:#fff;border:1.5px solid var(--gray-200);border-radius:12px;padding:16px 18px 14px;margin-top:14px;position:relative;">
         <div class="d-flex align-items-center justify-content-between" style="margin-bottom:14px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;">
             <div style="font-weight:800;color:var(--sa-700);font-size:13.5px;display:flex;align-items:center;gap:8px;">
@@ -4838,7 +5156,7 @@ function fdRuleCardHtml(r, n) {
             </div>
             <div class="col-md-4">
                 <label class="small fw-bold text-muted">القيمة</label>
-                <input type="text" class="form-control form-control-sm" value="${fdEscAttr(r.value || '')}" placeholder="${valDisabled ? 'لا يحتاج قيمة' : 'أدخل القيمة'}" ${valDisabled ? 'disabled' : ''} oninput="fdUpdateRuleValue(${r.id}, this.value)">
+                ${fdRuleValueInputHtml(r)}
             </div>
             <div class="col-md-6">
                 <label class="small fw-bold text-muted">الإجراء <span class="required-star">*</span></label>
@@ -4858,13 +5176,221 @@ function fdUpdateRuleValue(id, v) {
     r.value = v;
 }
 
+// ─── CONDITIONAL LOGIC RUNTIME (تطبيق القواعد عند تعبئة النموذج) ─────────────
+const FD_CL_HIDDEN = 'fd-cl-hidden';
+
+(function fdEnsureClStyles() {
+    if (typeof document === 'undefined' || document.getElementById('fd-cl-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'fd-cl-styles';
+    s.textContent = '.fd-cl-hidden{display:none!important;}';
+    document.head.appendChild(s);
+})();
+
+function fdInitConditionalLogic(root, ctx) {
+    root = root || document;
+    ctx = ctx || {};
+    const rules = (ctx.rules || []).filter(r => r && r.isEnabled !== false);
+    if (!rules.length) return;
+    if (root.__fdClBound) {
+        fdClApplyAll(root, rules);
+        return;
+    }
+    root.__fdClBound = true;
+    root.__fdClRules = rules;
+    fdClCaptureBaseline(root);
+    const handler = () => fdClApplyAll(root, root.__fdClRules || rules);
+    root.addEventListener('input', handler, true);
+    root.addEventListener('change', handler, true);
+    root.addEventListener('click', (e) => {
+        if (e.target && (e.target.classList.contains('fd-switch-input') || e.target.type === 'radio' || e.target.type === 'checkbox')) handler();
+    }, true);
+    handler();
+}
+
+function fdClCaptureBaseline(root) {
+    root.querySelectorAll('[data-fd-field-id]').forEach(el => {
+        el.dataset.fdClBaseVisible = el.classList.contains(FD_CL_HIDDEN) ? '0' : '1';
+        el.dataset.fdClBaseRequired = el.getAttribute('data-fd-field-required') || '0';
+        el.dataset.fdClBaseDisabled = el.getAttribute('data-fd-field-readonly') || '0';
+    });
+    root.querySelectorAll('[data-fd-section-id]').forEach(el => {
+        el.dataset.fdClBaseVisible = el.classList.contains(FD_CL_HIDDEN) ? '0' : '1';
+    });
+}
+
+function fdClReset(root) {
+    root.querySelectorAll('[data-fd-field-id]').forEach(el => {
+        const vis = el.dataset.fdClBaseVisible !== '0';
+        el.classList.toggle(FD_CL_HIDDEN, !vis);
+        fdClSetFieldRequired(el, el.dataset.fdClBaseRequired === '1');
+        fdClSetFieldDisabled(el, el.dataset.fdClBaseDisabled === '1');
+    });
+    root.querySelectorAll('[data-fd-section-id]').forEach(el => {
+        el.classList.toggle(FD_CL_HIDDEN, el.dataset.fdClBaseVisible === '0');
+    });
+}
+
+function fdClApplyAll(root, rules) {
+    fdClReset(root);
+    (rules || []).forEach(r => {
+        if (r.isEnabled === false) return;
+        if (fdClRuleMatches(root, r)) fdClExecuteAction(root, r);
+    });
+}
+
+function fdClRuleMatches(root, rule) {
+    const src = fdParseRuleRef(rule.sourceRef);
+    if (!src || src.kind !== 'field') return false;
+    const wrap = root.querySelector(`[data-fd-field-id="${src.id}"]`);
+    if (!wrap) return false;
+    const ft = rule.sourceFieldType || wrap.getAttribute('data-fd-field-type') || '';
+    const actual = fdClReadFieldValue(wrap, ft);
+    return fdClCompare(rule.operator, actual, rule.value, ft);
+}
+
+function fdClReadFieldValue(wrap, fieldType) {
+    if (!wrap) return '';
+    const ft = fieldType || wrap.getAttribute('data-fd-field-type') || '';
+    const ocSingle = wrap.querySelector('[data-fd-oc-mode="single"]');
+    if (ocSingle) {
+        const r = ocSingle.querySelector('input[type="radio"]:checked');
+        return r ? (r.value || '') : '';
+    }
+    const ocMulti = wrap.querySelector('[data-fd-oc-mode="multi"]');
+    if (ocMulti) {
+        return Array.from(ocMulti.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value || '').filter(Boolean);
+    }
+    const sw = wrap.querySelector('.fd-switch-input');
+    if (sw) {
+        const onText = sw.getAttribute('data-fd-on-text') || 'نعم';
+        const offText = sw.getAttribute('data-fd-off-text') || 'لا';
+        return sw.checked ? onText : offText;
+    }
+    if (ft === 'تاريخ') {
+        const hij = wrap.querySelector('input.fd-hijri-face');
+        if (hij) return (hij.value || '').trim();
+        const greg = wrap.querySelector('input.fd-greg-face');
+        if (greg) return (greg.value || '').trim();
+    }
+    const sel = wrap.querySelector('select.form-select, select.form-control');
+    if (sel) {
+        if (sel.multiple) return Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);
+        return sel.value || '';
+    }
+    const ta = wrap.querySelector('textarea');
+    if (ta) return (ta.value || '').trim();
+    const num = wrap.querySelector('input[type="number"], input.fd-spin-input');
+    if (num) return (num.value || '').trim();
+    const dt = wrap.querySelector('input[type="datetime-local"], input[type="date"], input[type="time"]');
+    if (dt) return (dt.value || '').trim();
+    const inp = wrap.querySelector('input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input:not([type="hidden"])');
+    return inp ? (inp.value || '').trim() : '';
+}
+
+function fdClIsEmpty(val) {
+    if (val == null) return true;
+    if (Array.isArray(val)) return val.length === 0;
+    if (typeof val === 'boolean') return false;
+    return String(val).trim() === '';
+}
+
+function fdClNormalizeCompareVal(val, fieldType) {
+    if (Array.isArray(val)) return val.map(v => String(v).trim()).join('|');
+    return String(val == null ? '' : val).trim();
+}
+
+function fdClCompare(operator, actual, expected, fieldType) {
+    const op = operator || 'يساوي';
+    if (op === 'فارغ') return fdClIsEmpty(actual);
+    if (op === 'غير فارغ') return !fdClIsEmpty(actual);
+    const exp = fdClNormalizeCompareVal(expected, fieldType);
+    if (Array.isArray(actual)) {
+        if (op === 'يساوي') return actual.some(v => fdClNormalizeCompareVal(v, fieldType) === exp);
+        if (op === 'لا يساوي') return !actual.some(v => fdClNormalizeCompareVal(v, fieldType) === exp);
+        if (op === 'يحتوي على') return actual.some(v => String(v).includes(exp));
+        return false;
+    }
+    const act = fdClNormalizeCompareVal(actual, fieldType);
+    if (op === 'يساوي') return act === exp;
+    if (op === 'لا يساوي') return act !== exp;
+    if (op === 'يحتوي على') return act.includes(exp);
+    if (op === 'أكبر من' || op === 'أصغر من') {
+        const na = parseFloat(act), ne = parseFloat(exp);
+        if (!isNaN(na) && !isNaN(ne)) return op === 'أكبر من' ? na > ne : na < ne;
+        const da = Date.parse(act.replace(/\//g, '-')), de = Date.parse(exp.replace(/\//g, '-'));
+        if (!isNaN(da) && !isNaN(de)) return op === 'أكبر من' ? da > de : da < de;
+        return op === 'أكبر من' ? act > exp : act < exp;
+    }
+    return false;
+}
+
+function fdClExecuteAction(root, rule) {
+    const tgt = fdParseRuleRef(rule.targetRef);
+    if (!tgt) return;
+    const action = rule.action || '';
+    if (tgt.kind === 'section') {
+        const sec = root.querySelector(`[data-fd-section-id="${tgt.id}"]`);
+        if (!sec) return;
+        if (action === 'إظهار') sec.classList.remove(FD_CL_HIDDEN);
+        else if (action === 'إخفاء') sec.classList.add(FD_CL_HIDDEN);
+        else if (action === 'جعل العنصر مطلوباً') sec.querySelectorAll('[data-fd-field-id]').forEach(w => fdClSetFieldRequired(w, true));
+        else if (action === 'تعطيل') sec.querySelectorAll('[data-fd-field-id]').forEach(w => fdClSetFieldDisabled(w, true));
+        return;
+    }
+    if (tgt.kind === 'field') {
+        const wrap = root.querySelector(`[data-fd-field-id="${tgt.id}"]`);
+        if (!wrap) return;
+        if (action === 'إظهار') wrap.classList.remove(FD_CL_HIDDEN);
+        else if (action === 'إخفاء') wrap.classList.add(FD_CL_HIDDEN);
+        else if (action === 'جعل العنصر مطلوباً') fdClSetFieldRequired(wrap, true);
+        else if (action === 'تعطيل') fdClSetFieldDisabled(wrap, true);
+    }
+}
+
+function fdClSetFieldRequired(wrap, required) {
+    wrap.setAttribute('data-fd-field-required', required ? '1' : '0');
+    wrap.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'hidden' || el.classList.contains('fd-auto-data-store')) return;
+        if (required) el.setAttribute('required', 'required');
+        else el.removeAttribute('required');
+    });
+    const lbl = wrap.querySelector('label');
+    if (!lbl) return;
+    let star = lbl.querySelector('.fd-cl-req-star');
+    if (required) {
+        if (!star) lbl.insertAdjacentHTML('beforeend', '<span class="fd-cl-req-star" style="color:#ef4444;margin-right:4px;">*</span>');
+    } else if (star) star.remove();
+}
+
+function fdClSetFieldDisabled(wrap, disabled) {
+    wrap.querySelectorAll('input, select, textarea, button').forEach(el => {
+        if (el.type === 'hidden' || el.classList.contains('fd-auto-data-store')) return;
+        if (disabled) {
+            el.setAttribute('disabled', 'disabled');
+            if (el.tagName === 'INPUT') el.readOnly = true;
+        } else if (wrap.getAttribute('data-fd-field-readonly') !== '1') {
+            el.removeAttribute('disabled');
+            if (el.tagName === 'INPUT') el.readOnly = false;
+        }
+    });
+    wrap.querySelectorAll('canvas.fd-sig-canvas').forEach(c => {
+        c.style.pointerEvents = disabled ? 'none' : '';
+        c.style.opacity = disabled ? '0.55' : '';
+    });
+}
+
+if (typeof window !== 'undefined') {
+    window.fdInitConditionalLogic = fdInitConditionalLogic;
+}
+
 // ─── STEP NAVIGATION ─────────────────────────────────────────────────────────
 async function fdGoStep2() {
     const s = fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
     if (!s.formClassId) return showToast('أصناف النماذج مطلوبة','error');
     if (!s.typeId) return showToast('نوع النموذج مطلوب','error');
-    if (!s.ouId) return showToast('الوحدة التنظيمية مطلوبة','error');
+    if (!s.ouId) return showToast('الوحدة التنظيمية المالكة مطلوبة','error');
     fdStep1State = s;
     await fdEnsureFieldBindingLookups();
     fdStep=2; fdRenderStep();
@@ -4899,6 +5425,10 @@ function fdSyncRulesAfterFieldChanges() {
             r.sourceRef = fdSerializeRuleRef(fb);
             src = fb;
         }
+        if (src && src.kind === 'field') {
+            const sf = fdFields.find(f => f.id === src.id);
+            if (sf) r.sourceFieldType = sf.fieldType;
+        }
         let tgt = fdParseRuleRef(r.targetRef);
         if (!tgt || !fdRuleRefIsValid(tgt, fieldIds, sectionIds) || (src && fdRuleRefEqual(src, tgt))) {
             const alt = fdRuleFirstRefExcluding(src, fdFields, fdSections);
@@ -4915,9 +5445,8 @@ async function fdGoStep4() {
             if (res && res.success) fdCurrentTemplate = res.data;
         } catch {}
     } else {
-        if (!fdEditId && !fdVersionMode) fdCurrentTemplate = null;
+        fdCurrentTemplate = null;
     }
-    // ملاحظة: في وضع الإصدار يكون القالب محمّلاً مسبقاً قبل فتح المعالج، فلا يُمسح إن لم نعِد جلبه.
     await fdPrefetchBindingCachesForFields();
     fdStep = 4;
     fdRenderStep();
@@ -4954,6 +5483,7 @@ async function fdOnFieldTypeChange() {
     const roCb = document.getElementById('fdProp_readOnly');
     if (roCb) roCb.onchange = fdSyncRequiredDisabledFromReadOnly;
     fdSyncRequiredDisabledFromReadOnly();
+    fdSyncAutoFieldTypeUi(type);
 }
 
 function fdCollectFieldProps() {
@@ -4961,7 +5491,7 @@ function fdCollectFieldProps() {
     if(!type||!FD_FIELD_TYPES[type]) return {};
     const def=FD_FIELD_TYPES[type], result={};
     def.props.forEach(p => {
-        if(p.type==='optionList'||p.type==='fileTypesPick') return;
+        if(p.type==='optionList'||p.type==='fileTypesPick'||p.type==='autoDataPick') return;
         if(p.type==='dropdownListPick'||p.type==='readyTablePick'){
             const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
             const v=parseInt(el.value,10); result[p.key]=v>0?v:0; return;
@@ -4997,7 +5527,7 @@ function fdSetFieldProps(type, po) {
         fdRefreshDropdownListPicker(parseInt(po.dropdownListId, 10) || 0);
     }
     def.props.forEach(p => {
-        if(p.type==='optionList'||p.type==='fileTypesPick') return;
+        if(p.type==='optionList'||p.type==='fileTypesPick'||p.type==='autoDataPick') return;
         if(p.type==='dropdownListPick'||p.type==='readyTablePick'){
             const el=document.getElementById(`fdProp_${p.key}`); if(!el) return;
             const v=po[p.key]; if(v!=null&&v!=='') el.value=String(v);
@@ -5038,13 +5568,18 @@ function fdAddField() {
         const rl = document.getElementById('fdProp_rowLabels');
         if (!rl || !String(rl.value || '').trim()) return showToast('يرجى إدخال عناوين الصفوف (سطر لكل صف)', 'error');
     }
+    if (FD_AUTO_FIELD_TYPES.has(type)) {
+        const keys = fdCollectAutoDataPick('fdProp');
+        if (!keys.length) return showToast('اختر عنصراً واحداً على الأقل للعرض', 'error');
+    }
     const props = fdCollectFieldProps();
     const secSel = document.getElementById('fdFieldSection');
     const secId = secSel ? (parseInt(secSel.value, 10) || fdActiveSectionId) : fdActiveSectionId;
-    const isReadOnly = !!props.readOnly;
+    const isAutoData = FD_AUTO_FIELD_TYPES.has(type);
+    const isReadOnly = isAutoData || !!props.readOnly;
     const structuralTypes = new Set(['عنوان', 'خط فاصل', 'فاصل صفحات', 'صورة عرض']);
     const isStructural = structuralTypes.has(type);
-    const isRequired = !isReadOnly && !isStructural && document.getElementById('fdFieldRequired')?.value === '1';
+    const isRequired = !isReadOnly && !isStructural && !isAutoData && document.getElementById('fdFieldRequired')?.value === '1';
     const tooltipText = document.getElementById('fdFieldTooltip')?.value?.trim() || '';
     const field = { id: fdEditingIdx>=0 ? fdFields[fdEditingIdx].id : Date.now(), fieldType:type, fieldName:name, isRequired, isReadOnly, subName:props.subName||'', placeholder:props.placeholder||'', tooltipText, displayLayout:document.getElementById('fdFieldDisplayLayout')?.value?.trim()||'', sortOrder: fdNextFieldSortOrder(secId), sectionId: secId, propertiesJson:JSON.stringify(props) };
     if(fdEditingIdx>=0){ fdFields[fdEditingIdx]=field; showToast('تم تحديث الحقل','success'); fdEditingIdx=-1; }
@@ -5075,12 +5610,15 @@ async function fdEditField(idx) {
     await fdOnFieldTypeChange();
     fdSetFieldProps(f.fieldType, po);
     fdSyncRequiredDisabledFromReadOnly();
+    fdSyncAutoFieldTypeUi(f.fieldType);
     if (po.dropdownListId) await fdFetchDropdownItemsForField(po.dropdownListId);
     if (po.readyTableId) await fdFetchReadyTableGridForField(po.readyTableId);
     document.getElementById('fdPropsArea')?.scrollIntoView({behavior:'smooth'});
 }
 
 function fdSyncRequiredDisabledFromReadOnly() {
+    const type = document.getElementById('fdFieldType')?.value || '';
+    if (FD_AUTO_FIELD_TYPES.has(type)) return;
     const ro = !!document.getElementById('fdProp_readOnly')?.checked;
     const reqSel = document.getElementById('fdFieldRequired');
     if (!reqSel) return;
@@ -5092,6 +5630,27 @@ function fdSyncRequiredDisabledFromReadOnly() {
         reqSel.disabled = false;
         reqSel.title = '';
     }
+}
+
+function fdSyncAutoFieldTypeUi(type) {
+    type = type || document.getElementById('fdFieldType')?.value || '';
+    const isAuto = FD_AUTO_FIELD_TYPES.has(type);
+    const reqSel = document.getElementById('fdFieldRequired');
+    const reqWrap = reqSel ? reqSel.closest('.col-md-4, .col-sm-6, .fd-form-group, div') : null;
+    if (reqSel) {
+        if (isAuto) {
+            reqSel.value = '0';
+            reqSel.disabled = true;
+            reqSel.title = 'يُعبَّأ تلقائياً — لا يمكن جعله إجباري';
+        } else if (!document.getElementById('fdProp_readOnly')?.checked) {
+            reqSel.disabled = false;
+            reqSel.title = '';
+        }
+    }
+    if (reqWrap) reqWrap.style.display = isAuto ? 'none' : '';
+    const roEl = document.getElementById('fdProp_readOnly');
+    const roWrap = roEl ? roEl.closest('.col-md-6, .col-sm-6, .form-check, div') : null;
+    if (roWrap) roWrap.style.display = isAuto ? 'none' : '';
 }
 
 function fdDeleteField(idx) {
@@ -5311,6 +5870,24 @@ function fdCollect1() {
 }
 
 // ─── SAVE ─────────────────────────────────────────────────────────────────────
+function fdValidateNameUnique() {
+    if (fdVersionMode) return true;
+    const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
+    const name = (s.name || '').trim();
+    if (!name) return true;
+    const excludeId = fdEditId || null;
+    const normEq = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+    for (const r of (fdData || [])) {
+        const rid = r.id ?? r.Id;
+        if (excludeId != null && rid === excludeId) continue;
+        if (normEq(r.name ?? r.Name, name)) {
+            showToast('اسم النموذج مستخدم بالفعل — لا يُسمح بالتكرار', 'error');
+            return false;
+        }
+    }
+    return true;
+}
+
 async function fdSave(sendForApproval) {
     if (fdStep === 4) {
         const host = document.getElementById('fdWizardBody');
@@ -5345,6 +5922,7 @@ async function fdSave(sendForApproval) {
 
     const s = fdStep1State && fdStep1State.name ? fdStep1State : fdCollect1();
     if (!s.name) return showToast('اسم النموذج مطلوب','error');
+    if (!fdValidateNameUnique()) return;
     const payload = { name:s.name, description:s.desc, ownership:s.ownership, formClassId:s.formClassId, formTypeId:s.typeId, organizationalUnitId:s.ouId, templateId:s.tplId, fieldsJson:fdSerializeFieldsJson(), sendForApproval };
     try {
         let res;
@@ -5360,11 +5938,7 @@ async function fdSave(sendForApproval) {
     } catch { showToast('خطأ في الاتصال بالخادم','error'); }
 }
 
-// ─── SEND / APPROVE / REJECT / DELETE ────────────────────────────────────────
-async function fdSendApproval(id) {
-    if (!confirm('إرسال للاعتماد؟')) return;
-    try { const r=await apiFetch('/FormDefinitions/SubmitForApproval','POST',{id}); if(r.success){showToast('تم الإرسال','success');fdLoad();} else showToast(r.message,'error'); } catch { showToast('خطأ','error'); }
-}
+// ─── APPROVE / REJECT / DELETE ───────────────────────────────────────────────
 function fdShowApprove(id, name) {
     fdApproveId = id;
     document.getElementById('fdApproveName').textContent = name;
@@ -5408,6 +5982,7 @@ async function fdShowDetails(id) {
         // Template data comes embedded in the response — تكميل العلامة المائية من القالب المرتبط إن وُجدت في القالب فقط
         let tplData = d.templateData || null;
         tplData = await fdEnrichTemplateDataWatermark(tplData, d.templateId);
+        if ((parseInt(String(d.templateId || ''), 10) || 0) <= 0) tplData = null;
 
         // ── info section ────────────────────────────────────────────────────
         const activeBadge = d.isActive
@@ -5437,7 +6012,6 @@ async function fdShowDetails(id) {
                 <span class="fd-detail-val">
                     ${tplData ? `<span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:${tplData.color};display:inline-block;"></span>${esc(tplData.name)}</span>` : (esc(d.templateName) || '<span style="color:var(--gray-400);">—</span>')}
                 </span>
-                <span class="fd-detail-lbl">الوحدة التنظيمية</span><span class="fd-detail-val">${esc(d.orgUnitName)}</span>
             </div>
         </div>`;
 

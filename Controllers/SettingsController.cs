@@ -1529,6 +1529,15 @@ public class SettingsController : BaseController
                 b.SecondName,
                 b.ThirdName,
                 b.FourthName,
+                b.Gender,
+                b.MaritalStatus,
+                DateOfBirth = b.DateOfBirth?.ToString("yyyy-MM-dd"),
+                b.EmployeeNumber,
+                b.Rank,
+                b.JobTitle,
+                b.JobNumber,
+                b.EducationQualification,
+                b.Honorific,
                 b.OrganizationalUnitId,
                 OrganizationalUnitName = GetBeneficiaryOrganizationalUnitName(b.OrganizationalUnitId, units),
                 b.Phone,
@@ -1536,6 +1545,8 @@ public class SettingsController : BaseController
                 b.Username,
                 b.IsActive,
                 DeactivateReason = b.DeactivateReason ?? "",
+                b.IsProfileComplete,
+                ProfileStatus = b.ProfileStatus,
                 b.MainRole,
                 b.IsUnitManager,
                 b.SubRole,
@@ -1588,6 +1599,15 @@ public class SettingsController : BaseController
             SecondName = req.SecondName!.Trim(),
             ThirdName = req.ThirdName!.Trim(),
             FourthName = req.FourthName!.Trim(),
+            Gender = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.Gender ?? "").Trim(),
+            MaritalStatus = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.MaritalStatus ?? "").Trim(),
+            DateOfBirth = IsBeneficiarySysAdminRole(req.SubRole) ? null : ParseBeneficiaryDateOfBirth(req.DateOfBirth),
+            EmployeeNumber = IsBeneficiarySysAdminRole(req.SubRole) ? "" : SanitizeBeneficiaryDigits(req.EmployeeNumber),
+            Rank = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.Rank ?? "").Trim(),
+            JobTitle = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.JobTitle ?? "").Trim(),
+            JobNumber = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.JobNumber ?? "").Trim(),
+            EducationQualification = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.EducationQualification ?? "").Trim(),
+            Honorific = IsBeneficiarySysAdminRole(req.SubRole) ? "" : (req.Honorific ?? "").Trim(),
             OrganizationalUnitId = IsBeneficiarySysAdminRole(req.SubRole)
                 ? null
                 : (req.OrganizationalUnitId.HasValue && req.OrganizationalUnitId.Value > 0 ? req.OrganizationalUnitId : null),
@@ -1674,6 +1694,30 @@ public class SettingsController : BaseController
         b.SecondName = req.SecondName!.Trim();
         b.ThirdName = req.ThirdName!.Trim();
         b.FourthName = req.FourthName!.Trim();
+        if (IsBeneficiarySysAdminRole(req.SubRole))
+        {
+            b.Gender = "";
+            b.MaritalStatus = "";
+            b.DateOfBirth = null;
+            b.EmployeeNumber = "";
+            b.Rank = "";
+            b.JobTitle = "";
+            b.JobNumber = "";
+            b.EducationQualification = "";
+            b.Honorific = "";
+        }
+        else
+        {
+            b.Gender = (req.Gender ?? "").Trim();
+            b.MaritalStatus = (req.MaritalStatus ?? "").Trim();
+            b.DateOfBirth = ParseBeneficiaryDateOfBirth(req.DateOfBirth);
+            b.EmployeeNumber = SanitizeBeneficiaryDigits(req.EmployeeNumber);
+            b.Rank = (req.Rank ?? "").Trim();
+            b.JobTitle = (req.JobTitle ?? "").Trim();
+            b.JobNumber = (req.JobNumber ?? "").Trim();
+            b.EducationQualification = (req.EducationQualification ?? "").Trim();
+            b.Honorific = (req.Honorific ?? "").Trim();
+        }
         b.OrganizationalUnitId = req.OrganizationalUnitId;
         b.Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
         b.Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
@@ -1776,6 +1820,19 @@ public class SettingsController : BaseController
 
     private static bool IsBeneficiarySysAdminRole(string? subRole) =>
         string.Equals((subRole ?? "").Trim(), "مدير النظام", StringComparison.Ordinal);
+
+    private static DateTime? ParseBeneficiaryDateOfBirth(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(v)) return null;
+        return DateTime.TryParse(v, out var dt) ? dt.Date : null;
+    }
+
+    private static string SanitizeBeneficiaryDigits(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        return new string(value.Where(char.IsDigit).ToArray());
+    }
 
     private static string GetBeneficiaryOrganizationalUnitName(int? organizationalUnitId, IEnumerable<OrganizationalUnit> units)
     {
@@ -3446,6 +3503,15 @@ public class BeneficiaryRequest
     public string? SecondName { get; set; }
     public string? ThirdName { get; set; }
     public string? FourthName { get; set; }
+    public string? Gender { get; set; }
+    public string? MaritalStatus { get; set; }
+    public string? DateOfBirth { get; set; }
+    public string? EmployeeNumber { get; set; }
+    public string? Rank { get; set; }
+    public string? JobTitle { get; set; }
+    public string? JobNumber { get; set; }
+    public string? EducationQualification { get; set; }
+    public string? Honorific { get; set; }
     public int? OrganizationalUnitId { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }

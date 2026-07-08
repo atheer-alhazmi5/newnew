@@ -154,7 +154,7 @@ public class TablesController : BaseController
             return (true, true, true);
 
         if (isAdmin)
-            return (false, false, false);
+            return (false, false, true);
 
         return (false, false, true);
     }

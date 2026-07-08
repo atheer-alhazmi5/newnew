@@ -73,6 +73,30 @@
 .fd-save-btn.draft:hover { background:var(--gray-600); }
 .fd-save-btn.send   { background:var(--sa-600); }
 .fd-save-btn.send:hover  { background:var(--sa-700); }
+.fd-save-btn.publish { transition:background .2s, color .2s, opacity .2s, transform .15s; }
+.fd-save-btn.publish.publish-muted,
+.fd-save-btn.publish:disabled {
+    background:var(--gray-200) !important;
+    color:var(--gray-400) !important;
+    cursor:not-allowed;
+    opacity:1;
+    box-shadow:none;
+}
+.fd-save-btn.publish.publish-muted:hover,
+.fd-save-btn.publish:disabled:hover {
+    transform:none;
+    background:var(--gray-200) !important;
+    color:var(--gray-400) !important;
+}
+.fd-save-btn.publish.publish-ready {
+    background:var(--success-600) !important;
+    color:#fff !important;
+    cursor:pointer;
+}
+.fd-save-btn.publish.publish-ready:hover {
+    background:var(--success-700) !important;
+    transform:translateY(-1px);
+}
 .fd-cancel-btn      { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
 .fd-cancel-btn:hover { background:var(--gray-300); }
 /* قوائم اختيار متعدد — نفس خط وحدود حقول form-select داخل النموذج */
@@ -160,6 +184,23 @@
     font-family:'Cairo',sans-serif;
 }
 .wp-dd-menu .text-muted.small { padding:10px 14px; }
+
+/* قائمة المستهدفين المعنيين — نفس عرض «الموظفين المستهدفين» في الإشعارات المنبثقة */
+.wp-dd-menu .pn-target-list { max-height:280px; overflow-y:auto; border:none; border-radius:0; padding:0; background:#fff; }
+.wp-dd-menu .pn-target-list label { display:flex; align-items:center; gap:8px; padding:4px 12px; font-size:13px; color:var(--gray-700); cursor:pointer; }
+.wp-dd-menu .pn-target-list label:hover { color:var(--sa-700); }
+.wp-dd-menu .pn-user-row-manager { background:#ECFDF3; border-radius:8px; padding:6px 8px!important; margin:2px 8px; align-items:center; flex-wrap:wrap; }
+.wp-dd-menu .pn-user-mgr-badge { font-size:11px; font-weight:700; color:#067647; white-space:nowrap; margin-right:6px; }
+.wp-dd-menu .pn-dept-group { border-bottom:1px solid var(--gray-100); }
+.wp-dd-menu .pn-dept-group:last-child { border-bottom:none; }
+.wp-dd-menu .pn-dept-group-head { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; user-select:none; transition:background .15s; font-size:13px; font-weight:700; color:var(--gray-700); }
+.wp-dd-menu .pn-dept-group-head:hover { background:var(--sa-25); }
+.wp-dd-menu .pn-dept-group-toggle { width:20px; height:20px; border-radius:6px; border:1px solid var(--gray-200); background:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--sa-600); flex-shrink:0; }
+.wp-dd-menu .pn-dept-group-name { flex:1; }
+.wp-dd-menu .pn-dept-group-count { font-size:11px; color:var(--gray-400); font-weight:600; }
+.wp-dd-menu .pn-dept-group-body { padding:2px 12px 8px 36px; display:none; }
+.wp-dd-menu .pn-dept-group.expanded .pn-dept-group-body { display:block; }
+.wp-dd-menu .pn-dept-group.expanded .pn-dept-group-toggle { background:var(--sa-100); }
 
 /* قائمة الإجراء المصدر — عرض هرمي مجمَّع حسب سلسلة الإصدارات */
 .wp-ver-group { border-bottom:1px solid var(--gray-200); }
@@ -425,10 +466,34 @@
 #wpWorkflowStepModal .wp-wf-muted { color:var(--gray-500); }
 #wpWorkflowStepModal .wp-wf-na { color:var(--gray-400); }
 
+.wp-wf-step-drag { cursor:grab; color:var(--gray-400); font-size:16px; padding:2px; }
+.wp-wf-step-drag:active { cursor:grabbing; }
+.wp-wf-step-row-dragging { opacity:.55; background:var(--sa-50) !important; }
+.wp-wf-step-row-drop-target td { box-shadow:inset 0 3px 0 var(--sa-500); }
+
+.wp-wf-det-wrap { display:flex; flex-direction:column; gap:14px; }
+.wp-wf-det-hero { display:flex; align-items:center; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius:12px; }
+.wp-wf-det-hero-icon { width:44px; height:44px; border-radius:12px; background:var(--sa-700); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.wp-wf-det-hero-title { font-weight:800; font-size:16px; color:var(--gray-900); }
+.wp-wf-det-hero-sub { font-size:12px; color:var(--gray-500); font-weight:600; margin-top:4px; }
+.wp-wf-det-card { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; background:#fff; }
+.wp-wf-det-card-hd { padding:10px 14px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); font-weight:800; font-size:13px; color:var(--sa-800); display:flex; align-items:center; gap:8px; }
+.wp-wf-det-card-hd i { color:var(--sa-600); }
+.wp-wf-det-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; padding:14px 16px; }
+.wp-wf-det-item { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.wp-wf-det-item.wp-wf-det-full { grid-column:1 / -1; }
+.wp-wf-det-lbl { font-size:11.5px; font-weight:700; color:var(--gray-500); }
+.wp-wf-det-val { font-size:13px; font-weight:600; color:var(--gray-800); line-height:1.55; word-break:break-word; }
+.wp-wf-det-empty { color:var(--gray-400); font-weight:500; }
+.wp-wf-det-pills { display:flex; flex-wrap:wrap; gap:6px; }
+.wp-wf-det-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; background:color-mix(in srgb, var(--pill-color,#6b7280) 12%, #fff); color:var(--pill-color,#6b7280); border:1px solid color-mix(in srgb, var(--pill-color,#6b7280) 35%, #fff); }
+.wp-wf-det-notes { padding:12px 16px; font-size:13px; line-height:1.7; color:var(--gray-800); white-space:pre-wrap; }
+
 @@media (max-width:768px) {
     .fd-form-row { grid-template-columns:1fr; }
     .fd-form-row.cols-3 { grid-template-columns:1fr; }
     .fd-detail-grid { grid-template-columns:1fr; }
+    .wp-wf-det-grid { grid-template-columns:1fr; }
 }
 </style>
 
@@ -452,9 +517,6 @@
         <i class="bi bi-search rt-search-icon"></i>
         <input type="text" class="form-control" id="wpSearch" placeholder="بحث في أسماء الإجراء..." oninput="wpLoad()">
     </div>
-    <select class="rt-filter-select form-select" id="wpFilterWorkspace" onchange="wpLoad()" aria-label="مساحة العمل">
-        <option value="">مساحة العمل</option>
-    </select>
     <select class="rt-filter-select form-select" id="wpFilterFormDef" onchange="wpLoad()" aria-label="النماذج المستخدمة">
         <option value="">النماذج المستخدمة</option>
     </select>
@@ -498,9 +560,6 @@
                         <th>ترميز الإجراء</th>
                         <th>اسم الإجراء</th>
                         <th>نوع الإجراء</th>
-                        <th style="text-align:center;">معدل الاستخدام</th>
-                        <th style="text-align:center;">مستوى الأولوية</th>
-                        <th>التصنيف</th>
                         <th>الوحدة التنظيمية المالكة</th>
                         <th style="text-align:center;">صلاحية الإجراء</th>
                         <th>القالب المستخدم</th>
@@ -511,7 +570,7 @@
                     </tr>
                 </thead>
                 <tbody id="wpBody">
-                    <tr><td colspan="13" class="text-center py-4">
+                    <tr><td colspan="11" class="text-center py-4">
                         <div class="spinner-border" style="color:var(--sa-600);"></div>
                     </td></tr>
                 </tbody>
@@ -530,22 +589,6 @@
             </div>
             <div class="fd-modal-body" id="wpEditBody"></div>
             <div class="fd-modal-footer" id="wpEditFoot"></div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="wpDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content fd-modal">
-            <div class="fd-modal-header details">
-                <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
-                <h5 class="fd-modal-title">تفاصيل إجراء العمل</h5>
-                <div class="fd-modal-subtitle">عرض كامل للبيانات</div>
-            </div>
-            <div class="fd-modal-body" id="wpDetailsBody"></div>
-            <div class="fd-modal-footer" style="justify-content:flex-end;">
-                <button type="button" class="fd-cancel-btn" data-bs-dismiss="modal">إغلاق</button>
-            </div>
         </div>
     </div>
 </div>
@@ -612,7 +655,7 @@
 </div>
 
 <div class="modal fade" id="wpWorkflowStepDetailModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div class="modal-content fd-modal">
             <div class="fd-modal-header details">
                 <button type="button" class="btn-close-x" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
@@ -628,6 +671,7 @@
 </div>
 
 @section Scripts {
+<script src="~/js/outbox-procedure-details.js" asp-append-version="true"></script>
 <script src="~/js/work-procedures.js" asp-append-version="true"></script>
 <script>wpLoad();</script>
 }

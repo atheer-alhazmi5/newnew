@@ -19,6 +19,7 @@ var obsExecutors = [];
 var obsFirstApprover = '';
 var obsProcedurePriority = 'متوسط';
 var obsCollected = null;      // آخر مجموعة إجابات تم جمعها لخطوة المراجعة
+var obsStepContext = null;    // سياق خطوة سير العمل (القسم القابل للتحرير)
 
 function obsEscAttr(s) {
     if (s == null) return '';
@@ -224,6 +225,7 @@ async function obsLoadProcedureForm(procedureId) {
     obsExecutors = r.executors || [];
     obsFirstApprover = r.firstApprover || '';
     obsProcedurePriority = r.priorityLevel || 'متوسط';
+    obsStepContext = r.stepContext || null;
 
     if (!r.hasForm) {
         obsFormDef = null;
@@ -247,6 +249,8 @@ async function obsLoadProcedureForm(procedureId) {
         titleAppearance: fdInfo.titleAppearance
     };
     obsTemplateData = r.templateData || null;
+    var obsTplId = parseInt(String((r.form && (r.form.templateId ?? r.form.TemplateId)) || ''), 10) || 0;
+    if (obsTplId <= 0) obsTemplateData = null;
 
     obsRenderForm();
 }
@@ -272,10 +276,27 @@ function obsParseFieldsJsonFallback(json) {
     return def;
 }
 
+var obsFillProfile = null;
+
+async function obsEnsureFillProfile() {
+    if (obsFillProfile) return obsFillProfile;
+    try {
+        var r = await apiFetch('/Dashboard/GetProfile');
+        if (r && r.success && r.profile) {
+            obsFillProfile = r.profile;
+            window.fdBeneficiaryFillProfile = r.profile;
+        }
+    } catch (e) { /* ignore */ }
+    window.fdFormFillPhase = 'submit';
+    return obsFillProfile;
+}
+
 /** يبني الـ HTML الكامل للنموذج (يُعيد استخدام fdBuildFormPreview للحفاظ على التماثل البصري) */
-function obsRenderForm() {
+async function obsRenderForm() {
     var host = document.getElementById('obsFormHost');
     if (!host || !obsFormDef) return;
+
+    await obsEnsureFillProfile();
 
     if (typeof fdBuildFormPreview === 'function') {
         var html = fdBuildFormPreview(
@@ -295,6 +316,53 @@ function obsRenderForm() {
 
     // تفعيل الـ widgets الديناميكية (تواريخ، دوار، رفع ملفات، قوائم...)
     try { if (typeof fdInitDynamicWidgets === 'function') fdInitDynamicWidgets(host); } catch (e) { console.warn('fdInitDynamicWidgets', e); }
+    try {
+        if (typeof fdInitConditionalLogic === 'function' && obsFormDef) {
+            fdInitConditionalLogic(host, {
+                fields: obsFormDef.fields || [],
+                sections: obsFormDef.sections || [],
+                rules: obsFormDef.rules || []
+            });
+        }
+    } catch (e) { console.warn('fdInitConditionalLogic', e); }
+    obsApplyWorkflowSectionScope();
+}
+
+/** يقيّد التحرير على قسم خطوة سير العمل الحالية (أو يخفي الأقسام الأخرى). */
+function obsApplyWorkflowSectionScope() {
+    if (!obsStepContext || !obsFormDef) return;
+    var host = document.getElementById('obsFormHost');
+    if (!host) return;
+
+    var editable = {};
+    (obsStepContext.editableFieldIds || obsStepContext.EditableFieldIds || []).forEach(function (id) {
+        editable[String(id)] = true;
+    });
+    var hideOther = !!(obsStepContext.hideOtherSections || obsStepContext.HideOtherSections);
+    var activeSectionId = obsStepContext.formSectionId || obsStepContext.FormSectionId || null;
+
+    host.querySelectorAll('[data-fd-section-id]').forEach(function (secEl) {
+        var sid = secEl.getAttribute('data-fd-section-id');
+        var sectionHasEditable = false;
+        secEl.querySelectorAll('[data-fd-field-id]').forEach(function (wrap) {
+            var fid = wrap.getAttribute('data-fd-field-id');
+            var canEdit = !!editable[fid];
+            if (canEdit) sectionHasEditable = true;
+            if (typeof fdClSetFieldDisabled === 'function') fdClSetFieldDisabled(wrap, !canEdit);
+        });
+        if (hideOther) {
+            secEl.style.display = (activeSectionId && String(activeSectionId) === String(sid)) || sectionHasEditable ? '' : 'none';
+        } else if (!sectionHasEditable) {
+            secEl.classList.add('fd-wf-section-readonly');
+        }
+    });
+}
+
+function obsIsFieldInActiveWorkflowSection(f) {
+    if (!obsStepContext || !f) return true;
+    var editable = obsStepContext.editableFieldIds || obsStepContext.EditableFieldIds || [];
+    if (!editable.length) return true;
+    return editable.indexOf(f.id) >= 0 || editable.indexOf(Number(f.id)) >= 0;
 }
 
 function obsRenderFormFallback() {
@@ -335,12 +403,17 @@ function obsCollectAnswers(opt) {
     (obsFormDef.fields || []).forEach(function (f) {
         // تجاوز العناصر البنيوية
         if (f.fieldType === 'عنوان' || f.fieldType === 'خط فاصل' || f.fieldType === 'فاصل صفحات' || f.fieldType === 'صورة عرض') return;
+        if (!obsIsFieldInActiveWorkflowSection(f)) return;
 
         var value = obsExtractFieldValue(host, f);
         var isEmpty = value == null || (Array.isArray(value) ? value.length === 0 : String(value).trim() === '');
 
-        if (validateRequired && f.isRequired && isEmpty && !firstRequiredMissing) {
+        if (validateRequired && obsIsFieldEffectivelyRequired(host, f) && isEmpty && !firstRequiredMissing) {
             firstRequiredMissing = f;
+        }
+
+        if (f.fieldType === 'بيانات التصديق' && validateRequired) {
+            isEmpty = false;
         }
 
         entries.push({
@@ -368,23 +441,45 @@ function obsCollectAnswers(opt) {
     };
 }
 
-function obsFocusField(host, f) {
+function obsFindFieldWrap(host, f) {
+    if (!host || !f || f.id == null) return null;
+    var byId = host.querySelector('[data-fd-field-id="' + f.id + '"]');
+    if (byId) return byId;
     var label = Array.from(host.querySelectorAll('label')).find(function (l) {
         return (l.textContent || '').trim().indexOf(String(f.fieldName || '').trim()) === 0;
     });
-    var wrap = label ? label.parentElement : null;
+    return label ? label.parentElement : null;
+}
+
+function obsIsFieldSkippedForValidation(host, f) {
+    var wrap = obsFindFieldWrap(host, f);
+    if (!wrap) return false;
+    if (wrap.classList.contains('fd-cl-hidden')) return true;
+    var ctrl = wrap.querySelector('input:not([type="hidden"]):not(.fd-auto-data-store), select, textarea');
+    if (ctrl && ctrl.disabled) return true;
+    return false;
+}
+
+function obsIsFieldEffectivelyRequired(host, f) {
+    if (obsIsFieldSkippedForValidation(host, f)) return false;
+    var wrap = obsFindFieldWrap(host, f);
+    if (wrap && wrap.hasAttribute('data-fd-field-required')) {
+        return wrap.getAttribute('data-fd-field-required') === '1';
+    }
+    return !!f.isRequired;
+}
+
+function obsFocusField(host, f) {
+    var wrap = obsFindFieldWrap(host, f);
     if (!wrap) return;
-    var inp = wrap.querySelector('input,textarea,select');
+    var inp = wrap.querySelector('input:not([type="hidden"]), textarea, select');
     if (inp && typeof inp.focus === 'function') inp.focus();
     wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /** يستخرج قيمة الحقل من الـ DOM (يدعم جميع الأنواع الموجودة في FD_FIELD_TYPES) */
 function obsExtractFieldValue(host, f) {
-    var label = Array.from(host.querySelectorAll('label')).find(function (l) {
-        return (l.textContent || '').trim().indexOf(String(f.fieldName || '').trim()) === 0;
-    });
-    var wrap = label ? label.parentElement : null;
+    var wrap = obsFindFieldWrap(host, f);
     if (!wrap) return null;
 
     var t = f.fieldType;
@@ -445,6 +540,11 @@ function obsExtractFieldValue(host, f) {
         // نكتفي بمؤشر بسيط — التوقيع canvas-based ولن نحفظ الصورة هنا
         var sigCanvas = wrap.querySelector('canvas');
         return sigCanvas ? '(تم التوقيع)' : '';
+    }
+    if (t === 'البيانات التلقائية للمستفيد' || t === 'بيانات التصديق') {
+        var store = wrap.querySelector('.fd-auto-data-store');
+        if (!store || !store.value) return null;
+        try { return JSON.parse(store.value); } catch (e) { return null; }
     }
     if (t === 'رابط') {
         var lk = wrap.querySelector('input[type="url"], input.fd-url-input, input[type="text"]');
@@ -537,6 +637,11 @@ function obsRenderReview() {
 function obsValueIsEmpty(v) {
     if (v == null) return true;
     if (Array.isArray(v)) return v.length === 0;
+    if (typeof v === 'object') {
+        var keys = Object.keys(v);
+        if (!keys.length) return true;
+        return keys.every(function (k) { return v[k] == null || String(v[k]).trim() === ''; });
+    }
     if (typeof v === 'boolean') return false;
     return String(v).trim() === '';
 }
@@ -568,6 +673,22 @@ function obsFormatValueHtml(item) {
     }
     if (t === 'رابط' && v) {
         return '<a href="' + obsEscAttr(String(v)) + '" target="_blank" rel="noopener" style="color:var(--info-700);direction:ltr;">' + esc(String(v)) + '</a>';
+    }
+    if ((t === 'البيانات التلقائية للمستفيد' || t === 'بيانات التصديق') && v && typeof v === 'object' && !Array.isArray(v)) {
+        return Object.keys(v).map(function (k) {
+            var lbl = k;
+            if (typeof fdAutoDataLabelForKey === 'function') {
+                lbl = fdAutoDataLabelForKey(t === 'بيانات التصديق' ? 'certification' : 'beneficiary', k);
+            }
+            var val = v[k];
+            if (k === 'photo' && val && String(val).indexOf('data:image') === 0) {
+                return '<div style="margin-bottom:6px;"><b>' + esc(lbl) + ':</b><br><img src="' + obsEscAttr(String(val)) + '" alt="" style="max-width:56px;max-height:56px;border-radius:50%;object-fit:cover;margin-top:4px;"></div>';
+            }
+            if (k === 'signature' && val && String(val).indexOf('data:image') === 0) {
+                return '<div style="margin-bottom:6px;"><b>' + esc(lbl) + ':</b><br><img src="' + obsEscAttr(String(val)) + '" alt="" style="max-height:48px;max-width:140px;object-fit:contain;margin-top:4px;"></div>';
+            }
+            return '<div><b>' + esc(lbl) + ':</b> ' + (val ? esc(String(val)) : '—') + '</div>';
+        }).join('');
     }
     return esc(String(v));
 }
