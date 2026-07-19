@@ -290,6 +290,31 @@ async function dashLoadProfile() {
 
     var signSectionHtml = dashBuildSignSectionHtml(p, canEditSign, signHtml);
 
+    function dashFieldRow(label, value, ltr) {
+        var val = (value || '').trim() || '—';
+        var dir = ltr ? ' dir="ltr" style="text-align:right;"' : '';
+        return '<div class="lbl">' + dashEsc(label) + '</div><div class="val"' + dir + '>' + dashEsc(val) + '</div>';
+    }
+
+    var basicFieldsHtml =
+        dashFieldRow('الاسم الكامل', p.fullName)
+        + dashFieldRow('الهوية الوطنية', p.nationalId, true)
+        + dashFieldRow('الجوال', p.phone, true)
+        + dashFieldRow('البريد الإلكتروني', p.email, true)
+        + dashFieldRow('الوحدة التنظيمية', p.organizationalUnit)
+        + dashFieldRow('الصفة في الوحدة', p.roleInUnit);
+
+    var personalFieldsHtml =
+        dashFieldRow('الجنس', p.gender)
+        + dashFieldRow('الحالة الاجتماعية', p.maritalStatus)
+        + dashFieldRow('تاريخ الميلاد', p.dateOfBirth, true)
+        + dashFieldRow('الرقم الوظيفي', p.employeeNumber, true)
+        + dashFieldRow('المرتبة', p.rank)
+        + dashFieldRow('المسمى الوظيفي', p.jobTitle)
+        + dashFieldRow('رقم الوظيفة', p.jobNumber, true)
+        + dashFieldRow('المؤهل التعليمي', p.educationQualification)
+        + dashFieldRow('اللقب', p.honorific);
+
     var roles = r.executorRoles || [];
     var rolesHtml = '';
     if (!roles.length) {
@@ -304,19 +329,19 @@ async function dashLoadProfile() {
         '<div class="dash-profile-grid">'
         + '<div class="dash-avatar-wrap"><div class="dash-avatar">' + photo + '</div></div>'
         + '<div>'
-        + '<div class="dash-fields">'
-        + '<div class="lbl">الاسم الكامل</div><div class="val">' + dashEsc(p.fullName || '—') + '</div>'
-        + '<div class="lbl">الجوال</div><div class="val" dir="ltr" style="text-align:right;">' + dashEsc(p.phone || '—') + '</div>'
-        + '<div class="lbl">الوحدة التنظيمية</div><div class="val">' + dashEsc(p.organizationalUnit || '—') + '</div>'
-        + '<div class="lbl">الصفة في الوحدة</div><div class="val">' + dashEsc(p.roleInUnit || '—') + '</div>'
-        + '<div class="lbl">البريد الإلكتروني</div><div class="val" dir="ltr" style="text-align:right;">' + dashEsc(p.email || '—') + '</div>'
-        + '<div class="lbl">الهوية الوطنية</div><div class="val" dir="ltr" style="text-align:right;">' + dashEsc(p.nationalId || '—') + '</div>'
+        + '<div class="dash-profile-section">'
+        + '<h3 class="dash-section-title" style="margin-top:0;"><i class="bi bi-building"></i> الوحدة والاتصال</h3>'
+        + '<div class="dash-fields">' + basicFieldsHtml + '</div>'
+        + '</div>'
+        + '<div class="dash-profile-section">'
+        + '<h3 class="dash-section-title" style="margin-top:0;"><i class="bi bi-card-list"></i> البيانات الشخصية والوظيفية</h3>'
+        + '<div class="dash-fields">' + personalFieldsHtml + '</div>'
         + '</div>'
         + signSectionHtml
         + '</div></div>'
-        + '<div style="margin-top:28px;">'
-        + '<h3 class="dash-section-title"><i class="bi bi-person-badge"></i> قائمة الأدوار التنفيذية</h3>'
-        + '<div class="card"><div class="card-body p-0"><div class="table-responsive">'
+        + '<div class="dash-profile-section" style="margin-top:16px;">'
+        + '<h3 class="dash-section-title" style="margin-top:0;"><i class="bi bi-person-badge"></i> قائمة الأدوار التنفيذية</h3>'
+        + '<div class="card" style="border:1px solid var(--gray-200);box-shadow:none;"><div class="card-body p-0"><div class="table-responsive">'
         + '<table class="table mb-0 dash-table"><thead><tr>'
         + '<th style="width:50px;">ت</th><th>الدور</th><th>الوصف</th><th>الملكية</th>'
         + '</tr></thead><tbody>' + rolesHtml + '</tbody></table>'
@@ -333,8 +358,8 @@ async function dashLoadProfile() {
 
 function dashBuildSignSectionHtml(p, canEdit, signHtmlFn) {
     if (canEdit) {
-        return '<div class="dash-sign-section">'
-            + '<div class="dash-sign-label"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
+        return '<div class="dash-profile-section dash-sign-section" style="margin-top:0;padding-top:18px;">'
+            + '<div class="dash-sign-label dash-section-title" style="margin-top:0;"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
             + '<p class="dash-sign-locked-note"><i class="bi bi-info-circle"></i> يمكن إضافة التأشير والتوقيع مرة واحدة فقط؛ بعد الحفظ لا يمكن تعديلهما.</p>'
             + '<div class="dash-sign-grid">'
             + '<div>'
@@ -362,8 +387,8 @@ function dashBuildSignSectionHtml(p, canEdit, signHtmlFn) {
             + '</div>';
     }
 
-    return '<div class="dash-sign-section dash-sign-section-locked">'
-        + '<div class="dash-sign-label"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
+    return '<div class="dash-profile-section dash-sign-section dash-sign-section-locked" style="margin-top:0;padding-top:18px;">'
+        + '<div class="dash-sign-label dash-section-title" style="margin-top:0;"><i class="bi bi-pencil-square"></i> التأشير والتوقيع</div>'
 
         + '<div class="dash-sign-grid">'
         + '<div><div class="dash-sign-label" style="margin-top:0;font-size:13px;"><i class="bi bi-pen"></i> التأشير</div>'

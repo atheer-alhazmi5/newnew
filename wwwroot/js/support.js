@@ -58,6 +58,11 @@ function spColspan() {
     return spIsAdmin ? 10 : 8;
 }
 
+function spUpdateTotalCount(total) {
+    var txt = document.getElementById('spTotalCountTxt');
+    if (txt) txt.textContent = String(total ?? 0);
+}
+
 function spInit() {
     spIsAdmin = window.spIsAdmin === true || window.spIsAdmin === 'true';
     spCreateModal = document.getElementById('spCreateModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spCreateModal')) : null;
@@ -79,6 +84,7 @@ async function spLoad() {
 
     spAll = r.data || [];
     spIsAdmin = r.isAdmin === true;
+    spUpdateTotalCount(spAll.length);
 
     if (spIsAdmin) {
         var orgSel = document.getElementById('spFilterOrgUnit');
@@ -281,6 +287,10 @@ function spBuildDetailHtml(d, includeStatus) {
     html += '<div class="lbl">المرفقات</div><div class="val">' + spAttachmentsHtml(d.attachments) + '</div>';
     html += '<div class="lbl">الموضوع</div><div class="val">' + spEsc(d.subject || '—') + '</div>';
     html += '<div class="lbl">المحتوى</div><div class="val"><div class="sp-detail-content">' + spEsc(d.content || '—') + '</div></div>';
+    var respondedBy = String(d.respondedByName || d.RespondedByName || '').trim();
+    if (respondedBy) {
+        html += '<div class="lbl">قام بالرد</div><div class="val">' + spEsc(respondedBy) + '</div>';
+    }
     html += '<div class="lbl">الرد</div><div class="val"><div class="sp-detail-content">' + spEsc(d.response || '—') + '</div></div>';
     html += '</div>';
     return html;

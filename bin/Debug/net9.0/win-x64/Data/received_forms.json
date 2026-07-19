@@ -1,0 +1,21 @@
+[
+  {
+    "Id": 1,
+    "FormId": 5,
+    "FormName": "\u0628\u0644\u0627",
+    "FormIcon": "document",
+    "SenderId": 1,
+    "SenderName": "\u0645\u0627\u062C\u062F \u0645\u0631\u0632\u0648\u0642 \u0644\u0627\u062D\u0642 \u0627\u0644\u062D\u0633\u064A\u0646\u064A",
+    "SenderDepartment": "\u0625\u062F\u0627\u0631\u0629 \u062A\u0642\u0646\u064A\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A",
+    "RecipientId": 2,
+    "RecipientName": "\u0623\u062B\u064A\u0631 \u0639\u0644\u064A \u0627\u0644\u062D\u0627\u0632\u0645\u064A",
+    "Category": "fill_request",
+    "SentDate": "2026-03-08T07:08:50.2695479+03:00",
+    "Status": "\u062A\u0645 \u0627\u0644\u0645\u0644\u0621",
+    "IsRead": true,
+    "AnswersJson": "[{\u0022questionId\u0022:\u0022q_1772942926644_plupu\u0022,\u0022label\u0022:\u0022\u0628\u0644\u0627\u0022,\u0022question\u0022:\u0022\u0628\u0644\u0627\u0022,\u0022type\u0022:\u0022short_answer\u0022,\u0022answer\u0022:\u0022\u0642\u0641\u063A\u0022}]",
+    "ReplyDate": "2026-03-08T07:21:33.0846317+03:00",
+    "SentFormId": 1,
+    "TargetRecipientsJson": null
+  }
+]

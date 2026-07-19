@@ -54,13 +54,12 @@ var seLevelColors = {
 
 function seUpdateSubmitUi() {
     var btn = document.getElementById('seBtnEvaluate');
-    var msg = document.getElementById('seAlreadyMsg');
-    if (btn) {
-        btn.disabled = !seCanSubmit;
-        btn.style.opacity = seCanSubmit ? '1' : '0.55';
-        btn.style.cursor = seCanSubmit ? 'pointer' : 'not-allowed';
-    }
-    if (msg) msg.classList.toggle('show', !seCanSubmit);
+    if (btn) btn.classList.toggle('is-submitted', !seCanSubmit);
+}
+
+function seUpdateTotalCount(total) {
+    var txt = document.getElementById('seTotalCountTxt');
+    if (txt) txt.textContent = String(total ?? 0);
 }
 
 function seOpenEvaluateModal() {
@@ -358,6 +357,7 @@ async function seLoad() {
     var canSubmit = r.canSubmit ?? r.CanSubmit;
     seCanSubmit = canSubmit !== false;
     seUpdateSubmitUi();
+    seUpdateTotalCount(r.totalCount ?? r.TotalCount ?? (r.data || []).length);
 
     seDestroyCharts();
     seRenderDetailChart(r);
