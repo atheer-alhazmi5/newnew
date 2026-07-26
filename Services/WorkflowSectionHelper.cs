@@ -56,9 +56,6 @@ public static class WorkflowSectionHelper
         IReadOnlyDictionary<int, FormDefinition> fdById)
     {
         var fid = formDefinitionId;
-        if ((!fid.HasValue || fid.Value <= 0) && usedFormIds.Count == 1)
-            fid = usedFormIds[0];
-
         if (!fid.HasValue || fid.Value <= 0)
             return (null, null);
 
@@ -81,9 +78,10 @@ public static class WorkflowSectionHelper
         return sec?.Title;
     }
 
-    public static HashSet<int> FieldIdsInSection(string? fieldsJson, int sectionId)
+    /// <summary>معرّفات الحقول أرقام زمنية (Date.now) تتجاوز حدود int، لذا تُعالَج كـ long.</summary>
+    public static HashSet<long> FieldIdsInSection(string? fieldsJson, int sectionId)
     {
-        var ids = new HashSet<int>();
+        var ids = new HashSet<long>();
         if (string.IsNullOrWhiteSpace(fieldsJson) || sectionId <= 0) return ids;
         try
         {
@@ -102,7 +100,7 @@ public static class WorkflowSectionHelper
                 if (f.TryGetProperty("sectionId", out var sEl) && sEl.TryGetInt32(out var parsed))
                     sid = parsed;
                 if (sid != sectionId) continue;
-                if (f.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var fid))
+                if (f.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var fid))
                     ids.Add(fid);
             }
         }

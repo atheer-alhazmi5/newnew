@@ -137,6 +137,8 @@ public class DropdownsController : BaseController
         var units = await _ds.ListOrganizationalUnitsAsync();
         var parentList = list.ParentListId.HasValue ? await _ds.GetDropdownListByIdAsync(list.ParentListId.Value) : null;
         var items = await _ds.ListDropdownItemsByListIdAsync(id);
+        var (activeParentIds, activeParentItems) = await ResolveActiveParentItemsAsync(list);
+        var visibleItems = FilterSubListItemsByActiveParent(list, items, activeParentIds);
 
         return Json(new
         {
@@ -161,7 +163,21 @@ public class DropdownsController : BaseController
                 CreatedAt = list.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 UpdatedBy = list.UpdatedBy ?? "",
                 UpdatedAt = list.UpdatedAt.HasValue ? list.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "",
-                Items = items.Select(i => new { i.Id, i.ItemText, i.Description, i.Color, i.IsActive, i.SortOrder, i.ParentItemId, i.LevelNumber, i.LevelValuesJson })
+                Items = visibleItems.Select(i => new
+                {
+                    i.Id,
+                    i.ItemText,
+                    i.Description,
+                    i.Color,
+                    i.IsActive,
+                    i.SortOrder,
+                    i.ParentItemId,
+                    i.LevelNumber,
+                    i.LevelValuesJson,
+                    ParentItemText = i.ParentItemId.HasValue
+                        ? activeParentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
+                        : ""
+                })
             }
         });
     }
@@ -186,10 +202,8 @@ public class DropdownsController : BaseController
 
         var items = await _ds.ListDropdownItemsByListIdAsync(id);
         var activeItems = items.Where(i => i.IsActive).OrderBy(i => i.SortOrder).ThenBy(i => i.Id).ToList();
-
-        var parentItems = new List<DropdownItem>();
-        if (list.ListType == "قائمة فرعية" && list.ParentListId.HasValue)
-            parentItems = await _ds.ListDropdownItemsByListIdAsync(list.ParentListId.Value);
+        var (activeParentIds, activeParentItems) = await ResolveActiveParentItemsAsync(list);
+        activeItems = FilterSubListItemsByActiveParent(list, activeItems, activeParentIds);
 
         var rows = activeItems.Select(i => new
         {
@@ -197,7 +211,7 @@ public class DropdownsController : BaseController
             i.ItemText,
             i.ParentItemId,
             ParentItemText = i.ParentItemId.HasValue
-                ? parentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
+                ? activeParentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
                 : "",
             i.LevelNumber,
             i.LevelValuesJson,
@@ -214,7 +228,7 @@ public class DropdownsController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetDropdownItems(int listId)
+    public async Task<IActionResult> GetDropdownItems(int listId, bool activeOnly = false)
     {
         if (!IsAuthenticated || !IsAdminOrEmployee())
             return Json(new { success = false, message = "غير مصرح" });
@@ -231,12 +245,13 @@ public class DropdownsController : BaseController
         }
 
         var items = await _ds.ListDropdownItemsByListIdAsync(listId);
+        if (activeOnly)
+            items = items.Where(i => i.IsActive).ToList();
 
-        var parentItems = new List<DropdownItem>();
-        if (list?.ListType == "قائمة فرعية" && list.ParentListId.HasValue)
-            parentItems = await _ds.ListDropdownItemsByListIdAsync(list.ParentListId.Value);
+        var (activeParentIds, activeParentItems) = await ResolveActiveParentItemsAsync(list);
+        var visibleItems = FilterSubListItemsByActiveParent(list, items, activeParentIds);
 
-        var result = items.Select(i => new
+        var result = visibleItems.Select(i => new
         {
             i.Id,
             i.DropdownListId,
@@ -249,11 +264,35 @@ public class DropdownsController : BaseController
             i.LevelNumber,
             i.LevelValuesJson,
             ParentItemText = i.ParentItemId.HasValue
-                ? parentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
+                ? activeParentItems.FirstOrDefault(p => p.Id == i.ParentItemId.Value)?.ItemText ?? ""
                 : ""
         }).ToList();
 
         return Json(new { success = true, data = result });
+    }
+
+    private async Task<(HashSet<int> ActiveParentIds, List<DropdownItem> ActiveParentItems)> ResolveActiveParentItemsAsync(DropdownList? list)
+    {
+        if (list?.ListType != "قائمة فرعية" || !list.ParentListId.HasValue)
+            return (new HashSet<int>(), new List<DropdownItem>());
+
+        var parentList = await _ds.GetDropdownListByIdAsync(list.ParentListId.Value);
+        if (parentList == null || !parentList.IsActive)
+            return (new HashSet<int>(), new List<DropdownItem>());
+
+        var parentItems = await _ds.ListDropdownItemsByListIdAsync(list.ParentListId.Value);
+        var activeParentItems = parentItems.Where(p => p.IsActive).ToList();
+        return (activeParentItems.Select(p => p.Id).ToHashSet(), activeParentItems);
+    }
+
+    private static List<DropdownItem> FilterSubListItemsByActiveParent(DropdownList? list, IEnumerable<DropdownItem> items, HashSet<int> activeParentIds)
+    {
+        if (list?.ListType != "قائمة فرعية")
+            return items.ToList();
+
+        return items
+            .Where(i => i.ParentItemId.HasValue && activeParentIds.Contains(i.ParentItemId.Value))
+            .ToList();
     }
 
     private async Task<int> GetCreatorOrgUnitIdAsync()

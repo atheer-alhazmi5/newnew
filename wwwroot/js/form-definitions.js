@@ -756,6 +756,264 @@ function fdDdlEnsureTreeExpandDelegation() {
     document.addEventListener('click', fdDdlBranchToggleHandler);
 }
 
+function fdReadDdlTreeValue(wrap) {
+    const ouWrap = wrap && wrap.querySelector('.fd-bound-ddl-ou-wrap');
+    if (ouWrap) return fdBoundDdlOuReadValue(ouWrap);
+
+    const tree = wrap && wrap.querySelector('.fd-ddl-tree');
+    if (!tree) return null;
+    const hasCheckbox = tree.querySelector('input[type="checkbox"]');
+    if (hasCheckbox) {
+        return Array.from(tree.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(c => (c.getAttribute('data-dd-text') || c.value || '').trim())
+            .filter(Boolean);
+    }
+    const r = tree.querySelector('input[type="radio"]:checked');
+    return r ? (r.getAttribute('data-dd-text') || r.value || '').trim() : '';
+}
+
+// ─── قائمة فرعية: منتقي شجري بنفس آلية الوحدات التنظيمية ─────────────────────
+const fdBoundDdlOuExpanded = {};
+
+function fdBoundDdlOuParseHidden(hid, multi) {
+    const raw = (hid && hid.value ? hid.value : '').trim();
+    if (!multi) return raw;
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map(s => String(s).trim()).filter(Boolean);
+    } catch (e) { /* fall through */ }
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function fdBoundDdlOuFormatLabel(selected, emptyLab, multi) {
+    const list = Array.isArray(selected) ? selected : (selected ? [selected] : []);
+    if (!list.length) return emptyLab || '-- اختر --';
+    if (!multi) return list[0];
+    if (list.length === 1) return list[0];
+    if (list.length <= 3) return list.join('، ');
+    return list.length + ' عناصر محددة';
+}
+
+function fdBoundDdlOuGetGroups(wrap) {
+    const listId = parseInt(wrap.getAttribute('data-fd-ddl-list-id') || '0', 10);
+    if (!listId) return [];
+    const entry = fdNormalizeDropdownCacheEntry(listId);
+    return fdBuildSublistGroupedRoots(entry.items || []);
+}
+
+function fdBoundDdlOuExpandedMap(wrap) {
+    const key = wrap.getAttribute('data-fd-ddl-uid') || wrap.id || '';
+    if (!fdBoundDdlOuExpanded[key]) fdBoundDdlOuExpanded[key] = {};
+    return fdBoundDdlOuExpanded[key];
+}
+
+function fdRenderSublistOuTreeRows(groups, expandedMap, selectedSet) {
+    let html = '';
+    (groups || []).forEach(function (g, gi) {
+        const gKey = 'g_' + (g.parentId != null && g.parentId !== '' ? g.parentId : gi);
+        const children = g.items || [];
+        const hasChildren = children.length > 0;
+        const expanded = !!expandedMap[gKey];
+        html += '<div class="bnf-ou-tree-row fd-ddl-sublist-parent d-flex align-items-center" dir="rtl" style="padding:8px 10px;padding-right:12px;">';
+        if (hasChildren) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + fdEscAttr(gKey) + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1 fw-semibold text-muted">' + esc(g.parentText || '—') + '</span></div>';
+        if (hasChildren && expanded) {
+            children.forEach(function (item) {
+                const txt = String(item.itemText ?? item.ItemText ?? '').trim();
+                if (!txt) return;
+                const isSel = selectedSet.has(txt) ? ' is-selected' : '';
+                html += '<div class="bnf-ou-tree-row d-flex align-items-center' + isSel + '" data-selectable="1" data-text="' + fdEscAttr(txt) + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:34px;cursor:pointer;">';
+                html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+                html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(txt) + '</span></div>';
+            });
+        }
+    });
+    return html;
+}
+
+function fdBoundDdlOuRenderPanel(wrap) {
+    const panel = wrap.querySelector('.fd-bound-ddl-ou-panel');
+    if (!panel) return;
+    const groups = fdBoundDdlOuGetGroups(wrap);
+    if (!groups.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد عناصر</div>';
+        return;
+    }
+    const multi = wrap.getAttribute('data-fd-ddl-multi') === '1';
+    const hid = wrap.querySelector('input[type="hidden"]');
+    const selected = fdBoundDdlOuParseHidden(hid, multi);
+    const selectedSet = new Set(Array.isArray(selected) ? selected : (selected ? [selected] : []));
+    const html = fdRenderSublistOuTreeRows(groups, fdBoundDdlOuExpandedMap(wrap), selectedSet);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد عناصر</div>';
+}
+
+function fdBoundDdlOuUpdateUi(wrap) {
+    const multi = wrap.getAttribute('data-fd-ddl-multi') === '1';
+    const emptyLab = wrap.getAttribute('data-fd-ddl-empty') || '-- اختر --';
+    const hid = wrap.querySelector('input[type="hidden"]');
+    const lab = wrap.querySelector('.fd-bound-ddl-ou-label');
+    const selected = fdBoundDdlOuParseHidden(hid, multi);
+    if (lab) lab.textContent = fdBoundDdlOuFormatLabel(selected, emptyLab, multi);
+    fdBoundDdlOuRenderPanel(wrap);
+}
+
+function fdBoundDdlOuClosePanel(wrap) {
+    const panel = wrap.querySelector('.fd-bound-ddl-ou-panel');
+    const trig = wrap.querySelector('.fd-bound-ddl-ou-trigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function fdBoundDdlOuCloseAllExcept(exceptWrap) {
+    document.querySelectorAll('.fd-bound-ddl-ou-wrap').forEach(function (w) {
+        if (exceptWrap && w === exceptWrap) return;
+        fdBoundDdlOuClosePanel(w);
+    });
+}
+
+function fdBoundDdlOuExpandForSelection(wrap) {
+    const multi = wrap.getAttribute('data-fd-ddl-multi') === '1';
+    const hid = wrap.querySelector('input[type="hidden"]');
+    const selected = fdBoundDdlOuParseHidden(hid, multi);
+    const selectedSet = new Set(Array.isArray(selected) ? selected : (selected ? [selected] : []));
+    if (!selectedSet.size) return;
+    const groups = fdBoundDdlOuGetGroups(wrap);
+    const map = fdBoundDdlOuExpandedMap(wrap);
+    groups.forEach(function (g, gi) {
+        const gKey = 'g_' + (g.parentId != null && g.parentId !== '' ? g.parentId : gi);
+        const hasSel = (g.items || []).some(function (it) {
+            return selectedSet.has(String(it.itemText ?? it.ItemText ?? '').trim());
+        });
+        if (hasSel) map[gKey] = true;
+    });
+}
+
+function fdBoundDdlOuTogglePanel(wrap) {
+    const panel = wrap.querySelector('.fd-bound-ddl-ou-panel');
+    const trig = wrap.querySelector('.fd-bound-ddl-ou-trigger');
+    if (!panel) return;
+    const willOpen = panel.classList.contains('d-none');
+    fdBoundDdlOuCloseAllExcept(willOpen ? wrap : null);
+    if (willOpen) {
+        fdBoundDdlOuExpandForSelection(wrap);
+        fdBoundDdlOuRenderPanel(wrap);
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        fdBoundDdlOuClosePanel(wrap);
+    }
+}
+
+function fdBoundDdlOuSetSingle(wrap, text) {
+    const hid = wrap.querySelector('input[type="hidden"]');
+    if (hid) hid.value = text || '';
+    fdBoundDdlOuUpdateUi(wrap);
+    fdBoundDdlOuClosePanel(wrap);
+}
+
+function fdBoundDdlOuToggleMulti(wrap, text) {
+    const hid = wrap.querySelector('input[type="hidden"]');
+    if (!hid) return;
+    const cur = fdBoundDdlOuParseHidden(hid, true);
+    const set = new Set(cur);
+    if (set.has(text)) set.delete(text);
+    else set.add(text);
+    const next = Array.from(set);
+    hid.value = next.length ? JSON.stringify(next) : '';
+    fdBoundDdlOuUpdateUi(wrap);
+}
+
+function fdBoundDdlOuReadValue(wrap) {
+    const multi = wrap.getAttribute('data-fd-ddl-multi') === '1';
+    const hid = wrap.querySelector('input[type="hidden"]');
+    return fdBoundDdlOuParseHidden(hid, multi);
+}
+
+function fdBoundDdlOuPanelClick(e) {
+    const wrap = e.currentTarget.closest('.fd-bound-ddl-ou-wrap');
+    if (!wrap || wrap.getAttribute('data-fd-ddl-readonly') === '1') return;
+    const expBtn = e.target.closest('.bnf-ou-tree-exp');
+    if (expBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = expBtn.getAttribute('data-exp');
+        const map = fdBoundDdlOuExpandedMap(wrap);
+        map[id] = !map[id];
+        fdBoundDdlOuRenderPanel(wrap);
+        return;
+    }
+    const row = e.target.closest('.bnf-ou-tree-row[data-selectable="1"]');
+    if (!row) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const text = row.getAttribute('data-text') || '';
+    if (wrap.getAttribute('data-fd-ddl-multi') === '1') fdBoundDdlOuToggleMulti(wrap, text);
+    else fdBoundDdlOuSetSingle(wrap, text);
+}
+
+function fdBoundDdlOuEnsureDelegation() {
+    if (typeof window === 'undefined' || window._fdBoundDdlOuDocBound) return;
+    window._fdBoundDdlOuDocBound = true;
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.fd-bound-ddl-ou-wrap')) return;
+        fdBoundDdlOuCloseAllExcept(null);
+    });
+}
+
+function fdInitBoundDdlOuPickers(root) {
+    fdBoundDdlOuEnsureDelegation();
+    (root || document).querySelectorAll('.fd-bound-ddl-ou-wrap').forEach(function (wrap) {
+        if (wrap.dataset.fdDdlOuBound === '1') return;
+        wrap.dataset.fdDdlOuBound = '1';
+        const trig = wrap.querySelector('.fd-bound-ddl-ou-trigger');
+        const panel = wrap.querySelector('.fd-bound-ddl-ou-panel');
+        if (trig) {
+            trig.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (wrap.getAttribute('data-fd-ddl-readonly') === '1') return;
+                fdBoundDdlOuTogglePanel(wrap);
+            });
+        }
+        if (panel) panel.addEventListener('click', fdBoundDdlOuPanelClick);
+        fdBoundDdlOuUpdateUi(wrap);
+    });
+}
+
+function fdBuildSublistOuPickerHtml(f, props, items, multi, emptyLab, def, defMulti, reqAttr, roSel, ttAttr, mk) {
+    const listId = props.dropdownListId;
+    const uid = 'fd_ddl_' + String(f.id ?? 'x') + '_' + String(listId);
+    const readonly = props.readOnly ? '1' : '0';
+    const reqFlag = f.isRequired ? ' data-fd-required="1"' : '';
+    let initVal = '';
+    let initLabel = emptyLab;
+    if (multi) {
+        const sel = Object.keys(defMulti).filter(function (k) { return defMulti[k]; });
+        initVal = sel.length ? JSON.stringify(sel) : '';
+        initLabel = fdBoundDdlOuFormatLabel(sel, emptyLab, true);
+    } else if (def) {
+        initVal = def;
+        initLabel = def;
+    }
+    const trigCls = readonly === '1' ? ' bnf-ou-tree-trigger-readonly' : '';
+    const disAttr = readonly === '1' ? ' disabled aria-disabled="true"' : '';
+    return '<div class="fd-bound-ddl-ou-wrap bnf-ou-tree-wrap position-relative"' + ttAttr + mk()
+        + ' id="' + fdEscAttr(uid) + '" data-fd-ddl-uid="' + fdEscAttr(uid) + '" data-fd-ddl-list-id="' + fdEscAttr(String(listId)) + '"'
+        + ' data-fd-ddl-multi="' + (multi ? '1' : '0') + '" data-fd-ddl-readonly="' + readonly + '"'
+        + ' data-fd-ddl-empty="' + fdEscAttr(emptyLab) + '"' + reqFlag + '>'
+        + '<input type="hidden" class="fd-bound-ddl-ou-value"' + reqAttr + ' value="' + fdEscAttr(initVal) + '">'
+        + '<button type="button" class="form-select bnf-ou-tree-trigger fd-bound-ddl-ou-trigger text-end w-100' + trigCls + '"' + disAttr
+        + ' aria-expanded="false" aria-haspopup="listbox">'
+        + '<span class="bnf-ou-tree-label fd-bound-ddl-ou-label text-truncate d-block">' + esc(initLabel) + '</span></button>'
+        + '<div class="bnf-ou-tree-panel fd-bound-ddl-ou-panel d-none" role="listbox"'
+        + ' style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>'
+        + '</div>';
+}
+
 function fdRenderDropdownTreeLeaves(items, inputType, nameBase, disabled, defSingle, defMultiSet, depth) {
     let html = '';
     const indent = Math.max(0, (depth || 0) * 22);
@@ -833,16 +1091,16 @@ function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph) {
         return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option><option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
     }
 
+    if (listType === 'قائمة فرعية') {
+        return fdBuildSublistOuPickerHtml(f, props, items, multi, emptyLab, def, defMulti, reqAttr, roSel, ttAttr, mk);
+    }
+
     if (presentation.mode === 'flat') {
         const labels = items.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean);
         if (multi) {
-            const sz = Math.min(Math.max(labels.length + 1, 3), 12);
-            let h = `<select class="form-select" multiple size="${sz}"${reqAttr}${roSel}${ttAttr}${mk()}>`;
-            labels.forEach(o => {
-                const sel = defMulti[o] ? ' selected' : '';
-                h += `<option value="${fdEscAttr(o)}"${sel}>${o.replace(/</g, '&lt;')}</option>`;
-            });
-            return h + '</select>';
+            fdDdlEnsureTreeExpandDelegation();
+            const leaves = fdRenderDropdownTreeLeaves(items, 'checkbox', nameBase, disabled, def, defMulti, 0);
+            return `<div class="fd-ddl-tree"${ttAttr}${mk()} data-fd-ddl-mode="multi"><div class="small text-muted mb-2 px-1">يمكنك تحديد أكثر من خيار</div><div class="fd-ddl-tree-panel">${leaves}</div></div>`;
         }
         let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option>`;
         labels.forEach(o => {
@@ -866,7 +1124,7 @@ function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph) {
     }
 
     const reqHint = f.isRequired && !multi ? ' <span class="text-danger">*</span>' : '';
-    return `<div class="fd-ddl-tree"${ttAttr}${mk()}><div class="small text-muted mb-2 px-1">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><div class="fd-ddl-tree-panel">${innerUl}</div></div><input type="hidden" id="fdStep1OuInput" value="">`;
+    return `<div class="fd-ddl-tree"${ttAttr}${mk()}><div class="small text-muted mb-2 px-1">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><div class="fd-ddl-tree-panel">${innerUl}</div></div>`;
 }
 
 async function fdFetchReadyTableGridForField(tableId) {
@@ -874,11 +1132,168 @@ async function fdFetchReadyTableGridForField(tableId) {
     if (!id || fdReadyTableGridCache[id]) return;
     try {
         const res = await apiFetch(`/FormDefinitions/GetReadyTableForField?id=${id}`);
-        if (res && res.success) fdReadyTableGridCache[id] = res;
-        else fdReadyTableGridCache[id] = null;
+        if (res && res.success) {
+            fdReadyTableGridCache[id] = res;
+            for (const f of (res.fields || [])) {
+                let p = {};
+                try { p = JSON.parse(f.propertiesJson || '{}'); } catch (e) { p = {}; }
+                if (f.fieldType === 'قائمة منسدلة' && p.dropdownListId) {
+                    await fdFetchDropdownItemsForField(p.dropdownListId);
+                }
+            }
+        } else {
+            fdReadyTableGridCache[id] = null;
+        }
     } catch {
         fdReadyTableGridCache[id] = null;
     }
+}
+
+function fdSyntheticTableCellFieldId(f, rowIdx, colIdx) {
+    const base = String((f && f.fieldName) || 'f').replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF\-]/g, '') || 'fld';
+    return 'fd_rt_' + base + '_' + rowIdx + '_' + colIdx + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+function fdReadyTableCellPayload(f, rowIdx, colIdx) {
+    return Object.assign({}, f, {
+        id: fdSyntheticTableCellFieldId(f, rowIdx, colIdx),
+        displayLayout: 'يمتد عبر كامل الصف (واحد من واحد)'
+    });
+}
+
+function fdBuildReadyTableGridHtml(g, opt, ttAttr) {
+    const fields = (g.fields || []).slice().sort(function (a, b) {
+        return (a.sortOrder || 0) - (b.sortOrder || 0) || (a.id || 0) - (b.id || 0);
+    });
+    if (!fields.length) {
+        const cols = (g.columns || []).length ? g.columns : ['عمود'];
+        let t = '<div class="table-responsive"' + (ttAttr || '') + '><table class="table table-bordered table-sm mb-0 rt-preview-form-table"><thead><tr>';
+        cols.forEach(function (h) { t += '<th>' + esc(h) + '</th>'; });
+        t += '</tr></thead><tbody><tr>';
+        cols.forEach(function () { t += '<td><input type="text" class="form-control form-control-sm"></td>'; });
+        return t + '</tr></tbody></table></div>';
+    }
+
+    const rowMode = g.rowCountMode || g.RowCountMode || 'مقيد';
+    const maxRows = parseInt(g.maxRows || g.MaxRows || 3, 10);
+    const numRows = rowMode === 'مفتوح' ? 1 : Math.min(Math.max(maxRows > 0 ? maxRows : 1, 1), 50);
+    const headerColor = g.columnHeaderColor || g.ColumnHeaderColor || '#f3f4f6';
+    const readOnly = !!(opt && opt.forceReadOnly);
+    const fieldNames = fields.map(function (f) { return f.fieldName || ''; });
+    const fieldDefs = fields.map(function (f) {
+        return {
+            fieldName: f.fieldName || '',
+            fieldType: f.fieldType || 'نص قصير',
+            propertiesJson: f.propertiesJson || '{}',
+            isRequired: !!f.isRequired,
+            subName: f.subName || '',
+            placeholder: f.placeholder || '',
+            tooltipText: f.tooltipText || ''
+        };
+    });
+    const cellOpt = Object.assign({}, opt || {}, { forceReadOnly: readOnly });
+
+    let html = '<div class="rt-preview-wrap fd-ready-table-wrap"' + (ttAttr || '')
+        + ' data-fd-rt-fields="' + fdEscAttr(JSON.stringify(fieldNames)) + '"'
+        + ' data-fd-rt-field-defs="' + fdEscAttr(JSON.stringify(fieldDefs)) + '">';
+    html += '<table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
+    fields.forEach(function (f) {
+        const tip = f.tooltipText ? ' title="' + fdEscAttr(f.tooltipText) + '"' : '';
+        html += '<th' + tip + ' style="background:' + headerColor + ' !important;color:#1f2937 !important;">'
+            + esc(f.fieldName || '')
+            + (f.isRequired ? ' <span class="required-star">*</span>' : '')
+            + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '')
+            + '</th>';
+    });
+    html += '</tr></thead><tbody class="fd-ready-table-tbody">';
+    for (let ri = 0; ri < numRows; ri++) {
+        html += '<tr class="fd-ready-table-row">';
+        fields.forEach(function (f, ci) {
+            const cellF = fdReadyTableCellPayload(f, ri, ci);
+            let cellHtml = fdBuildFieldInput(cellF, cellOpt);
+            const sub = (f.subName || '').trim();
+            if (sub) cellHtml += '<div class="rt-field-subname">' + esc(sub) + '</div>';
+            html += '<td>' + cellHtml + '</td>';
+        });
+        html += '</tr>';
+    }
+    if (rowMode === 'مفتوح' && !readOnly) {
+        html += '<tr class="fd-ready-table-add-row"><td colspan="' + fields.length + '" style="padding:12px;text-align:center;border:1px dashed #e5e7eb;">'
+            + '<button type="button" class="rt-add-fields-btn" onclick="fdReadyTableAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+}
+
+function fdReadyTableAddRow(btn) {
+    const wrap = btn && btn.closest ? btn.closest('.fd-ready-table-wrap') : null;
+    if (!wrap) return;
+    let fieldDefs = [];
+    try { fieldDefs = JSON.parse(wrap.getAttribute('data-fd-rt-field-defs') || '[]'); } catch (e) { fieldDefs = []; }
+    const tbody = wrap.querySelector('.fd-ready-table-tbody');
+    const addRow = wrap.querySelector('.fd-ready-table-add-row');
+    if (!tbody || !fieldDefs.length) return;
+    const ri = tbody.querySelectorAll('tr.fd-ready-table-row').length;
+    const tr = document.createElement('tr');
+    tr.className = 'fd-ready-table-row';
+    let rowHtml = '';
+    fieldDefs.forEach(function (f, ci) {
+        const cellF = fdReadyTableCellPayload(f, ri, ci);
+        let cellHtml = fdBuildFieldInput(cellF, {});
+        const sub = (f.subName || '').trim();
+        if (sub) cellHtml += '<div class="rt-field-subname">' + esc(sub) + '</div>';
+        rowHtml += '<td>' + cellHtml + '</td>';
+    });
+    tr.innerHTML = rowHtml;
+    if (addRow) tbody.insertBefore(tr, addRow);
+    else tbody.appendChild(tr);
+    if (typeof fdInitDynamicWidgets === 'function') fdInitDynamicWidgets(tr);
+}
+
+function fdExtractTableCellValue(td) {
+    if (!td) return '';
+    const tmpWrap = document.createElement('div');
+    tmpWrap.appendChild(td.cloneNode(true));
+    if (typeof fdReadDdlTreeValue === 'function') {
+        const ddlVal = fdReadDdlTreeValue(tmpWrap);
+        if (ddlVal != null) return Array.isArray(ddlVal) ? ddlVal.join('، ') : ddlVal;
+    }
+    const ocSingle = tmpWrap.querySelector('[data-fd-oc-mode="single"] input[type="radio"]:checked');
+    if (ocSingle) return ocSingle.value || '';
+    const ocMulti = tmpWrap.querySelector('[data-fd-oc-mode="multi"]');
+    if (ocMulti) {
+        return Array.from(ocMulti.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) { return c.value || ''; }).filter(Boolean).join('، ');
+    }
+    const sw = tmpWrap.querySelector('.fd-switch-input');
+    if (sw) {
+        const onText = sw.getAttribute('data-fd-on-text') || 'نعم';
+        const offText = sw.getAttribute('data-fd-off-text') || 'لا';
+        return sw.checked ? onText : offText;
+    }
+    const sel = tmpWrap.querySelector('select.form-select, select.form-control');
+    if (sel) {
+        if (sel.multiple) return Array.from(sel.selectedOptions).map(function (o) { return o.value; }).filter(Boolean).join('، ');
+        return sel.value || '';
+    }
+    const ta = tmpWrap.querySelector('textarea');
+    if (ta) return (ta.value || '').trim();
+    const inp = tmpWrap.querySelector('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="url"], input[type="date"], input[type="time"], input[type="datetime-local"], input.fd-spin-input, input:not([type="hidden"])');
+    return inp ? (inp.value || '').trim() : '';
+}
+
+function fdExtractReadyTableValue(wrap) {
+    const tableWrap = wrap && wrap.querySelector('.fd-ready-table-wrap');
+    if (!tableWrap) return null;
+    let names = [];
+    try { names = JSON.parse(tableWrap.getAttribute('data-fd-rt-fields') || '[]'); } catch (e) { names = []; }
+    return names.map(function (name, ci) {
+        const vals = [];
+        tableWrap.querySelectorAll('tbody tr.fd-ready-table-row').forEach(function (tr) {
+            const td = tr.querySelectorAll('td')[ci];
+            if (td) vals.push(fdExtractTableCellValue(td));
+        });
+        return { label: name, value: vals };
+    });
 }
 
 function fdWireBindingPropListeners(type) {
@@ -3047,28 +3462,19 @@ function fdBuildFieldInput(f, opt) {
         const onInp = props.readOnly ? '' : ' oninput="this.nextElementSibling.textContent=this.value"';
         inp = `<div${ttAttr}><input type="range" class="form-range" min="${arMin}" max="${arMax}" value="${cur}"${disR}${onInp}${reqAttr}><div class="text-center fw-bold" style="font-size:14px;">${cur}</div>${legendRow}</div>`;
     } else if (f.fieldType==='جدول بيانات') {
-        let cols = [];
-        let numRows = 1;
         if (props.readyTableId && fdReadyTableGridCache[props.readyTableId]) {
-            const g = fdReadyTableGridCache[props.readyTableId];
-            cols = (g.columns || []).slice();
-            const maxR = (g.rowCountMode === 'مقيد' && g.maxRows) ? parseInt(g.maxRows, 10) : 3;
-            numRows = Math.min(Math.max(maxR > 0 ? maxR : 3, 1), 50);
+            inp = fdBuildReadyTableGridHtml(fdReadyTableGridCache[props.readyTableId], opt, ttAttr);
         } else {
-            cols = fdParseLines(props.options);
-        }
-        const c = cols.length ? cols : ['عمود'];
-        const ro = props.readOnly ? ' readonly' : '';
-        let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0" style="font-size:13px;"><thead><tr>`;
-        c.forEach(h => { t += `<th>${esc(h)}</th>`; });
-        t += '</tr></thead><tbody>';
-        for (let ri = 0; ri < numRows; ri++) {
-            t += '<tr>';
+            let cols = fdParseLines(props.options);
+            const c = cols.length ? cols : ['عمود'];
+            const ro = props.readOnly ? ' readonly' : '';
+            let t = `<div class="table-responsive"${ttAttr}><table class="table table-bordered table-sm mb-0 rt-preview-form-table"><thead><tr>`;
+            c.forEach(h => { t += `<th>${esc(h)}</th>`; });
+            t += '</tr></thead><tbody><tr>';
             c.forEach(() => { t += `<td><input type="text" class="form-control form-control-sm"${ro}${reqAttr}></td>`; });
-            t += '</tr>';
+            t += '</tbody></table></div>';
+            inp = t;
         }
-        t += '</tbody></table></div>';
-        inp = t;
     } else if (f.fieldType==='شبكة خيارات متعددة') {
         const cols = fdParseLines(props.options);
         const rows = fdParseLines(props.rowLabels);
@@ -3533,6 +3939,7 @@ function fdInitDynamicWidgets(root) {
     fdEnsureDateFieldStyles();
     fdEnsureFieldTypeBadgeStyles();
     fdDdlEnsureTreeExpandDelegation();
+    fdInitBoundDdlOuPickers(root);
     (root || document).querySelectorAll('canvas[data-fd-init-sig]').forEach(fdSigBindCanvas);
     (root || document).querySelectorAll('.fd-oc-group').forEach(fdOcInitGroup);
     (root || document).querySelectorAll('.fd-switch-input').forEach(el => fdSwitchSync(el));
@@ -3546,6 +3953,9 @@ function fdInitDynamicWidgets(root) {
 if (typeof window !== 'undefined') {
     window.fdInitDynamicWidgets = fdInitDynamicWidgets;
     window.fdFieldTypeBadgeHtml = fdFieldTypeBadgeHtml;
+    window.fdBoundDdlOuReadValue = fdBoundDdlOuReadValue;
+    window.fdExtractReadyTableValue = fdExtractReadyTableValue;
+    window.fdReadyTableAddRow = fdReadyTableAddRow;
 }
 
 /** التنقل بين صفحات النموذج (التالي/السابق) — يُحدِّث حالة الأزرار والمؤشرات. */
@@ -4735,9 +5145,9 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
     const tSizePx = `${ta.fontSizePx}px`;
     const tColor = ta.color || '#111827';
     const titleIntroHtml =
-        `<div style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);font-style:normal;text-align:${tAlign};">` +
-            `<div style="font-size:${tSizePx};font-weight:${tWeight};color:${tColor};margin:0 0 4px;line-height:1.5;text-align:${tAlign};width:100%;">${esc(formName)}</div>` +
-            (formDesc ? `<p style="font-size:13px;color:var(--gray-500);margin:0;font-style:normal;text-align:${tAlign};line-height:1.5;">${esc(formDesc)}</p>` : '') +
+        `<div class="fd-form-title-block" style="margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--gray-200);width:100%;">` +
+            `<div class="fd-form-title-text" style="font-size:${tSizePx};font-weight:${tWeight};color:${tColor};margin:0 0 4px;line-height:1.5;text-align:${tAlign};width:100%;">${esc(formName)}</div>` +
+            (formDesc ? `<p class="fd-form-desc-preview">${esc(formDesc)}</p>` : '') +
         `</div>`;
 
     // ── fields HTML ──────────────────────────────────────────────────────────
@@ -5273,6 +5683,8 @@ function fdClReadFieldValue(wrap, fieldType) {
         const greg = wrap.querySelector('input.fd-greg-face');
         if (greg) return (greg.value || '').trim();
     }
+    const ddlVal = fdReadDdlTreeValue(wrap);
+    if (ddlVal != null) return ddlVal;
     const sel = wrap.querySelector('select.form-select, select.form-control');
     if (sel) {
         if (sel.multiple) return Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);

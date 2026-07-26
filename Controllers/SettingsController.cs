@@ -2260,7 +2260,7 @@ public class SettingsController : BaseController
             case "OutboxRequest":
                 if (await _ds.GetOutboxRequestByIdAsync(eid) is { } req)
                 {
-                    fields.Add(new("رقم الطلب", req.RequestNumber));
+                    fields.Add(new("الرقم المرجعي", req.RequestNumber));
                     fields.Add(new("الأولوية", req.Priority));
                     fields.Add(new("تصنيف الحالة", req.StatusCategory));
                     fields.Add(new("حالة SLA", req.SlaState));

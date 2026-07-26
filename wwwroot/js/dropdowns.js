@@ -471,13 +471,13 @@ function ddlShowItems(listId, listName) {
 // ─── Non-Hierarchy Items (Independent + Sub) ────────────────────────────────
 async function ddlLoadParentListItems(parentListId) {
     try {
-        var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + parentListId);
+        var r = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + parentListId + '&activeOnly=true');
         if (r && r.success) {
-            ddlParentListItemsCache = (r.data || []);
+            ddlParentListItemsCache = (r.data || []).filter(function (item) { return item.isActive !== false; });
             var sel = document.getElementById('ddlItemParentItemId');
             var html = '<option value="">-- اختر عنصر القائمة المستقلة --</option>';
             ddlParentListItemsCache.forEach(function (item) {
-                html += '<option value="' + item.id + '">' + esc(item.itemText) + (item.isActive ? '' : ' (معطل)') + '</option>';
+                html += '<option value="' + item.id + '">' + esc(item.itemText) + '</option>';
             });
             sel.innerHTML = html;
         }
@@ -1201,8 +1201,8 @@ async function ddlShowDetails(id) {
             var parentItems = [];
             if (isSubList && d.parentListId) {
                 try {
-                    var pr = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + d.parentListId);
-                    if (pr && pr.success) parentItems = pr.data || [];
+                    var pr = await apiFetch('/Dropdowns/GetDropdownItems?listId=' + d.parentListId + '&activeOnly=true');
+                    if (pr && pr.success) parentItems = (pr.data || []).filter(function (p) { return p.isActive !== false; });
                 } catch (e) {}
             }
 
@@ -1234,8 +1234,8 @@ async function ddlShowDetails(id) {
 
                     itemsHtml = '<table class="table table-sm"><thead><tr>' + thRow + '</tr></thead><tbody>';
                     d.items.forEach(function (item, i) {
-                        var parentName = '';
-                        if (isSubList && item.parentItemId) {
+                        var parentName = item.parentItemText || '';
+                        if (!parentName && isSubList && item.parentItemId) {
                             var pItem = parentItems.find(function (p) { return p.id === item.parentItemId; });
                             parentName = pItem ? pItem.itemText : '';
                         }

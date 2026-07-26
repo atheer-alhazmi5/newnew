@@ -291,12 +291,30 @@ async function obsEnsureFillProfile() {
     return obsFillProfile;
 }
 
+async function obsPrefetchDropdownCaches() {
+    if (!obsFormDef || !obsFormDef.fields) return;
+    if (typeof fdFetchDropdownItemsForField !== 'function' && typeof fdFetchReadyTableGridForField !== 'function') return;
+    for (var i = 0; i < obsFormDef.fields.length; i++) {
+        var f = obsFormDef.fields[i];
+        if (f.fieldType !== 'قائمة منسدلة' && f.fieldType !== 'جدول بيانات') continue;
+        var p = {};
+        try { p = JSON.parse(f.propertiesJson || '{}'); } catch (e) { p = {}; }
+        if (f.fieldType === 'قائمة منسدلة' && p.dropdownListId && typeof fdFetchDropdownItemsForField === 'function') {
+            await fdFetchDropdownItemsForField(p.dropdownListId);
+        }
+        if (f.fieldType === 'جدول بيانات' && p.readyTableId && typeof fdFetchReadyTableGridForField === 'function') {
+            await fdFetchReadyTableGridForField(p.readyTableId);
+        }
+    }
+}
+
 /** يبني الـ HTML الكامل للنموذج (يُعيد استخدام fdBuildFormPreview للحفاظ على التماثل البصري) */
 async function obsRenderForm() {
     var host = document.getElementById('obsFormHost');
     if (!host || !obsFormDef) return;
 
     await obsEnsureFillProfile();
+    await obsPrefetchDropdownCaches();
 
     if (typeof fdBuildFormPreview === 'function') {
         var html = fdBuildFormPreview(
@@ -334,8 +352,12 @@ function obsApplyWorkflowSectionScope() {
     var host = document.getElementById('obsFormHost');
     if (!host) return;
 
+    var editableIds = obsStepContext.editableFieldIds || obsStepContext.EditableFieldIds || [];
+    // بلا قائمة حقول قابلة للتحرير لا يوجد نطاق فعلي للخطوة، فتبقى الحقول متاحة (مطابق لـ obsIsFieldInActiveWorkflowSection).
+    if (!editableIds.length) return;
+
     var editable = {};
-    (obsStepContext.editableFieldIds || obsStepContext.EditableFieldIds || []).forEach(function (id) {
+    editableIds.forEach(function (id) {
         editable[String(id)] = true;
     });
     var hideOther = !!(obsStepContext.hideOtherSections || obsStepContext.HideOtherSections);
@@ -496,6 +518,35 @@ function obsExtractFieldValue(host, f) {
         return Array.from(grpm.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) { return c.value || ''; }).filter(Boolean);
     }
     if (t === 'قائمة منسدلة') {
+        var ouWrap = wrap.querySelector('.fd-bound-ddl-ou-wrap');
+        if (ouWrap) {
+            if (typeof fdBoundDdlOuReadValue === 'function') return fdBoundDdlOuReadValue(ouWrap);
+            var ouHid = ouWrap.querySelector('input[type="hidden"]');
+            var ouMulti = ouWrap.getAttribute('data-fd-ddl-multi') === '1';
+            if (!ouHid) return ouMulti ? [] : '';
+            var raw = (ouHid.value || '').trim();
+            if (!ouMulti) return raw;
+            if (!raw) return [];
+            try {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (ex) { /* ignore */ }
+            return raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
+        var tree = wrap.querySelector('.fd-ddl-tree');
+        if (tree) {
+            if (typeof fdReadDdlTreeValue === 'function') {
+                var treeVal = fdReadDdlTreeValue(wrap);
+                return treeVal == null ? (tree.querySelector('input[type="checkbox"]') ? [] : '') : treeVal;
+            }
+            if (tree.querySelector('input[type="checkbox"]')) {
+                return Array.from(tree.querySelectorAll('input[type="checkbox"]:checked')).map(function (c) {
+                    return (c.getAttribute('data-dd-text') || c.value || '').trim();
+                }).filter(Boolean);
+            }
+            var tr = tree.querySelector('input[type="radio"]:checked');
+            return tr ? ((tr.getAttribute('data-dd-text') || tr.value || '').trim()) : '';
+        }
         var sel = wrap.querySelector('select.form-select, select.form-control, select');
         if (!sel) return '';
         if (sel.multiple) return Array.from(sel.selectedOptions).map(function (o) { return o.value; });
@@ -563,6 +614,10 @@ function obsExtractFieldValue(host, f) {
         return ta ? (ta.value || '') : '';
     }
     if (t === 'شبكة خيارات متعددة' || t === 'شبكة مربعات اختيار' || t === 'جدول بيانات') {
+        if (t === 'جدول بيانات' && typeof fdExtractReadyTableValue === 'function') {
+            var rtVal = fdExtractReadyTableValue(wrap);
+            if (rtVal != null) return rtVal;
+        }
         // قراءة مبسّطة: كل الخلايا/الراديو/الـ checkbox
         var rows = [];
         wrap.querySelectorAll('tr').forEach(function (tr) {
@@ -694,10 +749,39 @@ function obsFormatValueHtml(item) {
 }
 
 function obsFmtFileSize(bytes) {
+    if (typeof obaFmtFileSize === 'function') return obaFmtFileSize(bytes);
     var n = parseInt(bytes, 10) || 0;
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+/**
+ * يرفع الملفات المختارة في حقول «رفع ملف» ويضيف مسار كل ملف إلى قيمته المجمّعة،
+ * بحيث يسجّلها الخادم ضمن الوثائق المرفقة بالطلب. يعيد رسالة خطأ عند الفشل.
+ */
+async function obsUploadFormFiles(entries) {
+    var host = document.getElementById('obsFormHost');
+    if (!host || typeof obaUploadFile !== 'function') return '';
+
+    for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        if (entry.fieldType !== 'رفع ملف' || !Array.isArray(entry.value) || !entry.value.length) continue;
+
+        var wrap = host.querySelector('[data-fd-field-id="' + entry.id + '"]');
+        var input = wrap ? wrap.querySelector('input[type="file"]') : null;
+        if (!input || !input.files || !input.files.length) continue;
+
+        var files = Array.from(input.files);
+        for (var j = 0; j < files.length; j++) {
+            var res = await obaUploadFile(files[j]);
+            if (!res || !res.success) {
+                return 'تعذّر رفع الملف «' + (files[j].name || '') + '»' + (res && res.message ? ' — ' + res.message : '');
+            }
+            if (entry.value[j]) entry.value[j].url = res.url;
+        }
+    }
+    return '';
 }
 
 // ─── Step 4 — Submit ───────────────────────────────────────────────────────
@@ -722,6 +806,20 @@ async function obsSubmit() {
     };
 
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> جاري الإرسال...'; }
+
+    // رفع ملفات حقول «رفع ملف» فعلياً قبل الحفظ حتى تظهر ضمن وثائق الطلب.
+    var uploadErr = await obsUploadFormFiles(obsCollected.fields || []);
+    if (uploadErr) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send-fill"></i> تأكيد وإرسال'; }
+        showToast(uploadErr, 'danger');
+        return;
+    }
+    payload.formDataJson = JSON.stringify({
+        formId: obsFormDef ? obsFormDef.id : 0,
+        formName: obsFormDef ? obsFormDef.name : '',
+        fields: obsCollected.fields || []
+    });
+
     var r = await apiFetch('/Outbox/CreateRequest', 'POST', payload);
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send-fill"></i> تأكيد وإرسال'; }
     if (!r || !r.success) { showToast((r && r.message) || 'تعذّر إرسال الطلب', 'danger'); return; }

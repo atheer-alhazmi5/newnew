@@ -161,11 +161,11 @@ function obApplyFilters() {
 
     var html = '';
     list.forEach(function (it, i) {
-        var isClosed = it.statusCategory === 'مغلق';
-        var isNewStage = (it.currentStageName || '').trim() === 'جديد';
+        // الحذف متاح فقط عندما يكون تصنيف الحالة «مفتوح» والمرحلة «جديد» معاً.
+        var canDelete = (it.statusCategory || '').trim() === 'مفتوح'
+            && (it.currentStageName || '').trim() === 'جديد';
         var actions = '<button class="ob-act-btn ob-act-detail" onclick="obShowDetails(' + it.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
-        if (!isClosed && isNewStage) {
-            actions += ' <button class="ob-act-btn ob-act-wf" onclick="obShowWorkflow(' + it.id + ',' + (it.procedureId || 0) + ')" title="سير العمل"><i class="bi bi-diagram-3"></i> سير</button>';
+        if (canDelete) {
             actions += ' <button class="ob-act-btn ob-act-del" onclick="obAskDelete(' + it.id + ',\'' + obEscAttr(it.requestNumber) + '\')"><i class="bi bi-trash3"></i> حذف</button>';
         }
 
@@ -196,60 +196,10 @@ function obClearFilters() {
 }
 
 // ─── DETAILS ────────────────────────────────────────────────────────────────
-async function obShowDetails(id) {
-    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('obDetailsModal'));
-    var host = document.getElementById('obDetailsBody');
-    if (host) host.innerHTML = '<div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>';
-    var subEl = document.getElementById('obDetailsSub');
-    modal.show();
-    var r = await apiFetch('/Outbox/GetRequest?id=' + encodeURIComponent(id));
-    if (!r || !r.success) {
-        if (host) host.innerHTML = '<div class="ob-empty"><i class="bi bi-exclamation-circle"></i><p>تعذّر التحميل</p></div>';
-        return;
-    }
-    var d = r.data || {};
-    if (subEl) subEl.textContent = 'رقم الطلب: ' + (d.requestNumber || '—');
-
-    var stagesHtml = '';
-    (r.stages || []).forEach(function (s) {
-        var dotColor = s.color && /^#/.test(s.color) ? s.color : '#9DA4AE';
-        var isCur = d.currentStageId && Number(d.currentStageId) === Number(s.statusId);
-        stagesHtml += '<span class="ob-badge" style="background:' + (isCur ? dotColor + '22' : 'var(--gray-50)') + ';color:var(--gray-800);border:1px solid ' + (isCur ? dotColor : 'var(--gray-200)') + ';">'
-            + '<span class="ob-stage-dot" style="background:' + dotColor + '"></span>'
-            + esc(s.name) + (isCur ? ' (الحالية)' : '') + '</span>';
-    });
-
-    var formExtras = '';
-    try {
-        var fd = JSON.parse(d.formDataJson || '{}');
-        if (fd && typeof fd === 'object') {
-            ['subject','body'].forEach(function (k) {
-                if (fd[k]) formExtras += '<div class="ob-detail-lbl">' + (k === 'subject' ? 'موضوع الطلب' : 'وصف تفصيلي') + '</div><div class="ob-detail-val">' + esc(String(fd[k])) + '</div>';
-            });
-        }
-    } catch (e) {}
-
-    var procDetailsBtn = (d.procedureId || d.procedureId === 0)
-        ? '<button type="button" class="ob-act-btn ob-act-detail" style="margin-inline-start:8px;" onclick="obShowProcedureDetails(' + (d.procedureId || 0) + ',' + (d.id || 0) + ')"><i class="bi bi-file-earmark-text"></i> تفاصيل الإجراء</button>'
-        : '';
-
-    host.innerHTML =
-        '<div class="ob-detail-grid">'
-        + '<div class="ob-detail-lbl">رقم الطلب</div><div class="ob-detail-val" style="direction:ltr;">' + esc(d.requestNumber || '—') + '</div>'
-        + '<div class="ob-detail-lbl">اسم الإجراء</div><div class="ob-detail-val">' + esc(d.procedureName || '—') + procDetailsBtn + '</div>'
-        + '<div class="ob-detail-lbl">نوع الإجراء</div><div class="ob-detail-val">' + esc(d.procedureTypeName || '—') + '</div>'
-        + '<div class="ob-detail-lbl">تاريخ التقديم</div><div class="ob-detail-val" style="direction:ltr;text-align:right;">' + esc(obFmtDate(d.submittedAt)) + '</div>'
-        + '<div class="ob-detail-lbl">الموعد المتوقع</div><div class="ob-detail-val" style="direction:ltr;text-align:right;">' + esc(obFmtDate(d.expectedDueAt)) + '</div>'
-        + '<div class="ob-detail-lbl">الأولوية</div><div class="ob-detail-val">' + obPriorityBadge(d.priority) + '</div>'
-        + '<div class="ob-detail-lbl">تصنيف الحالة</div><div class="ob-detail-val">' + obCatBadge(d.statusCategory) + '</div>'
-        + '<div class="ob-detail-lbl">الحالة / المرحلة</div><div class="ob-detail-val">' + obStageBadge(d.currentStageName, d.currentStageColor) + '</div>'
-        + '<div class="ob-detail-lbl">سرعة الاستجابة SLA</div><div class="ob-detail-val">' + obSlaBadge(d.slaState) + '</div>'
-        + '<div class="ob-detail-lbl">تاريخ الإغلاق</div><div class="ob-detail-val" style="direction:ltr;text-align:right;">' + esc(obFmtDate(d.closedAt)) + '</div>'
-        + '<div class="ob-detail-lbl">المُقدِّم</div><div class="ob-detail-val">' + esc(d.submittedByName || '—') + (d.submittedByDept ? ' <span class="text-muted">— ' + esc(d.submittedByDept) + '</span>' : '') + '</div>'
-        + formExtras
-        + (d.notes ? '<div class="ob-detail-lbl">ملاحظات</div><div class="ob-detail-val" style="white-space:pre-wrap;">' + esc(d.notes) + '</div>' : '')
-        + (stagesHtml ? '<div class="ob-detail-lbl">مراحل الإجراء</div><div class="ob-detail-val"><div class="d-flex flex-wrap gap-2">' + stagesHtml + '</div></div>' : '')
-        + '</div>';
+/** ينتقل إلى صفحة تفاصيل الطلب المستقلة (بدل النافذة المنبثقة السابقة). */
+function obShowDetails(id) {
+    if (!id) return;
+    window.location.href = appResolveUrl('/Outbox/Details/' + encodeURIComponent(id));
 }
 
 // ─── EDIT ───────────────────────────────────────────────────────────────────
@@ -265,7 +215,7 @@ async function obShowEdit(id) {
     if (!r || !r.success) { host.innerHTML = '<div class="ob-empty"><i class="bi bi-exclamation-circle"></i><p>تعذّر التحميل</p></div>'; return; }
     var d = r.data || {};
     var stages = r.stages || [];
-    if (subEl) subEl.textContent = 'رقم الطلب: ' + (d.requestNumber || '—');
+    if (subEl) subEl.textContent = 'الرقم المرجعي: ' + (d.requestNumber || '—');
 
     var stageOpts = '';
     stages.forEach(function (s) {
@@ -358,11 +308,6 @@ function obShowProcedureDetails(procedureId, outboxRequestId) {
     }
 }
 
-function obShowWorkflow(requestId, procedureId) {
-    if (procedureId) obShowProcedureDetails(procedureId, requestId);
-    else obShowDetails(requestId);
-}
-
 window.obLoad = obLoad;
 window.obApplyFilters = obApplyFilters;
 window.obClearFilters = obClearFilters;
@@ -370,4 +315,3 @@ window.obShowDetails = obShowDetails;
 window.obAskDelete = obAskDelete;
 window.obSubmitDelete = obSubmitDelete;
 window.obShowProcedureDetails = obShowProcedureDetails;
-window.obShowWorkflow = obShowWorkflow;

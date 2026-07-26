@@ -654,14 +654,28 @@ public class FormDefinitionsController : BaseController
             return Json(new { success = false, message = "الجدول غير متاح" });
 
         var fields = await _ds.ListReadyTableFieldsByTableIdAsync(id);
-        var columns = fields.OrderBy(f => f.SortOrder).Select(f => f.FieldName).ToList();
+        var orderedFields = fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList();
+        var columns = orderedFields.Select(f => f.FieldName).ToList();
         return Json(new
         {
             success = true,
             t.Name,
             t.RowCountMode,
             t.MaxRows,
-            columns
+            t.ColumnHeaderColor,
+            columns,
+            fields = orderedFields.Select(f => new
+            {
+                f.Id,
+                f.FieldName,
+                f.FieldType,
+                f.SortOrder,
+                f.IsRequired,
+                f.SubName,
+                f.Placeholder,
+                f.TooltipText,
+                f.PropertiesJson
+            })
         });
     }
 

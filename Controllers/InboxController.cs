@@ -402,7 +402,7 @@ public partial class InboxController
                     var fdAll = await _ds.ListFormDefinitionsAsync();
                     var fdById = fdAll.ToDictionary(f => f.Id);
                     var step = WorkflowExecutionHelper.GetStepById(proc, a.StepId);
-                    HashSet<int>? allowedFieldIds = null;
+                    HashSet<long>? allowedFieldIds = null;
                     FormDefinition? fd = null;
                     if (step != null)
                     {

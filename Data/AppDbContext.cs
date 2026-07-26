@@ -70,6 +70,8 @@ public class AppDbContext
     public List<ProcedureActionType> ProcedureActionTypes => Load<ProcedureActionType>("procedure_action_types");
     public List<OutboxRequest> OutboxRequests => Load<OutboxRequest>("outbox_requests");
     public List<OutboxAssignment> OutboxAssignments => Load<OutboxAssignment>("outbox_assignments");
+    public List<OutboxComment> OutboxComments => Load<OutboxComment>("outbox_comments");
+    public List<OutboxAttachment> OutboxAttachments => Load<OutboxAttachment>("outbox_attachments");
     public List<UserGuideItem> UserGuideItems => Load<UserGuideItem>("user_guide_items");
     public List<SystemFeedback> SystemFeedbacks => Load<SystemFeedback>("system_feedbacks");
     public List<UserNote> UserNotes => Load<UserNote>("user_notes");
@@ -108,6 +110,8 @@ public class AppDbContext
     public void SaveProcedureActionTypes(List<ProcedureActionType> d) => Save("procedure_action_types", d);
     public void SaveOutboxRequests(List<OutboxRequest> d) => Save("outbox_requests", d);
     public void SaveOutboxAssignments(List<OutboxAssignment> d) => Save("outbox_assignments", d);
+    public void SaveOutboxComments(List<OutboxComment> d) => Save("outbox_comments", d);
+    public void SaveOutboxAttachments(List<OutboxAttachment> d) => Save("outbox_attachments", d);
     public void SaveUserGuideItems(List<UserGuideItem> d) => Save("user_guide_items", d);
     public void SaveSystemFeedbacks(List<SystemFeedback> d) => Save("system_feedbacks", d);
     public void SaveUserNotes(List<UserNote> d) => Save("user_notes", d);

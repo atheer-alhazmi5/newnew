@@ -109,7 +109,7 @@ public static class FormAutoDataHelper
         }
     }
 
-    public static string MergeCertificationOnApprove(string formDataJson, string? formDefinitionFieldsJson, Dictionary<string, string> certifierProfileMap, HashSet<int>? limitToFieldIds = null)
+    public static string MergeCertificationOnApprove(string formDataJson, string? formDefinitionFieldsJson, Dictionary<string, string> certifierProfileMap, HashSet<long>? limitToFieldIds = null)
     {
         if (string.IsNullOrWhiteSpace(formDataJson)) return formDataJson;
         var defFields = ParseDefinitionFields(formDefinitionFieldsJson);
@@ -138,7 +138,7 @@ public static class FormAutoDataHelper
                                 if (ep.NameEquals("value"))
                                 {
                                     var fieldId = entry.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var fid) ? fid : 0;
-                                    if (limitToFieldIds != null && fieldId > 0 && !limitToFieldIds.Contains((int)fieldId))
+                                    if (limitToFieldIds != null && fieldId > 0 && !limitToFieldIds.Contains(fieldId))
                                     {
                                         writer.WritePropertyName(ep.Name);
                                         ep.Value.WriteTo(writer);

@@ -2,13 +2,13 @@ namespace FormsSystem.Models.Entities;
 
 /// <summary>
 /// طلب صادر مرتبط بإجراء عمل (WorkProcedure).
-/// يحفظ رقم الطلب التلقائي بصيغة REQ-YYYY-MM-DD-# مع المرحلة الحالية والأولوية والـ SLA.
+/// يحفظ الرقم المرجعي التلقائي بصيغة REQ-YYYY-MM-DD-# مع المرحلة الحالية والأولوية والـ SLA.
 /// </summary>
 public class OutboxRequest
 {
     public int Id { get; set; }
 
-    /// <summary>رقم الطلب التلقائي: REQ-YYYY-MM-DD-#</summary>
+    /// <summary>الرقم المرجعي التلقائي: REQ-YYYY-MM-DD-#</summary>
     public string RequestNumber { get; set; } = "";
 
     public int WorkProcedureId { get; set; }
@@ -28,8 +28,11 @@ public class OutboxRequest
     /// <summary>تصنيف الحالة المُحسوب: مفتوح | مغلق</summary>
     public string StatusCategory { get; set; } = "مفتوح";
 
-    /// <summary>قيمة الـ SLA الحالية: مبكر | في الموعد | متأخر | تم التصعيد</summary>
-    public string SlaState { get; set; } = "في الموعد";
+    /// <summary>
+    /// قيمة الـ SLA الحالية: مبكر | في الموعد | متأخر | تم التصعيد.
+    /// تبقى فارغة عند إنشاء الطلب وتُحتسب بعد بدء المنفذ بمعالجته.
+    /// </summary>
+    public string SlaState { get; set; } = "";
 
     /// <summary>الموعد المتوقع للإنجاز بناء على ExpectedDurationDays/Hours في سير العمل.</summary>
     public DateTime? ExpectedDueAt { get; set; }

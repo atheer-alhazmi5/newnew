@@ -1,0 +1,258 @@
+@{
+    ViewBag.Title = "تفاصيل الطلب";
+    ViewBag.PageName = "تفاصيل الطلب";
+    var requestId = ViewBag.RequestId is int rid ? rid : 0;
+}
+
+<style>
+/* ── تفاصيل الطلب — نفس Design System المعتمد (dash-*, ob-*, rt-*) ── */
+.obd-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+.obd-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
+.obd-subtitle .obd-req-num { color:var(--info-600); font-weight:800; direction:ltr; display:inline-block; }
+.obd-back-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    background:#fff; border:2px solid var(--gray-200); color:var(--gray-700);
+    border-radius:12px; padding:9px 20px; font-size:13px; font-weight:700;
+    font-family:'Cairo',sans-serif; text-decoration:none; transition:all .15s;
+}
+.obd-back-btn:hover { border-color:var(--sa-400); color:var(--sa-700); }
+
+/* بطاقة بيانات الطلب */
+.obd-info-card {
+    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    box-shadow:var(--shadow); padding:22px 24px; margin-bottom:24px;
+}
+.obd-info-row { display:grid; gap:18px 24px; padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid var(--gray-100); }
+.obd-info-row:last-child { padding-bottom:0; margin-bottom:0; border-bottom:none; }
+.obd-info-row.cols-1 { grid-template-columns:1fr; }
+.obd-info-row.cols-3 { grid-template-columns:repeat(3,1fr); }
+.obd-field-lbl { font-weight:700; font-size:12.5px; color:var(--gray-500); margin-bottom:6px; }
+.obd-field-val { font-size:14px; color:var(--gray-800); font-weight:600; word-break:break-word; }
+.obd-proc-name { display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-weight:800; font-size:15px; color:var(--gray-900); }
+
+/* أقسام الصفحة — نفس أسلوب التبويبات المتجاورة في أعلى لوحة المعلومات */
+.dash-tabs-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow); }
+.dash-tabs { display:flex; border-bottom:1px solid var(--gray-200); background:#fff; overflow-x:auto; }
+.dash-tab {
+    flex:1; min-width:140px; padding:14px 12px; text-align:center;
+    font-size:13px; font-weight:700; color:var(--gray-400);
+    border-bottom:3px solid transparent; background:none; border-top:none; border-left:none; border-right:none;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    transition:all .2s; cursor:pointer; font-family:'Cairo',sans-serif; white-space:nowrap;
+}
+.dash-tab:hover { color:var(--sa-700); background:var(--sa-25); }
+.dash-tab.active { color:var(--sa-700); border-bottom-color:var(--sa-500); background:var(--sa-25); }
+.dash-tab i { font-size:15px; }
+.dash-panel { display:none; }
+.dash-panel.active { display:block; }
+.dash-panel-inner { padding:24px; }
+.obd-count-pill {
+    display:inline-flex; align-items:center; justify-content:center; min-width:22px;
+    padding:1px 8px; border-radius:999px; background:var(--gray-100);
+    color:var(--gray-600); font-size:11.5px; font-weight:800;
+}
+.dash-tab.active .obd-count-pill { background:var(--sa-100); color:var(--sa-700); }
+
+/* حالات فارغة / تحميل داخل الأقسام */
+.obd-state { text-align:center; padding:36px 16px; color:var(--gray-400); }
+.obd-state i { font-size:40px; display:block; margin-bottom:10px; color:var(--gray-300); }
+.obd-state p { margin:0; font-weight:600; font-size:13px; }
+.obd-soon {
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+    min-height:240px; background:var(--gray-50); border:2px dashed var(--gray-200);
+    border-radius:12px; color:var(--gray-400); font-weight:700; font-size:14px;
+}
+.obd-soon i { font-size:40px; color:var(--gray-300); }
+
+/* ── بيانات النموذج ── */
+/* بلا إطار إضافي: بطاقة التبويبات توفّر الإطار، والقالب يوفّر إطاره الخاص عند وجوده */
+.obd-form-host { background:#fff; }
+/* النموذج للقراءة فقط: تعطيل التفاعل مع الإدخالات مع الإبقاء على شكلها */
+.obd-form-host input, .obd-form-host textarea, .obd-form-host select { pointer-events:none; }
+.obd-form-host .fd-file-upload-wrap input[type="file"] { display:none; }
+.obd-ro-value {
+    min-height:38px; padding:8px 12px; border:1px solid var(--gray-200); border-radius:8px;
+    background:var(--gray-50); color:var(--gray-800); font-size:13px; font-weight:600;
+    white-space:pre-wrap; word-break:break-word;
+}
+.obd-ro-value.empty { color:var(--gray-400); font-weight:500; }
+.obd-ro-files { display:flex; flex-wrap:wrap; gap:8px; }
+.obd-file-chip {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px;
+    background:var(--sa-50); border:1px solid var(--sa-200); color:var(--sa-800);
+    font-size:12px; font-weight:700; text-decoration:none; transition:all .15s;
+}
+a.obd-file-chip:hover { background:var(--sa-100); border-color:var(--sa-400); color:var(--sa-800); }
+.obd-file-chip .sz { color:var(--gray-500); font-weight:500; }
+
+/* ── التعليقات ── */
+.obd-comments { display:flex; flex-direction:column; gap:14px; margin-bottom:18px; }
+.obd-comment { display:flex; gap:12px; }
+.obd-comment-avatar {
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--sa-100); color:var(--sa-700); font-weight:800; font-size:13px;
+}
+.obd-comment-body { flex:1; min-width:0; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:12px; padding:12px 14px; }
+.obd-comment-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.obd-comment-author { font-weight:800; font-size:13px; color:var(--gray-900); }
+.obd-comment-dept { font-size:11.5px; color:var(--gray-500); font-weight:600; }
+.obd-comment-date { margin-inline-start:auto; font-size:11.5px; color:var(--gray-500); font-weight:600; direction:ltr; }
+.obd-comment-text { font-size:13.5px; color:var(--gray-800); line-height:1.8; white-space:pre-wrap; word-break:break-word; }
+.obd-comment-files { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.obd-ctype { display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+.obd-ctype-general { background:var(--success-50); color:var(--success-700); border:1px solid var(--success-200); }
+.obd-ctype-clarify { background:var(--warning-50); color:var(--warning-700); border:1px solid var(--warning-200); }
+
+/* نموذج إضافة تعليق */
+.obd-add-comment { border-top:1px dashed var(--gray-200); padding-top:16px; }
+.obd-add-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.obd-add-toolbar .form-select {
+    width:auto; min-width:170px; height:38px; border-radius:10px;
+    border:2px solid var(--gray-200); font-size:13px; font-weight:600; font-family:'Cairo',sans-serif;
+}
+.obd-add-toolbar .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
+.obd-attach-btn {
+    width:38px; height:38px; border-radius:10px; border:2px solid var(--gray-200); background:#fff;
+    color:var(--gray-600); display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:16px; transition:all .15s;
+}
+.obd-attach-btn:hover { border-color:var(--sa-400); color:var(--sa-700); background:var(--sa-25); }
+.obd-add-comment textarea {
+    border-radius:10px; border:2px solid var(--gray-200); font-size:13.5px;
+    font-family:'Cairo',sans-serif; padding:10px 12px; resize:vertical;
+}
+.obd-add-comment textarea:focus { border-color:var(--sa-400); box-shadow:none; }
+.obd-pending-files { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.obd-pending-chip {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+    background:var(--gray-100); border:1px solid var(--gray-200); color:var(--gray-700);
+    font-size:12px; font-weight:700;
+}
+.obd-pending-chip button { background:none; border:none; color:var(--error-600); cursor:pointer; padding:0; line-height:1; font-size:13px; }
+.obd-add-actions { display:flex; justify-content:flex-end; margin-top:12px; }
+.obd-send-btn {
+    display:inline-flex; align-items:center; gap:6px; border:none; cursor:pointer;
+    background:var(--sa-600); color:#fff; border-radius:10px; padding:9px 24px;
+    font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; transition:background .15s;
+}
+.obd-send-btn:hover:not(:disabled) { background:var(--sa-700); }
+.obd-send-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+/* ── الوثائق المرفقة ── */
+.obd-docs-table { width:100%; margin:0; }
+.obd-docs-table thead th {
+    background:var(--gray-50); color:var(--gray-700); font-size:12.5px; font-weight:700;
+    white-space:nowrap; border-bottom:2px solid var(--gray-200); padding:10px 12px; text-align:right;
+}
+.obd-docs-table tbody td { font-size:13px; padding:10px 12px; vertical-align:middle; border-bottom:1px solid var(--gray-100); color:var(--gray-800); }
+.obd-docs-table tbody tr:last-child td { border-bottom:none; }
+.obd-docs-table tbody tr:hover { background:var(--sa-25); }
+.obd-doc-name { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
+.obd-doc-name i { font-size:16px; color:var(--sa-600); }
+.obd-doc-src { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; background:var(--gray-100); border:1px solid var(--gray-200); color:var(--gray-700); font-size:11.5px; font-weight:700; white-space:nowrap; }
+.obd-doc-date { direction:ltr; text-align:right; color:var(--gray-600); font-weight:600; white-space:nowrap; }
+
+@@media (max-width:992px) {
+    .dash-tab { min-width:120px; font-size:12px; padding:12px 8px; }
+}
+@@media (max-width:768px) {
+    .obd-info-row.cols-3 { grid-template-columns:1fr; }
+    .dash-panel-inner { padding:16px; }
+}
+</style>
+
+<div class="obd-header">
+    <div>
+        <h2 class="page-title mb-0">تفاصيل الطلب</h2>
+        <p class="obd-subtitle" id="obdSubtitle">الرقم المرجعي: <span class="obd-req-num" id="obdReqNum">—</span></p>
+    </div>
+    <a href="/Outbox/Index" class="obd-back-btn"><i class="bi bi-arrow-right"></i> العودة إلى صندوق الصادر</a>
+</div>
+
+<div id="obdContent">
+    <div class="obd-info-card">
+        <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+    </div>
+</div>
+
+<div class="dash-tabs-wrap">
+    <div class="dash-tabs" id="obdTabs">
+        <button type="button" class="dash-tab active" data-tab="form" onclick="obdSelectTab('form')">
+            <i class="bi bi-file-earmark-text"></i> بيانات النموذج
+        </button>
+        <button type="button" class="dash-tab" data-tab="workflow" onclick="obdSelectTab('workflow')">
+            <i class="bi bi-diagram-3"></i> سير العمل (التتبع)
+        </button>
+        <button type="button" class="dash-tab" data-tab="comments" onclick="obdSelectTab('comments')">
+            <i class="bi bi-chat-left-text"></i> التعليقات
+            <span class="obd-count-pill" id="obdCommentsCount">0</span>
+        </button>
+        <button type="button" class="dash-tab" data-tab="documents" onclick="obdSelectTab('documents')">
+            <i class="bi bi-paperclip"></i> الوثائق المرفقة
+            <span class="obd-count-pill" id="obdDocsCount">0</span>
+        </button>
+    </div>
+
+    <!-- 1: بيانات النموذج -->
+    <div class="dash-panel active" id="obdPanelForm">
+        <div class="dash-panel-inner">
+            <div id="obdFormHost">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2: سير العمل (التتبع) -->
+    <div class="dash-panel" id="obdPanelWorkflow">
+        <div class="dash-panel-inner">
+            <div class="obd-soon"><i class="bi bi-hourglass-split"></i><span>سيتم تنفيذ هذا القسم لاحقاً</span></div>
+        </div>
+    </div>
+
+    <!-- 3: التعليقات -->
+    <div class="dash-panel" id="obdPanelComments">
+        <div class="dash-panel-inner">
+            <div id="obdCommentsHost">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+            <div class="obd-add-comment">
+                <div class="obd-add-toolbar">
+                    <select class="form-select" id="obdCommentType" aria-label="نوع التعليق">
+                        <option value="عام">عام</option>
+                        <option value="طلب توضيح">طلب توضيح</option>
+                    </select>
+                    <button type="button" class="obd-attach-btn" onclick="obdPickCommentFile()" title="إرفاق ملف" aria-label="إرفاق ملف">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
+                    <input type="file" id="obdCommentFile" style="display:none;" onchange="obdHandleCommentFile(this)">
+                </div>
+                <textarea class="form-control" id="obdCommentText" rows="3" placeholder="اكتب تعليقك هنا..."></textarea>
+                <div class="obd-pending-files" id="obdPendingFiles"></div>
+                <div class="obd-add-actions">
+                    <button type="button" class="obd-send-btn" id="obdSendBtn" onclick="obdSubmitComment()">
+                        <i class="bi bi-send-fill"></i> إرسال
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4: الوثائق المرفقة -->
+    <div class="dash-panel" id="obdPanelDocuments">
+        <div class="dash-panel-inner">
+            <div id="obdDocsHost">
+                <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/form-definitions.js?v=@DateTime.Now.Ticks"></script>
+<script src="~/js/outbox-procedure-details.js?v=@DateTime.Now.Ticks"></script>
+<script src="~/js/outbox-attachments.js?v=@DateTime.Now.Ticks"></script>
+<script src="~/js/outbox.js?v=@DateTime.Now.Ticks"></script>
+<script src="~/js/outbox-details.js?v=@DateTime.Now.Ticks"></script>
+<script>obdLoad(@requestId);</script>
+}

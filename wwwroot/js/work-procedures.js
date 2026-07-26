@@ -2782,10 +2782,7 @@ function wpWfRefreshFormBindingUI(selectedFormDefId, selectedSectionId) {
     if (bindingRow) bindingRow.style.display = '';
     if (formGrp) formGrp.style.display = '';
 
-    if (defs.length === 1) {
-        fid = defs[0].id != null ? defs[0].id : defs[0].Id;
-        if (formSel) formSel.value = String(fid);
-    } else if (!fid && formSel) {
+    if (!fid && formSel) {
         fid = parseInt(formSel.value || '0', 10) || 0;
     }
 
@@ -2819,11 +2816,9 @@ function wpWfRefreshFormSectionSelect(formDefId, selectedSectionId) {
 }
 
 function wpWfResolveStepFormBinding() {
-    const defs = wpWfGetUsedFormDefinitions();
     const formSel = document.getElementById('wpWfFormDef');
-    let fd = parseInt(formSel?.value || '0', 10) || 0;
-    if (defs.length === 1) fd = defs[0].id != null ? defs[0].id : defs[0].Id;
-    if (defs.length > 1 && fd <= 0) return { error: 'يجب اختيار النموذج المستخدم' };
+    const fd = parseInt(formSel?.value || '0', 10) || 0;
+    if (fd <= 0) return { formDefinitionId: null, formSectionId: null };
 
     const sections = wpWfGetFormDefSections(fd);
     let formSectionId = null;

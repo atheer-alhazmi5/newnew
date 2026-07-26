@@ -626,9 +626,6 @@ public class WorkProceduresController : BaseController
                 var (resolvedFd, resolvedSec) = WorkflowSectionHelper.ResolveStepBinding(
                     st.FormDefinitionId, st.FormSectionId, usedFdIds.ToList(), fdById);
 
-                if (usedFdIds.Count > 1 && (!resolvedFd.HasValue || resolvedFd.Value <= 0))
-                    return $"يجب اختيار النموذج في خطوة «{st.StepLabel}» عند وجود أكثر من نموذج مستخدم";
-
                 if (resolvedFd.HasValue && resolvedFd.Value > 0 && fdById.TryGetValue(resolvedFd.Value, out var fdRow))
                 {
                     var sectionList = WorkflowSectionHelper.ParseSections(fdRow.FieldsJson);

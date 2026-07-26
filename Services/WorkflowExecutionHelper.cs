@@ -70,7 +70,7 @@ public static class WorkflowExecutionHelper
         public int? FormDefinitionId { get; set; }
         public int? FormSectionId { get; set; }
         public string SectionTitle { get; set; } = "";
-        public List<int> EditableFieldIds { get; set; } = new();
+        public List<long> EditableFieldIds { get; set; } = new();
         public bool HideOtherSections { get; set; }
     }
 
@@ -248,7 +248,7 @@ public static class WorkflowExecutionHelper
         return submittedAt.AddHours(totalHours);
     }
 
-    public static string MergeSectionFormAnswers(string existingJson, string incomingJson, HashSet<int>? allowedFieldIds)
+    public static string MergeSectionFormAnswers(string existingJson, string incomingJson, HashSet<long>? allowedFieldIds)
     {
         if (string.IsNullOrWhiteSpace(incomingJson)) return existingJson ?? "{}";
         if (string.IsNullOrWhiteSpace(existingJson)) return incomingJson;
@@ -259,12 +259,12 @@ public static class WorkflowExecutionHelper
             using var inDoc = JsonDocument.Parse(incomingJson);
             if (inDoc.RootElement.ValueKind != JsonValueKind.Object) return existingJson;
 
-            var incomingFields = new Dictionary<int, JsonElement>();
+            var incomingFields = new Dictionary<long, JsonElement>();
             if (inDoc.RootElement.TryGetProperty("fields", out var inFields) && inFields.ValueKind == JsonValueKind.Array)
             {
                 foreach (var f in inFields.EnumerateArray())
                 {
-                    if (f.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var fid))
+                    if (f.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var fid))
                     {
                         if (allowedFieldIds == null || allowedFieldIds.Contains(fid))
                             incomingFields[fid] = f.Clone();
@@ -282,10 +282,10 @@ public static class WorkflowExecutionHelper
                     {
                         writer.WritePropertyName("fields");
                         writer.WriteStartArray();
-                        var written = new HashSet<int>();
+                        var written = new HashSet<long>();
                         foreach (var entry in prop.Value.EnumerateArray())
                         {
-                            var fid = entry.TryGetProperty("id", out var idEl) && idEl.TryGetInt32(out var id) ? id : 0;
+                            var fid = entry.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var id) ? id : 0L;
                             if (fid > 0 && incomingFields.TryGetValue(fid, out var repl))
                             {
                                 repl.WriteTo(writer);

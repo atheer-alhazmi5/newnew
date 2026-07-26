@@ -42,6 +42,17 @@ public class OutboxController : BaseController
         return View();
     }
 
+    /// <summary>صفحة مستقلة لتفاصيل الطلب — البيانات تُجلب من GetRequest الذي يتحقق من الصلاحيات.</summary>
+    public IActionResult Details(int id)
+    {
+        var auth = RequireAuth(); if (auth != null) return auth;
+        SetViewBagUser(_ui);
+        ViewBag.PageName = "تفاصيل الطلب";
+        ViewBag.Title = "تفاصيل الطلب";
+        ViewBag.RequestId = id;
+        return View();
+    }
+
     // ─── LIST + LOOKUPS ───────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> GetRequests()
@@ -54,6 +65,7 @@ public class OutboxController : BaseController
         var procedures = await _ds.ListWorkProceduresAsync();
         var procTypes = await _ds.ListProcedureActionTypesAsync();
         var statuses = await _ds.ListFormStatusesAsync();
+        var assignments = await _ds.ListOutboxAssignmentsAsync();
 
         var data = mine.Select(r =>
         {
@@ -66,7 +78,7 @@ public class OutboxController : BaseController
                 : null;
 
             // إعادة حساب SLA لحظياً لضمان دقة العرض
-            var slaState = ComputeSlaState(r);
+            var slaState = ComputeSlaState(r, HasExecutorAction(assignments, r.Id));
 
             return new
             {
@@ -124,6 +136,7 @@ public class OutboxController : BaseController
         var procTypes = await _ds.ListProcedureActionTypesAsync();
         var statuses = await _ds.ListFormStatusesAsync();
         var stagesForProc = ProcedureStages(proc, statuses).ToList();
+        var assignments = await _ds.ListOutboxAssignmentsForRequestAsync(r.Id);
 
         var type = proc != null
             ? procTypes.FirstOrDefault(t => t.Id == proc.ProcedureActionTypeId)
@@ -152,7 +165,7 @@ public class OutboxController : BaseController
                 CurrentStageName = fs?.Name ?? "",
                 CurrentStageColor = fs?.Color ?? "#9DA4AE",
                 r.CurrentStepSortOrder,
-                SlaState = ComputeSlaState(r),
+                SlaState = ComputeSlaState(r, HasExecutorAction(assignments, r.Id)),
                 SubmittedAt = r.SubmittedAt.ToString("yyyy-MM-dd HH:mm"),
                 ExpectedDueAt = r.ExpectedDueAt?.ToString("yyyy-MM-dd HH:mm"),
                 ClosedAt = r.ClosedAt?.ToString("yyyy-MM-dd HH:mm"),
@@ -476,9 +489,11 @@ public class OutboxController : BaseController
             SubmittedByName = CurrentUserFullName,
             SubmittedByDept = CurrentDeptName
         };
-        entity.SlaState = ComputeSlaState(entity);
+        // SLA لا يُعبَّأ عند إنشاء الطلب — يُحتسب لاحقاً بناءً على إجراءات المنفذ أثناء المعالجة.
+        entity.SlaState = "";
 
         await _ds.AddOutboxRequestAsync(entity);
+        await RegisterFormFileAttachmentsAsync(entity);
 
         // ─── Routing الفعلي: تحديد المستلمين + إنشاء assignments + إشعارات داخلية ───
         var procTypes = await _ds.ListProcedureActionTypesAsync();
@@ -601,7 +616,8 @@ public class OutboxController : BaseController
                 r.ClosedAt = null;
         }
 
-        r.SlaState = ComputeSlaState(r);
+        var reqAssignments = await _ds.ListOutboxAssignmentsForRequestAsync(r.Id);
+        r.SlaState = ComputeSlaState(r, HasExecutorAction(reqAssignments, r.Id));
         r.UpdatedBy = CurrentUserFullName;
         r.UpdatedAt = DateTime.Now;
 
@@ -633,8 +649,307 @@ public class OutboxController : BaseController
             return Json(new { success = false, message = "لا يمكن حذف الطلب إلا في مرحلة «جديد»" });
 
         await _ds.DeleteOutboxRequestAsync(req.Id);
+        await _ds.DeleteOutboxCommentsForRequestAsync(req.Id);
+        var orphanUrls = await _ds.DeleteOutboxAttachmentsForRequestAsync(req.Id);
+        DeleteUploadedFiles(orphanUrls);
         await _ds.AddAuditLogAsync(BuildAuditEntry("حذف طلب", "OutboxRequest", r.Id.ToString(), r.RequestNumber));
         return Json(new { success = true, message = "تم الحذف" });
+    }
+
+    // ─── REQUEST DETAILS TABS (form / comments / attachments) ─────────────────
+
+    /// <summary>يتحقق من صلاحية الوصول للطلب بنفس قاعدة GetRequest.</summary>
+    private bool CanAccessRequest(OutboxRequest r)
+        => r.SubmittedById == CurrentUserId || CurrentUserRole == "Admin";
+
+    private async Task<(OutboxRequest? request, IActionResult? error)> LoadAccessibleRequestAsync(int id)
+    {
+        if (!IsAuthenticated) return (null, Json(new { success = false, message = "غير مصرح" }));
+        var r = await _ds.GetOutboxRequestByIdAsync(id);
+        if (r == null) return (null, Json(new { success = false, message = "غير موجود" }));
+        if (!CanAccessRequest(r)) return (null, Json(new { success = false, message = "غير مصرح" }));
+        return (r, null);
+    }
+
+    /// <summary>
+    /// تعريف النموذج المستخدم في الطلب مع القالب وبيانات التعبئة المحفوظة —
+    /// يُستخدم في تبويب «بيانات النموذج» لعرض النموذج للقراءة فقط.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetRequestFormView(int id)
+    {
+        var (r, error) = await LoadAccessibleRequestAsync(id);
+        if (error != null) return error;
+
+        var formId = ExtractFormIdFromFormData(r!.FormDataJson);
+        var fdAll = await _ds.ListFormDefinitionsAsync();
+        var fd = formId > 0 ? fdAll.FirstOrDefault(f => f.Id == formId) : null;
+
+        // احتياط: إن لم يُخزَّن معرّف النموذج، نستنتجه من نماذج الإجراء المستخدمة.
+        if (fd == null)
+        {
+            var proc = await _ds.GetWorkProcedureByIdAsync(r.WorkProcedureId);
+            if (proc != null)
+            {
+                var usedFdIds = ParseIntArray(proc.UsedFormDefinitionsJson);
+                fd = fdAll.FirstOrDefault(f => usedFdIds.Contains(f.Id));
+            }
+        }
+
+        if (fd == null)
+        {
+            return Json(new { success = true, hasForm = false, formDataJson = r.FormDataJson });
+        }
+
+        var templates = await _ds.ListFormTemplatesAsync();
+        var tpl = templates.FirstOrDefault(x => x.Id == fd.TemplateId);
+        var templateData = FormDefinitionTemplateHelper.BuildTemplateData(fd, tpl);
+
+        return Json(new
+        {
+            success = true,
+            hasForm = true,
+            form = new { fd.Id, fd.Name, fd.Description, fd.FieldsJson, fd.TemplateId },
+            templateData,
+            formDataJson = r.FormDataJson
+        });
+    }
+
+    /// <summary>تعليقات الطلب مرتّبة زمنياً مع مرفقات كل تعليق.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetRequestComments(int id)
+    {
+        var (r, error) = await LoadAccessibleRequestAsync(id);
+        if (error != null) return error;
+
+        var comments = await _ds.ListOutboxCommentsForRequestAsync(r!.Id);
+        var attachments = await _ds.ListOutboxAttachmentsForRequestAsync(r.Id);
+
+        var data = comments.Select(c => new
+        {
+            id = c.Id,
+            commentType = c.CommentType,
+            content = c.Content,
+            authorId = c.AuthorId,
+            authorName = c.AuthorName,
+            authorDept = c.AuthorDept,
+            createdAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            attachments = attachments
+                .Where(a => a.OutboxCommentId == c.Id)
+                .Select(a => new { a.Id, a.FileName, a.Url, a.ContentType, a.Size })
+                .ToList()
+        }).ToList();
+
+        return Json(new { success = true, data, count = data.Count });
+    }
+
+    /// <summary>إضافة تعليق جديد على الطلب مع مرفقات اختيارية سبق رفعها.</summary>
+    [HttpPost]
+    public async Task<IActionResult> AddRequestComment([FromBody] OutboxCommentDto req)
+    {
+        if (req == null || req.RequestId <= 0) return Json(new { success = false, message = "الطلب مطلوب" });
+        var (r, error) = await LoadAccessibleRequestAsync(req.RequestId);
+        if (error != null) return error;
+
+        var content = (req.Content ?? "").Trim();
+        var files = req.Attachments ?? new List<OutboxAttachmentDto>();
+        if (content.Length == 0 && files.Count == 0)
+            return Json(new { success = false, message = "نص التعليق مطلوب" });
+
+        var type = (req.CommentType ?? "").Trim();
+        if (type != "عام" && type != "طلب توضيح") type = "عام";
+
+        var comment = await _ds.AddOutboxCommentAsync(new OutboxComment
+        {
+            OutboxRequestId = r!.Id,
+            CommentType = type,
+            Content = content,
+            AuthorId = CurrentUserId,
+            AuthorName = CurrentUserFullName,
+            AuthorDept = CurrentDeptName
+        });
+
+        var valid = files
+            .Where(f => !string.IsNullOrWhiteSpace(f.Url) && IsOutboxUploadUrl(f.Url))
+            .Select(f => new OutboxAttachment
+            {
+                OutboxRequestId = r.Id,
+                Source = OutboxAttachmentSources.Comment,
+                OutboxCommentId = comment.Id,
+                FileName = (f.Name ?? "").Trim(),
+                Url = f.Url!.Trim(),
+                ContentType = (f.ContentType ?? "").Trim(),
+                Size = f.Size,
+                UploadedById = CurrentUserId,
+                UploadedByName = CurrentUserFullName
+            })
+            .ToList();
+        if (valid.Count > 0) await _ds.AddOutboxAttachmentsAsync(valid);
+
+        await _ds.AddAuditLogAsync(BuildAuditEntry("إضافة تعليق", "OutboxRequest", r.Id.ToString(), r.RequestNumber));
+        return Json(new { success = true, message = "تمت إضافة التعليق" });
+    }
+
+    /// <summary>الوثائق المرفقة بالطلب — مرفقات النموذج ومرفقات التعليقات معاً.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetRequestAttachments(int id)
+    {
+        var (r, error) = await LoadAccessibleRequestAsync(id);
+        if (error != null) return error;
+
+        var items = await _ds.ListOutboxAttachmentsForRequestAsync(r!.Id);
+        var data = items.Select(a => new
+        {
+            id = a.Id,
+            source = a.Source,
+            fieldName = a.FieldName,
+            fileName = a.FileName,
+            url = a.Url,
+            contentType = a.ContentType,
+            size = a.Size,
+            uploadedByName = a.UploadedByName,
+            uploadedAt = a.UploadedAt.ToString("yyyy-MM-dd HH:mm")
+        }).ToList();
+
+        return Json(new { success = true, data, count = data.Count });
+    }
+
+    /// <summary>رفع ملف إلى مساحة صندوق الصادر — يُستدعى قبل حفظ التعليق أو تقديم الطلب.</summary>
+    [HttpPost]
+    public async Task<IActionResult> UploadRequestAttachment(IFormFile file)
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        if (file == null || file.Length == 0)
+            return Json(new { success = false, message = "لم يتم اختيار ملف" });
+        if (file.Length > MaxAttachmentBytes)
+            return Json(new { success = false, message = "حجم الملف يتجاوز 10 ميغابايت" });
+
+        var ext = Path.GetExtension(file.FileName);
+        if (!AllowedAttachmentExtensions.Contains(ext.ToLowerInvariant()))
+            return Json(new { success = false, message = "نوع الملف غير مدعوم" });
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "outbox");
+        Directory.CreateDirectory(uploadsDir);
+        var storedName = $"{Guid.NewGuid()}{ext}";
+        using (var stream = System.IO.File.Create(Path.Combine(uploadsDir, storedName)))
+            await file.CopyToAsync(stream);
+
+        return Json(new
+        {
+            success = true,
+            url = $"/uploads/outbox/{storedName}",
+            name = file.FileName,
+            contentType = file.ContentType ?? "",
+            size = file.Length
+        });
+    }
+
+    private const long MaxAttachmentBytes = 10_000_000;
+
+    private static readonly HashSet<string> AllowedAttachmentExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".txt", ".csv", ".zip", ".rar"
+    };
+
+    /// <summary>يمنع تسجيل مسارات خارج مساحة رفع صندوق الصادر.</summary>
+    private static bool IsOutboxUploadUrl(string? url)
+        => !string.IsNullOrWhiteSpace(url)
+           && url.StartsWith("/uploads/outbox/", StringComparison.Ordinal)
+           && !url.Contains("..", StringComparison.Ordinal);
+
+    private static void DeleteUploadedFiles(IEnumerable<string> urls)
+    {
+        foreach (var url in urls)
+        {
+            if (!IsOutboxUploadUrl(url)) continue;
+            try
+            {
+                var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            }
+            catch { /* حذف الملف الفعلي ليس حرجاً — السجل حُذف بالفعل */ }
+        }
+    }
+
+    private static int ExtractFormIdFromFormData(string? formDataJson)
+    {
+        if (string.IsNullOrWhiteSpace(formDataJson)) return 0;
+        try
+        {
+            using var doc = JsonDocument.Parse(formDataJson);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("formId", out var el)
+                && el.TryGetInt32(out var fid))
+                return fid;
+        }
+        catch { /* بيانات قديمة أو غير صالحة */ }
+        return 0;
+    }
+
+    /// <summary>
+    /// يسجّل ملفات حقول «رفع ملف» ضمن وثائق الطلب حتى تظهر في تبويب «الوثائق المرفقة».
+    /// تُقرأ المسارات من قيم النموذج بعد رفعها من الواجهة.
+    /// </summary>
+    private async Task RegisterFormFileAttachmentsAsync(OutboxRequest entity)
+    {
+        if (string.IsNullOrWhiteSpace(entity.FormDataJson)) return;
+
+        var pending = new List<OutboxAttachment>();
+        try
+        {
+            using var doc = JsonDocument.Parse(entity.FormDataJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return;
+            if (!doc.RootElement.TryGetProperty("fields", out var fields) || fields.ValueKind != JsonValueKind.Array) return;
+
+            foreach (var f in fields.EnumerateArray())
+            {
+                if (!f.TryGetProperty("fieldType", out var ftEl) || ftEl.GetString() != "رفع ملف") continue;
+                if (!f.TryGetProperty("value", out var val) || val.ValueKind != JsonValueKind.Array) continue;
+
+                var fieldName = f.TryGetProperty("fieldName", out var fnEl) ? (fnEl.GetString() ?? "") : "";
+                foreach (var item in val.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object) continue;
+                    var url = item.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
+                    if (!IsOutboxUploadUrl(url)) continue;
+
+                    pending.Add(new OutboxAttachment
+                    {
+                        OutboxRequestId = entity.Id,
+                        Source = OutboxAttachmentSources.Form,
+                        FieldName = fieldName,
+                        FileName = item.TryGetProperty("name", out var nEl) ? (nEl.GetString() ?? "") : "",
+                        Url = url!,
+                        ContentType = item.TryGetProperty("type", out var tEl) ? (tEl.GetString() ?? "") : "",
+                        Size = item.TryGetProperty("size", out var sEl) && sEl.TryGetInt64(out var sz) ? sz : 0,
+                        UploadedById = entity.SubmittedById,
+                        UploadedByName = entity.SubmittedByName,
+                        UploadedAt = entity.SubmittedAt
+                    });
+                }
+            }
+        }
+        catch { return; }
+
+        if (pending.Count > 0) await _ds.AddOutboxAttachmentsAsync(pending);
+    }
+
+    public class OutboxCommentDto
+    {
+        public int RequestId { get; set; }
+        public string? CommentType { get; set; }
+        public string? Content { get; set; }
+        public List<OutboxAttachmentDto>? Attachments { get; set; }
+    }
+
+    public class OutboxAttachmentDto
+    {
+        public string? Name { get; set; }
+        public string? Url { get; set; }
+        public string? ContentType { get; set; }
+        public long Size { get; set; }
     }
 
     // ─── PROCEDURE DETAILS (full payload: header + workflow grid) ────────────
@@ -989,12 +1304,20 @@ public class OutboxController : BaseController
     }
 
     /// <summary>
+    /// بدأت معالجة الطلب فعلياً متى اتّخذ أحد المنفذين إجراءً على تسليم مرتبط به.
+    /// </summary>
+    private static bool HasExecutorAction(IEnumerable<OutboxAssignment> assignments, int outboxRequestId)
+        => assignments.Any(a => a.OutboxRequestId == outboxRequestId && a.ActedAt.HasValue);
+
+    /// <summary>
     /// SLA: مبكر إن أُغلق قبل الموعد، في الموعد إن أُغلق ضمنه، متأخر إن تجاوز،
     /// تم التصعيد عند رفع علم التصعيد. للطلبات المفتوحة: مبكر إن لم يتجاوز نصف المدة،
     /// في الموعد إن في المنتصف، متأخر إن تجاوز.
+    /// يبقى فارغاً قبل أن يبدأ المنفذ بمعالجة الطلب، لأنه يعتمد على إجراءاته.
     /// </summary>
-    private static string ComputeSlaState(OutboxRequest r)
+    private static string ComputeSlaState(OutboxRequest r, bool executionStarted)
     {
+        if (!executionStarted && !r.IsEscalated && !r.ClosedAt.HasValue) return "";
         if (r.IsEscalated) return "تم التصعيد";
         if (!r.ExpectedDueAt.HasValue) return "في الموعد";
 

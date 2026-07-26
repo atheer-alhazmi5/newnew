@@ -2458,6 +2458,77 @@ public class DataService
         return Task.FromResult(true);
     }
 
+    // ─── OUTBOX COMMENTS ──────────────────────────────────────────────────────
+    public Task<List<OutboxComment>> ListOutboxCommentsForRequestAsync(int outboxRequestId)
+        => Task.FromResult(_db.OutboxComments
+            .Where(c => c.OutboxRequestId == outboxRequestId)
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .ToList());
+
+    public Task<OutboxComment> AddOutboxCommentAsync(OutboxComment c)
+    {
+        var list = _db.OutboxComments;
+        c.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (c.CreatedAt == default) c.CreatedAt = DateTime.Now;
+        list.Add(c);
+        _db.SaveOutboxComments(list);
+        return Task.FromResult(c);
+    }
+
+    /// <summary>يحذف تعليقات الطلب — يُستدعى عند حذف الطلب للحفاظ على اتساق البيانات.</summary>
+    public Task<int> DeleteOutboxCommentsForRequestAsync(int outboxRequestId)
+    {
+        var list = _db.OutboxComments;
+        var removed = list.RemoveAll(c => c.OutboxRequestId == outboxRequestId);
+        if (removed > 0) _db.SaveOutboxComments(list);
+        return Task.FromResult(removed);
+    }
+
+    // ─── OUTBOX ATTACHMENTS ───────────────────────────────────────────────────
+    public Task<List<OutboxAttachment>> ListOutboxAttachmentsForRequestAsync(int outboxRequestId)
+        => Task.FromResult(_db.OutboxAttachments
+            .Where(a => a.OutboxRequestId == outboxRequestId)
+            .OrderBy(a => a.UploadedAt)
+            .ThenBy(a => a.Id)
+            .ToList());
+
+    public Task<OutboxAttachment> AddOutboxAttachmentAsync(OutboxAttachment a)
+    {
+        var list = _db.OutboxAttachments;
+        a.Id = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        if (a.UploadedAt == default) a.UploadedAt = DateTime.Now;
+        list.Add(a);
+        _db.SaveOutboxAttachments(list);
+        return Task.FromResult(a);
+    }
+
+    public Task<List<OutboxAttachment>> AddOutboxAttachmentsAsync(IEnumerable<OutboxAttachment> items)
+    {
+        var list = _db.OutboxAttachments;
+        var nextId = list.Count == 0 ? 1 : list.Max(x => x.Id) + 1;
+        var added = new List<OutboxAttachment>();
+        foreach (var a in items)
+        {
+            a.Id = nextId++;
+            if (a.UploadedAt == default) a.UploadedAt = DateTime.Now;
+            list.Add(a);
+            added.Add(a);
+        }
+        if (added.Count > 0) _db.SaveOutboxAttachments(list);
+        return Task.FromResult(added);
+    }
+
+    /// <summary>يحذف مرفقات الطلب من السجل ويعيد مساراتها لحذف الملفات من القرص.</summary>
+    public Task<List<string>> DeleteOutboxAttachmentsForRequestAsync(int outboxRequestId)
+    {
+        var list = _db.OutboxAttachments;
+        var urls = list.Where(a => a.OutboxRequestId == outboxRequestId).Select(a => a.Url).ToList();
+        var removed = list.RemoveAll(a => a.OutboxRequestId == outboxRequestId);
+        if (removed > 0) _db.SaveOutboxAttachments(list);
+        return Task.FromResult(urls);
+    }
+
     // ─── USER GUIDE ITEMS ─────────────────────────────────────────────────────
     public Task<List<UserGuideItem>> ListUserGuideItemsAsync()
         => Task.FromResult(_db.UserGuideItems.ToList());
@@ -2569,7 +2640,7 @@ public class DataService
         return Task.FromResult(true);
     }
 
-    /// <summary>توليد رقم الطلب: REQ-YYYY-MM-DD-# (تسلسل لليوم نفسه).</summary>
+    /// <summary>توليد الرقم المرجعي: REQ-YYYY-MM-DD-# (تسلسل لليوم نفسه).</summary>
     public Task<string> GenerateOutboxRequestNumberAsync(DateTime? at = null)
     {
         var dt = (at ?? DateTime.Now).Date;
