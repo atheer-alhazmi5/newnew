@@ -14,7 +14,8 @@
 .bnf-cancel-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; border:none; cursor:pointer; background:#6b7280; color:#fff; }
 .bnf-page-header { margin-bottom:24px; }
 .bnf-tbl .table-responsive { overflow-x:auto; max-width:100%; }
-.bnf-tbl .table { width:100%; margin-bottom:0; min-width:880px; font-size:13px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) — هنا العرض الأدنى فقط */
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:880px; }
 </style>
 
 <div class="bnf-settings-page">
@@ -23,7 +24,7 @@
         <p style="color:var(--gray-500);font-size:14px;margin:8px 0 0;">التفويضات التي تشارك فيها كمفوِّض أو مفوَّض له، مع الصلاحية المعروضة لكل طرف.</p>
     </div>
 
-    <div class="card bnf-tbl">
+    <div class="card ui-table-card bnf-tbl">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table mb-0">
@@ -47,6 +48,8 @@
             </div>
         </div>
     </div>
+
+    <div class="app-pagination" id="myDelPagination"></div>
 </div>
 
 <div class="modal fade" id="myDelDetailsModal" tabindex="-1">

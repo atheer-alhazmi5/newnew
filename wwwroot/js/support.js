@@ -9,6 +9,7 @@ var spCreateModal = null;
 var spUpdateModal = null;
 var spDetailModal = null;
 var spDeleteModal = null;
+var spPage = 1, spPerPage = 20, spCurrentList = [];
 
 function spEsc(s) {
     if (typeof esc === 'function') return esc(s);
@@ -126,6 +127,7 @@ function spDateBetween(iso, from, to) {
 }
 
 function spApplyFilters() {
+    spPage = 1;
     var q = (document.getElementById('spSearch')?.value || '').trim();
     var org = document.getElementById('spFilterOrgUnit')?.value || '';
     var cat = document.getElementById('spFilterCategory')?.value || '';
@@ -159,25 +161,31 @@ function spRenderTable(list) {
     var body = document.getElementById('spBody');
     if (!body) return;
 
+    spCurrentList = list || [];
+
     if (!list.length) {
         body.innerHTML = '<tr><td colspan="' + spColspan() + '"><div class="sp-empty"><i class="bi bi-headset"></i><p>لا توجد طلبات</p></div></td></tr>';
+        renderPagination('spPagination', 0, 1, spPerPage, 'spGoPage');
         return;
     }
 
+    var totalPages = Math.max(1, Math.ceil(list.length / spPerPage));
+    if (spPage > totalPages) spPage = totalPages;
+
     var html = '';
-    list.forEach(function (item, idx) {
+    list.slice((spPage - 1) * spPerPage, spPage * spPerPage).forEach(function (item, idx) {
         var closed = item.status === 'مغلق';
-        var acts = '<button type="button" class="sp-act-btn sp-act-detail" onclick="spShowDetail(' + item.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
+        var acts = '<button type="button" class="sp-act-btn ui-act-btn sp-act-detail" title="تفاصيل" onclick="spShowDetail(' + item.id + ')"><i class="bi bi-eye"></i></button>';
         if (!closed) {
             if (spIsAdmin) {
-                acts += ' <button type="button" class="sp-act-btn sp-act-edit" onclick="spShowUpdate(' + item.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+                acts += ' <button type="button" class="sp-act-btn ui-act-btn sp-act-edit" title="تحديث" onclick="spShowUpdate(' + item.id + ')"><i class="bi bi-pencil"></i></button>';
             } else {
-                acts += ' <button type="button" class="sp-act-btn sp-act-del" onclick="spShowDelete(' + item.id + ')"><i class="bi bi-trash"></i> حذف</button>';
+                acts += ' <button type="button" class="sp-act-btn ui-act-btn sp-act-del" title="حذف" onclick="spShowDelete(' + item.id + ')"><i class="bi bi-trash"></i></button>';
             }
         }
 
         html += '<tr>';
-        html += '<td>' + (idx + 1) + '</td>';
+        html += '<td>' + ((spPage - 1) * spPerPage + idx + 1) + '</td>';
         html += '<td><span class="sp-req-num">' + spEsc(item.requestNumber || '—') + '</span></td>';
         if (spIsAdmin) {
             html += '<td>' + spEsc(item.submitterName || '—') + '</td>';
@@ -192,6 +200,15 @@ function spRenderTable(list) {
         html += '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('spPagination', list.length, spPage, spPerPage, 'spGoPage');
+}
+
+function spGoPage(p) {
+    var total = Math.ceil(spCurrentList.length / spPerPage);
+    if (p < 1 || p > total) return;
+    spPage = p;
+    spRenderTable(spCurrentList);
+    appPaginationScrollTop();
 }
 
 function spShowCreateModal() {

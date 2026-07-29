@@ -1,5 +1,6 @@
 /*  Executor Roles – Client Logic  */
 var erRoles = [], erOrgUnits = [], erBeneficiaries = [];
+var erPage = 1, erPerPage = 20, erCurrentList = [];
 var erFilterOuExpanded = {};
 var erOuExpandedC = {}, erOuExpandedE = {};
 var erSelectedOuIdsC = [], erSelectedOuIdsE = [];
@@ -81,15 +82,19 @@ async function erLoad() {
 
 /* ─── Table Rendering ───────────────────────────────────────── */
 function erRenderTable(data) {
+    erCurrentList = data;
     var badge = document.getElementById('erCountBadge');
-    if (badge) badge.textContent = '(' + data.length + ')';
+    if (badge) badge.textContent = String(data.length);
     var body = document.getElementById('erBody');
     if (!data.length) {
         body.innerHTML = '<tr><td colspan="8" class="er-empty-state"><i class="bi bi-person-badge"></i><p>لا توجد أدوار منفذين</p></td></tr>';
+        renderPagination('erPagination', 0, 1, erPerPage, 'erGoPage');
         return;
     }
+    var erTotalPages = Math.max(1, Math.ceil(data.length / erPerPage));
+    if (erPage > erTotalPages) erPage = erTotalPages;
     var html = '';
-    data.forEach(function(r) {
+    data.slice((erPage - 1) * erPerPage, erPage * erPerPage).forEach(function(r) {
         var ownerBadge = r.ownership === 'حصري'
             ? '<span class="er-badge-ownership er-badge-exclusive"><i class="bi bi-lock-fill"></i> حصري</span>'
             : '<span class="er-badge-ownership er-badge-nonexclusive"><i class="bi bi-unlock-fill"></i> غير حصري</span>';
@@ -106,12 +111,21 @@ function erRenderTable(data) {
             + '<td style="text-align:center;"><label class="er-toggle"><input type="checkbox" ' + (r.isActive ? 'checked' : '') + ' onchange="erToggleActive(this,' + r.id + ')"><span class="er-slider"></span></label></td>'
             + '<td style="text-align:center;">'
             + '<div class="er-action-cell-inner">'
-            + '<button type="button" class="er-action-btn er-action-btn-detail" onclick="erShowDetails(' + r.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>'
-            + '<button type="button" class="er-action-btn er-action-btn-edit" onclick="erShowEditModal(' + r.id + ')"><i class="bi bi-pencil-fill"></i> تحديث</button>'
-            + '<button type="button" class="er-action-btn er-action-btn-delete" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')"><i class="bi bi-trash3-fill"></i> حذف</button>'
+            + '<button type="button" class="er-action-btn ui-act-btn er-action-btn-detail" title="تفاصيل" onclick="erShowDetails(' + r.id + ')"><i class="bi bi-eye"></i></button>'
+            + '<button type="button" class="er-action-btn ui-act-btn er-action-btn-edit" title="تحديث" onclick="erShowEditModal(' + r.id + ')"><i class="bi bi-pencil-fill"></i></button>'
+            + '<button type="button" class="er-action-btn ui-act-btn er-action-btn-delete" title="حذف" onclick="erShowDeleteModal(' + r.id + ',\'' + erEsc(r.name).replace(/'/g,"\\'") + '\')"><i class="bi bi-trash3-fill"></i></button>'
             + '</div></td></tr>';
     });
     body.innerHTML = html;
+    renderPagination('erPagination', data.length, erPage, erPerPage, 'erGoPage');
+}
+
+function erGoPage(p) {
+    var total = Math.ceil(erCurrentList.length / erPerPage);
+    if (p < 1 || p > total) return;
+    erPage = p;
+    erRenderTable(erCurrentList);
+    appPaginationScrollTop();
 }
 
 /* ─── Filters ───────────────────────────────────────────────── */
@@ -128,6 +142,7 @@ function erApplyFilters() {
         if (active === '0' && r.isActive) return false;
         return true;
     });
+    erPage = 1;
     erRenderTable(filtered);
 }
 
@@ -140,6 +155,7 @@ function erClearFilters() {
     if (ouLab) ouLab.textContent = 'الوحدة التنظيمية';
     erFilterOuExpanded = {};
     document.getElementById('erFilterActive').value = '';
+    erPage = 1;
     erRenderTable(erRoles);
 }
 

@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 let tpAllData = [];
 let tpFiltered = [];
+let tpPage = 1, tpPerPage = 20, tpCurrentList = [];
 let tpWizardMode = 'create'; // 'create' | 'edit'
 let tpEditId = 0;
 let tpCurrentStep = 0;
@@ -70,16 +71,22 @@ async function tpLoad() {
 function tpRenderTable() {
     const tb = document.getElementById('tpTableBody');
     const badge = document.getElementById('tpCountBadge');
-    badge.textContent = `(${tpFiltered.length})`;
+    badge.textContent = String(tpFiltered.length);
+
+    tpCurrentList = tpFiltered;
 
     if (!tpFiltered.length) {
         tb.innerHTML = `<tr><td colspan="5"><div class="tp-empty-state"><i class="bi bi-file-earmark-ruled"></i><p>لا توجد قوالب</p></div></td></tr>`;
+        renderPagination('tpPagination', 0, 1, tpPerPage, 'tpGoPage');
         return;
     }
 
-    tb.innerHTML = tpFiltered.map((t, i) => `
+    const totalPages = Math.max(1, Math.ceil(tpFiltered.length / tpPerPage));
+    if (tpPage > totalPages) tpPage = totalPages;
+
+    tb.innerHTML = tpFiltered.slice((tpPage - 1) * tpPerPage, tpPage * tpPerPage).map((t, i) => `
         <tr>
-            <td style="font-weight:700;color:var(--gray-400);">${i + 1}</td>
+            <td style="font-weight:700;color:var(--gray-400);">${(tpPage - 1) * tpPerPage + i + 1}</td>
             <td style="font-weight:700;">${escHtml(t.name)}</td>
             <td><span class="tp-color-swatch" style="background:${t.color};"></span></td>
             <td>
@@ -90,17 +97,28 @@ function tpRenderTable() {
             </td>
             <td>
                 <div class="tp-actions-row">
-                    <button class="tp-action-btn tp-action-btn-detail" onclick="tpShowDetails(${t.id})"><i class="bi bi-eye"></i> تفاصيل</button>
-                    <button class="tp-action-btn tp-action-btn-edit" onclick="tpShowEditModal(${t.id})"><i class="bi bi-pencil"></i> تعديل</button>
-                    <button class="tp-action-btn tp-action-btn-delete" onclick="tpShowDeleteModal(${t.id})"><i class="bi bi-trash3"></i> حذف</button>
+                    <button class="tp-action-btn ui-act-btn tp-action-btn-detail" title="تفاصيل" onclick="tpShowDetails(${t.id})"><i class="bi bi-eye"></i></button>
+                    <button class="tp-action-btn ui-act-btn tp-action-btn-edit" title="تعديل" onclick="tpShowEditModal(${t.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="tp-action-btn ui-act-btn tp-action-btn-delete" title="حذف" onclick="tpShowDeleteModal(${t.id})"><i class="bi bi-trash3"></i></button>
                 </div>
             </td>
         </tr>
     `).join('');
+
+    renderPagination('tpPagination', tpFiltered.length, tpPage, tpPerPage, 'tpGoPage');
+}
+
+function tpGoPage(p) {
+    const total = Math.ceil(tpCurrentList.length / tpPerPage);
+    if (p < 1 || p > total) return;
+    tpPage = p;
+    tpRenderTable();
+    appPaginationScrollTop();
 }
 
 /* ── Filters ─────────────────────────────────────────────────── */
 function tpApplyFilters() {
+    tpPage = 1;
     const q = document.getElementById('tpSearchInput').value.trim().toLowerCase();
     const st = document.getElementById('tpFilterStatus').value;
     tpFiltered = tpAllData.filter(t => {
@@ -113,6 +131,7 @@ function tpApplyFilters() {
 }
 
 function tpClearFilters() {
+    tpPage = 1;
     document.getElementById('tpSearchInput').value = '';
     document.getElementById('tpFilterStatus').value = '';
     tpFiltered = [...tpAllData];

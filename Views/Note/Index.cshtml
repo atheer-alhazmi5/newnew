@@ -5,7 +5,7 @@
 
 <style>
 .nt-page-header-card {
-    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px;
     padding:20px 24px; margin-bottom:24px; box-shadow:var(--shadow);
 }
 .nt-page-header {
@@ -26,7 +26,7 @@
 .nt-clear-btn:hover { background:var(--gray-200); }
 .nt-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; direction:rtl; }
 .nt-card {
-    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px;
     padding:16px 18px; display:flex; flex-direction:column; gap:10px;
     box-shadow:var(--shadow); transition:box-shadow .15s, transform .15s;
     position:relative; min-height:150px;
@@ -38,7 +38,7 @@
 .nt-card-top-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
 .nt-pin-btn {
     width:32px; height:32px; border-radius:8px; border:2px solid var(--gray-200);
-    background:#fff; color:var(--gray-400); cursor:pointer; flex-shrink:0;
+    background:var(--surface-0); color:var(--gray-400); cursor:pointer; flex-shrink:0;
     display:inline-flex; align-items:center; justify-content:center; font-size:15px; transition:all .15s;
 }
 .nt-pin-btn:hover { border-color:var(--gold-600); color:var(--gold-600); background:var(--gold-50,#fffbeb); }
@@ -46,14 +46,14 @@
 .nt-card-menu-wrap { position:relative; }
 .nt-menu-btn {
     width:32px; height:32px; border-radius:8px; border:2px solid var(--gray-200);
-    background:#fff; color:var(--gray-500); cursor:pointer;
+    background:var(--surface-0); color:var(--gray-500); cursor:pointer;
     display:inline-flex; align-items:center; justify-content:center; font-size:16px; transition:all .15s;
 }
 .nt-menu-btn:hover { border-color:var(--gray-400); color:var(--gray-800); background:var(--gray-50); }
 .nt-card-menu {
     position:absolute; top:calc(100% + 6px); left:0; z-index:30;
     display:flex; align-items:center; gap:4px; padding:6px;
-    background:#fff; border:1px solid var(--gray-200); border-radius:10px;
+    background:var(--surface-0); border:1px solid var(--gray-200); border-radius:10px;
     box-shadow:0 10px 28px rgba(0,0,0,.12);
 }
 .nt-importance-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; align-self:flex-start; }
@@ -62,7 +62,7 @@
 .nt-importance-low { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
 .nt-card-dates { font-size:12px; color:var(--gray-500); display:flex; flex-direction:column; gap:3px; margin-top:auto; }
 .nt-card-dates span { display:flex; align-items:center; gap:5px; }
-.nt-act-btn { min-width:32px; width:32px; height:32px; border-radius:8px; font-weight:700; padding:0; font-size:14px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.nt-act-btn { min-width:32px; width:32px; height:32px; border-radius:8px; font-weight:700; padding:0; font-size:14px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
 .nt-act-detail { border-color:var(--info-500); color:var(--info-500); }
 .nt-act-detail:hover { background:var(--info-50); }
 .nt-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
@@ -84,15 +84,15 @@
 .nt-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; display:inline-flex; align-items:center; gap:8px; }
 .nt-save-btn:hover { background:var(--sa-700); }
 .nt-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
-.nt-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; }
+.nt-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); }
 .nt-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
 .nt-editor-toolbar { display:flex; flex-wrap:wrap; gap:4px; padding:8px 10px; background:var(--gray-50); border:2px solid var(--gray-200); border-bottom:none; border-radius:10px 10px 0 0; }
-.nt-editor-toolbar button { width:34px; height:34px; border:1px solid var(--gray-200); border-radius:8px; background:#fff; color:var(--gray-700); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:14px; transition:all .15s; }
+.nt-editor-toolbar button { width:34px; height:34px; border:1px solid var(--gray-200); border-radius:8px; background:var(--surface-0); color:var(--gray-700); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:14px; transition:all .15s; }
 .nt-editor-toolbar button:hover { background:var(--sa-50); border-color:var(--sa-300); color:var(--sa-700); }
 .nt-editor {
     min-height:140px; max-height:240px; overflow-y:auto; padding:12px 14px;
     border:2px solid var(--gray-200); border-radius:0 0 10px 10px;
-    font-size:14px; line-height:1.75; background:#fff;
+    font-size:14px; line-height:1.75; background:var(--surface-0);
 }
 .nt-editor:focus { outline:none; border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
 .nt-editor.is-invalid { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.12); }

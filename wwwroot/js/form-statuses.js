@@ -96,9 +96,9 @@ function fstRenderTable() {
             '<td style="text-align:center;"><span class="fst-status-pill ' + statusClass + '"><span class="fst-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-                    '<button type="button" class="fst-action-btn fst-action-btn-detail" onclick="fstShowDetails(' + sid + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button type="button" class="fst-action-btn fst-action-btn-edit" onclick="fstShowEditModal(' + sid + ')"><i class="bi bi-pencil-fill"></i> تحديث</button>' +
-                    '<button type="button" class="fst-action-btn fst-action-btn-delete" onclick="fstShowDeleteModal(' + sid + ',\'' + safeName + '\')"><i class="bi bi-trash3-fill"></i> حذف</button>' +
+                    '<button type="button" class="fst-action-btn ui-act-btn fst-action-btn-detail" title="تفاصيل" onclick="fstShowDetails(' + sid + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button type="button" class="fst-action-btn ui-act-btn fst-action-btn-edit" title="تحديث" onclick="fstShowEditModal(' + sid + ')"><i class="bi bi-pencil-fill"></i></button>' +
+                    '<button type="button" class="fst-action-btn ui-act-btn fst-action-btn-delete" title="حذف" onclick="fstShowDeleteModal(' + sid + ',\'' + safeName + '\')"><i class="bi bi-trash3-fill"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';

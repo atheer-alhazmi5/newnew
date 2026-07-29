@@ -74,13 +74,14 @@ function renderTable() {
         const isSelf = Number(u.id) === CURRENT_USER_ID;
         const actions = isSelf
             ? '<span style="color:var(--gray-400);font-weight:700;">-</span>'
-            : `<div class="d-flex gap-2">
-                    <button class="action-btn action-btn-edit" onclick="showEditUserModal(${u.id})">
-                        <i class="bi bi-pencil"></i> تعديل
+            : `<div class="ui-act-group">
+                    <button class="action-btn ui-act-btn action-btn-edit" title="تعديل" onclick="showEditUserModal(${u.id})">
+                        <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="action-btn ${isActive ? 'action-btn-stop' : 'action-btn-activate'}"
+                    <button class="action-btn ui-act-btn ${isActive ? 'action-btn-stop' : 'action-btn-activate'}"
+                            title="${isActive ? 'إيقاف' : 'تفعيل'}"
                             onclick="toggleStatus(${u.id})">
-                        ${isActive ? 'إيقاف' : 'تفعيل'}
+                        <i class="bi ${isActive ? 'bi-pause-circle' : 'bi-play-circle'}"></i>
                     </button>
                </div>`;
 

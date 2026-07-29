@@ -7,6 +7,7 @@ var seCanSubmit = true;
 var seEvaluateModal = null;
 var seNotesViewModal = null;
 var seRowsCache = [];
+var sePage = 1, sePerPage = 20, seCurrentList = [];
 var seForm = { overall: '', ease: '', design: '', performance: '', support: '' };
 
 var sePickedLabelMap = { ease: 'sePickedEase', design: 'sePickedDesign', performance: 'sePickedPerformance', support: 'sePickedSupport' };
@@ -215,7 +216,7 @@ function seRenderOverallChart(payload) {
         type: 'pie',
         data: {
             labels: levels,
-            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+            datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: appSurfaceColor() }]
         },
         options: {
             responsive: true,
@@ -300,22 +301,27 @@ function seShowNotes(id) {
 
 function seRenderTable(rows) {
     seRowsCache = rows || [];
+    seCurrentList = seRowsCache;
     var body = document.getElementById('seBody');
     if (!body) return;
     var colSpan = seIsAdmin ? 12 : 10;
 
     if (!rows || !rows.length) {
         body.innerHTML = '<tr><td colspan="' + colSpan + '"><div class="se-empty"><i class="bi bi-inbox" style="font-size:40px;color:var(--gray-300);display:block;margin-bottom:8px;"></i><p>لا توجد تقييمات بعد</p></div></td></tr>';
+        renderPagination('sePagination', 0, 1, sePerPage, 'seGoPage');
         return;
     }
 
-    body.innerHTML = rows.map(function (r, i) {
+    var totalPages = Math.max(1, Math.ceil(seRowsCache.length / sePerPage));
+    if (sePage > totalPages) sePage = totalPages;
+
+    body.innerHTML = seRowsCache.slice((sePage - 1) * sePerPage, sePage * sePerPage).map(function (r, i) {
         var published = seRowPublished(r);
         var rowId = seRowId(r);
         var rowCls = seIsAdmin && !published ? ' class="se-row-unpublished"' : '';
         var html = ''
             + '<tr' + rowCls + '>'
-            + '<td>' + (i + 1) + '</td>'
+            + '<td>' + ((sePage - 1) * sePerPage + i + 1) + '</td>'
             + '<td style="font-weight:700;">' + seEsc(seProp(r, 'submitterName', 'SubmitterName') || '—') + '</td>'
             + '<td>' + seEsc(seProp(r, 'organizationalUnitName', 'OrganizationalUnitName') || '—') + '</td>'
             + '<td style="direction:ltr;">' + seEsc(seProp(r, 'createdAt', 'CreatedAt') || '—') + '</td>'
@@ -340,6 +346,16 @@ function seRenderTable(rows) {
         html += '</tr>';
         return html;
     }).join('');
+
+    renderPagination('sePagination', seRowsCache.length, sePage, sePerPage, 'seGoPage');
+}
+
+function seGoPage(p) {
+    var total = Math.ceil(seCurrentList.length / sePerPage);
+    if (p < 1 || p > total) return;
+    sePage = p;
+    seRenderTable(seCurrentList);
+    appPaginationScrollTop();
 }
 
 async function seLoad() {
@@ -393,4 +409,5 @@ window.seSubmitFeedback = seSubmitFeedback;
 window.seSetPublish = seSetPublish;
 window.seTogglePublish = seTogglePublish;
 window.seShowNotes = seShowNotes;
+window.seGoPage = seGoPage;
 window.seLoad = seLoad;

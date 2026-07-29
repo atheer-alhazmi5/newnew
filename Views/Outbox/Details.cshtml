@@ -11,7 +11,7 @@
 .obd-subtitle .obd-req-num { color:var(--info-600); font-weight:800; direction:ltr; display:inline-block; }
 .obd-back-btn {
     display:inline-flex; align-items:center; gap:6px;
-    background:#fff; border:2px solid var(--gray-200); color:var(--gray-700);
+    background:var(--surface-0); border:2px solid var(--gray-200); color:var(--gray-700);
     border-radius:12px; padding:9px 20px; font-size:13px; font-weight:700;
     font-family:'Cairo',sans-serif; text-decoration:none; transition:all .15s;
 }
@@ -19,7 +19,7 @@
 
 /* بطاقة بيانات الطلب */
 .obd-info-card {
-    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px;
     box-shadow:var(--shadow); padding:22px 24px; margin-bottom:24px;
 }
 .obd-info-row { display:grid; gap:18px 24px; padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid var(--gray-100); }
@@ -31,8 +31,8 @@
 .obd-proc-name { display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-weight:800; font-size:15px; color:var(--gray-900); }
 
 /* أقسام الصفحة — نفس أسلوب التبويبات المتجاورة في أعلى لوحة المعلومات */
-.dash-tabs-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow); }
-.dash-tabs { display:flex; border-bottom:1px solid var(--gray-200); background:#fff; overflow-x:auto; }
+.dash-tabs-wrap { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow); }
+.dash-tabs { display:flex; border-bottom:1px solid var(--gray-200); background:var(--surface-0); overflow-x:auto; }
 .dash-tab {
     flex:1; min-width:140px; padding:14px 12px; text-align:center;
     font-size:13px; font-weight:700; color:var(--gray-400);
@@ -66,7 +66,7 @@
 
 /* ── بيانات النموذج ── */
 /* بلا إطار إضافي: بطاقة التبويبات توفّر الإطار، والقالب يوفّر إطاره الخاص عند وجوده */
-.obd-form-host { background:#fff; }
+.obd-form-host { background:var(--surface-0); }
 /* النموذج للقراءة فقط: تعطيل التفاعل مع الإدخالات مع الإبقاء على شكلها */
 .obd-form-host input, .obd-form-host textarea, .obd-form-host select { pointer-events:none; }
 .obd-form-host .fd-file-upload-wrap input[type="file"] { display:none; }
@@ -113,7 +113,7 @@ a.obd-file-chip:hover { background:var(--sa-100); border-color:var(--sa-400); co
 }
 .obd-add-toolbar .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
 .obd-attach-btn {
-    width:38px; height:38px; border-radius:10px; border:2px solid var(--gray-200); background:#fff;
+    width:38px; height:38px; border-radius:10px; border:2px solid var(--gray-200); background:var(--surface-0);
     color:var(--gray-600); display:inline-flex; align-items:center; justify-content:center;
     cursor:pointer; font-size:16px; transition:all .15s;
 }
@@ -140,14 +140,9 @@ a.obd-file-chip:hover { background:var(--sa-100); border-color:var(--sa-400); co
 .obd-send-btn:disabled { opacity:.6; cursor:not-allowed; }
 
 /* ── الوثائق المرفقة ── */
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .obd-docs-table { width:100%; margin:0; }
-.obd-docs-table thead th {
-    background:var(--gray-50); color:var(--gray-700); font-size:12.5px; font-weight:700;
-    white-space:nowrap; border-bottom:2px solid var(--gray-200); padding:10px 12px; text-align:right;
-}
-.obd-docs-table tbody td { font-size:13px; padding:10px 12px; vertical-align:middle; border-bottom:1px solid var(--gray-100); color:var(--gray-800); }
 .obd-docs-table tbody tr:last-child td { border-bottom:none; }
-.obd-docs-table tbody tr:hover { background:var(--sa-25); }
 .obd-doc-name { display:inline-flex; align-items:center; gap:8px; font-weight:600; }
 .obd-doc-name i { font-size:16px; color:var(--sa-600); }
 .obd-doc-src { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; background:var(--gray-100); border:1px solid var(--gray-200); color:var(--gray-700); font-size:11.5px; font-weight:700; white-space:nowrap; }

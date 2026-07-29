@@ -1,6 +1,9 @@
 'use strict';
 
 let wpData = [];
+let wpPage = 1;
+let wpPerPage = 20;
+let wpCurrentList = [];
 let wpLookups = {
     formDefinitions: [],
     executorBeneficiaries: [],
@@ -33,6 +36,9 @@ let wpUsedFormPickerExtras = [];
 let wpWfProcedureId = null;
 let wpWfCtx = null;
 let wpWfSteps = [];
+let wpWfPage = 1;
+let wpWfPerPage = 20;
+let wpWfCurrentList = [];
 let wpWfDragFromId = null;
 let wpCurrentTab = 1;
 
@@ -269,6 +275,7 @@ const wpWfDetModal = () => bootstrap.Modal.getOrCreateInstance(document.getEleme
 const wpWfStepFormModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('wpWorkflowStepModal'));
 
 async function wpLoad() {
+    wpPage = 1;
     const search = document.getElementById('wpSearch')?.value || '';
     const status = document.getElementById('wpFilterStatus')?.value || '';
     const validity = document.getElementById('wpFilterValidity')?.value || '';
@@ -381,12 +388,18 @@ function wpStatusBadge(status) {
 function wpRenderTable() {
     const tbody = document.getElementById('wpBody');
     if (!tbody) return;
-    if (!wpData.length) {
+    const list = wpData || [];
+    wpCurrentList = list;
+    if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-diagram-3"></i><p>لا توجد إجراءات بعد</p></div></td></tr>`;
+        renderPagination('wpPagination', 0, 1, wpPerPage, 'wpGoPage');
         return;
     }
+    const totalPages = Math.max(1, Math.ceil(list.length / wpPerPage));
+    if (wpPage > totalPages) wpPage = totalPages;
+    const pageStart = (wpPage - 1) * wpPerPage;
     const disp = wpIsAdmin ? '' : 'display:none;';
-    tbody.innerHTML = wpData.map((f, i) => {
+    tbody.innerHTML = list.slice(pageStart, wpPage * wpPerPage).map((f, i) => {
         const toggle = wpIsAdmin
             ? `<label class="fd-toggle" title="${f.status !== 'approved' ? 'يمكن التفعيل للإجراءات المعتمدة فقط' : ''}"><input type="checkbox" ${f.isActive ? 'checked' : ''} ${f.status !== 'approved' ? 'disabled' : ''} onchange="wpToggle(${f.id},this)"><span class="fd-slider"></span></label>`
             : '';
@@ -394,7 +407,7 @@ function wpRenderTable() {
         const tplName = f.formTemplateName || f.FormTemplateName || '—';
         const verLbl = f.versionLabel || f.VersionLabel || 'V1.0';
         return `<tr>
-            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i + 1}</td>
+            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${pageStart + i + 1}</td>
             <td style="font-weight:600;">${esc(f.code)}</td>
             <td>${esc(f.name)}</td>
             <td style="font-size:13px;">${patName === '—' ? '<span class="text-muted">—</span>' : esc(patName)}</td>
@@ -407,18 +420,27 @@ function wpRenderTable() {
             <td style="text-align:center;">${wpActions(f)}</td>
         </tr>`;
     }).join('');
+    renderPagination('wpPagination', list.length, wpPage, wpPerPage, 'wpGoPage');
+}
+
+function wpGoPage(p) {
+    const total = Math.ceil(wpCurrentList.length / wpPerPage);
+    if (p < 1 || p > total) return;
+    wpPage = p;
+    wpRenderTable();
+    appPaginationScrollTop();
 }
 
 function wpActions(f) {
     const parts = [];
     const isApproved = f.status === 'approved';
-    parts.push(`<button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`);
+    parts.push(`<button type="button" class="fd-action-btn ui-act-btn fd-action-btn-detail" title="تفاصيل" onclick="wpShowDetails(${f.id})"><i class="bi bi-eye"></i></button>`);
     if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
-        parts.push(`<button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`);
+        parts.push(`<button type="button" class="fd-action-btn ui-act-btn fd-action-btn-edit" title="تعديل" onclick="wpShowEdit(${f.id})"><i class="bi bi-pencil-square"></i></button>`);
     if (wpIsAdmin && f.status === 'pending')
-        parts.push(`<button type="button" class="fd-action-btn fd-action-btn-reject" onclick="wpShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`);
+        parts.push(`<button type="button" class="fd-action-btn ui-act-btn fd-action-btn-reject" title="رفض" onclick="wpShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i></button>`);
     if (!isApproved && (wpIsAdmin || f.status === 'draft' || f.status === 'rejected'))
-        parts.push(`<button type="button" class="fd-action-btn fd-action-btn-delete" onclick="wpShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`);
+        parts.push(`<button type="button" class="fd-action-btn ui-act-btn fd-action-btn-delete" title="حذف" onclick="wpShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i></button>`);
     return `<div class="wp-action-grid">${parts.join('')}</div>`;
 }
 
@@ -1168,7 +1190,7 @@ function wpTab2Html() {
             <button type="button" class="btn btn-primary btn-sm" style="border-radius:10px;font-weight:700;" onclick="wpWfShowAddForm()"><i class="bi bi-plus-lg"></i> إضافة خطوة</button>
         </div>
         <div class="table-responsive wp-wf-table-wrap">
-            <table class="table table-sm mb-0">
+            <table class="table table-sm mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="text-align:center;width:36px;"></th>
@@ -2280,6 +2302,7 @@ function wpWfInitStandalonePage() {
         return;
     }
     wpWfProcedureId = id;
+    wpWfPage = 1;
     wpWfLoad();
 }
 
@@ -2438,11 +2461,19 @@ function wpWfRenderTable() {
     const tbody = document.getElementById('wpWfBody');
     if (!tbody) return;
     const sorted = [].concat(wpWfSteps).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    wpWfCurrentList = sorted;
+    // شريط الترقيم موجود في صفحة سير العمل المستقلة فقط؛ داخل معالج الإجراء تُعرض كل الخطوات
+    const paged = !!document.getElementById('wpWfPagination');
     if (!sorted.length) {
         tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">لا توجد خطوات مسجّلة بعد</td></tr>';
+        renderPagination('wpWfPagination', 0, 1, wpWfPerPage, 'wpWfGoPage');
         return;
     }
-    tbody.innerHTML = sorted.map((s, i) => {
+    const totalPages = Math.max(1, Math.ceil(sorted.length / wpWfPerPage));
+    if (wpWfPage > totalPages) wpWfPage = totalPages;
+    const pageStart = paged ? (wpWfPage - 1) * wpWfPerPage : 0;
+    const rows = paged ? sorted.slice(pageStart, wpWfPage * wpWfPerPage) : sorted;
+    tbody.innerHTML = rows.map((s, i) => {
         const dec = !!s.isDecision;
         const mu = () => (dec ? ' class="wp-wf-muted"' : '');
         const na = dec ? '<span class="wp-wf-na">—</span>' : '';
@@ -2461,7 +2492,7 @@ function wpWfRenderTable() {
                 <i class="bi bi-grip-vertical wp-wf-step-drag" draggable="true" title="اسحب لإعادة الترتيب"
                     ondragstart="wpWfOnStepDragStart(event, ${s.id})" ondragend="wpWfOnStepDragEnd(event)"></i>
             </td>
-            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i + 1}</td>
+            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${pageStart + i + 1}</td>
             <td${mu()}>${esc(s.stepLabel || '')}${dec ? ' <span class="badge bg-secondary">قرار</span>' : ''}</td>
             <td style="text-align:center;">${assigneeMode}</td>
             <td>${wpWfAssigneeLabel(s)}</td>
@@ -2471,12 +2502,21 @@ function wpWfRenderTable() {
             <td${mu()}>${sec}</td>
             <td${mu()}>${fs}</td>
             <td style="text-align:center;white-space:nowrap;">
-                <button type="button" class="fd-action-btn fd-action-btn-detail" onclick="wpWfShowDetails(${s.id})"><i class="bi bi-eye"></i></button>
-                <button type="button" class="fd-action-btn fd-action-btn-edit" onclick="wpWfShowEditForm(${s.id})"><i class="bi bi-pencil-square"></i></button>
-                <button type="button" class="fd-action-btn fd-action-btn-delete" onclick="wpWfDeleteStep(${s.id})"><i class="bi bi-trash3"></i></button>
+                <button type="button" class="fd-action-btn ui-act-btn fd-action-btn-detail" title="تفاصيل" onclick="wpWfShowDetails(${s.id})"><i class="bi bi-eye"></i></button>
+                <button type="button" class="fd-action-btn ui-act-btn fd-action-btn-edit" title="تعديل" onclick="wpWfShowEditForm(${s.id})"><i class="bi bi-pencil-square"></i></button>
+                <button type="button" class="fd-action-btn ui-act-btn fd-action-btn-delete" title="حذف" onclick="wpWfDeleteStep(${s.id})"><i class="bi bi-trash3"></i></button>
             </td>
         </tr>`;
     }).join('');
+    renderPagination('wpWfPagination', sorted.length, wpWfPage, wpWfPerPage, 'wpWfGoPage');
+}
+
+function wpWfGoPage(p) {
+    const total = Math.ceil(wpWfCurrentList.length / wpWfPerPage);
+    if (p < 1 || p > total) return;
+    wpWfPage = p;
+    wpWfRenderTable();
+    appPaginationScrollTop();
 }
 
 /** عرض اسم المنفذ (محدد=دور، أو ثابت=نوع + وحدة عند اللزوم). */

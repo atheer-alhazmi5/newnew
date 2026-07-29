@@ -28,6 +28,7 @@ function myDelDetailRow(label, innerHtml) {
 }
 
 var myDelRows = [];
+var myDelPage = 1, myDelPerPage = 20, myDelCurrentList = [];
 
 async function myDelLoad() {
     try {
@@ -48,14 +49,18 @@ async function myDelLoad() {
 function myDelRenderTable() {
     var body = document.getElementById('myDelBody');
     if (!body) return;
+    myDelCurrentList = myDelRows;
     if (!myDelRows.length) {
         body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد تفويضات مسجلة لك</td></tr>';
+        renderPagination('myDelPagination', 0, 1, myDelPerPage, 'myDelGoPage');
         return;
     }
+    var totalPages = Math.max(1, Math.ceil(myDelRows.length / myDelPerPage));
+    if (myDelPage > totalPages) myDelPage = totalPages;
     var html = '';
-    myDelRows.forEach(function (d, idx) {
+    myDelRows.slice((myDelPage - 1) * myDelPerPage, myDelPage * myDelPerPage).forEach(function (d, idx) {
         html += '<tr>' +
-            '<td style="text-align:center;">' + (idx + 1) + '</td>' +
+            '<td style="text-align:center;">' + ((myDelPage - 1) * myDelPerPage + idx + 1) + '</td>' +
             '<td>' + myDelNameRoleCell(d.delegatorName || d.DelegatorName, d.delegatorRoleDisplay || d.DelegatorRoleDisplay) + '</td>' +
             '<td style="font-size:12px;">' + myDelEsc(d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '') + '</td>' +
             '<td>' + myDelNameRoleCell(d.delegateeName || d.DelegateeName, d.delegateeRoleDisplay || d.DelegateeRoleDisplay) + '</td>' +
@@ -63,10 +68,19 @@ function myDelRenderTable() {
             '<td dir="ltr" style="font-size:12px;">' + myDelEsc(d.startDate || d.StartDate || '') + '</td>' +
             '<td dir="ltr" style="font-size:12px;">' + myDelEsc(d.endDate || d.EndDate || '') + '</td>' +
             '<td style="text-align:center;">' + myDelStatusLabel(d.statusCode || d.StatusCode) + '</td>' +
-            '<td style="text-align:center;"><button type="button" class="btn btn-sm btn-outline-info py-0 px-2" onclick="myDelShowDetails(' + d.id + ')"><i class="bi bi-eye"></i></button></td>' +
+            '<td style="text-align:center;"><button type="button" class="btn btn-sm btn-outline-info ui-act-btn" title="تفاصيل" onclick="myDelShowDetails(' + d.id + ')"><i class="bi bi-eye"></i></button></td>' +
             '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('myDelPagination', myDelRows.length, myDelPage, myDelPerPage, 'myDelGoPage');
+}
+
+function myDelGoPage(p) {
+    var total = Math.ceil(myDelCurrentList.length / myDelPerPage);
+    if (p < 1 || p > total) return;
+    myDelPage = p;
+    myDelRenderTable();
+    appPaginationScrollTop();
 }
 
 async function myDelShowDetails(id) {

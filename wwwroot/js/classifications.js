@@ -77,9 +77,9 @@ function clsRenderTable() {
             '<td style="text-align:center;"><span class="cls-status-pill ' + statusClass + '"><span class="cls-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +
-                    '<button class="cls-action-btn cls-action-btn-detail" onclick="clsShowDetails(' + c.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="cls-action-btn cls-action-btn-edit" onclick="clsShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="cls-action-btn cls-action-btn-delete" onclick="clsShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
+                    '<button class="cls-action-btn ui-act-btn cls-action-btn-detail" title="تفاصيل" onclick="clsShowDetails(' + c.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="cls-action-btn ui-act-btn cls-action-btn-edit" title="تحديث" onclick="clsShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="cls-action-btn ui-act-btn cls-action-btn-delete" title="حذف" onclick="clsShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';

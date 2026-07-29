@@ -117,9 +117,9 @@ function fmcRenderTable() {
             '<td style="text-align:center;"><span class="fmc-status-pill ' + statusClass + '"><span class="fmc-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +
-                    '<button class="fmc-action-btn fmc-action-btn-detail" onclick="fmcShowDetails(' + c.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="fmc-action-btn fmc-action-btn-edit" onclick="fmcShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="fmc-action-btn fmc-action-btn-delete" onclick="fmcShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
+                    '<button class="fmc-action-btn ui-act-btn fmc-action-btn-detail" title="تفاصيل" onclick="fmcShowDetails(' + c.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="fmc-action-btn ui-act-btn fmc-action-btn-edit" title="تحديث" onclick="fmcShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="fmc-action-btn ui-act-btn fmc-action-btn-delete" title="حذف" onclick="fmcShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';

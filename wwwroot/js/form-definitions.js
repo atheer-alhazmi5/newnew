@@ -12,6 +12,11 @@ let fdLookups       = { formClasses:[], formTypes:[], templates:[], templateFilt
 let fdOrgUnits      = [];
 let fdFilterOuExpanded = {};
 
+// ترقيم صفحات جدول النماذج (مستقل تماماً عن مُرقّم صفحات النموذج داخل المعالج)
+let fdtPage        = 1;
+let fdtPerPage     = 20;
+let fdtCurrentList = [];
+
 function fdMapOrgUnits(list) {
     return (list || []).map(u => ({
         id: u.id ?? u.Id,
@@ -504,7 +509,7 @@ function fdEnsureFieldTypeBadgeStyles() {
   border-color: var(--gray-200, #e5e7eb);
 }
 .fd-field-type-badge--rich {
-  background: #fffbeb;
+  background: var(--surface-0)beb;
   color: #92400e;
   border-color: #fde68a;
 }
@@ -514,17 +519,17 @@ function fdEnsureFieldTypeBadgeStyles() {
   border-color: var(--info-200, #bfdbfe);
 }
 .fd-field-type-badge--choice {
-  background: #ede9fe;
+  background: #f5f3ff;
   color: #5b21b6;
   border-color: #ddd6fe;
 }
 .fd-field-type-badge--date {
   background: var(--sa-50, #ecfdf5);
-  color: var(--sa-800, #065f46);
+  color: var(--sa-800);
   border-color: var(--sa-200, #a7f3d0);
 }
 .fd-field-type-badge--file {
-  background: #fff7ed;
+  background: var(--surface-0)7ed;
   color: #9a3412;
   border-color: #fed7aa;
 }
@@ -544,17 +549,17 @@ function fdEnsureFieldTypeBadgeStyles() {
   border-color: var(--gray-300, #d1d5db);
 }
 .fd-field-type-badge--bool {
-  background: #dbeafe;
+  background: #eff6ff;
   color: #1d4ed8;
   border-color: #93c5fd;
 }
 .fd-field-type-badge--meta {
-  background: #f3e8ff;
+  background: #faf5ff;
   color: #6b21a8;
   border-color: #e9d5ff;
 }
 .fd-field-type-badge--media {
-  background: #fce7f3;
+  background: #fdf2f8;
   color: #9d174d;
   border-color: #f9a8d4;
 }
@@ -571,7 +576,7 @@ table .fd-field-req:not([style*="background"]) {
   border-radius: 999px;
   font-weight: 700;
   font-size: 11px;
-  background: #dcf5e8;
+  background: var(--gray-100);
   color: #0f9f5c;
 }
 `;
@@ -1199,7 +1204,7 @@ function fdBuildReadyTableGridHtml(g, opt, ttAttr) {
     html += '<table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
     fields.forEach(function (f) {
         const tip = f.tooltipText ? ' title="' + fdEscAttr(f.tooltipText) + '"' : '';
-        html += '<th' + tip + ' style="background:' + headerColor + ' !important;color:#1f2937 !important;">'
+        html += '<th' + tip + ' style="background:' + headerColor + ' !important;color:var(--gray-900) !important;">'
             + esc(f.fieldName || '')
             + (f.isRequired ? ' <span class="required-star">*</span>' : '')
             + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '')
@@ -1218,7 +1223,7 @@ function fdBuildReadyTableGridHtml(g, opt, ttAttr) {
         html += '</tr>';
     }
     if (rowMode === 'مفتوح' && !readOnly) {
-        html += '<tr class="fd-ready-table-add-row"><td colspan="' + fields.length + '" style="padding:12px;text-align:center;border:1px dashed #e5e7eb;">'
+        html += '<tr class="fd-ready-table-add-row"><td colspan="' + fields.length + '" style="padding:12px;text-align:center;border:1px dashed var(--gray-200);">'
             + '<button type="button" class="rt-add-fields-btn" onclick="fdReadyTableAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
     }
     html += '</tbody></table></div>';
@@ -1569,7 +1574,7 @@ function fdBuildAutoDataFieldHtml(f, props, opt) {
     } else if (showPending) {
         rows = '<div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius:10px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div>';
         keys.forEach(k => {
-            rows += `<div class="fd-auto-data-row fd-auto-data-row-pending" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:#fff;border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);">${esc(fdAutoDataLabelForKey(group, k))}</span><span class="fd-auto-data-val text-muted">—</span></div>`;
+            rows += `<div class="fd-auto-data-row fd-auto-data-row-pending" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);">${esc(fdAutoDataLabelForKey(group, k))}</span><span class="fd-auto-data-val text-muted">—</span></div>`;
         });
     } else {
         keys.forEach(k => {
@@ -1585,7 +1590,7 @@ function fdBuildAutoDataFieldHtml(f, props, opt) {
             } else {
                 valHtml = val ? esc(val) : '<span class="text-muted">—</span>';
             }
-            rows += `<div class="fd-auto-data-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 10px;background:#fff;border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);min-width:38%;">${esc(lbl)}</span><span class="fd-auto-data-val" style="flex:1;text-align:end;font-weight:600;color:var(--gray-800);">${valHtml}</span></div>`;
+            rows += `<div class="fd-auto-data-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);min-width:38%;">${esc(lbl)}</span><span class="fd-auto-data-val" style="flex:1;text-align:end;font-weight:600;color:var(--gray-800);">${valHtml}</span></div>`;
         });
     }
 
@@ -1638,7 +1643,7 @@ function fdBuildSinglePropHtml(p, pfx) {
         const dOther = p.perOptionOther ? ' data-fd-per-option-other="1"' : '';
         return `<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">${p.label}</label>
         <p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً.</p>
-        <div id="${pfx}_${p.key}_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="${p.choiceMode||'single'}"${dOther}></div></div>`;
+        <div id="${pfx}_${p.key}_options_editor" class="border rounded-3 p-3" style="background:var(--surface-app);" data-mode="${p.choiceMode||'single'}"${dOther}></div></div>`;
     }
     if (p.type === 'textarea') {
         const fid = `${pfx}_${p.key}`;
@@ -2418,13 +2423,13 @@ function fdEnsureDateFieldStyles() {
   min-width: 2.6rem;
   padding-inline: 0.6rem;
   background: var(--sa-50, #ecfdf5);
-  color: var(--sa-700, #047857);
+  color: var(--sa-700);
   border-color: var(--gray-200, #e5e7eb);
   transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 .fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn:hover:not([disabled]) {
   background: var(--sa-100, #d1fae5);
-  color: var(--sa-800, #065f46);
+  color: var(--sa-800);
   border-color: var(--sa-300, #6ee7b7);
 }
 .fd-date-field-wrap .fd-date-input-group > .fd-date-cal-btn .bi-calendar3 {
@@ -2491,7 +2496,7 @@ function fdEnsureDateFieldStyles() {
   width: ${FD_CAL_POP_PANEL_WIDTH}px;
   max-width: calc(100vw - 14px);
   box-sizing: border-box;
-  background: #ffffff;
+  background: var(--surface-0);
   border: 1px solid rgba(15, 23, 42, 0.09);
   border-radius: 10px;
   box-shadow:
@@ -2509,7 +2514,7 @@ function fdEnsureDateFieldStyles() {
   font-size: 11.75px;
   font-weight: 700;
   line-height: 1.35;
-  color: #0f172a;
+  color: var(--gray-900);
   letter-spacing: 0.02em;
   padding: 4px 2px;
   min-height: 2.125rem;
@@ -2530,17 +2535,17 @@ function fdEnsureDateFieldStyles() {
   justify-content: center;
   border-radius: 8px !important;
   border: 1px solid rgba(15, 23, 42, 0.12) !important;
-  background: #ffffff !important;
-  color: #334155 !important;
+  background: var(--surface-0) !important;
+  color: var(--gray-800) !important;
   font-size: 1.1rem !important;
   line-height: 1 !important;
   font-weight: 600;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 .fd-cal-pop .fd-cal-nav-btn:hover:not(:disabled) {
-  background: #f8fafc !important;
+  background: var(--gray-50) !important;
   border-color: rgba(15, 23, 42, 0.2) !important;
-  color: #0f172a !important;
+  color: var(--gray-900) !important;
 }
 
 .fd-cal-pop .fd-cal-weekdays,
@@ -2555,7 +2560,7 @@ function fdEnsureDateFieldStyles() {
   padding-top: 6px;
   padding-bottom: 6px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 
 .fd-cal-pop .fd-cal-wd {
@@ -2564,7 +2569,7 @@ function fdEnsureDateFieldStyles() {
   justify-content: center;
   font-size: 10.5px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--gray-700);
   line-height: 1.2;
   min-height: 1.125rem;
   text-transform: none;
@@ -2604,20 +2609,20 @@ function fdEnsureDateFieldStyles() {
 }
 
 .fd-cal-pop .fd-cal-day--enabled {
-  background: #fff !important;
-  color: #0f172a !important;
+  background: var(--surface-0) !important;
+  color: var(--gray-900) !important;
 }
 .fd-cal-pop .fd-cal-day--enabled:not(:disabled):hover {
-  background: #f1f5f9 !important;
+  background: var(--gray-100) !important;
   border-color: #cbd5e1 !important;
 }
 
 .fd-cal-pop .fd-cal-day--disabled {
-  background: #fafafa !important;
-  color: #94a3b8 !important;
+  background: var(--surface-app) !important;
+  color: var(--gray-500) !important;
   opacity: 0.9;
   cursor: not-allowed !important;
-  border-color: #f1f5f9 !important;
+  border-color: var(--gray-100) !important;
 }
 
 .fd-cal-pop .fd-cal-day--selected.fd-cal-day--enabled {
@@ -2634,7 +2639,7 @@ function fdEnsureDateFieldStyles() {
   border-top: 1px solid rgba(15, 23, 42, 0.06);
   padding: 6px 10px 8px;
   text-align: center;
-  background: #fafbfc;
+  background: var(--gray-50);
 }
 
 .fd-cal-pop .fd-cal-footer .fd-cal-clear {
@@ -3237,7 +3242,7 @@ function fdBuildFieldInput(f, opt) {
     const defVal  = props.defaultValue != null ? String(props.defaultValue).replace(/"/g,'&quot;') : '';
     const roAttr  = props.readOnly ? ' readonly' : '';
     const roSel   = props.readOnly ? ' disabled' : '';
-    const roStyle = props.readOnly ? 'background:#f3f4f6;cursor:not-allowed;' : '';
+    const roStyle = props.readOnly ? 'background:var(--gray-100);cursor:not-allowed;' : '';
     const reqAttr = f.isRequired ? ' required' : '';
     const maxL    = (props.maxLength||props.charLimit) ? ` maxlength="${props.maxLength||props.charLimit}"` : '';
     const minL    = props.minLength ? ` minlength="${props.minLength}"` : '';
@@ -3560,7 +3565,7 @@ function fdBuildFieldInput(f, opt) {
             `</div>`;
     } else if (f.fieldType === 'فاصل صفحات') {
         const lbl = (props.pageLabel || '').trim();
-        inp = `<div class="fd-page-break" data-fd-pagebreak="1" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1.5px dashed var(--info-300,#93c5fd);background:var(--info-50,#eff6ff);color:var(--info-700,#1d4ed8);border-radius:10px;font-weight:700;font-size:12.5px;"${ttAttr}>` +
+        inp = `<div class="fd-page-break" data-fd-pagebreak="1" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1.5px dashed var(--info-300,#93c5fd);background:var(--info-50,#eff6ff);color:var(--info-700);border-radius:10px;font-weight:700;font-size:12.5px;"${ttAttr}>` +
             `<i class="bi bi-file-earmark-break" aria-hidden="true"></i>` +
             `<span>فاصل صفحات</span>` +
             (lbl ? `<span style="margin-inline-start:auto;font-weight:600;color:var(--info-600);">→ ${esc(lbl)}</span>` : '') +
@@ -4475,6 +4480,7 @@ function fdInitStep1OrgUnitTree() {
 }
 
 async function fdLoad() {
+    fdtPage = 1;
     const search = document.getElementById('fdSearch')?.value||'';
     const status = document.getElementById('fdFilterStatus')?.value||'';
     const catId  = document.getElementById('fdFilterCat')?.value||'';
@@ -4534,11 +4540,17 @@ function fdClear() {
 function fdRenderTable() {
     const tbody = document.getElementById('fdBody');
     if (!tbody) return;
-    if (!fdData.length) {
+    const list = fdData || [];
+    fdtCurrentList = list;
+    if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-file-earmark-x"></i><p>لا توجد نماذج بعد</p></div></td></tr>`;
+        renderPagination('fdtPagination', 0, 1, fdtPerPage, 'fdtGoPage');
         return;
     }
-    tbody.innerHTML = fdData.map((f,i) => {
+    const totalPages = Math.max(1, Math.ceil(list.length / fdtPerPage));
+    if (fdtPage > totalPages) fdtPage = totalPages;
+    const pageStart = (fdtPage - 1) * fdtPerPage;
+    tbody.innerHTML = list.slice(pageStart, fdtPage * fdtPerPage).map((f,i) => {
         const disp = '';
         let toggle;
         if (fdIsAdmin) {
@@ -4553,7 +4565,7 @@ function fdRenderTable() {
             ? `<span class="fd-activever-badge">${esc(f.activeVersionLabel)}</span>`
             : `<span class="fd-activever-empty">—</span>`;
         return `<tr>
-            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${i+1}</td>
+            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${pageStart+i+1}</td>
             <td style="text-align:center;">${publicIdCell}</td>
             <td style="font-weight:600;">${esc(f.name)}</td>
             <td>${esc(f.formClassName)}</td>
@@ -4566,6 +4578,15 @@ function fdRenderTable() {
             <td style="text-align:center;">${fdActions(f)}</td>
         </tr>`;
     }).join('');
+    renderPagination('fdtPagination', list.length, fdtPage, fdtPerPage, 'fdtGoPage');
+}
+
+function fdtGoPage(p) {
+    const total = Math.ceil(fdtCurrentList.length / fdtPerPage);
+    if (p < 1 || p > total) return;
+    fdtPage = p;
+    fdRenderTable();
+    appPaginationScrollTop();
 }
 
 function fdStatusBadge(status) {
@@ -4583,19 +4604,19 @@ function fdOwnershipBadge(ownership) {
 
 function fdActions(f) {
     let h = '<div class="fd-actions-wrap d-flex gap-1 justify-content-center flex-wrap align-items-center">';
-    h += `<button class="fd-action-btn fd-action-btn-detail" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i> تفاصيل</button>`;
+    h += `<button class="fd-action-btn ui-act-btn fd-action-btn-detail" title="تفاصيل" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i></button>`;
     const isApproved = f.status === 'approved';
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
-        h += `<button class="fd-action-btn fd-action-btn-edit" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i> تعديل</button>`;
+        h += `<button class="fd-action-btn ui-act-btn fd-action-btn-edit" title="تعديل" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i></button>`;
 
     if (isApproved)
-        h += `<button class="fd-action-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i> إصدار نسخة</button>`;
+        h += `<button class="fd-action-btn ui-act-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i></button>`;
 
     if (fdIsAdmin && f.status === 'pending') {
-        h += `<button class="fd-action-btn fd-action-btn-reject" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i> رفض</button>`;
+        h += `<button class="fd-action-btn ui-act-btn fd-action-btn-reject" title="رفض" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i></button>`;
     }
     if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
-        h += `<button class="fd-action-btn fd-action-btn-delete" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i> حذف</button>`;
+        h += `<button class="fd-action-btn ui-act-btn fd-action-btn-delete" title="حذف" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i></button>`;
     return h + '</div>';
 }
 
@@ -5539,7 +5560,7 @@ function fdRuleCardHtml(r, n) {
     const actOpts = FD_RULE_ACTIONS.map(a => `<option value="${esc(a)}" ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('');
     const sourceOpts = fdRuleBuildSourceOptions(r.sourceRef || '');
     const targetOpts = fdRuleBuildUnifiedOptions(r.targetRef || '', r.sourceRef || '');
-    return `<div class="fd-rule-card" style="background:#fff;border:1.5px solid var(--gray-200);border-radius:12px;padding:16px 18px 14px;margin-top:14px;position:relative;">
+    return `<div class="fd-rule-card" style="background:var(--surface-0);border:1.5px solid var(--gray-200);border-radius:12px;padding:16px 18px 14px;margin-top:14px;position:relative;">
         <div class="d-flex align-items-center justify-content-between" style="margin-bottom:14px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;">
             <div style="font-weight:800;color:var(--sa-700);font-size:13.5px;display:flex;align-items:center;gap:8px;">
                 <span style="background:var(--sa-50);color:var(--sa-700);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">${n}</span>
@@ -6235,8 +6256,8 @@ function fdRenderFieldsTable() {
                 <td style="font-size:12px;color:var(--gray-700);">${esc(sec.title)}</td>
                 <td style="font-size:11px;color:var(--gray-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${fdEscAttr(layout)}">${esc(layout)}</td>
                 <td style="white-space:nowrap;text-align:center;">
-                    <button class="fd-action-btn fd-action-btn-edit" onclick="fdEditField(${origIdx})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-pencil"></i></button>
-                    <button class="fd-action-btn fd-action-btn-delete" onclick="fdDeleteField(${origIdx})" style="padding:3px 8px;font-size:10px;"><i class="bi bi-trash"></i></button>
+                    <button class="fd-action-btn ui-act-btn fd-action-btn-edit" title="تعديل" onclick="fdEditField(${origIdx})"><i class="bi bi-pencil"></i></button>
+                    <button class="fd-action-btn ui-act-btn fd-action-btn-delete" title="حذف" onclick="fdDeleteField(${origIdx})"><i class="bi bi-trash"></i></button>
                 </td>
             </tr>`;
         });

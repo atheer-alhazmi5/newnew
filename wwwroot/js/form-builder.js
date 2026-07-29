@@ -330,7 +330,7 @@ function renderStep1() {
         '<div class="ms-trigger" onclick="toggleMsDropdown(\'deptDropdown\')">' +
         '<span>' + deptLabel + '</span>' +
         (deptCount > 0 ? '<span class="ms-count">' + deptCount + '</span>' : '') +
-        '<i class="bi bi-chevron-down" style="font-size:12px;color:#a3a3a3;"></i></div>' +
+        '<i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i></div>' +
         '<div class="ms-panel" style="display:none;">' +
         '<div class="ms-all" onclick="toggleAllMs(\'dept\')">' +
         '<input class="form-check-input" type="checkbox" ' + (allDeptsChecked ? 'checked' : '') + ' style="pointer-events:none;">' +
@@ -341,7 +341,7 @@ function renderStep1() {
         '<div class="ms-trigger" onclick="toggleMsDropdown(\'userDropdown\')">' +
         '<span>' + userLabel + '</span>' +
         (userCount > 0 ? '<span class="ms-count">' + userCount + '</span>' : '') +
-        '<i class="bi bi-chevron-down" style="font-size:12px;color:#a3a3a3;"></i></div>' +
+        '<i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i></div>' +
         '<div class="ms-panel" style="display:none;">' +
         '<input class="ms-search" type="text" placeholder="ابحث بالاسم..." oninput="filterMsUsers(this.value)">' +
         '<div class="ms-all" onclick="toggleAllMs(\'user\')">' +
@@ -489,7 +489,7 @@ function updateMsTrigger(type) {
     var trigger = dd.querySelector('.ms-trigger');
     trigger.innerHTML = '<span>' + label + '</span>' +
         (arr.length > 0 ? '<span class="ms-count">' + arr.length + '</span>' : '') +
-        '<i class="bi bi-chevron-down" style="font-size:12px;color:#a3a3a3;"></i>';
+        '<i class="bi bi-chevron-down" style="font-size:12px;color:var(--gray-400);"></i>';
 }
 
 function updateMsAllCheckbox(type) {
@@ -547,10 +547,10 @@ function renderQCard(q, si, qi) {
     var validationHtml = '';
     if (q.type === 'short_answer') {
         validationHtml = '<div class="q-options" style="padding-right:44px;">' +
-            '<small style="color:#737373;"><i class="bi bi-info-circle" style="margin-left:4px;"></i> الحد الأقصى: 255 حرف</small></div>';
+            '<small style="color:var(--gray-500);"><i class="bi bi-info-circle" style="margin-left:4px;"></i> الحد الأقصى: 255 حرف</small></div>';
     } else if (q.type === 'paragraph') {
         validationHtml = '<div class="q-options" style="padding-right:44px;">' +
-            '<small style="color:#737373;"><i class="bi bi-info-circle" style="margin-left:4px;"></i> الحد الأقصى: 1000 حرف</small></div>';
+            '<small style="color:var(--gray-500);"><i class="bi bi-info-circle" style="margin-left:4px;"></i> الحد الأقصى: 1000 حرف</small></div>';
     }
 
     var optionsHtml = '';
@@ -565,7 +565,7 @@ function renderQCard(q, si, qi) {
         ).join('') +
         '<button class="q-add-option" onclick="addOption(' + si + ',' + qi + ')">' +
         '<i class="bi bi-plus"></i> إضافة خيار</button>' +
-        '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e5e7eb;">' +
+        '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-200);">' +
         '<div class="form-check form-switch">' +
         '<input class="form-check-input q-enable-other" type="checkbox" id="other_' + si + '_' + qi + '" ' + (q.enableOther ? 'checked' : '') + '>' +
         '<label class="form-check-label" for="other_' + si + '_' + qi + '" style="font-size:13px;font-weight:600;">تفعيل خيار "أخرى"</label>' +
@@ -680,7 +680,7 @@ function renderStep3() {
         '<div style="width:64px;height:64px;border-radius:50%;background:var(--sa-600);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:#fff;">' +
         iconSvg(formData.icon, 28) + '</div>' +
         '<div style="font-weight:700;font-size:20px;color:var(--gold-600);">' + esc(formData.name) + '</div>' +
-        (formData.description ? '<div style="color:#6c757d;font-size:14px;margin-top:4px;">' + esc(formData.description) + '</div>' : '');
+        (formData.description ? '<div style="color:var(--gray-500);font-size:14px;margin-top:4px;">' + esc(formData.description) + '</div>' : '');
 
     if (formData.pinAsReady) {
         topCard += '<div style="background:var(--sa-50);border:1px solid var(--sa-200);border-radius:12px;padding:16px;margin-top:20px;display:flex;align-items:center;gap:12px;justify-content:center;">' +
@@ -691,9 +691,9 @@ function renderStep3() {
         const selectedUsers = INIT_USERS.filter(u => formData.targetUserIds.includes(u.id));
 
         topCard += '<div class="row g-3 mt-3">' +
-            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--sa-600);">' + totalQ + '</div><div style="font-size:13px;color:#6c757d;">عدد الأسئلة</div></div></div>' +
-            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--gold-600);">' + selectedDepts.length + '</div><div style="font-size:13px;color:#6c757d;">أقسام مستهدفة</div></div></div>' +
-            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--info-600);">' + selectedUsers.length + '</div><div style="font-size:13px;color:#6c757d;">مستخدمين مستهدفين</div></div></div></div>';
+            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--sa-600);">' + totalQ + '</div><div style="font-size:13px;color:var(--gray-500);">عدد الأسئلة</div></div></div>' +
+            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--gold-600);">' + selectedDepts.length + '</div><div style="font-size:13px;color:var(--gray-500);">أقسام مستهدفة</div></div></div>' +
+            '<div class="col-md-4"><div class="preview-card" style="text-align:center;"><div style="font-size:28px;font-weight:800;color:var(--info-600);">' + selectedUsers.length + '</div><div style="font-size:13px;color:var(--gray-500);">مستخدمين مستهدفين</div></div></div></div>';
 
         if (selectedDepts.length) {
             topCard += '<div style="margin-top:16px;"><strong style="font-size:13px;">الأقسام:</strong> ' +
@@ -704,7 +704,7 @@ function renderStep3() {
                 selectedUsers.map(u => '<span class="badge bg-primary-subtle text-primary" style="margin:2px;">' + esc(u.fullName) + '</span>').join('') + '</div>';
         }
         if (formData.startDate || formData.endDate) {
-            topCard += '<div style="margin-top:8px;font-size:13px;color:#6c757d;"><i class="bi bi-calendar3" style="margin-left:4px;"></i> ';
+            topCard += '<div style="margin-top:8px;font-size:13px;color:var(--gray-500);"><i class="bi bi-calendar3" style="margin-left:4px;"></i> ';
             if (formData.startDate) topCard += 'من ' + formData.startDate + ' ';
             if (formData.endDate) topCard += 'إلى ' + formData.endDate;
             topCard += '</div>';

@@ -16,16 +16,16 @@
 .bnf-save-btn:hover { background:var(--sa-700); }
 .bnf-cancel-btn { padding:9px 24px; border-radius:10px; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .15s; }
 .bnf-cancel-btn:hover { background:#4b5563; }
-.bnf-section { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.bnf-section { background:var(--surface-0); border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
 .bnf-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px 0; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
 .bnf-section-title i { font-size:15px; color:var(--sa-600); }
 .required-star { color:#ef4444; margin-right:4px; }
 .bnf-action-btn { min-width:70px; border-radius:8px; font-weight:700; padding:6px 12px; font-size:11.5px; line-height:1.3; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; transition:all .15s; border:1.5px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; box-sizing:border-box; background:transparent; }
-.bnf-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.bnf-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .bnf-action-btn-detail:hover { background:var(--info-50); }
-.bnf-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.bnf-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
 .bnf-action-btn-edit:hover { background:var(--sa-50); }
-.bnf-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.bnf-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
 .bnf-action-btn-delete:hover { background:var(--error-50); }
 .bnf-form-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:14px; }
 .bnf-form-row:last-child { margin-bottom:0; }
@@ -46,7 +46,7 @@
 .bnf-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
 .bnf-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); }
 .bnf-attach-preview-wrap { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
-.bnf-activation-wrap { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#fff; border-radius:10px; border:1px solid var(--gray-200); }
+.bnf-activation-wrap { display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--surface-0); border-radius:10px; border:1px solid var(--gray-200); }
 .bnf-activation-wrap .form-check-input { width:44px; height:22px; cursor:pointer; }
 .bnf-activation-wrap .form-check-label { font-weight:700; font-size:13px; cursor:pointer; }
 .bnf-pw-hint { margin-top:8px; padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; font-size:11.5px; line-height:1.55; color:var(--gray-700); }
@@ -60,10 +60,10 @@
 .bnf-pw-hint-list li.pw-met .bnf-pw-req-icon { color:#fff; background:#059669; }
 .bnf-pw-hint-list strong { color:var(--gray-800); font-weight:700; }
 .bnf-pw-hint-list li.pw-met strong { color:#059669; }
-.bnf-pw-hint-chars { display:inline-block; direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:11px; padding:2px 6px; background:#fff; border:1px solid var(--gray-200); border-radius:6px; }
-.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
+.bnf-pw-hint-chars { display:inline-block; direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:11px; padding:2px 6px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:6px; }
+.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: var(--surface-0); display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
-.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: var(--surface-0); border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .bnf-ou-tree-row { user-select: none; border-bottom: 1px solid var(--gray-100); transition: background .15s ease; gap: 8px; }
 .bnf-ou-tree-row:hover { background: var(--sa-25); }
 .bnf-ou-tree-row.is-selected { background: var(--info-50); }
@@ -74,10 +74,9 @@
 .bnf-ou-tree-name { text-align: right; font-size: 14px; line-height: 1.4; min-width: 0; }
 .bnf-tbl-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid var(--gray-200); background:var(--gray-100); vertical-align:middle; }
 .bnf-tbl-avatar-placeholder { width:32px; height:32px; border-radius:50%; background:var(--gray-100); display:inline-flex; align-items:center; justify-content:center; border:2px solid var(--gray-200); color:var(--gray-400); font-size:14px; }
-.bnf-tbl .table { font-size:13px; }
-.bnf-tbl .table thead th { font-size:12px; white-space:nowrap; padding:10px 8px; vertical-align:middle; }
-.bnf-tbl .table tbody td { padding:8px; vertical-align:middle; white-space:nowrap; }
-.bnf-status-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:11px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
+.bnf-tbl .table tbody td { white-space:nowrap; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .bnf-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
 .bnf-status-pill.inactive { background:#fde8e8; color:#ef4444; }
 .bnf-status-dot { width:7px; height:7px; border-radius:999px; display:inline-block; }
@@ -124,7 +123,7 @@
     <button type="button" class="rt-clear-btn" id="bnfFilterClear" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card bnf-tbl">
+<div class="card ui-table-card bnf-tbl">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table mb-0">
@@ -151,6 +150,8 @@
         </div>
     </div>
 </div>
+
+<div class="app-pagination" id="bnfPagination"></div>
 </div>
 
 <!-- Add/Edit Modal -->

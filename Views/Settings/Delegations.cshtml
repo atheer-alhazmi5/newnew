@@ -23,12 +23,8 @@
 .bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
 .bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
 .bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
-.bnf-tbl .table { width:100%; margin-bottom:0; min-width:920px; font-size:13px; }
-.bnf-tbl .table > :not(caption) > * > * { padding-top:0.72rem; padding-bottom:0.72rem; vertical-align:middle; }
-.bnf-tbl .table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding-left:10px; padding-right:10px; }
-.bnf-tbl .table tbody tr { transition:background .15s; }
-.bnf-tbl .table tbody tr:hover { background:var(--sa-25); }
-.bnf-tbl .table tbody td { border-bottom:1px solid var(--gray-100); padding-left:10px; padding-right:10px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) — هنا العرض الأدنى فقط */
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:920px; }
 .del-action-btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
 .del-action-btn-detail { background:var(--gray-100); color:var(--gray-700); }
 .del-action-btn-detail:hover { background:var(--gray-200); color:var(--gray-800); }
@@ -46,9 +42,9 @@
 .bnf-ou-tree-wrap.del-delegatee-ou-wrap { z-index:4; }
 .bnf-ou-tree-wrap.del-filter-delegator-ou-wrap { z-index:5; }
 .bnf-ou-tree-wrap.del-filter-delegatee-ou-wrap { z-index:6; }
-.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: #fff; display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-trigger { text-align: right !important; cursor: pointer; background-color: var(--surface-0); display: flex; align-items: center; min-height: calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight: 500; color: var(--gray-800); }
-.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-panel { max-height: 280px; overflow-y: auto; background: var(--surface-0); border: 1px solid var(--gray-300); border-radius: 8px; margin-top: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .bnf-ou-tree-row { user-select: none; border-bottom: 1px solid var(--gray-100); transition: background .15s ease; gap: 8px; }
 .bnf-ou-tree-row:hover { background: var(--sa-25); }
 .bnf-ou-tree-row.is-selected { background: var(--info-50); }
@@ -103,7 +99,7 @@
         <button type="button" class="rt-clear-btn" id="delFilterClear" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
     </div>
 
-    <div class="card bnf-tbl">
+    <div class="card ui-table-card bnf-tbl">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table mb-0">
@@ -128,6 +124,8 @@
             </div>
         </div>
     </div>
+
+    <div class="app-pagination" id="delPagination"></div>
 </div>
 
 <div class="modal fade" id="delModal" tabindex="-1">

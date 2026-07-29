@@ -35,14 +35,17 @@
 .ib-btn-approve:hover { background:var(--success-700); }
 .ib-btn-reject { background:var(--error-600); color:#fff; }
 .ib-btn-reject:hover { background:#a50e0e; }
-.ib-btn-return { background:#fff; color:#1d4ed8; border-color:#1d4ed8; }
+.ib-btn-return { background:var(--surface-0); color:#1d4ed8; border-color:#1d4ed8; }
 .ib-btn-return:hover { background:#eff6ff; }
-.ib-form-edit-host { margin-top:14px; border:1px solid var(--gray-200); border-radius:12px; padding:12px; background:#fff; }
+.ib-form-edit-host { margin-top:14px; border:1px solid var(--gray-200); border-radius:12px; padding:12px; background:var(--surface-0); }
 .ib-form-edit-host .ib-form-edit-title { font-weight:800; font-size:13px; color:var(--sa-800); margin-bottom:10px; }
 </style>
 
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-    <h2 class="page-title" style="margin:0;">صندوق الوارد <span id="inbox-count" style="font-size:14px;color:var(--gray-500);font-weight:400;"></span></h2>
+    <h2 class="page-title" style="margin:0;">صندوق الوارد</h2>
+    <div class="ui-header-actions">
+        <span class="ui-count-pill"><i class="bi bi-inbox-fill"></i><span id="inbox-count">0</span></span>
+    </div>
 </div>
 
 <div class="d-flex gap-3 mb-4 flex-wrap">
@@ -64,10 +67,10 @@
     </select>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th>النموذج</th>
@@ -87,7 +90,7 @@
     </div>
 </div>
 
-<div id="paginationContainer" class="d-flex justify-content-center mt-4"></div>
+<div id="paginationContainer" class="app-pagination"></div>
 
 <!-- مودال طلب إجراء (تفاصيل + اعتماد/رفض/إرجاع) -->
 <div class="modal fade" id="ibReqModal" tabindex="-1">

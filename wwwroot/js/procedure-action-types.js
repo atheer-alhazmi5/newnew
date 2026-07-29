@@ -131,9 +131,9 @@ function patRenderTable() {
             '<td style="text-align:center;"><span class="pat-status-pill ' + statusClass + '"><span class="pat-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +
-                    '<button class="pat-action-btn pat-action-btn-detail" onclick="patShowDetails(' + c.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="pat-action-btn pat-action-btn-edit" onclick="patShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="pat-action-btn pat-action-btn-delete" onclick="patShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
+                    '<button class="pat-action-btn ui-act-btn pat-action-btn-detail" title="تفاصيل" onclick="patShowDetails(' + c.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="pat-action-btn ui-act-btn pat-action-btn-edit" title="تحديث" onclick="patShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="pat-action-btn ui-act-btn pat-action-btn-delete" title="حذف" onclick="patShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';

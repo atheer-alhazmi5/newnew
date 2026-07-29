@@ -484,7 +484,7 @@ async function obdLoadDocuments() {
     var rows = list.map(function (a, i) {
         var url = appResolveUrl(a.url);
         var preview = obaIsPreviewable(a.fileName)
-            ? '<button type="button" class="ob-act-btn ob-act-detail" onclick="obaOpenPreview(\'' + obEscAttr(a.url) + '\')"><i class="bi bi-eye"></i> معاينة</button> '
+            ? '<button type="button" class="ob-act-btn ui-act-btn ob-act-detail" title="معاينة" onclick="obaOpenPreview(\'' + obEscAttr(a.url) + '\')"><i class="bi bi-eye"></i></button> '
             : '';
         var srcLabel = a.source || '—';
         var srcDetail = a.fieldName ? ' — ' + a.fieldName : '';
@@ -497,12 +497,12 @@ async function obdLoadDocuments() {
             + '<td class="obd-doc-date">' + esc(obFmtDate(a.uploadedAt)) + '</td>'
             + '<td>' + esc(a.uploadedByName || '—') + '</td>'
             + '<td style="white-space:nowrap;">' + preview
-            +   '<a class="ob-act-btn ob-act-detail" href="' + obEscAttr(url) + '" download="' + obEscAttr(a.fileName || '') + '"><i class="bi bi-download"></i> تحميل</a>'
+            +   '<a class="ob-act-btn ui-act-btn ob-act-detail" title="تحميل" href="' + obEscAttr(url) + '" download="' + obEscAttr(a.fileName || '') + '"><i class="bi bi-download"></i></a>'
             + '</td>'
             + '</tr>';
     }).join('');
 
-    host.innerHTML = '<div class="table-responsive"><table class="obd-docs-table">'
+    host.innerHTML = '<div class="table-responsive"><table class="table mb-0 obd-docs-table">'
         + '<thead><tr>'
         +   '<th style="width:50px;text-align:center;">ت</th>'
         +   '<th>نوع المرفق</th>'

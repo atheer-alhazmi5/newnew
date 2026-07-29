@@ -363,9 +363,9 @@ function ugRenderTable() {
             +     '<span class="ug-status-dot"></span>' + statusText + '</span>'
             + '</td>'
             + '<td class="text-center">'
-            +   '<button class="ug-action-btn ug-action-btn-detail" onclick="ugShowDetails(' + c.id + ')"><i class="bi bi-eye"></i> تفاصيل</button> '
-            +   '<button class="ug-action-btn ug-action-btn-edit" onclick="ugShowEdit(' + c.id + ')"><i class="bi bi-pencil"></i> تحديث</button> '
-            +   '<button class="ug-action-btn ug-action-btn-delete" onclick="ugAskDelete(' + c.id + ')"><i class="bi bi-trash3"></i> حذف</button>'
+            +   '<button class="ug-action-btn ui-act-btn ug-action-btn-detail" title="تفاصيل" onclick="ugShowDetails(' + c.id + ')"><i class="bi bi-eye"></i></button> '
+            +   '<button class="ug-action-btn ui-act-btn ug-action-btn-edit" title="تحديث" onclick="ugShowEdit(' + c.id + ')"><i class="bi bi-pencil"></i></button> '
+            +   '<button class="ug-action-btn ui-act-btn ug-action-btn-delete" title="حذف" onclick="ugAskDelete(' + c.id + ')"><i class="bi bi-trash3"></i></button>'
             + '</td>'
             + '</tr>';
     });

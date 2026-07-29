@@ -9,6 +9,7 @@ var obProcedures = [];
 var obProcedureTypes = [];
 var obStages = [];
 var obSelectedDelete = null;
+var obPage = 1, obPerPage = 20, obCurrentList = [];
 
 function obEscAttr(s) {
     if (s == null) return '';
@@ -122,6 +123,11 @@ function obDateBetween(iso, from, to) {
 }
 
 function obApplyFilters() {
+    obPage = 1;
+    obRenderList();
+}
+
+function obRenderList() {
     var q = (document.getElementById('obSearch')?.value || '').trim();
     var fProc = document.getElementById('obFilterProcedure')?.value || '';
     var fType = document.getElementById('obFilterType')?.value || '';
@@ -148,6 +154,8 @@ function obApplyFilters() {
         return true;
     });
 
+    obCurrentList = list;
+
     var countEl = document.getElementById('obCountTxt');
     if (countEl) countEl.textContent = String(obAll.length) + (list.length !== obAll.length ? ' (الظاهر: ' + list.length + ')' : '');
 
@@ -156,21 +164,26 @@ function obApplyFilters() {
 
     if (list.length === 0) {
         body.innerHTML = '<tr><td colspan="10"><div class="ob-empty"><i class="bi bi-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
+        renderPagination('obPagination', 0, 1, obPerPage, 'obGoPage');
         return;
     }
 
+    var obTotalPages = Math.max(1, Math.ceil(list.length / obPerPage));
+    if (obPage > obTotalPages) obPage = obTotalPages;
+    var obStart = (obPage - 1) * obPerPage;
+
     var html = '';
-    list.forEach(function (it, i) {
+    list.slice(obStart, obStart + obPerPage).forEach(function (it, i) {
         // الحذف متاح فقط عندما يكون تصنيف الحالة «مفتوح» والمرحلة «جديد» معاً.
         var canDelete = (it.statusCategory || '').trim() === 'مفتوح'
             && (it.currentStageName || '').trim() === 'جديد';
-        var actions = '<button class="ob-act-btn ob-act-detail" onclick="obShowDetails(' + it.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
+        var actions = '<button class="ob-act-btn ui-act-btn ob-act-detail" title="تفاصيل" onclick="obShowDetails(' + it.id + ')"><i class="bi bi-eye"></i></button>';
         if (canDelete) {
-            actions += ' <button class="ob-act-btn ob-act-del" onclick="obAskDelete(' + it.id + ',\'' + obEscAttr(it.requestNumber) + '\')"><i class="bi bi-trash3"></i> حذف</button>';
+            actions += ' <button class="ob-act-btn ui-act-btn ob-act-del" title="حذف" onclick="obAskDelete(' + it.id + ',\'' + obEscAttr(it.requestNumber) + '\')"><i class="bi bi-trash3"></i></button>';
         }
 
         html += '<tr>'
-            + '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (i + 1) + '</td>'
+            + '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (obStart + i + 1) + '</td>'
             + '<td><a href="javascript:void(0)" class="ob-req-link" onclick="obShowDetails(' + it.id + ')">' + esc(it.requestNumber || '') + '</a></td>'
             + '<td>' + obProcTypeChip(it) + '</td>'
             + '<td style="font-weight:600;">' + esc(it.procedureName || '—') + '</td>'
@@ -183,6 +196,15 @@ function obApplyFilters() {
             + '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('obPagination', list.length, obPage, obPerPage, 'obGoPage');
+}
+
+function obGoPage(p) {
+    var total = Math.ceil(obCurrentList.length / obPerPage);
+    if (p < 1 || p > total) return;
+    obPage = p;
+    obRenderList();
+    appPaginationScrollTop();
 }
 
 function obClearFilters() {

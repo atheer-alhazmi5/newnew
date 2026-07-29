@@ -32,16 +32,16 @@
 .ddl-save-btn.create:hover { background:var(--sa-700); }
 .ddl-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
 .ddl-cancel-btn:hover { background:#4b5563; }
-.ddl-section { background:#fff; border-radius:14px; padding:20px 24px; margin-bottom:20px; border:1px solid var(--gray-200); }
+.ddl-section { background:var(--surface-0); border-radius:14px; padding:20px 24px; margin-bottom:20px; border:1px solid var(--gray-200); }
 .ddl-section-title { font-weight:800; font-size:16px; color:var(--sa-800); margin:0 0 18px 0; padding-bottom:12px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
 .ddl-section-title i { font-size:18px; color:var(--sa-600); }
 .required-star { color:#ef4444; margin-right:4px; }
 .ddl-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.ddl-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.ddl-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .ddl-action-btn-detail:hover { background:var(--info-50); }
-.ddl-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.ddl-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
 .ddl-action-btn-edit:hover { background:var(--sa-50); }
-.ddl-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.ddl-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
 .ddl-action-btn-delete:hover { background:var(--error-50); }
 .ddl-form-row { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:16px; }
 .ddl-form-row:last-child { margin-bottom:0; }
@@ -64,30 +64,26 @@
 .ddl-item-row-inactive td .ddl-badge-inactive { opacity:1; }
 .ddl-badge-public { color:var(--info-600); font-weight:700; }
 .ddl-badge-private { color:var(--warning-600); font-weight:700; }
-.table > :not(caption) > * > * { padding:0.75rem; vertical-align:middle; }
-#ddlTable thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-#ddlTable tbody td { vertical-align:middle; }
-#ddlTable tbody tr:hover { background:var(--sa-25); }
+/* تنسيق جداول القوائم موحّد في styles.css (.ui-table) */
 .ddl-color-circle { width:24px; height:24px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; }
-.ddl-items-table { font-size:13px; }
 .ddl-add-items-btn { padding:10px 24px; border-radius:10px; font-weight:700; background:var(--sa-100); color:var(--sa-700); border:2px solid var(--sa-200); cursor:pointer; }
 .ddl-add-items-btn:hover { background:var(--sa-200); }
-#ddlTable td { font-size:13px; }
 .ddl-tree-table { width:100%; border-collapse:collapse; }
-.ddl-tree-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); vertical-align:middle; font-size:13px; }
-.ddl-tree-table th { background:var(--gray-50); padding:10px 12px; border-bottom:2px solid var(--gray-200); font-weight:700; font-size:13px; color:var(--gray-700); white-space:nowrap; }
+/* نفس مقاسات الجدول الموحّد مع إبقاء المحاذاة لليمين لإظهار التدرّج الهرمي */
+.ddl-tree-table td { padding:12px 14px; border-bottom:1px solid var(--gray-100); vertical-align:middle; font-size:13px; }
+.ddl-tree-table th { background:var(--gray-50); padding:12px 14px; border-bottom:2px solid var(--gray-200); font-weight:700; font-size:13px; color:var(--gray-700); white-space:nowrap; }
 .ddl-tree-table tr:hover td { background:var(--sa-25); }
 .ddl-tree-level-badge { font-size:11px; padding:2px 10px; border-radius:999px; background:var(--sa-100); color:var(--sa-700); font-weight:700; white-space:nowrap; display:inline-block; }
 .ddl-hier-badges { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .ddl-level-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:16px; }
-.ddl-level-tab { padding:10px 20px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:2px solid var(--gray-200); background:#fff; color:var(--gray-600); transition:all 0.2s; }
+.ddl-level-tab { padding:10px 20px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; border:2px solid var(--gray-200); background:var(--surface-0); color:var(--gray-600); transition:all 0.2s; }
 .ddl-level-tab:hover { background:var(--sa-25); color:var(--sa-700); border-color:var(--sa-200); }
 .ddl-level-tab.active { background:var(--sa-100); color:var(--sa-800); border-color:var(--sa-500); }
 .ddl-level-tab.disabled { opacity:0.6; cursor:not-allowed; pointer-events:none; }
 /* شجرة الوحدة التنظيمية (فلتر) — نفس أسلوب المستفيدين */
-.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:var(--surface-0); display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
-.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:var(--surface-0); border:1px solid var(--gray-300); border-radius:8px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
 .bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
 .bnf-ou-tree-row:hover { background:var(--sa-25); }
 .bnf-ou-tree-row.is-selected { background:var(--info-50); }
@@ -143,10 +139,10 @@
 </div>
 
 <!-- Table -->
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive" style="overflow-x:auto;">
-            <table class="table mb-0" id="ddlTable">
+            <table class="table mb-0 ui-table" id="ddlTable">
                 <thead>
                     <tr>
                         <th style="width:50px;text-align:center;">الترتيب</th>
@@ -166,6 +162,8 @@
         </div>
     </div>
 </div>
+
+<div class="app-pagination" id="ddlPagination"></div>
 </div>
 
 <!-- Create Modal -->

@@ -34,6 +34,7 @@ var delBeneficiaries = [];
 var delOrgUnits = [];
 var delRows = [];
 var delEditingId = null;
+var delPage = 1, delPerPage = 20, delCurrentList = [];
 
 function delTodayIso() {
     var n = new Date();
@@ -126,6 +127,7 @@ function delConfigureStartDateForEdit() {
 }
 
 function delClearFilters() {
+    delPage = 1;
     var s = document.getElementById('delSearch');
     if (s) s.value = '';
     var r = document.getElementById('delFilterReference');
@@ -293,6 +295,7 @@ function delFilterDelegatorOuSetSelection(id, nameOpt) {
     }
     if (lab) lab.textContent = disp || 'كل الوحدات';
     delRenderFilterDelegatorOuPanel();
+    delPage = 1;
     delRenderTable();
 }
 
@@ -309,6 +312,7 @@ function delFilterDelegateeOuSetSelection(id, nameOpt) {
     }
     if (lab) lab.textContent = disp || 'كل الوحدات';
     delRenderFilterDelegateeOuPanel();
+    delPage = 1;
     delRenderTable();
 }
 
@@ -766,16 +770,22 @@ function delRenderTable() {
     var body = document.getElementById('delBody');
     if (!body) return;
     if (!delRows.length) {
+        delCurrentList = [];
         body.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">لا توجد تفويضات</td></tr>';
+        renderPagination('delPagination', 0, 1, delPerPage, 'delGoPage');
         return;
     }
     var list = delFilteredRows();
+    delCurrentList = list;
     if (!list.length) {
         body.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">لا توجد تفويضات مطابقة</td></tr>';
+        renderPagination('delPagination', 0, 1, delPerPage, 'delGoPage');
         return;
     }
+    var totalPages = Math.max(1, Math.ceil(list.length / delPerPage));
+    if (delPage > totalPages) delPage = totalPages;
     var html = '';
-    list.forEach(function (d, idx) {
+    list.slice((delPage - 1) * delPerPage, delPage * delPerPage).forEach(function (d, idx) {
         var rawCode = d.statusCode != null ? d.statusCode : d.StatusCode;
         var sc = String(rawCode || '').toLowerCase();
         var locked = sc === 'cancelled' || sc === 'expired';
@@ -785,7 +795,7 @@ function delRenderTable() {
         var durDays = delDelegationDurationDays(d.startDate, d.endDate);
         var durCell = durDays != null ? (delEsc(String(durDays)) + ' يوم') : '—';
         html += '<tr>' +
-            '<td style="text-align:center;">' + (idx + 1) + '</td>' +
+            '<td style="text-align:center;">' + ((delPage - 1) * delPerPage + idx + 1) + '</td>' +
             '<td>' + delNameRoleCell(d.delegatorName, d.delegatorRoleDisplay) + '</td>' +
             '<td style="font-size:12px;">' + delEsc(d.delegatorOrgUnitName || '') + '</td>' +
             '<td>' + delNameRoleCell(d.delegateeName, d.delegateeRoleDisplay) + '</td>' +
@@ -796,17 +806,26 @@ function delRenderTable() {
             '<td style="text-align:center;">' + delStatusLabel(d.statusCode) + '</td>' +
             '<td>' +
             '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-            '<button type="button" class="del-action-btn del-action-btn-detail" onclick="delShowDetails(' + rowId + ')" title="تفاصيل"><i class="bi bi-eye"></i> تفاصيل</button>' +
+            '<button type="button" class="del-action-btn ui-act-btn del-action-btn-detail" onclick="delShowDetails(' + rowId + ')" title="تفاصيل"><i class="bi bi-eye"></i></button>' +
             (!locked
-                ? '<button type="button" class="del-action-btn del-action-btn-edit" onclick="delEdit(' + rowId + ')" title="تحديث"><i class="bi bi-pencil"></i> تحديث</button>'
+                ? '<button type="button" class="del-action-btn ui-act-btn del-action-btn-edit" onclick="delEdit(' + rowId + ')" title="تحديث"><i class="bi bi-pencil"></i></button>'
                 : '') +
             (showDelete
-                ? '<button type="button" class="del-action-btn del-action-btn-delete" onclick="delConfirmDelete(' + rowId + ')" title="حذف"><i class="bi bi-trash3"></i> حذف</button>'
+                ? '<button type="button" class="del-action-btn ui-act-btn del-action-btn-delete" onclick="delConfirmDelete(' + rowId + ')" title="حذف"><i class="bi bi-trash3"></i></button>'
                 : '') +
             '</div></td>' +
             '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('delPagination', list.length, delPage, delPerPage, 'delGoPage');
+}
+
+function delGoPage(p) {
+    var total = Math.ceil(delCurrentList.length / delPerPage);
+    if (p < 1 || p > total) return;
+    delPage = p;
+    delRenderTable();
+    appPaginationScrollTop();
 }
 
 async function delShowDetails(id) {
@@ -1137,26 +1156,28 @@ document.addEventListener('DOMContentLoaded', function () {
     delInitOuTreePanels();
     delInitFilterOuTreePanels();
     var ds = document.getElementById('delSearch');
-    if (ds) ds.addEventListener('input', function () { delRenderTable(); });
+    if (ds) ds.addEventListener('input', function () { delPage = 1; delRenderTable(); });
     var deref = document.getElementById('delFilterReference');
     if (deref) {
         deref.addEventListener('input', function (e) {
             delSanitizeReferenceInput(e);
+            delPage = 1;
             delRenderTable();
         });
         deref.addEventListener('paste', function (e) {
             setTimeout(function () {
                 delSanitizeReferenceInput({ target: deref });
+                delPage = 1;
                 delRenderTable();
             }, 0);
         });
     }
     var dst = document.getElementById('delFilterStatus');
-    if (dst) dst.addEventListener('change', function () { delRenderTable(); });
+    if (dst) dst.addEventListener('change', function () { delPage = 1; delRenderTable(); });
     var df = document.getElementById('delFilterDateFrom');
     var dto = document.getElementById('delFilterDateTo');
-    if (df) df.addEventListener('change', function () { delRenderTable(); });
-    if (dto) dto.addEventListener('change', function () { delRenderTable(); });
+    if (df) df.addEventListener('change', function () { delPage = 1; delRenderTable(); });
+    if (dto) dto.addEventListener('change', function () { delPage = 1; delRenderTable(); });
     var clr = document.getElementById('delFilterClear');
     if (clr) clr.addEventListener('click', delClearFilters);
     var refInpInit = document.getElementById('delReferenceNumber');

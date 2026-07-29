@@ -8,14 +8,14 @@
 .obs-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
 .obs-back-btn {
     display:inline-flex; align-items:center; gap:6px;
-    background:#fff; border:2px solid var(--gray-200); color:var(--gray-700);
+    background:var(--surface-0); border:2px solid var(--gray-200); color:var(--gray-700);
     padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px;
     font-family:'Cairo',sans-serif; text-decoration:none; transition:all .15s;
 }
 .obs-back-btn:hover { border-color:var(--sa-400); color:var(--sa-700); }
 
 /* Stepper */
-.obs-stepper { display:flex; align-items:center; gap:0; padding:24px 18px; background:#fff; border:1px solid var(--gray-200); border-radius:14px; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; }
+.obs-stepper { display:flex; align-items:center; gap:0; padding:24px 18px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; }
 .obs-step { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1 1 auto; min-width:120px; }
 .obs-step-circle {
     width:44px; height:44px; border-radius:50%;
@@ -36,14 +36,14 @@
 .obs-step.is-done + .obs-step-conn { background:var(--sa-400); }
 
 /* Panel */
-.obs-panel { background:#fff; border:1px solid var(--gray-200); border-radius:14px; padding:24px 28px; min-height:300px; }
+.obs-panel { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; padding:24px 28px; min-height:300px; }
 .obs-panel-title { font-size:16px; font-weight:800; color:var(--sa-800); padding-bottom:12px; border-bottom:2px solid var(--sa-100); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
 .obs-panel-title i { color:var(--sa-600); }
 
 /* بطاقات اختيار النوع */
 .obs-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
 .obs-card {
-    background:#fff; border:1px solid var(--gray-200); border-radius:14px;
+    background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px;
     padding:18px 20px; display:flex; flex-direction:column; gap:12px;
     transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
     cursor:pointer; position:relative;
@@ -76,7 +76,7 @@
 .obs-card.is-selected .obs-card-selected-mark { display:inline-flex; }
 
 /* الأزرار داخل البطاقات */
-.obs-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 12px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:#fff; transition:all .15s; }
+.obs-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 12px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
 .obs-btn-detail { border-color:var(--info-500); color:var(--info-500); }
 .obs-btn-detail:hover { background:var(--info-50); }
 .obs-btn-pick { border-color:var(--sa-600); color:var(--sa-600); }
@@ -111,7 +111,7 @@
 .obs-meta-row { display:flex; flex-wrap:wrap; gap:14px; padding:14px 16px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; margin-bottom:16px; }
 .obs-meta-cell { display:flex; flex-direction:column; gap:4px; min-width:200px; flex:1 1 220px; }
 .obs-meta-lbl { font-size:12px; font-weight:700; color:var(--gray-500); }
-.obs-meta-val { font-size:14px; font-weight:700; color:var(--gray-900); padding:6px 10px; background:#fff; border:1px solid var(--gray-200); border-radius:8px; }
+.obs-meta-val { font-size:14px; font-weight:700; color:var(--gray-900); padding:6px 10px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:8px; }
 
 .obs-form-host { border:1px solid var(--gray-200); border-radius:12px; padding:6px; background:var(--gray-25,#fcfcfd); min-height:160px; }
 .obs-form-host .row.g-3 { margin-inline:0; }
@@ -119,7 +119,7 @@
 
 /* Step 3 — مراجعة (مجموعات حسب أقسام النموذج) */
 .obs-review { display:flex; flex-direction:column; gap:14px; }
-.obs-review-section { background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:14px 16px; }
+.obs-review-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:12px; padding:14px 16px; }
 .obs-review-section-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:8px; border-bottom:2px solid var(--sa-100); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
 .obs-review-section-title i { color:var(--sa-600); font-size:15px; }
 .obs-review-grid { display:grid; grid-template-columns:200px 1fr; gap:8px 14px; font-size:13px; }
@@ -146,7 +146,7 @@
 .obs-confirm-notes li { color:var(--gray-700); font-size:13.5px; line-height:1.9; }
 .obs-confirm-notes li strong { color:var(--sa-800); }
 .obs-confirm-routing { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-width:760px; margin-inline:auto; text-align:right; }
-.obs-routing-card { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:#fff; border:1px solid var(--gray-200); border-radius:10px; font-size:13px; color:var(--gray-700); }
+.obs-routing-card { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:10px; font-size:13px; color:var(--gray-700); }
 .obs-routing-card i { color:var(--sa-600); font-size:18px; margin-top:2px; flex-shrink:0; }
 .obs-routing-card b { color:var(--gray-900); display:block; margin-bottom:2px; font-size:13px; }
 .obs-routing-card .chips { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }

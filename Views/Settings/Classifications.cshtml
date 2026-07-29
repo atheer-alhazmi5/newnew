@@ -19,20 +19,16 @@
 .cls-section-title { font-weight:700; font-size:15px; color:var(--sa-800); margin-bottom:20px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:2px solid var(--sa-100); }
 .cls-section-title i { font-size:18px; }
 .required-star { color:#ef4444; margin-right:4px; font-weight:700; }
-.cls-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .cls-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
 .cls-status-pill.inactive { background:#fde8e8; color:#ef4444; }
 .cls-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
 .cls-status-pill.active .cls-status-dot { background:#0f9f5c; }
 .cls-status-pill.inactive .cls-status-dot { background:#ef4444; }
 .cls-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .cls-color-picker-wrap { position:relative; display:inline-block; }
-.cls-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.cls-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
 .cls-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
 .cls-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
 .cls-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
@@ -74,10 +70,10 @@
     <button type="button" class="rt-clear-btn" onclick="clsClearFilter()" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:70px;">الترتيب</th>
@@ -96,7 +92,7 @@
     </div>
 </div>
 
-<div id="clsPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+<div id="clsPaginationContainer" class="app-pagination"></div>
 
 <!-- Add Modal -->
 <div class="modal fade" id="clsAddModal" tabindex="-1">

@@ -4,33 +4,29 @@
 }
 
 <style>
-.bk-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .bk-b-full         { background:#ECFDF3; color:#067647; }
 .bk-b-differential { background:#EFF8FF; color:#175CD3; }
 .bk-b-incremental  { background:#F4F3FF; color:#5925DC; }
 .bk-b-log          { background:#FFF6ED; color:#B93815; }
 .bk-b-system       { background:#FEF3F2; color:#B42318; }
 .bk-size { font-family:'Consolas','Courier New',monospace; font-size:12px; background:var(--gray-100); padding:3px 10px; border-radius:8px; color:var(--gray-700); }
-.bk-del-btn { background:transparent; border:1.5px solid #FCA5A5; color:#B42318; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
-.bk-del-btn:hover { background:#FEF2F2; border-color:#F87171; }
-.bk-dl-btn  { background:transparent; border:1.5px solid var(--sa-400); color:var(--sa-700); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; text-decoration:none; }
+/* أزرار الإجراءات: نفس أساس بقية النظام (.ui-act-btn في styles.css) والألوان من متغيّرات النظام */
+.bk-del-btn, .bk-dl-btn, .bk-rst-btn {
+    background:var(--surface-0); border:2px solid transparent; border-radius:8px; padding:5px 10px;
+    font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer;
+    transition:all .15s; display:inline-flex; align-items:center; gap:4px; text-decoration:none;
+}
+.bk-del-btn { border-color:var(--error-500); color:var(--error-500); }
+.bk-del-btn:hover { background:var(--error-50); }
+.bk-dl-btn  { border-color:var(--sa-600); color:var(--sa-600); }
 .bk-dl-btn:hover  { background:var(--sa-50); }
-.bk-rst-btn { background:transparent; border:1.5px solid #FCD34D; color:#92400E; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
-.bk-rst-btn:hover { background:#FFFBEB; border-color:#F59E0B; }
+.bk-rst-btn { border-color:var(--warning-600); color:var(--warning-700); }
+.bk-rst-btn:hover { background:var(--warning-50); }
 .bk-actions { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
 .bk-empty { text-align:center; padding:48px 20px; color:var(--gray-400); }
 .bk-empty i { font-size:52px; display:block; margin-bottom:12px; }
-.bk-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
-.bk-pagination button { border:1px solid var(--gray-300); background:#fff; color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
-.bk-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
-.bk-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
-.bk-pagination button:disabled { opacity:.4; cursor:default; }
-.bk-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
-.table > :not(caption) > * > * { padding-top:.75rem; padding-bottom:.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); text-align:center; font-size:13px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 </style>
 
 <!-- Header -->
@@ -76,10 +72,10 @@
 </div>
 
 <!-- Table -->
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:55px;">#</th>
@@ -100,7 +96,7 @@
     </div>
 </div>
 
-<div class="bk-pagination" id="bkPagination"></div>
+<div class="app-pagination" id="bkPagination"></div>
 
 <!-- ─── Create Backup Modal ─── -->
 <div class="modal fade" id="bkCreateModal" tabindex="-1">
@@ -336,8 +332,8 @@ function bkRender() {
         const typeIcon = BK_TYPE_ICONS[d.backupType]  || 'bi-archive';
         const typeLbl  = BK_TYPE_LABELS[d.backupType] || d.backupType;
         const dlBtn = d.hasFile
-            ? `<a href="/Settings/DownloadBackup?id=${d.id}" class="bk-dl-btn" title="تحميل النسخة">
-                   <i class="bi bi-download"></i> تحميل
+            ? `<a href="/Settings/DownloadBackup?id=${d.id}" class="bk-dl-btn ui-act-btn" title="تحميل النسخة">
+                   <i class="bi bi-download"></i>
                </a>`
             : `<span style="font-size:11px;color:var(--gray-400);">—</span>`;
 
@@ -352,11 +348,11 @@ function bkRender() {
             <td>
                 <div class="bk-actions">
                     ${dlBtn}
-                    ${d.hasFile ? `<button class="bk-rst-btn" onclick="bkOpenRestoreModal(${d.id},'${esc(d.name)}')" title="استعادة">
-                        <i class="bi bi-arrow-counterclockwise"></i> استعادة
+                    ${d.hasFile ? `<button class="bk-rst-btn ui-act-btn" onclick="bkOpenRestoreModal(${d.id},'${esc(d.name)}')" title="استعادة">
+                        <i class="bi bi-arrow-counterclockwise"></i>
                     </button>` : ''}
-                    <button class="bk-del-btn" onclick="bkOpenDeleteModal(${d.id}, '${esc(d.name)}')">
-                        <i class="bi bi-trash3"></i> حذف
+                    <button class="bk-del-btn ui-act-btn" onclick="bkOpenDeleteModal(${d.id}, '${esc(d.name)}')" title="حذف">
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </div>
             </td>
@@ -367,31 +363,7 @@ function bkRender() {
 }
 
 function bkRenderPagination() {
-    const total = Math.ceil(bkFiltered.length / bkPerPage);
-    const el    = document.getElementById('bkPagination');
-    if (total <= 1) { el.innerHTML = ''; return; }
-
-    let html = `<span class="bk-pagination-info">صفحة ${bkPage} من ${total}</span>`;
-    html += `<button onclick="bkGoPage(${bkPage - 1})" ${bkPage <= 1 ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-
-    const maxV = 7;
-    let startP = Math.max(1, bkPage - Math.floor(maxV / 2));
-    let endP   = Math.min(total, startP + maxV - 1);
-    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
-
-    if (startP > 1) {
-        html += `<button onclick="bkGoPage(1)">1</button>`;
-        if (startP > 2) html += `<button disabled>…</button>`;
-    }
-    for (let p = startP; p <= endP; p++) {
-        html += `<button onclick="bkGoPage(${p})" class="${p === bkPage ? 'active' : ''}">${p}</button>`;
-    }
-    if (endP < total) {
-        if (endP < total - 1) html += `<button disabled>…</button>`;
-        html += `<button onclick="bkGoPage(${total})">${total}</button>`;
-    }
-    html += `<button onclick="bkGoPage(${bkPage + 1})" ${bkPage >= total ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
-    el.innerHTML = html;
+    renderPagination('bkPagination', bkFiltered.length, bkPage, bkPerPage, 'bkGoPage');
 }
 
 function bkGoPage(p) {
@@ -399,7 +371,7 @@ function bkGoPage(p) {
     if (p < 1 || p > total) return;
     bkPage = p;
     bkRender();
-    document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    appPaginationScrollTop();
 }
 
 /* ── Create Modal ── */

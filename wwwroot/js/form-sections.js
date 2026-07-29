@@ -117,9 +117,9 @@ function fmsRenderTable() {
             '<td style="text-align:center;"><span class="fms-status-pill ' + statusClass + '"><span class="fms-status-dot"></span>' + statusText + '</span></td>' +
             '<td>' +
                 '<div style="display:flex;gap:6px;align-items:center;justify-content:center;">' +
-                    '<button class="fms-action-btn fms-action-btn-detail" onclick="fmsShowDetails(' + c.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="fms-action-btn fms-action-btn-edit" onclick="fmsShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="fms-action-btn fms-action-btn-delete" onclick="fmsShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
+                    '<button class="fms-action-btn ui-act-btn fms-action-btn-detail" title="تفاصيل" onclick="fmsShowDetails(' + c.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="fms-action-btn ui-act-btn fms-action-btn-edit" title="تحديث" onclick="fmsShowEditModal(' + c.id + ')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="fms-action-btn ui-act-btn fms-action-btn-delete" title="حذف" onclick="fmsShowDeleteModal(' + c.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';

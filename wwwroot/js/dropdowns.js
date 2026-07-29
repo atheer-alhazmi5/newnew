@@ -9,6 +9,7 @@ var ddlCurrentUser = '';
 var ddlIsAdmin = false;
 var ddlCurrentOrgUnitId = 0;
 var ddlFilterOuExpanded = {};
+var ddlPage = 1, ddlPerPage = 20, ddlCurrentList = [];
 
 var DDL_LIST_NAME_DUP_MSG = 'اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var DDL_ITEM_TEXT_DUP_MSG = 'اسم العنصر موجود مسبقًا، يرجى إدخال اسم مختلف.';
@@ -265,6 +266,7 @@ function ddlSyncFilterOuTreeLabel() {
 }
 
 function ddlApplyFilters() {
+    ddlPage = 1;
     var search = (document.getElementById('ddlSearchInput')?.value || '').trim().toLowerCase();
     var listType = document.getElementById('ddlFilterListType')?.value || '';
     var selectionType = document.getElementById('ddlFilterSelectionType')?.value || '';
@@ -284,6 +286,7 @@ function ddlApplyFilters() {
 }
 
 function ddlClearFilters() {
+    ddlPage = 1;
     document.getElementById('ddlSearchInput').value = '';
     document.getElementById('ddlFilterListType').value = '';
     document.getElementById('ddlFilterSelectionType').value = '';
@@ -299,15 +302,20 @@ function ddlClearFilters() {
 
 function ddlRenderTable() {
     var body = document.getElementById('ddlBody');
+    ddlCurrentList = ddlFiltered;
     if (ddlFiltered.length === 0) {
         body.innerHTML = '<tr><td colspan="8">' +
             emptyState('bi-ui-checks-grid', 'لا توجد قوائم منسدلة', 'لم يتم العثور على نتائج أو اضغط إنشاء قائمة منسدلة') +
             '</td></tr>';
+        renderPagination('ddlPagination', 0, 1, ddlPerPage, 'ddlGoPage');
         return;
     }
 
+    var totalPages = Math.max(1, Math.ceil(ddlFiltered.length / ddlPerPage));
+    if (ddlPage > totalPages) ddlPage = totalPages;
+
     var html = '';
-    ddlFiltered.forEach(function (d, idx) {
+    ddlFiltered.slice((ddlPage - 1) * ddlPerPage, ddlPage * ddlPerPage).forEach(function (d, idx) {
         var safeName = esc(d.name || '').replace(/'/g, "\\'");
         var ownershipClass = d.ownership === 'عام' ? 'ddl-badge-public' : 'ddl-badge-private';
         var statusClass = d.isActive ? 'ddl-badge-active' : 'ddl-badge-inactive';
@@ -315,7 +323,7 @@ function ddlRenderTable() {
         var canModify = ddlCanModifyList(d);
 
         html += '<tr>' +
-            '<td style="text-align:center;font-weight:800;">' + (idx + 1) + '</td>' +
+            '<td style="text-align:center;font-weight:800;">' + ((ddlPage - 1) * ddlPerPage + idx + 1) + '</td>' +
             '<td style="font-weight:700;">' + esc(d.name) + '</td>' +
             '<td style="text-align:center;">' + esc(d.listType) + '</td>' +
             '<td style="text-align:center;">' + esc(d.selectionType) + '</td>' +
@@ -324,19 +332,28 @@ function ddlRenderTable() {
             '<td style="text-align:center;"><span class="' + statusClass + '">' + statusText + '</span></td>' +
             '<td style="text-align:center;">' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-                    '<button class="ddl-action-btn ddl-action-btn-detail" onclick="ddlShowDetails(' + d.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i> عناصر</button>';
+                    '<button class="ddl-action-btn ui-act-btn ddl-action-btn-detail" title="تفاصيل" onclick="ddlShowDetails(' + d.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="ddl-action-btn ui-act-btn ddl-action-btn-edit" title="عناصر" onclick="ddlShowItems(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-list-check"></i></button>';
         if (canModify) {
             if (!ddlIsListLinkedToForm(d)) {
-                html += '<button class="ddl-action-btn ddl-action-btn-edit" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+                html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-edit" title="تحديث" onclick="ddlShowEditModal(' + d.id + ')"><i class="bi bi-pencil"></i></button>';
             }
-            html += '<button class="ddl-action-btn ddl-action-btn-delete" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>';
+            html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-delete" title="حذف" onclick="ddlShowDeleteModal(' + d.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>';
         }
         html += '</div>' +
             '</td>' +
             '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('ddlPagination', ddlFiltered.length, ddlPage, ddlPerPage, 'ddlGoPage');
+}
+
+function ddlGoPage(p) {
+    var total = Math.ceil(ddlCurrentList.length / ddlPerPage);
+    if (p < 1 || p > total) return;
+    ddlPage = p;
+    ddlRenderTable();
+    appPaginationScrollTop();
 }
 
 // ─── Create Modal ────────────────────────────────────────────────────────────
@@ -525,9 +542,9 @@ async function ddlLoadItems(listId) {
                     var safeItemName = esc(item.itemText || '').replace(/'/g, "\\'");
                     html += '<td>';
                     if (canEditItems) {
-                        html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditItemInline(' + item.id + ')">تحديث</button> ';
+                        html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-edit" title="تحديث" onclick="ddlEditItemInline(' + item.id + ')"><i class="bi bi-pencil"></i></button> ';
                     }
-                    html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeItemName + '\')">حذف</button></td>';
+                    html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-delete" title="حذف" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeItemName + '\')"><i class="bi bi-trash3"></i></button></td>';
                 }
                 html += '</tr>';
             });
@@ -937,9 +954,9 @@ function ddlRenderTreeRows(nodes, depth, canModify, canEditItems) {
             var safeHierItemName = esc(item.itemText || '').replace(/'/g, "\\'");
             html += '<td>';
             if (canEditItems) {
-                html += '<button class="ddl-action-btn ddl-action-btn-edit btn-sm" onclick="ddlEditHierItem(' + item.id + ')">تحديث</button> ';
+                html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-edit" title="تحديث" onclick="ddlEditHierItem(' + item.id + ')"><i class="bi bi-pencil"></i></button> ';
             }
-            html += '<button class="ddl-action-btn ddl-action-btn-delete btn-sm" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeHierItemName + '\')">حذف</button>' +
+            html += '<button class="ddl-action-btn ui-act-btn ddl-action-btn-delete" title="حذف" onclick="ddlShowDeleteItemModal(' + item.id + ',\'' + safeHierItemName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</td>';
         }
         html += '</tr>';
@@ -1232,7 +1249,7 @@ async function ddlShowDetails(id) {
                     if (isSubList) thRow += '<th>عنصر القائمة المستقلة</th>';
                     thRow += '<th>العنصر</th><th>الوصف</th><th>اللون</th><th>التفعيل</th>';
 
-                    itemsHtml = '<table class="table table-sm"><thead><tr>' + thRow + '</tr></thead><tbody>';
+                    itemsHtml = '<table class="table table-sm ui-table"><thead><tr>' + thRow + '</tr></thead><tbody>';
                     d.items.forEach(function (item, i) {
                         var parentName = item.parentItemText || '';
                         if (!parentName && isSubList && item.parentItemId) {

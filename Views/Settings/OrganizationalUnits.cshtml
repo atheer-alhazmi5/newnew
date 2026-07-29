@@ -20,12 +20,8 @@
 .bnf-settings-page { width:100%; max-width:100%; box-sizing:border-box; }
 .bnf-tbl { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
 .bnf-tbl .table-responsive { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
-.bnf-tbl .table { width:100%; margin-bottom:0; min-width:1180px; font-size:13px; }
-.bnf-tbl .table > :not(caption) > * > * { padding-top:0.72rem; padding-bottom:0.72rem; vertical-align:middle; }
-.bnf-tbl .table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding-left:10px; padding-right:10px; }
-.bnf-tbl .table tbody tr { transition:background .15s; }
-.bnf-tbl .table tbody tr:hover { background:var(--sa-25); }
-.bnf-tbl .table tbody td { border-bottom:1px solid var(--gray-100); padding-left:10px; padding-right:10px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) — هنا العرض الأدنى فقط */
+.bnf-tbl .table { width:100%; margin-bottom:0; min-width:1180px; }
 .ou-action-btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
 .ou-action-btn-detail { background:var(--gray-100); color:var(--gray-700); }
 .ou-action-btn-detail:hover { background:var(--gray-200); color:var(--gray-800); }
@@ -123,7 +119,7 @@
         </div>
     </div>
 
-    <div class="card bnf-tbl">
+    <div class="card ui-table-card bnf-tbl">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table mb-0">
@@ -147,6 +143,8 @@
             </div>
         </div>
     </div>
+
+    <div class="app-pagination" id="ouPagination"></div>
 </div>
 
 <div class="modal fade" id="ouModal" tabindex="-1">

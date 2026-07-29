@@ -223,6 +223,26 @@
             color: #fff; transform: none; cursor: default;
         }
 
+        /* المتصفحات وأنظمة التشغيل المدعومة — صف مدمج أسفل النموذج */
+        .lg-support {
+            display: flex; align-items: center; justify-content: center;
+            flex-wrap: wrap; gap: 8px 12px; margin-top: 18px;
+        }
+        .lg-support-label {
+            font-size: 11px; font-weight: 700; color: #B0B3B8; white-space: nowrap;
+        }
+        .lg-support-icons {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            justify-content: center;
+        }
+        .lg-support-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; font-size: 17px; line-height: 1;
+            color: #9CA3AF; cursor: default; transition: color .15s, transform .15s;
+        }
+        .lg-support-icon:hover { color: var(--sa-600); transform: translateY(-1px); }
+        .lg-support-sep { width: 1px; height: 14px; background: #E5E7EB; }
+
         /* Demo section */
         .lg-demo {
             padding: 18px 36px 28px;
@@ -308,6 +328,8 @@
             .lg-card-body { padding: 22px 22px 24px; }
             .lg-demo { padding: 16px 22px 22px; }
             .lg-demo-grid { grid-template-columns: 1fr; }
+            .lg-support { gap: 6px 10px; margin-top: 16px; }
+            .lg-support-icons { gap: 8px; }
             .lp-footer { padding: 32px 20px 24px; }
             .lp-footer-inner { flex-direction: column; text-align: center; align-items: center; }
             .lp-footer-desc { max-width: 100%; }
@@ -392,10 +414,26 @@
                                 <i class="bi bi-box-arrow-in-left"></i> تسجيل الدخول
                             </button>
                         </form>
-                    </div>
+
+                        <div class="lg-support" role="group" aria-label="المتصفحات وأنظمة التشغيل المدعومة">
+                          
+                            <div class="lg-support-icons">
+                                <span class="lg-support-icon" title="Google Chrome" aria-label="Google Chrome"><i class="bi bi-browser-chrome"></i></span>
+                                <span class="lg-support-icon" title="Microsoft Edge" aria-label="Microsoft Edge"><i class="bi bi-browser-edge"></i></span>
+                                <span class="lg-support-icon" title="Mozilla Firefox" aria-label="Mozilla Firefox"><i class="bi bi-browser-firefox"></i></span>
+                                <span class="lg-support-icon" title="Safari" aria-label="Safari"><i class="bi bi-browser-safari"></i></span>
+                                <span class="lg-support-sep" aria-hidden="true"></span>
+                                <span class="lg-support-icon" title="Windows" aria-label="Windows"><i class="bi bi-windows"></i></span>
+                                <span class="lg-support-icon" title="macOS" aria-label="macOS"><i class="bi bi-apple"></i></span>
+                                <span class="lg-support-icon" title="Linux" aria-label="Linux"><i class="bi bi-ubuntu"></i></span>
+                                <span class="lg-support-icon" title="Android" aria-label="Android"><i class="bi bi-android2"></i></span>
+                                <span class="lg-support-icon" title="iOS" aria-label="iOS"><i class="bi bi-phone"></i></span>
+                            </div>
+                        </div>
+                    
 
                     <!-- Demo Accounts -->
-                    <div class="lg-demo">
+                 <!--   <div class="lg-demo">
                         <div class="lg-demo-sep">
                             <span class="lg-demo-sep-text">بيانات الدخول التجريبية</span>
                         </div>
@@ -432,42 +470,14 @@
         </div><!-- /.lg-content -->
     </main>
 
-    <!-- FOOTER: مطابق تماماً لصفحة اللاندنق بيج -->
+    <!-- FOOTER: مطابق تماماً لصفحة اللاندنق بيج 
     <footer class="lp-footer">
-        <div class="lp-footer-inner">
-            <div>
-                <div class="lp-footer-brand">
-                    <img src="~/images/logo1.webp" alt="شعار" class="lp-footer-logo"
-                         onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/8/87/Emblem_of_Saudi_Arabia_%282%29.svg'">
-                    <span class="lp-footer-brand-text">نظام إدارة النماذج وسير الإجراءات</span>
-                </div>
-                <p class="lp-footer-desc">
-                    نظام يهدف إلى أتمتة الإجراءات وتقليل الاعتماد على الورق.
-                </p>
-            </div>
-            <div>
-                <div class="lp-footer-col-title">روابط سريعة</div>
-                <a href="/" class="lp-footer-link"><i class="bi bi-house-door"></i> الصفحة الرئيسية</a>
-                <a href="/Guide/Index" class="lp-footer-link"><i class="bi bi-book"></i> دليل الاستخدام</a>
-                <a href="/Feedback/Index" class="lp-footer-link"><i class="bi bi-star"></i> تقييم النظام</a>
-            </div>
-            <div>
-                <div class="lp-footer-col-title">الدعم الفني</div>
-                <a href="mailto:support@madinah.gov.sa" class="lp-footer-link"><i class="bi bi-envelope-fill"></i> support@@madinah.gov.sa</a>
-                <a href="tel:+966148150198" class="lp-footer-link"><i class="bi bi-telephone-fill"></i> 0148150198</a>
-                <a href="#" class="lp-footer-link"><i class="bi bi-clock-fill"></i> الأحد - الخميس</a>
-                <div class="lp-footer-social">
-                    <a href="#" title="انستقرام"><i class="bi bi-instagram"></i></a>
-                    <a href="#" title="لينكدإن"><i class="bi bi-linkedin"></i></a>
-                    <a href="#" title="منصة إكس"><i class="bi bi-twitter-x"></i></a>
-                </div>
-            </div>
-        </div>
+       
         <div class="lp-footer-bottom">
-            <span class="lp-footer-copy">جميع الحقوق محفوظة لإمارة منطقة المدينة المنورة &copy; 2026</span>
+            <span class="lp-footer-copy">جميع الحقوق محفوظة للمبادرة &copy; 2026</span>
             <span class="lp-footer-dev">تنفيذ وتطوير: <span>إدارة الأنظمة والبرامج</span></span>
         </div>
-    </footer>
+    </footer>-->
 
 </div>
 

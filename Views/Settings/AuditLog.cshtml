@@ -11,7 +11,7 @@
 .al-btn-excel { background:#079455; color:#fff; border:none; border-radius:10px; padding:8px 18px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; text-decoration:none; }
 .al-btn-excel:hover { background:#067647; transform:translateY(-1px); color:#fff; }
 .al-record-count { background:var(--gray-100); color:var(--gray-700); border-radius:10px; padding:6px 16px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
-.al-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .al-badge-login { background:#ECFDF3; color:#067647; }
 .al-badge-logout { background:#FEF3F2; color:#B42318; }
 .al-badge-add { background:#EFF8FF; color:#175CD3; }
@@ -22,24 +22,14 @@
 .al-badge-delete { background:#FEF3F2; color:#B42318; }
 .al-badge-default { background:var(--gray-100); color:var(--gray-700); }
 .al-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); text-align:center; font-size:13px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .al-empty { text-align:center; padding:40px 20px; color:var(--gray-400); }
 .al-empty i { font-size:48px; display:block; margin-bottom:12px; }
-.al-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
-.al-pagination button { border:1px solid var(--gray-300); background:#fff; color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
-.al-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
-.al-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
-.al-pagination button:disabled { opacity:.4; cursor:default; }
-.al-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
 /* فلتر الوحدة — شجرة كما في المستفيدين */
 .al-filter-ou-wrap { position:relative; min-width:220px; max-width:280px; }
-.al-filt-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.al-filt-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:var(--surface-0); display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
 .al-filt-ou-tree-label { font-weight:500; color:var(--gray-800); }
-.al-filt-ou-tree-panel { max-height:min(320px,70vh); overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.al-filt-ou-tree-panel { max-height:min(320px,70vh); overflow-y:auto; background:var(--surface-0); border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
 .al-filt-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; }
 .al-filt-ou-tree-row:hover { background:var(--sa-25); }
 .al-filt-ou-tree-row.is-selected { background:var(--info-50); }
@@ -127,10 +117,10 @@
 </div>
 
 <!-- Table -->
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:50px;">#</th>
@@ -152,7 +142,7 @@
     </div>
 </div>
 
-<div class="al-pagination" id="alPagination"></div>
+<div class="app-pagination" id="alPagination"></div>
 
 <!-- تفاصيل العملية -->
 <div class="modal fade" id="alDetailModal" tabindex="-1">
@@ -495,31 +485,7 @@ function alRender() {
 }
 
 function alRenderPagination() {
-    const total = Math.ceil(alFiltered.length / alPerPage);
-    if (total <= 1) { document.getElementById('alPagination').innerHTML = ''; return; }
-
-    let html = `<span class="al-pagination-info">صفحة ${alPage} من ${total}</span>`;
-    html += `<button onclick="alGoPage(${alPage - 1})" ${alPage <= 1 ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-
-    const maxVisible = 7;
-    let startP = Math.max(1, alPage - Math.floor(maxVisible / 2));
-    let endP = Math.min(total, startP + maxVisible - 1);
-    if (endP - startP + 1 < maxVisible) startP = Math.max(1, endP - maxVisible + 1);
-
-    if (startP > 1) {
-        html += `<button onclick="alGoPage(1)">1</button>`;
-        if (startP > 2) html += `<button disabled>…</button>`;
-    }
-    for (let p = startP; p <= endP; p++) {
-        html += `<button onclick="alGoPage(${p})" class="${p === alPage ? 'active' : ''}">${p}</button>`;
-    }
-    if (endP < total) {
-        if (endP < total - 1) html += `<button disabled>…</button>`;
-        html += `<button onclick="alGoPage(${total})">${total}</button>`;
-    }
-
-    html += `<button onclick="alGoPage(${alPage + 1})" ${alPage >= total ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
-    document.getElementById('alPagination').innerHTML = html;
+    renderPagination('alPagination', alFiltered.length, alPage, alPerPage, 'alGoPage');
 }
 
 function alGoPage(p) {
@@ -527,7 +493,7 @@ function alGoPage(p) {
     if (p < 1 || p > total) return;
     alPage = p;
     alRender();
-    document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    appPaginationScrollTop();
 }
 
 function alDetailRow(label, val) {

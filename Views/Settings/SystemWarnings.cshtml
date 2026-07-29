@@ -6,7 +6,7 @@
 <style>
 .sw-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .sw-record-count { background:var(--gray-100); color:var(--gray-700); border-radius:10px; padding:6px 16px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
-.sw-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .sw-badge-success { background:#ECFDF3; color:#067647; }
 .sw-badge-fail { background:#FEF3F2; color:#B42318; }
 .sw-badge-exceed { background:#FEF9C3; color:#854D0E; }
@@ -24,25 +24,15 @@
 .sw-sev-high { background:#FFF4ED; color:#C4320A; }
 .sw-sev-critical { background:#FEF3F2; color:#B42318; }
 .sw-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
-.table > :not(caption) > * > * { padding-top:0.65rem; padding-bottom:0.65rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:12px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); text-align:center; font-size:13px; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .sw-empty { text-align:center; padding:40px 20px; color:var(--gray-400); }
 .sw-empty i { font-size:48px; display:block; margin-bottom:12px; }
-.sw-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
-.sw-pagination button { border:1px solid var(--gray-300); background:#fff; color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
-.sw-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
-.sw-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
-.sw-pagination button:disabled { opacity:.4; cursor:default; }
-.sw-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
 .sw-clear-btn { background:var(--error-50); color:var(--error-600); border:1px solid var(--error-200); border-radius:10px; padding:8px 20px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
 .sw-clear-btn:hover { background:var(--error-100); border-color:var(--error-300); }
 
 /* severity legend cards */
 .sw-legend { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
-.sw-legend-card { background:#fff; border:1px solid var(--gray-200); border-radius:10px; padding:14px 16px 12px; position:relative; transition:box-shadow .2s; }
+.sw-legend-card { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:10px; padding:14px 16px 12px; position:relative; transition:box-shadow .2s; }
 .sw-legend-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.05); }
 .sw-legend-card--low { border-right:3px solid var(--sa-600); }
 .sw-legend-card--medium { border-right:3px solid var(--sa-600); }
@@ -70,9 +60,9 @@
 @@media(max-width:600px){ .sw-legend { grid-template-columns:1fr; } }
 
 /* شجرة الوحدة التنظيمية (فلتر) */
-.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:#fff; display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
+.bnf-ou-tree-trigger { text-align:right !important; cursor:pointer; background-color:var(--surface-0); display:flex; align-items:center; min-height:calc(1.5em + 0.75rem + 2px); }
 .bnf-ou-tree-label { font-weight:500; color:var(--gray-800); }
-.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.bnf-ou-tree-panel { max-height:280px; overflow-y:auto; background:var(--surface-0); border:1px solid var(--gray-300); border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
 .bnf-ou-tree-row { user-select:none; border-bottom:1px solid var(--gray-100); transition:background .15s ease; gap:8px; cursor:pointer; }
 .bnf-ou-tree-row:hover { background:var(--sa-25); }
 .bnf-ou-tree-row.is-selected { background:var(--info-50); }
@@ -190,10 +180,10 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:45px;">#</th>
@@ -217,7 +207,7 @@
     </div>
 </div>
 
-<div class="sw-pagination" id="swPagination"></div>
+<div class="app-pagination" id="swPagination"></div>
 
 @section Scripts {
 <script>
@@ -458,30 +448,7 @@ function swRender() {
 }
 
 function swRenderPagination() {
-    var total = Math.ceil(swFiltered.length / swPerPage);
-    if (total <= 1) { document.getElementById('swPagination').innerHTML = ''; return; }
-
-    var html = '<span class="sw-pagination-info">صفحة ' + swPage + ' من ' + total + '</span>';
-    html += '<button onclick="swGoPage(' + (swPage - 1) + ')" ' + (swPage <= 1 ? 'disabled' : '') + '><i class="bi bi-chevron-right"></i></button>';
-
-    var maxV = 7;
-    var startP = Math.max(1, swPage - Math.floor(maxV / 2));
-    var endP = Math.min(total, startP + maxV - 1);
-    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
-
-    if (startP > 1) {
-        html += '<button onclick="swGoPage(1)">1</button>';
-        if (startP > 2) html += '<button disabled>…</button>';
-    }
-    for (var p = startP; p <= endP; p++) {
-        html += '<button onclick="swGoPage(' + p + ')" class="' + (p === swPage ? 'active' : '') + '">' + p + '</button>';
-    }
-    if (endP < total) {
-        if (endP < total - 1) html += '<button disabled>…</button>';
-        html += '<button onclick="swGoPage(' + total + ')">' + total + '</button>';
-    }
-    html += '<button onclick="swGoPage(' + (swPage + 1) + ')" ' + (swPage >= total ? 'disabled' : '') + '><i class="bi bi-chevron-left"></i></button>';
-    document.getElementById('swPagination').innerHTML = html;
+    renderPagination('swPagination', swFiltered.length, swPage, swPerPage, 'swGoPage');
 }
 
 function swGoPage(p) {
@@ -489,7 +456,7 @@ function swGoPage(p) {
     if (p < 1 || p > total) return;
     swPage = p;
     swRender();
-    document.querySelector('.table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    appPaginationScrollTop();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

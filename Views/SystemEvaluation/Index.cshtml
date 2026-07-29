@@ -6,27 +6,15 @@
 
 <style>
 .se-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
-.se-title-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.se-count-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 12px; border-radius:999px;
-    background:var(--sa-50); color:var(--sa-700);
-    border:1px solid var(--sa-200);
-    font-weight:700; font-size:12.5px;
-}
-.se-count-pill .bi { font-size:13px; }
+/* عدّاد السجلات موحّد في styles.css (.ui-count-pill داخل .ui-header-actions) */
 .se-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
 .se-evaluate-btn.is-submitted { opacity:.75; }
 .se-charts-row { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-bottom:24px; }
-.se-chart-card { background:#fff; border:1px solid var(--gray-200); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+.se-chart-card { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
 .se-chart-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:10px; border-bottom:2px solid var(--sa-100); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .se-chart-title i { color:var(--sa-600); font-size:16px; }
 .se-chart-wrap { position:relative; min-height:280px; }
-.se-table-card { border-radius:14px; border:1px solid var(--gray-200); overflow:hidden; box-shadow:var(--shadow); }
-.se-table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding:12px 14px; }
-.se-table tbody td { vertical-align:middle; font-size:13px; padding:12px 14px; text-align:center; border-bottom:1px solid var(--gray-100); }
-.se-table tbody tr:hover { background:var(--sa-25); }
-.se-rating-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; white-space:nowrap; }
+/* تنسيق الجدول والحاوية والشارات موحّد في styles.css (.ui-table / .ui-table-card) */
 .se-rating-excellent { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
 .se-rating-good { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
 .se-rating-average { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
@@ -35,7 +23,7 @@
 .se-notes-cell { max-width: 72px; text-align: center !important; color: var(--gray-400); }
 .se-notes-view-btn {
     width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--info-500);
-    color: var(--info-600); background: #fff; display: inline-flex; align-items: center;
+    color: var(--info-600); background: var(--surface-0); display: inline-flex; align-items: center;
     justify-content: center; cursor: pointer; font-size: 16px; transition: all .15s;
 }
 .se-notes-view-btn:hover { background: var(--info-50); }
@@ -43,10 +31,9 @@
     white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.75;
     color: var(--gray-800); text-align: right; min-height: 48px;
 }
-.se-publish-badge { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; font-weight:700; font-size:11.5px; white-space:nowrap; }
 .se-publish-badge-on { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
 .se-publish-badge-off { background:var(--warning-100); color:var(--warning-700); border:1px solid var(--warning-200); }
-.se-publish-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 12px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:#fff; }
+.se-publish-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 12px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:var(--surface-0); }
 .se-publish-on { border-color:var(--success-500); color:var(--success-600); }
 .se-publish-on:hover { background:var(--success-50); }
 .se-publish-off { border-color:var(--gray-300); color:var(--gray-600); }
@@ -55,15 +42,14 @@
 .se-action-icon {
     width:34px; height:34px; border-radius:8px; border:2px solid transparent;
     display:inline-flex; align-items:center; justify-content:center;
-    cursor:pointer; background:#fff; font-size:16px; transition:all .15s;
+    cursor:pointer; background:var(--surface-0); font-size:16px; transition:all .15s;
 }
 .se-action-icon:disabled { opacity:.35; cursor:not-allowed; }
 .se-action-icon-publish { border-color:var(--success-500); color:var(--success-600); }
 .se-action-icon-publish:hover:not(:disabled) { background:var(--success-50); }
 .se-action-icon-stop { border-color:var(--error-500); color:var(--error-600); }
 .se-action-icon-stop:hover:not(:disabled) { background:var(--error-50); }
-.se-row-unpublished td { background:#fffbeb; }
-.se-empty { text-align:center; padding:40px 20px; color:var(--gray-500); }
+.se-row-unpublished td { background:var(--surface-0)beb; }
 .se-modal .modal-content { border-radius:20px; border:none; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .se-modal-header { background:var(--sa-800); padding:24px 28px; position:relative; }
 .se-modal-header .btn-close-x { position:absolute; top:16px; left:16px; background:none; border:none; color:rgba(255,255,255,.7); font-size:22px; cursor:pointer; }
@@ -83,7 +69,7 @@
     flex:1 1 calc(20% - 10px); min-width:88px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
     padding:12px 8px; border-radius:12px;
-    background:#fff; border:2px solid var(--gray-200);
+    background:var(--surface-0); border:2px solid var(--gray-200);
     cursor:pointer; font-family:'Cairo',sans-serif;
     transition:border-color .15s, background .15s, box-shadow .15s;
 }
@@ -98,9 +84,9 @@
 .se-choice-pill[data-level="ممتاز"].is-selected i { color:#047857; }
 .se-choice-pill[data-level="جيد"].is-selected { border-color:#059669; background:#f0fdf4; }
 .se-choice-pill[data-level="جيد"].is-selected i { color:#059669; }
-.se-choice-pill[data-level="متوسط"].is-selected { border-color:#d97706; background:#fffbeb; }
+.se-choice-pill[data-level="متوسط"].is-selected { border-color:#d97706; background:var(--surface-0)beb; }
 .se-choice-pill[data-level="متوسط"].is-selected i { color:#d97706; }
-.se-choice-pill[data-level="منخفض"].is-selected { border-color:#ea580c; background:#fff7ed; }
+.se-choice-pill[data-level="منخفض"].is-selected { border-color:#ea580c; background:var(--surface-0)7ed; }
 .se-choice-pill[data-level="منخفض"].is-selected i { color:#ea580c; }
 .se-choice-pill[data-level="منخفض جداً"].is-selected { border-color:#dc2626; background:#fef2f2; }
 .se-choice-pill[data-level="منخفض جداً"].is-selected i { color:#dc2626; }
@@ -118,7 +104,7 @@
 .se-dim-btns { display:flex; gap:6px; flex-wrap:wrap; }
 .se-dim-btn {
     flex:1 1 auto; min-width:52px; padding:8px 6px;
-    border-radius:10px; border:2px solid var(--gray-200); background:#fff;
+    border-radius:10px; border:2px solid var(--gray-200); background:var(--surface-0);
     font-size:11.5px; font-weight:700; color:var(--gray-600);
     cursor:pointer; font-family:'Cairo',sans-serif; text-align:center;
     transition:border-color .15s, background .15s, color .15s;
@@ -144,7 +130,7 @@
 .se-submit-btn:disabled { opacity:.6; cursor:not-allowed; }
 .se-cancel-btn {
     border-radius:12px; padding:11px 28px; font-weight:700; font-size:14px;
-    background:#fff; border:2px solid var(--gray-300); color:var(--gray-700);
+    background:var(--surface-0); border:2px solid var(--gray-300); color:var(--gray-700);
     font-family:'Cairo',sans-serif; cursor:pointer; transition:background .15s;
 }
 .se-cancel-btn:hover { background:var(--gray-100); }
@@ -157,15 +143,15 @@
 
 <div class="se-page-header">
     <div>
-        <div class="se-title-row">
-            <h2 class="page-title mb-0">تقييم النظام :</h2>
-            <span class="se-count-pill" id="seTotalCountPill"><i class="bi bi-star-fill"></i><span id="seTotalCountTxt">0</span></span>
-        </div>
+        <h2 class="page-title mb-0">تقييم النظام :</h2>
         <p class="se-subtitle">استعراض تقييمات المستفيدين على النظام</p>
     </div>
-    <button type="button" class="btn btn-primary se-evaluate-btn" id="seBtnEvaluate" style="border-radius:12px;padding:10px 28px;font-weight:700;" onclick="seOpenEvaluateModal()">
-        <i class="bi bi-star-fill"></i> تقييم النظام
-    </button>
+    <div class="ui-header-actions">
+        <span class="ui-count-pill" id="seTotalCountPill"><i class="bi bi-star-fill"></i><span id="seTotalCountTxt">0</span></span>
+        <button type="button" class="btn btn-primary se-evaluate-btn" id="seBtnEvaluate" style="border-radius:12px;padding:10px 28px;font-weight:700;" onclick="seOpenEvaluateModal()">
+            <i class="bi bi-star-fill"></i> تقييم النظام
+        </button>
+    </div>
 </div>
 
 <div class="se-charts-row">
@@ -209,6 +195,8 @@
         </div>
     </div>
 </div>
+
+<div class="app-pagination" id="sePagination"></div>
 
 <!-- مودال تقييم النظام — نفس الصفحة -->
 <div class="modal fade se-modal" id="seEvaluateModal" tabindex="-1">

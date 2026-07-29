@@ -13,6 +13,15 @@
     <link rel="stylesheet" href="~/css/styles.css?v=@DateTime.Now.Ticks">
     <link rel="stylesheet" href="~/css/animations.css">
     @RenderSection("Styles", required: false)
+    <script>
+        // تطبيق الوضع المحفوظ قبل رسم الصفحة لتجنّب وميض الألوان
+        (function () {
+            if (localStorage.getItem('appTheme') === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
 </head>
 <body>
 <div id="app">
@@ -96,9 +105,10 @@
                 <i class="bi bi-bell-fill"></i>
                 <span class="notification-dot d-none" id="notif-count">0</span>
             </a>
-            <a href="/" class="notification-bell">
-                <i class="bi bi-brightness-high"></i>
-            </a>
+            <button type="button" class="notification-bell theme-toggle" id="theme-toggle"
+                    onclick="appToggleTheme()" title="الوضع الليلي" aria-label="تبديل الوضع الليلي">
+                <i class="bi bi-brightness-high" id="theme-toggle-icon"></i>
+            </button>
            <div class="user-info">
                 <div class="user-avatar-circle">
                     <i class="bi bi-person-fill"></i>
@@ -227,21 +237,21 @@
 <script>window.APP_PATH_BASE = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Context.Request.PathBase.Value ?? string.Empty));</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="~/js/site.js"></script>
+<script src="~/js/site.js?v=@DateTime.Now.Ticks"></script>
 @RenderSection("Scripts", required: false)
 
 <div id="sysPopupContainer"></div>
 <style>
-.sys-popup-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s ease; }
+.sys-popup-overlay { position:fixed;inset:0;background:var(--overlay);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .25s ease; }
 .sys-popup-box { border-radius:20px;overflow:hidden;box-shadow:0 8px 50px rgba(0,0,0,.28);max-width:min(560px,96vw);width:100%;max-height:min(90vh,720px);display:flex;flex-direction:column;animation:slideUp .3s ease; }
 .sys-popup-head-ad      { background:linear-gradient(135deg,#079455,#16A34A);padding:18px 22px;color:#fff;flex-shrink:0; }
 .sys-popup-head-alert   { background:linear-gradient(135deg,#CA8A04,#EAB308);padding:18px 22px;color:#fff;flex-shrink:0; }
 .sys-popup-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:18px 22px;color:#fff;flex-shrink:0; }
-.sys-popup-body { background:#fff;padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
+.sys-popup-body { background:var(--surface-0);padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
 .sys-popup-body p { word-break:break-word; }
-.sys-popup-footer { background:#fff;padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid var(--gray-100); }
-.sys-popup-close { background:#fff;border:1.5px solid #E5E7EB;border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:#374151;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
-.sys-popup-close:hover { background:#F9FAFB; }
+.sys-popup-footer { background:var(--surface-0);padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid var(--gray-100); }
+.sys-popup-close { background:var(--surface-0);border:1.5px solid var(--gray-200);border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:var(--gray-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
+.sys-popup-close:hover { background:var(--gray-50); }
 @@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
 @@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
 @@keyframes slideUp { from { opacity:0;transform:translateY(30px); } to { opacity:1;transform:translateY(0); } }
@@ -289,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         if (p.contentType === 'text') {
             const txt = (p.textContent || '').trim();
             bodyHtml = txt
-                ? `<p style="color:#374151;font-size:14px;line-height:1.85;margin:0;white-space:pre-wrap;word-break:break-word;">${escHtml(txt)}</p>`
+                ? `<p style="color:var(--gray-700);font-size:14px;line-height:1.85;margin:0;white-space:pre-wrap;word-break:break-word;">${escHtml(txt)}</p>`
                 : '';
         } else if (p.contentType === 'image' && mediaUrl) {
             bodyHtml = `<img src="${mediaUrl}" alt="" style="width:100%;max-width:100%;height:auto;border-radius:10px;object-fit:contain;display:block;" />`;
@@ -305,7 +315,7 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
                 </div>
                 <div style="font-weight:700;font-size:${p.titleFontSize || 18}px;color:${escHtml(p.titleColor || '#ffffff')};line-height:1.4;word-break:break-word;">${escHtml(p.title)}</div>
             </div>
-            <div class="sys-popup-body">${bodyHtml || '<p style="color:#9CA3AF;font-size:13px;margin:0;">لا يوجد محتوى إضافي</p>'}</div>
+            <div class="sys-popup-body">${bodyHtml || '<p style="color:var(--gray-400);font-size:13px;margin:0;">لا يوجد محتوى إضافي</p>'}</div>
             <div class="sys-popup-footer">
                 <button type="button" class="sys-popup-close" id="sysPClose_${p.id}">إغلاق</button>
             </div>

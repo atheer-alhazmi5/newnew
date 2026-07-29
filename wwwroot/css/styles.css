@@ -111,6 +111,11 @@
     --info: var(--info-500);
     --text: var(--gray-900);
     --text-muted: var(--gray-500);
+    /* أسطح الواجهة: تتغير قيمها في الوضع الداكن دون تعديل المكوّنات */
+    --surface-0: #fff;
+    --surface-app: #fafafa;
+    --overlay: rgba(0,0,0,.45);
+    color-scheme: light;
     --sidebar-width: 288px;
     --header-height: 80px;
     --subheader-height: 64px;
@@ -138,7 +143,7 @@ body {
     font-family: 'Cairo', sans-serif;
     font-size: 15px;
     color: var(--text);
-    background: #fafafa;
+    background: var(--surface-app);
     direction: rtl;
     -webkit-font-smoothing: antialiased;
 }
@@ -239,7 +244,7 @@ a {
 /* HEADER */
 #main-header {
     height: var(--header-height);
-    background: #fff;
+    background: var(--surface-0);
     border-bottom: 1px solid var(--gray-200);
     display: flex;
     align-items: center;
@@ -299,6 +304,18 @@ a {
         color: var(--primary);
     }
 
+/* زر تبديل الوضع الليلي — بنفس مظهر أيقونات الشريط العلوي */
+button.theme-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cairo', sans-serif;
+}
+
 .notification-dot {
     position: absolute;
     top: -6px;
@@ -313,7 +330,7 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid #fff;
+    border: 2px solid var(--surface-0);
 }
 
 .user-info {
@@ -403,7 +420,7 @@ a {
     display: flex;
     flex: 1;
 /*    align-items: flex-start;
-*/    background: #fafafa;
+*/    background: var(--surface-app);
     min-width: 0;
     width: 100%;
 }
@@ -412,7 +429,7 @@ a {
 #sidebar {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
-    background: #fff;
+    background: var(--surface-0);
     border-left: 1px solid var(--gray-200);
     display: flex;
     flex-direction: column;
@@ -560,7 +577,7 @@ a {
     max-width: 100%;
     box-sizing: border-box;
     padding: 32px;
-    background: #fafafa;
+    background: var(--surface-app);
     min-height: 0;
     padding-bottom: 80px;
     overflow-x: auto;
@@ -742,7 +759,7 @@ body.accessible-mode input:focus {
 
 /* Cards */
 .card {
-    background: #fff;
+    background: var(--surface-0);
     border-radius: var(--radius);
     border: 1px solid var(--gray-200);
     box-shadow: var(--shadow);
@@ -892,25 +909,37 @@ body.accessible-mode input:focus {
     font-size: 16px;
 }
 
-/* Tables */
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLES — نظام موحّد لجميع جداول النظام
+   المرجع التصميمي الوحيد: جدول صفحة «تقييم النظام».
+   لا تُعرَّف أنماط جداول داخل صفحات .cshtml — كل التنسيق يُدار من هنا.
+
+   الاستخدام في أي صفحة جديدة:
+     <div class="card ui-table-card">
+       <div class="card-body p-0">
+         <div class="table-responsive">
+           <table class="table mb-0 ui-table"> ... </table>
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* الأساس العام لأي جدول — يشمل شبكات النماذج وجداول التفاصيل */
 .table {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text);
 }
 
     .table thead th {
-        background: var(--gray-100);
+        background: var(--gray-50);
         font-weight: 700;
         font-size: 13px;
-        padding: 12px 16px;
+        padding: 12px 14px;
         border-bottom: 2px solid var(--gray-200);
-        color: var(--text);
+        color: var(--gray-700);
         white-space: nowrap;
         vertical-align: middle;
     }
 
     .table tbody td {
-        padding: 12px 16px;
+        padding: 12px 14px;
         vertical-align: middle;
         border-bottom: 1px solid var(--gray-100);
         font-style: normal !important;
@@ -921,8 +950,207 @@ body.accessible-mode input:focus {
     }
 
         .table tbody tr:hover {
-            background: var(--primary-light);
+            background: var(--sa-25);
         }
+
+/* ── حاوية الجدول (Card) ─────────────────────────────────────────────────── */
+/* الأسماء القديمة مُدرجة كمرادفات حتى يبقى التعريف في مكان واحد */
+/* تُكتب مع .card لتتجاوز إعادة تعريف .card اللاحقة في هذا الملف */
+.card.ui-table-card,
+.card.se-table-card,
+.card.tp-table-card,
+.card.fms-table-card,
+.card.pat-table-card,
+.card.ug-table-card {
+    background: var(--surface-0);
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+/* ── الجدول الموحّد ──────────────────────────────────────────────────────── */
+/* يضيف التوسيط وخلفية الرأس فوق الأساس العام أعلاه */
+.ui-table thead th,
+.se-table thead th,
+.dash-table thead th,
+.ob-table thead th,
+.sp-table thead th,
+.tp-table thead th,
+.obd-docs-table thead th,
+.ddl-items-table thead th,
+.rt-inline-table thead th,
+.pn-viewers-table thead th,
+.bnf-tbl .table thead th,
+.pn-tbl .table thead th {
+    background: var(--gray-50) !important;
+    color: var(--gray-700);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: 2px solid var(--gray-200);
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+.ui-table tbody td,
+.se-table tbody td,
+.dash-table tbody td,
+.ob-table tbody td,
+.sp-table tbody td,
+.tp-table tbody td,
+.obd-docs-table tbody td,
+.ddl-items-table tbody td,
+.rt-inline-table tbody td,
+.pn-viewers-table tbody td,
+.bnf-tbl .table tbody td,
+.pn-tbl .table tbody td {
+    vertical-align: middle;
+    font-size: 13px;
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.ui-table tbody tr:hover,
+.se-table tbody tr:hover,
+.dash-table tbody tr:hover,
+.ob-table tbody tr:hover,
+.sp-table tbody tr:hover,
+.tp-table tbody tr:hover,
+.obd-docs-table tbody tr:hover,
+.ddl-items-table tbody tr:hover,
+.rt-inline-table tbody tr:hover,
+.pn-viewers-table tbody tr:hover,
+.bnf-tbl .table tbody tr:hover,
+.pn-tbl .table tbody tr:hover {
+    background: var(--sa-25);
+}
+
+/* ── شارات الحالة داخل الجداول (Status Pills) ────────────────────────────── */
+/* الأساس الموحّد — الألوان تبقى خاصة بكل صفحة عبر أصناف الحالة لديها */
+.ui-table-badge,
+.se-rating-pill,
+.se-publish-badge,
+.ob-badge,
+.ob-stage,
+.sp-badge,
+.fd-badge,
+.fdv-badge,
+.er-badge-ownership,
+.al-badge,
+.dash-al-badge,
+.sw-badge,
+.bk-badge,
+.pn-badge,
+.tp-badge-active,
+.tp-badge-inactive,
+.bnf-status-pill,
+.cls-status-pill,
+.fmc-status-pill,
+.fms-status-pill,
+.fst-status-pill,
+.pat-status-pill,
+.ug-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+
+/* ── عدّاد السجلات في رأس الصفحة ──────────────────────────────────────────
+   مكوّن موحّد، مرجعه صفحتا «تقييم النظام» و«الدعم الفني».
+   يوضع داخل .ui-header-actions قبل الزر، فيظهر — في اتجاه RTL — يمين الزر. */
+.ui-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--sa-50);
+    color: var(--sa-700);
+    border: 1px solid var(--sa-200);
+    font-weight: 700;
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+    .ui-count-pill .bi { font-size: 13px; }
+
+/* مجموعة يسار رأس الصفحة: العدّاد ثم أزرار الإجراءات */
+.ui-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ── أزرار عمود «الإجراءات» — أيقونات فقط ─────────────────────────────────
+   الشكل الموحّد مأخوذ من أزرار صفحة «تقييم النظام» (.se-action-icon):
+   مربع 34×34 بدون نص، واسم الإجراء يظهر في Tooltip عبر خاصية title.
+   الألوان والحدود تبقى من صنف كل صفحة (fd-action-btn, ob-act-btn, ...).
+   يُكتب المُحدِّد مع اسم العنصر لتجاوز أنماط الأصناف المعرّفة داخل الصفحات. */
+button.ui-act-btn,
+a.ui-act-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    gap: 0;
+    flex: 0 0 auto;
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    text-decoration: none;
+}
+
+    button.ui-act-btn > i,
+    a.ui-act-btn > i {
+        font-size: 16px;
+        margin: 0;
+    }
+
+/* حاوية أزرار الإجراءات داخل الخلية */
+.ui-act-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+/* ── حالة «لا توجد بيانات» ───────────────────────────────────────────────── */
+.ui-table-empty,
+.se-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray-500);
+}
+
+    .ui-table-empty i,
+    .se-empty i {
+        font-size: 40px;
+        color: var(--gray-300);
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .ui-table-empty p,
+    .se-empty p {
+        margin: 0;
+        font-weight: 600;
+    }
 
 /* Badges */
 .badge {
@@ -1106,7 +1334,7 @@ body.accessible-mode input:focus {
 
 /* KPI Card */
 .kpi-card {
-    background: #fff;
+    background: var(--surface-0);
     border-radius: var(--radius);
     border: 1px solid var(--gray-200);
     padding: 24px;
@@ -1183,7 +1411,7 @@ body.accessible-mode input:focus {
 
 /* Form Card (ready-made) */
 .form-card {
-    background: #fff;
+    background: var(--surface-0);
     border-radius: var(--radius-lg);
     border: 1px solid var(--gray-200);
     border-right: 12px solid var(--primary);
@@ -1213,7 +1441,7 @@ body.accessible-mode input:focus {
     }
 
     .form-card:hover .form-card-icon {
-        background: #fff;
+        background: var(--surface-0);
         color: var(--primary);
         box-shadow: 0 0 0 3px var(--primary);
     }
@@ -1242,7 +1470,7 @@ body.accessible-mode input:focus {
 }
 
 .inbox-group-header {
-    background: #fff;
+    background: var(--surface-0);
     border: 1px solid var(--gray-200);
     border-radius: var(--radius) var(--radius) 0 0;
     padding: 16px 20px;
@@ -1351,7 +1579,7 @@ body.accessible-mode input:focus {
 
 /* Question Card (Form Builder) */
 .question-card {
-    background: #fff;
+    background: var(--surface-0);
     border: 1px solid var(--gray-200);
     border-radius: var(--radius);
     padding: 20px;
@@ -1399,6 +1627,14 @@ body.accessible-mode input:focus {
     color: var(--primary);
 }
 
+/* ترقيم الصفحات الموحّد — المرجع: صفحة سجل العمليات */
+.app-pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
+.app-pagination button { border:1px solid var(--gray-300); background:var(--surface-0); color:var(--gray-700); border-radius:8px; padding:6px 14px; font-size:13px; font-weight:600; font-family:'Cairo',sans-serif; cursor:pointer; transition:all .15s; }
+.app-pagination button:hover { background:var(--sa-50); border-color:var(--sa-400); }
+.app-pagination button.active { background:var(--sa-600); color:#fff; border-color:var(--sa-600); }
+.app-pagination button:disabled { opacity:.4; cursor:default; }
+.app-pagination-info { font-size:13px; color:var(--gray-500); font-weight:600; }
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
@@ -1420,7 +1656,7 @@ body.accessible-mode input:focus {
 
 /* Form Builder Toolbar */
 .builder-toolbar {
-    background: #fff;
+    background: var(--surface-0);
     border-bottom: 1px solid var(--gray-200);
     padding: 12px 24px;
     display: flex;
@@ -1488,7 +1724,7 @@ body.accessible-mode input:focus {
     font-size: 13px;
     cursor: pointer;
     transition: var(--transition);
-    background: #fff;
+    background: var(--surface-0);
     text-align: center;
     font-family: 'Cairo', sans-serif;
 }
@@ -1700,6 +1936,23 @@ body.accessible-mode input:focus {
             padding: 8px 10px;
         }
 
+    /* الجدول الموحّد يتبع نفس التصغير على الشاشات الصغيرة */
+    .ui-table thead th, .ui-table tbody td,
+    .se-table thead th, .se-table tbody td,
+    .dash-table thead th, .dash-table tbody td,
+    .ob-table thead th, .ob-table tbody td,
+    .sp-table thead th, .sp-table tbody td,
+    .tp-table thead th, .tp-table tbody td,
+    .obd-docs-table thead th, .obd-docs-table tbody td,
+    .ddl-items-table thead th, .ddl-items-table tbody td,
+    .rt-inline-table thead th, .rt-inline-table tbody td,
+    .pn-viewers-table thead th, .pn-viewers-table tbody td,
+    .bnf-tbl .table thead th, .bnf-tbl .table tbody td,
+    .pn-tbl .table thead th, .pn-tbl .table tbody td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
     .footer-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 24px;
@@ -1796,7 +2049,7 @@ body.accessible-mode input:focus {
 
     #main-content {
         padding: 0;
-        background: #fff;
+        background: var(--surface-0);
     }
 }
 /* ============================================
@@ -2462,7 +2715,7 @@ p, li, span {
     max-height: 280px;
     overflow-y: auto;
     overflow-x: hidden;
-    background: #fff;
+    background: var(--surface-0);
     border: 1px solid var(--gray-300);
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
@@ -2546,7 +2799,7 @@ p, li, span {
 .fd-bound-ddl-ou-wrap .bnf-ou-tree-trigger {
     text-align: right !important;
     cursor: pointer;
-    background-color: #fff;
+    background-color: var(--surface-0);
     display: flex;
     align-items: center;
     min-height: calc(1.5em + 0.75rem + 2px);
@@ -2561,7 +2814,7 @@ p, li, span {
     max-height: min(320px, 70vh);
     overflow-y: auto;
     overflow-x: hidden;
-    background: #fff;
+    background: var(--surface-0);
     border: 1px solid var(--gray-300);
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
@@ -2750,18 +3003,7 @@ input.rt-spin-input {
 
 .ob-proc-type .bi { font-size: 13px; }
 
-/* badges حالة/أولوية/SLA — نفس مقاس fd-badge */
-.ob-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 11px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
+/* badges حالة/أولوية/SLA — الشكل من الأساس الموحّد (.ui-table-badge) والألوان أدناه */
 .ob-badge .bi { font-size: 12px; }
 
 /* تصنيف الحالة */
@@ -2782,16 +3024,9 @@ input.rt-spin-input {
 
 /* المرحلة الحالية — بادج بلون مخصّص (يأتي من قاعدة البيانات: حالة الإجراء) */
 .ob-stage {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
     background: var(--gray-50);
     border: 1px solid var(--gray-200);
     color: var(--gray-700);
-    font-weight: 700;
-    font-size: 12px;
 }
 
 .ob-stage-dot {
@@ -2817,10 +3052,374 @@ input.rt-spin-input {
     font-family: 'Cairo', sans-serif;
     white-space: nowrap;
     transition: all .15s;
-    background: #fff;
+    background: var(--surface-0);
 }
 
 .ob-act-detail { border-color: var(--info-500); color: var(--info-500); }
 .ob-act-detail:hover { background: var(--info-50); }
 .ob-act-del { border-color: var(--error-500); color: var(--error-500); }
 .ob-act-del:hover { background: var(--error-50); }
+
+/* ============================================
+   الوضع الداكن (Dark Mode)
+   يُفعّل عبر السمة data-theme="dark" على عنصر html.
+   المبدأ: عكس أطراف تدرّجات الألوان فقط، فتتكيّف جميع
+   المكوّنات التي تستخدم var(--...) تلقائياً دون تعديلها.
+   ============================================ */
+[data-theme="dark"] {
+    color-scheme: dark;
+    /* الأسطح */
+    --surface-0: #16212E;
+    --surface-app: #0E1621;
+    --overlay: rgba(0,0,0,.65);
+    /* التدرّج الرمادي معكوس بالكامل */
+    --gray-25: #1A2532;
+    --gray-50: #1E2A38;
+    --gray-100: #243141;
+    --gray-200: #2E3C4D;
+    --gray-300: #3C4B5E;
+    --gray-400: #7C8A9A;
+    --gray-500: #9AA7B5;
+    --gray-600: #B4C0CC;
+    --gray-700: #CBD5DF;
+    --gray-800: #E1E8EF;
+    --gray-900: #F1F5F9;
+    --gray-950: #F8FAFC;
+    /* الأخضر (هوية النظام): الأطراف الفاتحة تصبح خلفيات داكنة، والداكنة تصبح نصوصاً فاتحة */
+    --sa-25: #14231C;
+    --sa-50: #16291F;
+    --sa-100: #1B3A2A;
+    --sa-200: #235140;
+    --sa-700: #7FD4A8;
+    --sa-800: #9BE0BC;
+    --sa-900: #B8EACB;
+    --sa-950: #DFF6E7;
+    /* الذهبي (هوية النظام) */
+    --gold-25: #262214;
+    --gold-50: #2B2616;
+    --gold-100: #383018;
+    --gold-200: #4A3F1C;
+    --gold-700: #F5D77A;
+    --gold-800: #FAE5A4;
+    --gold-900: #FCF3BD;
+    --gold-950: #FFFCE6;
+    /* حالات النجاح */
+    --success-25: #12241B;
+    --success-50: #14291E;
+    --success-100: #173726;
+    --success-200: #1F4A33;
+    --success-700: #6FDCA5;
+    --success-800: #8FE7BA;
+    --success-900: #ABEFC6;
+    --success-950: #DCFAE6;
+    /* حالات الخطأ */
+    --error-25: #2A1614;
+    --error-50: #301917;
+    --error-100: #40201C;
+    --error-200: #542A24;
+    --error-700: #FCA6A0;
+    --error-800: #FDBDB8;
+    --error-900: #FECDCA;
+    --error-950: #FEE4E2;
+    /* حالات التحذير */
+    --warning-25: #2A2013;
+    --warning-50: #302415;
+    --warning-100: #3F2E17;
+    --warning-200: #533C1B;
+    --warning-700: #FDC97A;
+    --warning-800: #FEDA9E;
+    --warning-900: #FEE7BC;
+    --warning-950: #FEF0C7;
+    /* حالات المعلومات */
+    --info-25: #121E2C;
+    --info-50: #142234;
+    --info-100: #182C43;
+    --info-200: #1E3A57;
+    --info-700: #8FCBFF;
+    --info-800: #B2DDFF;
+    --info-900: #CFE6FF;
+    --info-950: #E3F0FF;
+    /* البنفسجي */
+    --lavender-25: #201A25;
+    --lavender-50: #241D2A;
+    --lavender-100: #2E2436;
+    --lavender-200: #3D2F47;
+    --lavender-700: #C9A9D8;
+    --lavender-800: #DCC4E6;
+    --lavender-900: #E1CCE8;
+    --lavender-950: #F2E9F5;
+    /* اللون الأساسي يبقى صالحاً كتعبئة يُكتب فوقها بالأبيض */
+    --primary: var(--sa-600);
+    --primary-dark: var(--sa-500);
+    --primary-hover: var(--sa-500);
+    --primary-light: var(--sa-100);
+    --primary-bg: var(--sa-50);
+    /* ظلال أعمق لتبقى محسوسة على خلفية داكنة */
+    --shadow: 0 1px 3px rgba(0,0,0,.5);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.55);
+    /* الطبقة الثانية من الرموز (--gov-*): النصوص والمحيّدات الفاتحة تُعكس،
+       أما --gov-white فيبقى أبيض لأنه يُستخدم فوق تعبئات ملوّنة */
+    --gov-dark: var(--gray-900);
+    --gov-light: var(--gray-50);
+    --gov-gray-100: var(--gray-50);
+    --gov-gray-200: var(--gray-100);
+    --gov-gray-300: var(--gray-200);
+    --gov-gray-600: var(--gray-500);
+    /* توحيد أسطح مكوّنات Bootstrap (النوافذ، القوائم، الحقول) مع لوحة النظام */
+    --bs-body-bg: var(--surface-0);
+    --bs-body-color: var(--gray-900);
+    --bs-emphasis-color: var(--gray-950);
+    --bs-secondary-color: var(--gray-500);
+    --bs-secondary-bg: var(--gray-100);
+    --bs-tertiary-bg: var(--gray-50);
+    --bs-border-color: var(--gray-200);
+}
+
+/* قاعدة body الثانية في الملف تستخدم --gov-white الذي يبقى أبيض */
+[data-theme="dark"] body {
+    background-color: var(--surface-app);
+}
+
+[data-theme="dark"] .search-suggestions {
+    background: var(--surface-0);
+}
+
+/* المواضع التي يُستخدم فيها اللون الأساسي كنص وليس كتعبئة */
+[data-theme="dark"] a {
+    color: var(--sa-800);
+}
+
+    [data-theme="dark"] a:hover {
+        color: var(--sa-900);
+    }
+
+[data-theme="dark"] .header-title,
+[data-theme="dark"] .text-primary {
+    color: var(--sa-800) !important;
+}
+
+[data-theme="dark"] .notification-bell:hover {
+    color: var(--sa-800);
+}
+
+[data-theme="dark"] .btn-outline-primary {
+    color: var(--sa-800);
+    border-color: var(--sa-700);
+}
+
+    [data-theme="dark"] .btn-outline-primary:hover {
+        background: var(--sa-200);
+        color: var(--sa-950);
+    }
+
+[data-theme="dark"] ::selection {
+    background: var(--sa-200);
+    color: var(--sa-950);
+}
+
+/* أزرار شريط الوصول العلوي تعتمد على تعتيم أسود لا يظهر في الوضع الداكن */
+[data-theme="dark"] .top-bar-left button {
+    background: rgba(255,255,255,.08);
+}
+
+    [data-theme="dark"] .top-bar-left button:hover {
+        background: rgba(255,255,255,.16);
+    }
+
+/* ────────────────────────────────────────────
+   شارات الحالة المعرَّفة بألوان صريحة داخل صفحات محددة.
+   تُعاد صياغتها هنا بالرموز فقط في الوضع الداكن، فيبقى
+   الوضع الفاتح كما هو تماماً دون أي تغيير.
+   ──────────────────────────────────────────── */
+
+/* أخضر — مفعّل / معتمد / إيجابي */
+[data-theme="dark"] .ddl-badge-active,
+[data-theme="dark"] .rt-badge-active,
+[data-theme="dark"] .rt-field-badge-req,
+[data-theme="dark"] .fdv-badge-active,
+[data-theme="dark"] .status-pill.active,
+[data-theme="dark"] .ws-status-pill.on,
+[data-theme="dark"] .ou-on,
+[data-theme="dark"] .fst-status-pill.active,
+[data-theme="dark"] .fms-status-pill.active,
+[data-theme="dark"] .cls-status-pill.active,
+[data-theme="dark"] .pat-status-pill.active,
+[data-theme="dark"] .ug-status-pill.active,
+[data-theme="dark"] .fmc-status-pill.active,
+[data-theme="dark"] .bnf-status-pill.active,
+[data-theme="dark"] .bnf-profile-pill.complete,
+[data-theme="dark"] .wp-wf-radio-row .wp-wf-radio[data-mode="fixed"],
+[data-theme="dark"] #wpWorkflowStepModal .wp-wf-radio[data-mode="fixed"],
+[data-theme="dark"] .se-rating-excellent,
+[data-theme="dark"] .se-rating-good,
+[data-theme="dark"] .sp-cat-suggestion,
+[data-theme="dark"] .sp-imp-low,
+[data-theme="dark"] .nt-importance-low,
+[data-theme="dark"] .tp-badge-active,
+[data-theme="dark"] .wp-ver-badge-approved {
+    background: var(--success-100);
+    color: var(--success-700);
+    border-color: var(--success-200);
+}
+
+/* أحمر — موقوف / مرفوض / سلبي */
+[data-theme="dark"] .ddl-badge-inactive,
+[data-theme="dark"] .rt-badge-inactive,
+[data-theme="dark"] .fdv-badge-inactive,
+[data-theme="dark"] .status-pill.inactive,
+[data-theme="dark"] .ws-status-pill.off,
+[data-theme="dark"] .ou-off,
+[data-theme="dark"] .fst-status-pill.inactive,
+[data-theme="dark"] .fms-status-pill.inactive,
+[data-theme="dark"] .cls-status-pill.inactive,
+[data-theme="dark"] .pat-status-pill.inactive,
+[data-theme="dark"] .ug-status-pill.inactive,
+[data-theme="dark"] .fmc-status-pill.inactive,
+[data-theme="dark"] .bnf-status-pill.inactive,
+[data-theme="dark"] .wp-wf-radio-row .wp-wf-radio[data-mode="specific"],
+[data-theme="dark"] #wpWorkflowStepModal .wp-wf-radio[data-mode="specific"],
+[data-theme="dark"] .se-rating-verylow,
+[data-theme="dark"] .sp-cat-note,
+[data-theme="dark"] .sp-imp-high,
+[data-theme="dark"] .nt-importance-high,
+[data-theme="dark"] .tp-badge-inactive,
+[data-theme="dark"] .wp-ver-badge-rejected {
+    background: var(--error-100);
+    color: var(--error-700);
+    border-color: var(--error-200);
+}
+
+/* كهرماني — قيد الاعتماد / متوسط */
+[data-theme="dark"] .er-badge-exclusive,
+[data-theme="dark"] .se-rating-average,
+[data-theme="dark"] .se-rating-low,
+[data-theme="dark"] .sp-cat-support,
+[data-theme="dark"] .sp-imp-med,
+[data-theme="dark"] .nt-importance-med,
+[data-theme="dark"] .bnf-profile-pill.incomplete,
+[data-theme="dark"] .wp-ver-badge-pending {
+    background: var(--warning-100);
+    color: var(--warning-700);
+    border-color: var(--warning-200);
+}
+
+[data-theme="dark"] .nt-pin-btn.is-pinned {
+    background: var(--gold-100);
+    border-color: var(--gold-700);
+    color: var(--gold-700);
+}
+
+/* أزرق — استفسار / إعادة توجيه */
+[data-theme="dark"] .er-badge-nonexclusive,
+[data-theme="dark"] .sp-cat-inquiry {
+    background: var(--info-100);
+    color: var(--info-700);
+    border-color: var(--info-200);
+}
+
+/* أزرار ومناطق ذات تظليل فاتح عند المرور */
+[data-theme="dark"] .action-btn-edit:hover {
+    background: var(--sa-50);
+}
+
+[data-theme="dark"] .action-btn-stop:hover,
+[data-theme="dark"] .wp-wf-action-chip:hover {
+    background: var(--gray-50);
+}
+
+[data-theme="dark"] .ib-btn-return:hover {
+    background: var(--info-50);
+}
+
+[data-theme="dark"] .profile-box {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+/* بطاقات مقارنة الإصدارات */
+[data-theme="dark"] .fdv-diff-card.fdv-diff-added .fdv-diff-item {
+    background: var(--success-25);
+    border-color: var(--success-200);
+}
+
+[data-theme="dark"] .fdv-diff-card.fdv-diff-removed .fdv-diff-head {
+    background: var(--error-50);
+    border-bottom-color: var(--error-200);
+}
+
+[data-theme="dark"] .fdv-diff-card.fdv-diff-removed .fdv-diff-item {
+    background: var(--error-25);
+    border-color: var(--error-200);
+}
+
+[data-theme="dark"] .fdv-diff-card.fdv-diff-renamed .fdv-diff-head {
+    background: var(--info-50);
+    border-bottom-color: var(--info-200);
+}
+
+[data-theme="dark"] .fdv-diff-card.fdv-diff-renamed .fdv-diff-item {
+    background: var(--info-25);
+    border-color: var(--info-200);
+}
+
+/* شرائح اختيار التقييم */
+[data-theme="dark"] .se-choice-pill[data-level="ممتاز"].is-selected,
+[data-theme="dark"] .se-choice-pill[data-level="جيد"].is-selected {
+    background: var(--success-100);
+}
+
+[data-theme="dark"] .se-choice-pill[data-level="منخفض جداً"].is-selected {
+    background: var(--error-100);
+}
+
+/* شارات أنواع الحقول وشارات الأولوية المُنشأة من JavaScript */
+[data-theme="dark"] .fd-field-type-badge--choice,
+[data-theme="dark"] .fd-field-type-badge--meta,
+[data-theme="dark"] .fd-field-type-badge--media {
+    background: var(--lavender-100);
+    color: var(--lavender-800);
+    border-color: var(--lavender-200);
+}
+
+[data-theme="dark"] .fd-field-type-badge--rating,
+[data-theme="dark"] .opd-pill-warn,
+[data-theme="dark"] .opd-pill-med {
+    background: var(--warning-100);
+    color: var(--warning-700);
+    border-color: var(--warning-200);
+}
+
+[data-theme="dark"] .fd-field-type-badge--grid,
+[data-theme="dark"] .fd-field-type-badge--bool,
+[data-theme="dark"] .opd-pill-low {
+    background: var(--info-100);
+    color: var(--info-700);
+    border-color: var(--info-200);
+}
+
+[data-theme="dark"] .opd-pill-urgent {
+    background: var(--error-100);
+    color: var(--error-700);
+    border-color: var(--error-200);
+}
+
+/* الطباعة تبقى دائماً بالوضع الفاتح */
+@media print {
+    [data-theme="dark"] {
+        color-scheme: light;
+        --surface-0: #fff;
+        --surface-app: #fff;
+        --gray-25: #FCFCFD;
+        --gray-50: #F9FAFB;
+        --gray-100: #F3F4F6;
+        --gray-200: #E5E7EB;
+        --gray-300: #D2D6DB;
+        --gray-400: #9DA4AE;
+        --gray-500: #6C737F;
+        --gray-600: #4D5761;
+        --gray-700: #384250;
+        --gray-800: #1F2A37;
+        --gray-900: #111927;
+        --gray-950: #0D121C;
+    }
+}

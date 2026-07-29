@@ -1,5 +1,6 @@
 /* ===== Ready Tables JS (Index Page) ===== */
 var rtAllData = [], rtFilteredData = [], rtOrgUnits = [], rtCurrentUser = '', rtIsAdmin = false;
+var rtPage = 1, rtPerPage = 20, rtCurrentList = [];
 var RT_TABLE_NAME_DUP_MSG = 'اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var rtcFields = [], rtcEditingIndex = -1;
 var rtFilterOuExpanded = {};
@@ -655,7 +656,7 @@ function rtBuildSinglePropHtml(p, idPrefix) {
     }
     if (p.type === 'optionList') {
         var dOther = p.perOptionOther ? ' data-fd-per-option-other="1"' : '';
-        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:#fafafa;" data-mode="' + (p.choiceMode || 'single') + '"' + dOther + '></div></div>';
+        return '<div class="col-12 mb-3"><label class="d-block fw-bold mb-1" style="color:var(--gray-600);font-size:12px;">' + p.label + '</label><p class="text-muted small mb-2" style="font-size:11px;">أضف خياراً لكل سطر، وحدد «افتراضي» لقيمة تظهر تلقائياً في الجدول.</p><div id="' + idPrefix + '_' + p.key + '_options_editor" class="border rounded-3 p-3" style="background:var(--surface-app);" data-mode="' + (p.choiceMode || 'single') + '"' + dOther + '></div></div>';
     }
     if (p.type === 'displayImageUpload') {
         var fid = idPrefix + '_' + p.key;
@@ -897,6 +898,7 @@ function rtSyncFilterOuTreeLabel() {
 }
 
 function rtApplyFilters() {
+    rtPage = 1;
     var s = (document.getElementById('rtSearchInput').value || '').trim().toLowerCase();
     var rc = document.getElementById('rtFilterRowCount').value;
     var ow = document.getElementById('rtFilterOwnership').value;
@@ -912,6 +914,7 @@ function rtApplyFilters() {
 }
 
 function rtClearFilters() {
+    rtPage = 1;
     document.getElementById('rtSearchInput').value = '';
     document.getElementById('rtFilterRowCount').value = '';
     document.getElementById('rtFilterOwnership').value = '';
@@ -969,14 +972,18 @@ function rtCanEdit(t) {
 
 function rtRenderTable() {
     var badge = document.getElementById('rtCountBadge');
-    badge.textContent = '(' + rtAllData.length + ')';
+    badge.textContent = String(rtAllData.length);
     var body = document.getElementById('rtBody');
+    rtCurrentList = rtFilteredData;
     if (rtFilteredData.length === 0) {
         body.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">لا توجد جداول</td></tr>';
+        renderPagination('rtPagination', 0, 1, rtPerPage, 'rtGoPage');
         return;
     }
+    var totalPages = Math.max(1, Math.ceil(rtFilteredData.length / rtPerPage));
+    if (rtPage > totalPages) rtPage = totalPages;
     var html = '';
-    rtFilteredData.forEach(function(t) {
+    rtFilteredData.slice((rtPage - 1) * rtPerPage, rtPage * rtPerPage).forEach(function(t) {
         var rowClass = t.rowCountMode === 'مفتوح' ? 'rt-row-open' : 'rt-row-restricted';
         var rowLabel = t.rowCountMode === 'مقيد' ? 'مقيد' : 'مفتوح';
         var owClass = t.ownership === 'عام' ? 'rt-badge-public' : 'rt-badge-private';
@@ -994,17 +1001,26 @@ function rtRenderTable() {
         html += '<div style="display:inline-flex;gap:4px;align-items:center;justify-content:center;">';
         var actions = rtGetTableActions(t);
         if (actions.canViewDetails) {
-            html += '<button class="rt-action-btn rt-action-btn-detail" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>';
+            html += '<button class="rt-action-btn ui-act-btn rt-action-btn-detail" title="تفاصيل" onclick="rtShowDetails(' + t.id + ')"><i class="bi bi-eye"></i></button>';
         }
         if (actions.canEdit) {
-            html += '<button class="rt-action-btn rt-action-btn-edit" onclick="rtShowEditModal(' + t.id + ')"><i class="bi bi-pencil"></i> تحديث</button>';
+            html += '<button class="rt-action-btn ui-act-btn rt-action-btn-edit" title="تحديث" onclick="rtShowEditModal(' + t.id + ')"><i class="bi bi-pencil"></i></button>';
         }
         if (actions.canDelete) {
-            html += '<button class="rt-action-btn rt-action-btn-delete" onclick="rtShowDeleteModal(' + t.id + ',\'' + (t.name||'').replace(/'/g,"\\'") + '\')"><i class="bi bi-trash"></i> حذف</button>';
+            html += '<button class="rt-action-btn ui-act-btn rt-action-btn-delete" title="حذف" onclick="rtShowDeleteModal(' + t.id + ',\'' + (t.name||'').replace(/'/g,"\\'") + '\')"><i class="bi bi-trash"></i></button>';
         }
         html += '</div></td></tr>';
     });
     body.innerHTML = html;
+    renderPagination('rtPagination', rtFilteredData.length, rtPage, rtPerPage, 'rtGoPage');
+}
+
+function rtGoPage(p) {
+    var total = Math.ceil(rtCurrentList.length / rtPerPage);
+    if (p < 1 || p > total) return;
+    rtPage = p;
+    rtRenderTable();
+    appPaginationScrollTop();
 }
 
 /* ===== Create Modal ===== */
@@ -1211,7 +1227,7 @@ function rtcRenderFieldsTable() {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
         var tipText = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
-        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText.replace(/"/g,'&quot;') + '">' + tipText + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText.replace(/"/g,'&quot;') + '">' + tipText + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn ui-act-btn rt-action-btn-edit" title="تعديل" onclick="rtcEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn ui-act-btn rt-action-btn-delete" title="حذف" onclick="rtcDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1418,13 +1434,13 @@ function rtcShowPreview() {
     html += '<p class="mb-3 fw-bold" style="font-size:15px;">نموذج الجدول - مطلوب تعبئته: <span class="text-muted" style="font-size:13px;font-weight:normal;">(مرّر أفقياً لعرض جميع الحقول)</span></p>';
     html += '<div class="rt-preview-wrap"><table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
     rtcFields.forEach(function(f) {
-        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:#1f2937 !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:#1f2937 !important;"';
+        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:var(--gray-900) !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:var(--gray-900) !important;"';
         html += '<th' + ttip + '>' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '') + '</th>';
     });
     html += '</tr></thead><tbody id="rtpPreviewTbody">';
     for (var i = 0; i < numRows; i++) { html += rtpBuildRowHtml(); }
     if (rowMode === 'مفتوح') {
-        html += '<tr id="rtpAddRowTr"><td colspan="' + rtcFields.length + '" style="padding:12px;text-align:center;border:1px dashed #e5e7eb;"><button type="button" class="rt-add-fields-btn" onclick="rtpAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
+        html += '<tr id="rtpAddRowTr"><td colspan="' + rtcFields.length + '" style="padding:12px;text-align:center;border:1px dashed var(--gray-200);"><button type="button" class="rt-add-fields-btn" onclick="rtpAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
     }
     html += '</tbody></table></div>';
 
@@ -1481,7 +1497,7 @@ async function rtShowDetails(id) {
 
         if (d.fields && d.fields.length > 0) {
             html += '<div class="rt-section"><div class="rt-section-title">حقول الجدول (' + d.fields.length + ')</div>';
-            html += '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr>';
+            html += '<div class="table-responsive"><table class="table table-sm mb-0 ui-table"><thead><tr>';
             html += '<th>رقم</th><th>نوع الحقل</th><th>اسم الحقل</th><th>إلزامي</th><th>الخصائص</th>';
             html += '</tr></thead><tbody>';
             d.fields.forEach(function(f) {
@@ -1763,7 +1779,7 @@ function rtEditRenderFieldsTable() {
         var reqBadge = f.isRequired ? '<span class="rt-field-badge-req">نعم</span>' : '<span class="rt-field-badge-opt">لا</span>';
         var propsText = rtcGetPropsSummaryCreate(f);
         var tipText2 = f.tooltipText ? rtEscHtml(f.tooltipText) : '—';
-        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText2.replace(/"/g,'&quot;') + '">' + tipText2 + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn rt-action-btn-edit" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn rt-action-btn-delete" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
+        html += '<tr><td>' + (i+1) + '</td><td>' + rtFieldTypeCellHtml(f.fieldType) + '</td><td>' + f.fieldName + '</td><td>' + reqBadge + '</td><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + tipText2.replace(/"/g,'&quot;') + '">' + tipText2 + '</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + propsText.replace(/"/g,'&quot;') + '">' + propsText + '</td><td style="white-space:nowrap;"><button class="rt-action-btn ui-act-btn rt-action-btn-edit" title="تعديل" onclick="rtEditEditField(' + i + ')"><i class="bi bi-pencil"></i></button> <button class="rt-action-btn ui-act-btn rt-action-btn-delete" title="حذف" onclick="rtEditDeleteField(' + i + ')"><i class="bi bi-trash"></i></button></td></tr>';
     });
     body.innerHTML = html;
 }
@@ -1793,7 +1809,7 @@ function rtEditShowPreview() {
     html += '<p class="mb-3 fw-bold" style="font-size:15px;">نموذج الجدول - مطلوب تعبئته: <span class="text-muted" style="font-size:13px;font-weight:normal;">(مرّر أفقياً لعرض جميع الحقول)</span></p>';
     html += '<div class="rt-preview-wrap"><table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
     rtEditFields.forEach(function(f) {
-        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:#1f2937 !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:#1f2937 !important;"';
+        var ttip = f.tooltipText ? ' title="' + rtEscAttr(f.tooltipText) + '" style="background:' + headerColor + ' !important;color:var(--gray-900) !important;cursor:help;"' : ' style="background:' + headerColor + ' !important;color:var(--gray-900) !important;"';
         html += '<th' + ttip + '>' + f.fieldName + (f.isRequired ? ' <span class="required-star">*</span>' : '') + (f.tooltipText ? ' <i class="bi bi-info-circle" style="font-size:11px;opacity:.5;"></i>' : '') + '</th>';
     });
     html += '</tr></thead><tbody id="rtpPreviewTbody">';
@@ -1803,7 +1819,7 @@ function rtEditShowPreview() {
         html += '</tr>';
     }
     if (rowMode === 'مفتوح') {
-        html += '<tr id="rtpAddRowTr"><td colspan="' + rtEditFields.length + '" style="padding:12px;text-align:center;border:1px dashed #e5e7eb;"><button type="button" class="rt-add-fields-btn" onclick="rtpAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
+        html += '<tr id="rtpAddRowTr"><td colspan="' + rtEditFields.length + '" style="padding:12px;text-align:center;border:1px dashed var(--gray-200);"><button type="button" class="rt-add-fields-btn" onclick="rtpAddRow(this)"><i class="bi bi-plus-circle"></i> إضافة صف</button></td></tr>';
     }
     html += '</tbody></table></div>';
 

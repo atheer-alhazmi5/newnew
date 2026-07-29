@@ -20,26 +20,22 @@
 .ug-section-title i { font-size:18px; }
 .required-star { color:#ef4444; margin-right:4px; font-weight:700; }
 .ug-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; line-height:1.3; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.ug-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.ug-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .ug-action-btn-detail:hover { background:var(--info-50); }
-.ug-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.ug-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
 .ug-action-btn-edit:hover { background:var(--sa-50); }
-.ug-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.ug-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
 .ug-action-btn-delete:hover { background:var(--error-50); }
-.ug-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .ug-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
 .ug-status-pill.inactive { background:#fde8e8; color:#ef4444; }
 .ug-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
 .ug-status-pill.active .ug-status-dot { background:#0f9f5c; }
 .ug-status-pill.inactive .ug-status-dot { background:#ef4444; }
 .ug-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .ug-color-picker-wrap { position:relative; display:inline-block; }
-.ug-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.ug-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
 .ug-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
 .ug-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
 .ug-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
@@ -57,7 +53,7 @@
 .ug-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .ug-page-header .ug-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
 .ug-icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; max-height:160px; overflow-y:auto; padding:6px; border:1px solid var(--gray-200); border-radius:10px; background:var(--gray-50); }
-.ug-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:#fff; }
+.ug-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:var(--surface-0); }
 .ug-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
 .ug-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
 .ug-icon-display { width:34px; height:34px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; overflow:hidden; }
@@ -76,10 +72,10 @@
 .ug-attach-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 .ug-attach-row .btn-attach { padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px; background:var(--sa-50); color:var(--sa-700); border:2px solid var(--sa-200); cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:'Cairo',sans-serif; }
 .ug-attach-row .btn-attach:hover { background:var(--sa-100); border-color:var(--sa-300); }
-.ug-attach-row .btn-attach-clear { padding:6px 12px; border-radius:8px; background:#fff; color:var(--error-600); border:2px solid var(--error-200); font-weight:700; font-size:12px; cursor:pointer; }
+.ug-attach-row .btn-attach-clear { padding:6px 12px; border-radius:8px; background:var(--surface-0); color:var(--error-600); border:2px solid var(--error-200); font-weight:700; font-size:12px; cursor:pointer; }
 .ug-attach-row input[type="file"] { display:none; }
 .ug-content-pre { white-space:pre-wrap; line-height:1.8; padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; font-size:13px; color:var(--gray-800); max-height:240px; overflow-y:auto; }
-.ug-rich-editor { border:2px solid var(--gray-200); border-radius:10px; background:#fff; }
+.ug-rich-editor { border:2px solid var(--gray-200); border-radius:10px; background:var(--surface-0); }
 .ug-rich-editor .ql-toolbar { border:none; border-bottom:2px solid var(--gray-100); border-radius:10px 10px 0 0; font-family:'Cairo',sans-serif; }
 .ug-rich-editor .ql-container { border:none; font-family:'Cairo',sans-serif; font-size:14px; min-height:180px; border-radius:0 0 10px 10px; }
 .ug-rich-editor .ql-editor { min-height:160px; direction:rtl; text-align:right; }
@@ -119,7 +115,7 @@
 <div class="card ug-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:90px;">الترتيب</th>
@@ -139,7 +135,7 @@
     </div>
 </div>
 
-<div id="ugPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+<div id="ugPaginationContainer" class="app-pagination"></div>
 
 <div class="modal fade" id="ugAddModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">

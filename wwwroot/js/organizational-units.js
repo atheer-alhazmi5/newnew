@@ -9,6 +9,7 @@ function ouEsc(t) {
 var ouRows = [];
 var ouClassifications = [];
 var ouEditingId = null;
+var ouPage = 1, ouPerPage = 20, ouCurrentList = [];
 
 function ouSyncDeactivateReasonVisibility() {
     var active = document.getElementById('ouIsActive');
@@ -129,6 +130,7 @@ function ouFillClassificationSelect(elId) {
 }
 
 function ouClearFilters() {
+    ouPage = 1;
     var search = document.getElementById('ouSearch');
     var cls = document.getElementById('ouFilterClassification');
     var mgr = document.getElementById('ouFilterDirectManager');
@@ -170,13 +172,17 @@ function ouRenderTable() {
     var body = document.getElementById('ouBody');
     if (!body) return;
     var list = ouFilteredRows();
+    ouCurrentList = list;
     if (!list.length) {
         body.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">لا توجد وحدات مطابقة</td></tr>';
+        renderPagination('ouPagination', 0, 1, ouPerPage, 'ouGoPage');
         return;
     }
     list.sort(ouCompareHierarchy);
+    var totalPages = Math.max(1, Math.ceil(list.length / ouPerPage));
+    if (ouPage > totalPages) ouPage = totalPages;
     var html = '';
-    list.forEach(function (u) {
+    list.slice((ouPage - 1) * ouPerPage, ouPage * ouPerPage).forEach(function (u) {
         var cls = ouClassifications.find(function (c) { return String(c.id) === String(u.classificationId); });
         var badgeColor = cls && cls.color ? cls.color : '#25935F';
         var parentNm = u.parentName ? ouEsc(u.parentName) : '<span class="text-muted">—</span>';
@@ -204,13 +210,22 @@ function ouRenderTable() {
             '<td style="text-align:center;">' + activePill + '</td>' +
             '<td style="white-space:nowrap;text-align:center;">' +
             '<div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
-            '<button type="button" class="ou-action-btn ou-action-btn-detail" onclick="ouShowDetails(' + u.id + ')" title="تفاصيل"><i class="bi bi-eye"></i> تفاصيل</button>' +
-            '<button type="button" class="ou-action-btn ou-action-btn-edit" onclick="ouEdit(' + u.id + ')" title="تحديث"><i class="bi bi-pencil"></i> تحديث</button>' +
-            '<button type="button" class="ou-action-btn ou-action-btn-delete" onclick="ouConfirmDelete(' + u.id + ')" title="حذف"><i class="bi bi-trash3"></i> حذف</button>' +
+            '<button type="button" class="ou-action-btn ui-act-btn ou-action-btn-detail" onclick="ouShowDetails(' + u.id + ')" title="تفاصيل"><i class="bi bi-eye"></i></button>' +
+            '<button type="button" class="ou-action-btn ui-act-btn ou-action-btn-edit" onclick="ouEdit(' + u.id + ')" title="تحديث"><i class="bi bi-pencil"></i></button>' +
+            '<button type="button" class="ou-action-btn ui-act-btn ou-action-btn-delete" onclick="ouConfirmDelete(' + u.id + ')" title="حذف"><i class="bi bi-trash3"></i></button>' +
             '</div></td>' +
             '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('ouPagination', list.length, ouPage, ouPerPage, 'ouGoPage');
+}
+
+function ouGoPage(p) {
+    var total = Math.ceil(ouCurrentList.length / ouPerPage);
+    if (p < 1 || p > total) return;
+    ouPage = p;
+    ouRenderTable();
+    appPaginationScrollTop();
 }
 
 function ouShowDetails(id) {
@@ -426,10 +441,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var m = document.getElementById('ouFilterDirectManager');
     var r = document.getElementById('ouFilterUnitRepresentative');
     var active = document.getElementById('ouIsActive');
-    if (s) s.addEventListener('input', function () { ouRenderTable(); });
-    if (f) f.addEventListener('change', function () { ouRenderTable(); });
-    if (m) m.addEventListener('change', function () { ouRenderTable(); });
-    if (r) r.addEventListener('change', function () { ouRenderTable(); });
+    if (s) s.addEventListener('input', function () { ouPage = 1; ouRenderTable(); });
+    if (f) f.addEventListener('change', function () { ouPage = 1; ouRenderTable(); });
+    if (m) m.addEventListener('change', function () { ouPage = 1; ouRenderTable(); });
+    if (r) r.addEventListener('change', function () { ouPage = 1; ouRenderTable(); });
     if (active) active.addEventListener('change', ouSyncDeactivateReasonVisibility);
     ouLoad();
 });

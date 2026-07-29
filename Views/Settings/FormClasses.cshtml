@@ -20,26 +20,22 @@
 .fmc-section-title i { font-size:18px; }
 .required-star { color:#ef4444; margin-right:4px; font-weight:700; }
 .fmc-action-btn { min-width:80px; border-radius:10px; font-weight:700; padding:7px 14px; font-size:12px; line-height:1.3; display:inline-flex; align-items:center; gap:5px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.fmc-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fmc-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .fmc-action-btn-detail:hover { background:var(--info-50); }
-.fmc-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fmc-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
 .fmc-action-btn-edit:hover { background:var(--sa-50); }
-.fmc-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fmc-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
 .fmc-action-btn-delete:hover { background:var(--error-50); }
-.fmc-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .fmc-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
 .fmc-status-pill.inactive { background:#fde8e8; color:#ef4444; }
 .fmc-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
 .fmc-status-pill.active .fmc-status-dot { background:#0f9f5c; }
 .fmc-status-pill.inactive .fmc-status-dot { background:#ef4444; }
 .fmc-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .fmc-color-picker-wrap { position:relative; display:inline-block; }
-.fmc-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.fmc-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
 .fmc-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
 .fmc-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
 .fmc-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
@@ -56,7 +52,7 @@
 .fmc-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .fmc-page-header .fmc-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
 .fmc-icon-picker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-.fmc-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:#fff; }
+.fmc-icon-picker-item { width:44px; height:44px; border-radius:10px; border:2px solid var(--gray-200); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; color:var(--gray-600); transition:all .2s; background:var(--surface-0); }
 .fmc-icon-picker-item:hover { border-color:var(--sa-400); background:var(--sa-50); color:var(--sa-700); }
 .fmc-icon-picker-item.selected { border-color:var(--sa-600); background:var(--sa-100); color:var(--sa-700); box-shadow:0 0 0 3px rgba(37,147,95,.15); }
 .fmc-icon-display { width:32px; height:32px; border-radius:8px; background:var(--sa-50); color:var(--sa-700); display:inline-flex; align-items:center; justify-content:center; font-size:16px; }
@@ -80,10 +76,10 @@
     <button type="button" class="rt-clear-btn" onclick="fmcClearFilter()" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:70px;">الترتيب</th>
@@ -103,7 +99,7 @@
     </div>
 </div>
 
-<div id="fmcPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+<div id="fmcPaginationContainer" class="app-pagination"></div>
 
 <!-- Add Modal -->
 <div class="modal fade" id="fmcAddModal" tabindex="-1">

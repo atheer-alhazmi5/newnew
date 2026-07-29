@@ -6,8 +6,8 @@
 <style>
 .dash-header { margin-bottom:24px; }
 .dash-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
-.dash-tabs-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow); }
-.dash-tabs { display:flex; border-bottom:1px solid var(--gray-200); background:#fff; overflow-x:auto; }
+.dash-tabs-wrap { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow); }
+.dash-tabs { display:flex; border-bottom:1px solid var(--gray-200); background:var(--surface-0); overflow-x:auto; }
 .dash-tab {
     flex:1; min-width:140px; padding:14px 12px; text-align:center;
     font-size:13px; font-weight:700; color:var(--gray-400);
@@ -22,7 +22,7 @@
 .dash-panel.active { display:block; }
 .dash-panel-inner { padding:24px; }
 .dash-chart-row { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:8px; }
-.dash-chart-card { background:#fff; border:1px solid var(--gray-200); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
+.dash-chart-card { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:14px; padding:20px 22px; box-shadow:var(--shadow); }
 .dash-chart-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:10px; border-bottom:2px solid var(--sa-100); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .dash-chart-title i { color:var(--sa-600); font-size:16px; }
 .dash-chart-wrap { position:relative; min-height:280px; }
@@ -37,7 +37,7 @@
     font-size:48px; color:var(--sa-600); overflow:hidden;
 }
 .dash-avatar img { width:100%; height:100%; object-fit:cover; }
-.dash-profile-section { background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+.dash-profile-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
 .dash-profile-section:last-child { margin-bottom:0; }
 .dash-fields { display:grid; grid-template-columns:160px 1fr; gap:12px 18px; font-size:13.5px; }
 .dash-fields .lbl { font-weight:700; color:var(--gray-500); }
@@ -56,10 +56,8 @@
 .dash-section-title i { color:var(--sa-600); }
 .dash-del-block { margin-bottom:28px; }
 .dash-del-block:last-child { margin-bottom:0; }
-.dash-table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); padding:12px 14px; }
-.dash-table tbody td { vertical-align:middle; font-size:13px; padding:12px 14px; text-align:center; border-bottom:1px solid var(--gray-100); }
-.dash-table tbody tr:hover { background:var(--sa-25); }
-.dash-al-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; white-space:nowrap; background:var(--gray-100); color:var(--gray-700); }
+/* تنسيق الجدول والشارات موحّد في styles.css (.ui-table / .ui-table-badge) */
+.dash-al-badge { background:var(--gray-100); color:var(--gray-700); }
 .dash-al-action-link { border:none; cursor:pointer; font-family:inherit; transition:transform .12s,opacity .12s; }
 .dash-al-action-link:hover { opacity:.88; transform:scale(1.03); }
 .dash-al-badge-login { background:#ECFDF3; color:#067647; }
@@ -215,7 +213,7 @@
 
             <div class="dash-del-block">
                 <h3 class="dash-section-title"><i class="bi bi-person-check"></i> جدول مفوض عنه</h3>
-                <div class="card"><div class="card-body p-0"><div class="table-responsive">
+                <div class="card ui-table-card"><div class="card-body p-0"><div class="table-responsive">
                     <table class="table mb-0 dash-table"><thead><tr>
                         <th style="width:50px;">ت</th><th>المرجع</th><th>المفوض عنه</th><th>الوحدة التنظيمية</th>
                         <th>تاريخ البداية</th><th>تاريخ النهاية</th><th>سبب التفويض</th><th>المدة</th><th>الحالة</th>
@@ -225,7 +223,7 @@
 
             <div class="dash-del-block">
                 <h3 class="dash-section-title"><i class="bi bi-person-plus"></i> جدول مفوض له</h3>
-                <div class="card"><div class="card-body p-0"><div class="table-responsive">
+                <div class="card ui-table-card"><div class="card-body p-0"><div class="table-responsive">
                     <table class="table mb-0 dash-table"><thead><tr>
                         <th style="width:50px;">ت</th><th>المرجع</th><th>المفوِّض</th><th>الوحدة التنظيمية</th>
                         <th>تاريخ البداية</th><th>تاريخ النهاية</th><th>سبب التفويض</th><th>المدة</th><th>الحالة</th>
@@ -246,7 +244,7 @@
                 <input type="date" class="dash-date-input" id="dashAlDateTo" onchange="dashAlApplyFilters()" aria-label="إلى تاريخ">
                 <button type="button" class="rt-clear-btn" onclick="dashAlClearFilters()"><i class="bi bi-x-circle"></i> مسح</button>
             </div>
-            <div class="card"><div class="card-body p-0"><div class="table-responsive">
+            <div class="card ui-table-card"><div class="card-body p-0"><div class="table-responsive">
                 <table class="table mb-0 dash-table"><thead><tr>
                     <th style="width:50px;">ت</th><th>العملية / الحركة</th><th style="width:170px;">تاريخ ووقت العملية</th>
                     <th style="width:100px;">المتصفح</th><th style="width:130px;">عنوان IP</th><th style="width:120px;">نظام التشغيل</th>

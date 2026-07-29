@@ -30,13 +30,13 @@ function renderTable() {
             <td>${fmtDate(item.sentDate)}</td>
             <td>${statusBadge(item.status)}</td>
             <td>
-                <div class="d-flex gap-2">
+                <div class="ui-act-group">
                     ${item.status === 'قيد الانتظار' ? `
-                    <button class="btn btn-sm btn-success" onclick="approve(${item.id})">
-                        <i class="bi bi-check-lg" style="margin-left:4px;"></i>اعتماد
+                    <button class="btn btn-sm btn-success ui-act-btn" title="اعتماد" onclick="approve(${item.id})">
+                        <i class="bi bi-check-lg"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="showReject(${item.id})">
-                        <i class="bi bi-x-lg" style="margin-left:4px;"></i>رفض
+                    <button class="btn btn-sm btn-danger ui-act-btn" title="رفض" onclick="showReject(${item.id})">
+                        <i class="bi bi-x-lg"></i>
                     </button>` : '—'}
                 </div>
             </td>

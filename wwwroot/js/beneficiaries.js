@@ -3,6 +3,7 @@ var bnfUnits = [];
 var bnfOuExpanded = {};
 var bnfFilterOuExpanded = {};
 var bnfSignCtx = {};
+var bnfPage = 1, bnfPerPage = 20, bnfCurrentList = [];
 
 function bnfIsSysAdminRole() {
     var c = document.querySelector('input[name="bnfSubRole"]:checked');
@@ -164,9 +165,13 @@ document.addEventListener('DOMContentLoaded', function () {
     filterIds.forEach(function (fid) {
         var el = document.getElementById(fid);
         if (!el) return;
-        el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () { bnfRenderTable(); });
+        el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
+            bnfPage = 1;
+            bnfRenderTable();
+        });
     });
     document.getElementById('bnfFilterClear').addEventListener('click', function () {
+        bnfPage = 1;
         document.getElementById('bnfFilterName').value = '';
         document.getElementById('bnfFilterNationalId').value = '';
         document.getElementById('bnfFilterUnit').value = '';
@@ -317,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 bnfFilterOuClosePanel();
                 bnfRenderFilterOrgUnitTreePanel();
+                bnfPage = 1;
                 bnfRenderTable();
             }
         });
@@ -735,18 +741,24 @@ function bnfProfileStatusHtml(b) {
 function bnfRenderTable() {
     var body = document.getElementById('bnfBody');
     if (bnfAll.length === 0) {
+        bnfCurrentList = [];
         body.innerHTML = '<tr><td colspan="12">' +
             emptyState('bi-people-fill', 'لا يوجد مستفيدين', 'اضغط إضافة لإدخال مستفيد جديد') + '</td></tr>';
+        renderPagination('bnfPagination', 0, 1, bnfPerPage, 'bnfGoPage');
         return;
     }
     var rows = bnfGetFilteredBeneficiaries();
+    bnfCurrentList = rows;
     if (rows.length === 0) {
         body.innerHTML = '<tr><td colspan="12">' +
             emptyState('bi-search', 'لا توجد نتائج', 'جرّب تعديل معايير البحث أو مسح الفلاتر') + '</td></tr>';
+        renderPagination('bnfPagination', 0, 1, bnfPerPage, 'bnfGoPage');
         return;
     }
+    var totalPages = Math.max(1, Math.ceil(rows.length / bnfPerPage));
+    if (bnfPage > totalPages) bnfPage = totalPages;
     var html = '';
-    rows.forEach(function (b, idx) {
+    rows.slice((bnfPage - 1) * bnfPerPage, bnfPage * bnfPerPage).forEach(function (b, idx) {
         var safeName = esc(b.fullName).replace(/'/g, "\\'");
         var avatarHtml = b.photoUrl
             ? '<img src="' + esc(b.photoUrl) + '" class="bnf-tbl-avatar" alt="" onerror="this.outerHTML=\'<span class=bnf-tbl-avatar-placeholder><i class=bi bi-person></i></span>\'">'
@@ -755,7 +767,7 @@ function bnfRenderTable() {
         var statusClass = active ? 'active' : 'inactive';
         var statusText = active ? 'مفعل' : 'معطل';
         html += '<tr>' +
-            '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td>' +
+            '<td style="text-align:center;font-weight:700;color:var(--gray-500);">' + ((bnfPage - 1) * bnfPerPage + idx + 1) + '</td>' +
             '<td style="text-align:center;">' + avatarHtml + '</td>' +
             '<td style="font-weight:700;">' + esc(b.fullName) + '</td>' +
             '<td><span dir="ltr" style="font-size:12px;">' + esc(b.username || '') + '</span></td>' +
@@ -768,14 +780,23 @@ function bnfRenderTable() {
             '<td style="text-align:center;">' + bnfProfileStatusHtml(b) + '</td>' +
             '<td>' +
                 '<div style="display:flex;gap:4px;align-items:center;justify-content:center;">' +
-                    '<button class="bnf-action-btn bnf-action-btn-detail" onclick="bnfShowDetails(' + b.id + ')"><i class="bi bi-eye"></i> تفاصيل</button>' +
-                    '<button class="bnf-action-btn bnf-action-btn-edit" onclick="bnfShowEditModal(' + b.id + ')"><i class="bi bi-pencil"></i> تحديث</button>' +
-                    '<button class="bnf-action-btn bnf-action-btn-delete" onclick="bnfShowDeleteModal(' + b.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i> حذف</button>' +
+                    '<button class="bnf-action-btn ui-act-btn bnf-action-btn-detail" title="تفاصيل" onclick="bnfShowDetails(' + b.id + ')"><i class="bi bi-eye"></i></button>' +
+                    '<button class="bnf-action-btn ui-act-btn bnf-action-btn-edit" title="تحديث" onclick="bnfShowEditModal(' + b.id + ')"><i class="bi bi-pencil"></i></button>' +
+                    '<button class="bnf-action-btn ui-act-btn bnf-action-btn-delete" title="حذف" onclick="bnfShowDeleteModal(' + b.id + ',\'' + safeName + '\')"><i class="bi bi-trash3"></i></button>' +
                 '</div>' +
             '</td>' +
             '</tr>';
     });
     body.innerHTML = html;
+    renderPagination('bnfPagination', rows.length, bnfPage, bnfPerPage, 'bnfGoPage');
+}
+
+function bnfGoPage(p) {
+    var total = Math.ceil(bnfCurrentList.length / bnfPerPage);
+    if (p < 1 || p > total) return;
+    bnfPage = p;
+    bnfRenderTable();
+    appPaginationScrollTop();
 }
 
 function bnfValidatePasswordStrength(pwd) {

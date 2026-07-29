@@ -21,20 +21,16 @@
 .required-star { color:#ef4444; margin-right:4px; font-weight:700; }
 .fst-cat-open { color:#15803d !important; font-weight:800; }
 .fst-cat-closed { color:#b91c1c !important; font-weight:800; }
-.fst-status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:700; font-size:12px; }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .fst-status-pill.active { background:#dcf5e8; color:#0f9f5c; }
 .fst-status-pill.inactive { background:#fde8e8; color:#ef4444; }
 .fst-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
 .fst-status-pill.active .fst-status-dot { background:#0f9f5c; }
 .fst-status-pill.inactive .fst-status-dot { background:#ef4444; }
 .fst-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-.table > :not(caption) > * > * { padding-top:0.75rem; padding-bottom:0.75rem; vertical-align:middle; }
-.table thead th { background:var(--gray-50) !important; color:var(--gray-700); font-size:13px; font-weight:700; text-align:center; white-space:nowrap; border-bottom:2px solid var(--gray-200); }
-.table tbody tr { transition:background .15s; }
-.table tbody tr:hover { background:var(--sa-25); }
-.table tbody td { border-bottom:1px solid var(--gray-100); }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .fst-color-picker-wrap { position:relative; display:inline-block; }
-.fst-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:#fff; transition:border-color .2s; }
+.fst-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
 .fst-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
 .fst-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
 .fst-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
@@ -51,11 +47,11 @@
 .fst-btn-table-delete { padding:8px 16px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; background:#dc3545; color:#fff; font-family:'Cairo',sans-serif; }
 .fst-btn-table-delete:hover { background:#bb2d3b; }
 .fst-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; line-height:1.3; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; transition:all .15s; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.fst-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
+.fst-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .fst-action-btn-detail:hover { background:var(--info-50); }
-.fst-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
+.fst-action-btn-edit { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
 .fst-action-btn-edit:hover { background:var(--sa-50); }
-.fst-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
+.fst-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
 .fst-action-btn-delete:hover { background:var(--error-50); }
 .fst-detail-row { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--gray-100); }
 .fst-detail-row:last-child { border-bottom:none; }
@@ -81,10 +77,10 @@
     <button type="button" class="rt-clear-btn" onclick="fstClearFilter()" title="مسح الفلاتر"><i class="bi bi-x-circle"></i> مسح</button>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="width:70px;">الترتيب</th>
@@ -104,7 +100,7 @@
     </div>
 </div>
 
-<div id="fstPaginationContainer" class="d-flex justify-content-center mt-4"></div>
+<div id="fstPaginationContainer" class="app-pagination"></div>
 
 <!-- Add Modal -->
 <div class="modal fade" id="fstAddModal" tabindex="-1">

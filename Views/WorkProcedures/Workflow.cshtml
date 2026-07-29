@@ -16,7 +16,7 @@
 .fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
 .fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
 .fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:flex-end; align-items:center; background:var(--gray-50); }
-.fd-section       { background:#fff; border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.fd-section       { background:var(--surface-0); border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
 .fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
 .fd-form-row   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:14px; }
 .fd-form-row.cols-1 { grid-template-columns:1fr; }
@@ -34,7 +34,7 @@
 .fd-detail-val  { color:var(--gray-800); font-weight:500; }
 #wpWorkflowStepModal .fd-modal-body { max-height: 75vh; overflow-y: auto; }
 .wp-wf-section-head .btn-primary { border-radius: 12px; padding: 8px 20px; font-size: 13px; font-weight: 700; }
-.wp-wf-table-wrap .table thead th { font-size: 12px; white-space: nowrap; }
+/* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .wp-wf-muted { background: var(--gray-100) !important; color: var(--gray-500) !important; }
 .wp-wf-muted .wp-wf-na { font-style: italic; }
 .wp-wf-escalation-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 8px 10px; background: var(--gray-50); border-radius: 8px; border: 1px solid var(--gray-200); }
@@ -47,7 +47,7 @@
   border: 2px solid var(--gray-200);
   border-radius: 10px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface-0);
   direction: ltr;
 }
 #wpWorkflowStepModal .wp-wf-stepper-btn {
@@ -77,7 +77,7 @@
   padding: 0 2px !important;
   height: 36px;
   color: var(--gray-800);
-  background: #fff !important;
+  background: var(--surface-0) !important;
   box-shadow: none !important;
   -moz-appearance: textfield;
   appearance: textfield;
@@ -155,10 +155,11 @@
 #wpWorkflowStepModal .btn-primary { background: var(--sa-600); border-color: var(--sa-600); font-weight: 700; border-radius: 12px; padding: 10px 24px; font-size: 14px; }
 #wpWorkflowStepModal .btn-primary:hover { background: var(--sa-700); border-color: var(--sa-700); }
 .fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; }
-.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:#fff; }
-.fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:#fff; }
-.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:#fff; }
-.fd-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-inline-end:4px; }
+.fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
+.fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
+.fd-action-btn-delete { border-color:var(--error-500); color:var(--error-500); background:var(--surface-0); }
+/* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
+.fd-badge { margin-inline-end:4px; }
 
 /* ═══ Radio buttons أفقية لـ «المكلف بالخطوة» ═══ */
 .wp-wf-radio-row { display:flex; gap:0; align-items:stretch; flex-wrap:wrap; padding:0; border:1px solid var(--gray-200); border-radius:10px; overflow:hidden; }
@@ -172,7 +173,7 @@
 .wp-wf-radio-row .wp-wf-radio[data-mode="fixed"] input[type="radio"] { accent-color:#16a34a; }
 .wp-wf-radio-row .wp-wf-radio:has(input:checked) { box-shadow:inset 0 0 0 2px currentColor; font-weight:800; }
 .wp-wf-radio-row.wp-wf-yesno { border:1px solid var(--gray-200); }
-.wp-wf-radio-row.wp-wf-yesno .wp-wf-radio { flex:1 1 50%; min-width:80px; background:#fff; color:var(--gray-700); padding:8px 12px; }
+.wp-wf-radio-row.wp-wf-yesno .wp-wf-radio { flex:1 1 50%; min-width:80px; background:var(--surface-0); color:var(--gray-700); padding:8px 12px; }
 .wp-wf-radio-row.wp-wf-yesno .wp-wf-radio input[type="radio"] { accent-color:var(--sa-600); }
 .wp-wf-radio-row.wp-wf-yesno .wp-wf-radio:has(input:checked) { background:var(--sa-50); color:var(--sa-700); }
 
@@ -181,7 +182,7 @@
 #wpWorkflowStepModal .wp-wf-ou-tree-trigger.form-select {
     text-align: right !important;
     cursor: pointer;
-    background-color: #fff;
+    background-color: var(--surface-0);
     display: flex;
     align-items: center;
     min-height: calc(1.5em + 0.75rem + 2px);
@@ -197,7 +198,7 @@
 #wpWorkflowStepModal .wp-wf-ou-tree-panel {
     max-height: 280px;
     overflow-y: auto;
-    background: #fff !important;
+    background: var(--surface-0) !important;
     border: 1px solid var(--gray-300) !important;
     border-radius: 8px !important;
     margin-top: 8px;
@@ -210,7 +211,7 @@
     transition: background .15s ease;
     gap: 8px;
     margin: 0;
-    background: #fff;
+    background: var(--surface-0);
     cursor: pointer;
 }
 #wpWorkflowStepModal .wp-wf-ou-tree-panel .wp-wf-ou-tree-row:last-child { border-bottom: none; }
@@ -248,7 +249,7 @@
 
 /* ═══ قنوات الإشعار (Multi Select Chips) ═══ */
 .wp-wf-channel-list { display:flex; gap:8px; flex-wrap:wrap; padding:6px 0; }
-.wp-wf-channel-chip { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:2px solid var(--gray-200); border-radius:10px; background:#fff; cursor:pointer; font-size:13px; font-weight:600; color:var(--gray-700); transition:all .15s; user-select:none; }
+.wp-wf-channel-chip { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border:2px solid var(--gray-200); border-radius:10px; background:var(--surface-0); cursor:pointer; font-size:13px; font-weight:600; color:var(--gray-700); transition:all .15s; user-select:none; }
 .wp-wf-channel-chip:hover { border-color:var(--sa-300); background:var(--sa-25); }
 .wp-wf-channel-chip.is-on { border-color:var(--sa-600); background:var(--sa-50); color:var(--sa-800); }
 .wp-wf-channel-chip input[type="checkbox"] { width:16px; height:16px; accent-color:var(--sa-600); cursor:pointer; margin:0; }
@@ -260,7 +261,7 @@
 .wp-wf-action-chip {
     display:inline-flex; align-items:center; gap:8px;
     padding:7px 12px; border:1px solid var(--gray-200); border-radius:8px;
-    background:#fff; cursor:pointer; font-size:13px; font-weight:700; user-select:none;
+    background:var(--surface-0); cursor:pointer; font-size:13px; font-weight:700; user-select:none;
     transition:all .15s; box-sizing:border-box;
     width:auto; min-width:170px; max-width:240px;
 }
@@ -285,7 +286,7 @@
 }
 .wp-wf-sub-row-left { display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .wp-wf-sub-label { font-weight:700; font-size:12.5px; color:var(--gray-700); white-space:nowrap; }
-.wp-wf-sub-select { font-size:13px; border-radius:8px; border:1px solid var(--gray-200); padding:6px 10px; font-family:'Cairo',sans-serif; background:#fff; min-width:160px; flex:1 1 160px; }
+.wp-wf-sub-select { font-size:13px; border-radius:8px; border:1px solid var(--gray-200); padding:6px 10px; font-family:'Cairo',sans-serif; background:var(--surface-0); min-width:160px; flex:1 1 160px; }
 .wp-wf-sub-row .wp-wf-radio-row.wp-wf-yesno { border-radius:8px; }
 
 /* وضع المكلف الثابت — تنسيق المنفذ + الوحدة التنظيمية */
@@ -301,7 +302,7 @@
 .wp-wf-det-hero-icon { width:44px; height:44px; border-radius:12px; background:var(--sa-700); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
 .wp-wf-det-hero-title { font-weight:800; font-size:16px; color:var(--gray-900); }
 .wp-wf-det-hero-sub { font-size:12px; color:var(--gray-500); font-weight:600; margin-top:4px; }
-.wp-wf-det-card { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; background:#fff; }
+.wp-wf-det-card { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; background:var(--surface-0); }
 .wp-wf-det-card-hd { padding:10px 14px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); font-weight:800; font-size:13px; color:var(--sa-800); display:flex; align-items:center; gap:8px; }
 .wp-wf-det-card-hd i { color:var(--sa-600); }
 .wp-wf-det-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; padding:14px 16px; }
@@ -338,10 +339,10 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card ui-table-card">
     <div class="card-body p-0">
         <div class="table-responsive wp-wf-table-wrap">
-            <table class="table mb-0">
+            <table class="table mb-0 ui-table">
                 <thead>
                     <tr>
                         <th style="text-align:center;width:36px;"></th>
@@ -365,6 +366,8 @@
         </div>
     </div>
 </div>
+
+<div class="app-pagination" id="wpWfPagination"></div>
 
 <div class="modal fade" id="wpWorkflowStepModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">

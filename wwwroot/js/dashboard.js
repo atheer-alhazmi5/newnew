@@ -235,7 +235,7 @@ function dashRenderStatusChart(chartData) {
                 data: counts,
                 backgroundColor: bg,
                 borderWidth: 2,
-                borderColor: '#fff'
+                borderColor: appSurfaceColor()
             }]
         },
         options: {

@@ -6,6 +6,9 @@
  */
 
 let fdvData = [];
+let fdvPage = 1;
+let fdvPerPage = 20;
+let fdvCurrentList = [];
 let fdvIsAdmin = false;
 let fdvDeleteId = null;
 let fdvDeleteName = '';
@@ -43,12 +46,18 @@ async function fdvLoad() {
 function fdvRenderTable() {
     const tbody = document.getElementById('fdvBody');
     if (!tbody) return;
-    if (!fdvData.length) {
+    const list = fdvData || [];
+    fdvCurrentList = list;
+    if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="12"><div class="fdv-empty-state"><i class="bi bi-layers"></i><p>لا توجد إصدارات بعد</p></div></td></tr>`;
+        renderPagination('fdvPagination', 0, 1, fdvPerPage, 'fdvGoPage');
         return;
     }
+    const totalPages = Math.max(1, Math.ceil(list.length / fdvPerPage));
+    if (fdvPage > totalPages) fdvPage = totalPages;
+    const pageStart = (fdvPage - 1) * fdvPerPage;
     let html = '';
-    fdvData.forEach((v, idx) => {
+    list.slice(pageStart, fdvPage * fdvPerPage).forEach((v, idx) => {
         const statusBadge = v.status === 'approved'
             ? '<span class="fdv-badge fdv-badge-approved"><i class="bi bi-check-circle-fill"></i>معتمد</span>'
             : '<span class="fdv-badge fdv-badge-draft"><i class="bi bi-pencil-fill"></i>مسودة</span>';
@@ -56,7 +65,7 @@ function fdvRenderTable() {
             ? '<span class="fdv-badge fdv-badge-active"><i class="bi bi-toggle-on"></i>مفعل</span>'
             : '<span class="fdv-badge fdv-badge-inactive"><i class="bi bi-toggle-off"></i>غير مفعل</span>';
         html += `<tr>
-            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${idx + 1}</td>
+            <td style="text-align:center;font-weight:700;color:var(--gray-400);">${pageStart + idx + 1}</td>
             <td><span class="fdv-version-name">${esc(v.versionName)}</span></td>
             <td style="text-align:center;font-weight:700;">${v.fieldsCount}</td>
             <td style="text-align:center;font-weight:700;">${v.sectionsCount}</td>
@@ -71,6 +80,15 @@ function fdvRenderTable() {
         </tr>`;
     });
     tbody.innerHTML = html;
+    renderPagination('fdvPagination', list.length, fdvPage, fdvPerPage, 'fdvGoPage');
+}
+
+function fdvGoPage(p) {
+    const total = Math.ceil(fdvCurrentList.length / fdvPerPage);
+    if (p < 1 || p > total) return;
+    fdvPage = p;
+    fdvRenderTable();
+    appPaginationScrollTop();
 }
 
 function fdvHasDraftVersion() {
@@ -81,11 +99,11 @@ function fdvActions(v) {
     let h = '<div class="d-flex gap-1 justify-content-center flex-wrap">';
     if (v.status === 'approved') {
         // الإصدار المعتمد: تفاصيل فقط
-        h += `<button class="fdv-action-btn fdv-action-btn-detail" onclick="fdvShowDetails(${v.id})"><i class="bi bi-eye"></i> تفاصيل</button>`;
+        h += `<button class="fdv-action-btn ui-act-btn fdv-action-btn-detail" title="تفاصيل" onclick="fdvShowDetails(${v.id})"><i class="bi bi-eye"></i></button>`;
     } else {
         // الإصدار المسودة: تحديث وحذف
-        h += `<button class="fdv-action-btn fdv-action-btn-edit" onclick="fdvEditVersion(${v.id})"><i class="bi bi-pencil-square"></i> تحديث</button>`;
-        h += `<button class="fdv-action-btn fdv-action-btn-delete" onclick="fdvShowDelete(${v.id},'${esc(v.versionName).replace(/'/g,'\\\'')}')"><i class="bi bi-trash3"></i> حذف</button>`;
+        h += `<button class="fdv-action-btn ui-act-btn fdv-action-btn-edit" title="تحديث" onclick="fdvEditVersion(${v.id})"><i class="bi bi-pencil-square"></i></button>`;
+        h += `<button class="fdv-action-btn ui-act-btn fdv-action-btn-delete" title="حذف" onclick="fdvShowDelete(${v.id},'${esc(v.versionName).replace(/'/g,'\\\'')}')"><i class="bi bi-trash3"></i></button>`;
     }
     return h + '</div>';
 }
