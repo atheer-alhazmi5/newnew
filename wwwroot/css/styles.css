@@ -2618,8 +2618,8 @@ p, li, span {
     min-width: 140px;
     width: auto;
     max-width: 200px;
-    border-radius: 12px;
-    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
     font-size: 13px;
     height: 40px;
     padding: 8px 12px;
@@ -2635,8 +2635,8 @@ p, li, span {
 .rt-filter-select {
     min-width: 140px;
     width: auto;
-    border-radius: 10px;
-    border: 2px solid var(--gray-200);
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
     padding: 8px 12px;
     font-size: 13px;
     font-family: 'Cairo', sans-serif;
@@ -2696,8 +2696,8 @@ p, li, span {
 
 .rt-filters .bnf-ou-tree-trigger.form-select {
     min-height: 40px;
-    border-radius: 10px;
-    border: 2px solid var(--gray-200);
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
     padding: 8px 12px;
     font-size: 13px;
     font-family: 'Cairo', sans-serif;
