@@ -330,7 +330,7 @@ button.theme-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--surface-0);
+    border: 1px solid var(--surface-0);
 }
 
 .user-info {
@@ -2644,12 +2644,12 @@ p, li, span {
 
 .rt-clear-btn {
     padding: 8px 16px;
-    border-radius: 10px;
+    border-radius: 5px;
     font-weight: 700;
     font-size: 13px;
     background: var(--gray-100);
     color: var(--gray-700);
-    border: 2px solid var(--gray-200);
+    border: 1px solid var(--gray-200);
     cursor: pointer;
     white-space: nowrap;
     font-family: 'Cairo', sans-serif;
@@ -2889,7 +2889,7 @@ p, li, span {
     overflow-y: visible;
     margin-bottom: 0;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border-radius: 8px;
     -webkit-overflow-scrolling: touch;
     width: 100%;
 }
@@ -2947,8 +2947,8 @@ p, li, span {
 .rt-add-fields-btn {
     background: var(--sa-50);
     color: var(--sa-700);
-    border: 2px solid var(--sa-200);
-    border-radius: 12px;
+    border: 1px solid var(--sa-200);
+    border-radius: 8px;
     padding: 10px 24px;
     font-weight: 700;
     font-size: 14px;
@@ -3048,7 +3048,7 @@ input.rt-spin-input {
     gap: 4px;
     justify-content: center;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     font-family: 'Cairo', sans-serif;
     white-space: nowrap;
     transition: all .15s;
