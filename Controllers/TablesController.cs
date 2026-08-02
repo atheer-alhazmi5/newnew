@@ -33,14 +33,14 @@ public class TablesController : BaseController
             return Json(new { success = false, message = "غير مصرح" });
 
         var all = await _ds.ListReadyTablesAsync();
+        var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
+        var (currentOrgUnitId, currentOrgUnitName) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
 
         if (CurrentUserRole != "Admin")
         {
-            var userOrgUnitId = await GetCreatorOrgUnitIdAsync();
-            all = all.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == userOrgUnitId)).ToList();
+            all = all.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == currentOrgUnitId)).ToList();
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
         var fields = await Task.WhenAll(all.Select(async t => (t.Id, Count: (await _ds.ListReadyTableFieldsByTableIdAsync(t.Id)).Count)));
         var fieldCounts = fields.ToDictionary(x => x.Id, x => x.Count);
 
@@ -80,15 +80,15 @@ public class TablesController : BaseController
             });
         }
 
-        var currentOrgUnitId = await GetCreatorOrgUnitIdAsync();
-        var currentOrgUnitName = units.FirstOrDefault(u => u.Id == currentOrgUnitId)?.Name ?? "";
+        var currentOrgUnitIdResolved = currentOrgUnitId;
+        var currentOrgUnitNameResolved = currentOrgUnitName;
 
         return Json(new
         {
             success = true, data = result,
-            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
+            organizationalUnits = units.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
             currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin",
-            currentOrgUnitId, currentOrgUnitName
+            currentOrgUnitId = currentOrgUnitIdResolved, currentOrgUnitName = currentOrgUnitNameResolved
         });
     }
 
@@ -126,23 +126,8 @@ public class TablesController : BaseController
 
     private async Task<int> GetCreatorOrgUnitIdAsync()
     {
-        var units = await _ds.ListOrganizationalUnitsAsync();
-        if (IsAuthenticated && CurrentUserId > 0)
-        {
-            var user = await _ds.GetUserByIdAsync(CurrentUserId);
-            if (user != null)
-            {
-                var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
-                if (beneficiary?.OrganizationalUnitId != null && beneficiary.OrganizationalUnitId.Value > 0)
-                {
-                    var ouId = beneficiary.OrganizationalUnitId.Value;
-                    var benUnit = units.FirstOrDefault(u => u.Id == ouId);
-                    if (benUnit != null) return benUnit.Id;
-                }
-            }
-        }
-        var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
-        return unit?.Id ?? CurrentDeptId;
+        var user = await _ds.GetUserByIdAsync(CurrentUserId);
+        return await _ds.ResolveUserOrganizationalUnitIdAsync(user, CurrentDeptId);
     }
 
     private static bool IsTableCreator(ReadyTable t, string? currentUserFullName, string? currentUserName)

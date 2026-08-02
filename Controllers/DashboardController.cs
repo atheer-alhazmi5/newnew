@@ -64,7 +64,7 @@ public class DashboardController : BaseController
 
         var orgUnits = await _ds.ListOrganizationalUnitsAsync();
         var depts = await _ds.ListDepartmentsAsync();
-        var orgUnitName = ResolveOrgUnitName(beneficiary?.OrganizationalUnitId, user.DepartmentId, depts, orgUnits);
+        var orgUnitName = DataService.ResolveOrganizationalUnitDisplayName(beneficiary?.OrganizationalUnitId, user.DepartmentId, depts, orgUnits);
         var roleInUnit = beneficiary?.RoleDisplayTable ?? user.RoleLabel;
         var canEditEndorsementSignature = beneficiary != null
             && string.IsNullOrWhiteSpace(beneficiary.EndorsementFile)
@@ -179,20 +179,6 @@ public class DashboardController : BaseController
                 l.OperatingSystem
             }).ToList()
         });
-    }
-
-    private static string ResolveOrgUnitName(int? beneficiaryOuId, int? userDeptId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
-    {
-        if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
-        {
-            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
-            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
-        }
-        if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
-        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
-        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
-        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
-        return ouFallback?.Name?.Trim() ?? "";
     }
 }
 

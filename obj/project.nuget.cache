@@ -1,12 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "0iSQ/FYR6UQ=",
+  "dgSpecHash": "RXVJnHoyoaI=",
   "success": true,
   "projectFilePath": "/Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/FormsSystem.csproj",
-  "expectedPackageFiles": [
-    "/Users/atheernamaa/.nuget/packages/microsoft.netcore.app.ref/8.0.18/microsoft.netcore.app.ref.8.0.18.nupkg.sha512",
-    "/Users/atheernamaa/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.18/microsoft.aspnetcore.app.ref.8.0.18.nupkg.sha512",
-    "/Users/atheernamaa/.nuget/packages/microsoft.netcore.app.host.win-x64/8.0.18/microsoft.netcore.app.host.win-x64.8.0.18.nupkg.sha512"
-  ],
+  "expectedPackageFiles": [],
   "logs": []
 }

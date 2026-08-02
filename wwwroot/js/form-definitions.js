@@ -804,8 +804,7 @@ function fdBoundDdlOuGetItems(wrap) {
     const listId = parseInt(wrap.getAttribute('data-fd-ddl-list-id') || '0', 10);
     if (!listId) return [];
     const entry = fdNormalizeDropdownCacheEntry(listId);
-    const rawEmpty = (wrap.getAttribute('data-fd-ddl-empty') || '').trim();
-    return fdDdlFilterItemsByHint(entry.items || [], rawEmpty);
+    return fdDdlFilterItemsByHint(entry.items || []);
 }
 
 function fdBoundDdlOuGetPresentation(wrap) {
@@ -1099,32 +1098,28 @@ function fdInitBoundDdlOuPickers(root) {
     });
 }
 
-function fdDdlResolveEmptyLabel(props, rawHint) {
-    return String((props && props.emptyText) || rawHint || 'اختر...').trim() || 'اختر...';
+function fdDdlResolveEmptyLabel(props) {
+    return String((props && props.emptyText) || 'اختر...').trim() || 'اختر...';
 }
 
 function fdDdlEscLabelHtml(raw) {
     return String(raw || '').replace(/</g, '&lt;');
 }
 
-function fdDdlPlaceholderOption(emptyLabHtml, isSelected) {
+function fdDdlPlaceholderOption(isSelected) {
     const sel = isSelected ? ' selected' : '';
-    return `<option value="" disabled hidden${sel}>${emptyLabHtml}</option>`;
+    return `<option value="" disabled${sel}>اختر...</option>`;
 }
 
-function fdDdlFilterItemsByHint(items, rawEmpty) {
-    if (!rawEmpty) return items || [];
-    const block = String(rawEmpty).trim();
+function fdDdlFilterItemsByHint(items) {
     return (items || []).filter(it => {
         const txt = String(it.itemText ?? it.ItemText ?? '').trim();
-        return txt && txt !== block;
+        return !!txt;
     });
 }
 
-function fdDdlFilterLabelsByHint(labels, rawEmpty) {
-    if (!rawEmpty) return labels || [];
-    const block = String(rawEmpty).trim();
-    return (labels || []).filter(l => String(l).trim() && String(l).trim() !== block);
+function fdDdlFilterLabelsByHint(labels) {
+    return (labels || []).filter(l => String(l).trim());
 }
 
 function fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, presentation) {
@@ -1225,21 +1220,21 @@ function fdRenderDropdownNestedNodes(nodes, inputType, nameBase, disabled, defSi
     return html;
 }
 
-function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawHint) {
+function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk) {
     const listId = props.dropdownListId;
     const entry = fdNormalizeDropdownCacheEntry(listId);
     const { listType, selectionType, items } = entry;
     const multi = fdSelectionIsMulti(selectionType);
-    const rawEmpty = fdDdlResolveEmptyLabel(props, rawHint);
+    const rawEmpty = fdDdlResolveEmptyLabel(props);
     const emptyLab = fdDdlEscLabelHtml(rawEmpty);
-    const filteredItems = fdDdlFilterItemsByHint(items, rawEmpty);
+    const filteredItems = fdDdlFilterItemsByHint(items);
     const def = (props.defaultOption || '').trim();
     const defMulti = {};
     String(props.defaultOption || '').split(/,\s*/).forEach(d => { const t = d.trim(); if (t) defMulti[t] = true; });
     const presentation = fdPlanDropdownFormPresentation(listType, filteredItems);
 
     if (!filteredItems.length) {
-        return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}<option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
+        return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(!def)}<option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
     }
 
     if (listType === 'قائمة فرعية') {
@@ -1250,8 +1245,8 @@ function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawH
         if (multi) {
             return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'flat-multi');
         }
-        const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean), rawEmpty);
-        let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
+        const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean));
+        let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(!def)}`;
         labels.forEach(o => {
             inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`;
         });
@@ -1266,8 +1261,8 @@ function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawH
         return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'sublist');
     }
 
-    const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean), rawEmpty);
-    let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
+    const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean));
+    let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(!def)}`;
     labels.forEach(o => {
         inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`;
     });
@@ -3464,14 +3459,11 @@ function fdBuildFieldInput(f, opt) {
         inp = `<div class="input-group fd-spinner-group"${ttAttr}${wrapStyle}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input" value="${spinVal}"${mn}${mx}${st}${reqAttr}${roAttr} style="text-align:center;direction:ltr"${spinClampEv}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
     } else if (f.fieldType === 'قائمة منسدلة') {
         if (props.dropdownListId) {
-            inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawHint);
+            inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk);
         } else {
             let opts = props.options ? String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : [];
-            const rawEmpty = fdDdlResolveEmptyLabel(props, rawHint);
-            const emptyLab = fdDdlEscLabelHtml(rawEmpty);
-            opts = fdDdlFilterLabelsByHint(opts, rawEmpty);
             const def = (props.defaultOption || '').trim();
-            inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
+            inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(!def)}`;
             opts.forEach(o => { inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`; });
             inp += '</select>';
         }

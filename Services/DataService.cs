@@ -1140,6 +1140,47 @@ public class DataService
     public Task<List<OrganizationalUnit>> ListOrganizationalUnitsAsync()
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
 
+    /// <summary>نفس منطق لوحة المعلومات &gt; البيانات الأساسية لعرض اسم الوحدة.</summary>
+    public static string ResolveOrganizationalUnitDisplayName(
+        int? beneficiaryOuId,
+        int? userDeptId,
+        IEnumerable<Department> depts,
+        IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
+        {
+            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
+            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+        }
+        if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
+        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
+        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
+        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
+        return ouFallback?.Name?.Trim() ?? "";
+    }
+
+    /// <summary>يحدّد معرّف الوحدة التنظيمية للمستخدم الحالي (مستفيد ثم القسم).</summary>
+    public async Task<int> ResolveUserOrganizationalUnitIdAsync(User? user, int currentDeptId, Beneficiary? beneficiary = null)
+    {
+        var units = await ListOrganizationalUnitsAsync();
+        if (user != null && beneficiary == null)
+            beneficiary = await ResolveBeneficiaryForUserAsync(user);
+        if (beneficiary?.OrganizationalUnitId is int ouId && ouId > 0 && units.Any(u => u.Id == ouId))
+            return ouId;
+        var unit = units.FirstOrDefault(u => u.Id == currentDeptId);
+        return unit?.Id ?? currentDeptId;
+    }
+
+    public async Task<(int OrgUnitId, string OrgUnitName)> ResolveCurrentUserOrganizationalUnitAsync(User? user, int currentDeptId)
+    {
+        var units = await ListOrganizationalUnitsAsync();
+        var depts = await ListDepartmentsAsync();
+        var beneficiary = user != null ? await ResolveBeneficiaryForUserAsync(user) : null;
+        var orgUnitId = await ResolveUserOrganizationalUnitIdAsync(user, currentDeptId, beneficiary);
+        var orgUnitName = ResolveOrganizationalUnitDisplayName(beneficiary?.OrganizationalUnitId, user?.DepartmentId, depts, units);
+        return (orgUnitId, orgUnitName);
+    }
+
     public Task<List<OrganizationalUnit>> ListActiveOrganizationalUnitsAsync()
         => Task.FromResult(FilterEffectivelyActiveOrganizationalUnits(_db.OrganizationalUnits));
 

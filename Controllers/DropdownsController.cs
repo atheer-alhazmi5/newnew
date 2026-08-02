@@ -40,16 +40,16 @@ public class DropdownsController : BaseController
 
         var lists = await _ds.ListDropdownListsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
-        var activeUnits = DataService.FilterEffectivelyActiveOrganizationalUnits(units);
+        var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
 
         // لممثل الوحدة: اعرض العامة + خاصة وحدته فقط
         var isAdmin = CurrentUserRole == "Admin";
         var myUnitId = 0;
+        var myUnitName = "";
+        if (currentUser != null)
+            (myUnitId, myUnitName) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
         if (!isAdmin)
-        {
-            myUnitId = await GetCreatorOrgUnitIdAsync();
             lists = lists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myUnitId)).ToList();
-        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -94,10 +94,11 @@ public class DropdownsController : BaseController
         {
             success = true,
             data = result,
-            organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
+            organizationalUnits = units.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
             currentUser = CurrentUserFullName,
             isAdmin,
-            currentOrgUnitId = myUnitId
+            currentOrgUnitId = myUnitId,
+            currentOrgUnitName = myUnitName
         });
     }
 
@@ -298,14 +299,7 @@ public class DropdownsController : BaseController
     private async Task<int> GetCreatorOrgUnitIdAsync()
     {
         var user = await _ds.GetUserByIdAsync(CurrentUserId);
-        if (user != null && !string.IsNullOrEmpty(user.Email))
-        {
-            var beneficiary = await _ds.GetBeneficiaryByEmailAsync(user.Email);
-            if (beneficiary != null && beneficiary.OrganizationalUnitId.HasValue)
-                return beneficiary.OrganizationalUnitId.Value;
-        }
-        var units = await _ds.ListOrganizationalUnitsAsync();
-        return units.Count > 0 ? units.First().Id : 0;
+        return await _ds.ResolveUserOrganizationalUnitIdAsync(user, CurrentDeptId);
     }
 
     /// <summary>مدير النظام لا يعدّل القوائم الخاصة؛ ممثل الوحدة يعدّل ما أنشأه أو الخاص بوحدته.</summary>

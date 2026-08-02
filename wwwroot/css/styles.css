@@ -2876,7 +2876,7 @@ p, li, span {
     margin: 8px 0 0;
     width: 100%;
     display: block;
-    text-align: right;
+    text-align: center;
     direction: rtl;
     line-height: 1.7;
     white-space: pre-wrap;
