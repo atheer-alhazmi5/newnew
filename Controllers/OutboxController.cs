@@ -184,12 +184,15 @@ public class OutboxController : BaseController
     public async Task<IActionResult> GetAvailableProcedures()
     {
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+        var (beneficiary, orgUnitId) = await GetSubmitUserContextAsync();
+        var beneficiaryId = beneficiary?.Id;
         var procs = await _ds.ListWorkProceduresAsync();
         var procTypes = await _ds.ListProcedureActionTypesAsync();
         var workspaces = await _ds.ListWorkspacesAsync();
 
         var data = procs
             .Where(p => p.IsActive && p.Status == "approved")
+            .Where(p => WorkProcedureVisibility.IsVisibleForSubmit(p, beneficiaryId, orgUnitId))
             .OrderBy(p => p.Name)
             .Select(p =>
             {
@@ -220,6 +223,10 @@ public class OutboxController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var p = await _ds.GetWorkProcedureByIdAsync(id);
         if (p == null || !p.IsActive || p.Status != "approved")
+            return Json(new { success = false, message = "الإجراء غير متاح" });
+
+        var (beneficiary, orgUnitId) = await GetSubmitUserContextAsync();
+        if (!WorkProcedureVisibility.IsVisibleForSubmit(p, beneficiary?.Id, orgUnitId))
             return Json(new { success = false, message = "الإجراء غير متاح" });
 
         var statuses = await _ds.ListFormStatusesAsync();
@@ -266,6 +273,10 @@ public class OutboxController : BaseController
         if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
         var p = await _ds.GetWorkProcedureByIdAsync(id);
         if (p == null || !p.IsActive || p.Status != "approved")
+            return Json(new { success = false, message = "الإجراء غير متاح" });
+
+        var (beneficiary, orgUnitId) = await GetSubmitUserContextAsync();
+        if (!WorkProcedureVisibility.IsVisibleForSubmit(p, beneficiary?.Id, orgUnitId))
             return Json(new { success = false, message = "الإجراء غير متاح" });
 
         var usedFdIds = ParseIntArray(p.UsedFormDefinitionsJson);
@@ -398,6 +409,19 @@ public class OutboxController : BaseController
         return result;
     }
 
+    private async Task<(Beneficiary? beneficiary, int orgUnitId)> GetSubmitUserContextAsync()
+    {
+        var user = await _ds.GetUserByIdAsync(CurrentUserId);
+        if (user == null) return (null, 0);
+        var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+        var orgUnitId = 0;
+        if (beneficiary?.OrganizationalUnitId is int benOuId && benOuId > 0)
+            orgUnitId = benOuId;
+        else if (CurrentDeptId > 0)
+            orgUnitId = CurrentDeptId;
+        return (beneficiary, orgUnitId);
+    }
+
     private async Task<string> EnrichOutboxFormDataAsync(string? rawJson, WorkProcedure proc)
     {
         var formDataJson = string.IsNullOrWhiteSpace(rawJson) ? "{}" : rawJson;
@@ -458,6 +482,10 @@ public class OutboxController : BaseController
 
         var proc = await _ds.GetWorkProcedureByIdAsync(req.ProcedureId);
         if (proc == null || !proc.IsActive || proc.Status != "approved")
+            return Json(new { success = false, message = "الإجراء غير متاح" });
+
+        var (beneficiary, orgUnitId) = await GetSubmitUserContextAsync();
+        if (!WorkProcedureVisibility.IsVisibleForSubmit(proc, beneficiary?.Id, orgUnitId))
             return Json(new { success = false, message = "الإجراء غير متاح" });
 
         var priority = NormalizePriority(proc.ConfidentialityLevel);

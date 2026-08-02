@@ -238,9 +238,18 @@
         .lg-support-icon {
             display: inline-flex; align-items: center; justify-content: center;
             width: 22px; height: 22px; font-size: 17px; line-height: 1;
-            color: #9CA3AF; cursor: default; transition: color .15s, transform .15s;
+            color: #9CA3AF; cursor: default; transition: color .15s, background .15s, box-shadow .15s, transform .15s;
+        }
+        .lg-support-icon.is-active {
+            color: var(--sa-600);
+            background: var(--sa-50);
+            border-radius: 6px;
+            min-width: 26px; min-height: 26px;
+            padding: 3px 5px;
+            box-shadow: 0 0 0 1px var(--sa-200);
         }
         .lg-support-icon:hover { color: var(--sa-600); transform: translateY(-1px); }
+        .lg-support-icon.is-active:hover { color: var(--sa-700); background: var(--sa-100); }
         .lg-support-sep { width: 1px; height: 14px; background: #E5E7EB; }
 
         /* Demo section */
@@ -417,17 +426,18 @@
 
                         <div class="lg-support" role="group" aria-label="المتصفحات وأنظمة التشغيل المدعومة">
                           
-                            <div class="lg-support-icons">
-                                <span class="lg-support-icon" title="Google Chrome" aria-label="Google Chrome"><i class="bi bi-browser-chrome"></i></span>
-                                <span class="lg-support-icon" title="Microsoft Edge" aria-label="Microsoft Edge"><i class="bi bi-browser-edge"></i></span>
-                                <span class="lg-support-icon" title="Mozilla Firefox" aria-label="Mozilla Firefox"><i class="bi bi-browser-firefox"></i></span>
-                                <span class="lg-support-icon" title="Safari" aria-label="Safari"><i class="bi bi-browser-safari"></i></span>
+                            <div class="lg-support-icons" id="lgSupportIcons">
+                                <span class="lg-support-icon" data-browser="chrome" title="Google Chrome" aria-label="Google Chrome"><i class="bi bi-browser-chrome"></i></span>
+                                <span class="lg-support-icon" data-browser="edge" title="Microsoft Edge" aria-label="Microsoft Edge"><i class="bi bi-browser-edge"></i></span>
+                                <span class="lg-support-icon" data-browser="firefox" title="Mozilla Firefox" aria-label="Mozilla Firefox"><i class="bi bi-browser-firefox"></i></span>
+                                <span class="lg-support-icon" data-browser="safari" title="Safari" aria-label="Safari"><i class="bi bi-browser-safari"></i></span>
+                                <span class="lg-support-icon" data-browser="opera" title="Opera" aria-label="Opera"><i class="bi bi-browser-opera"></i></span>
                                 <span class="lg-support-sep" aria-hidden="true"></span>
-                                <span class="lg-support-icon" title="Windows" aria-label="Windows"><i class="bi bi-windows"></i></span>
-                                <span class="lg-support-icon" title="macOS" aria-label="macOS"><i class="bi bi-apple"></i></span>
-                                <span class="lg-support-icon" title="Linux" aria-label="Linux"><i class="bi bi-ubuntu"></i></span>
-                                <span class="lg-support-icon" title="Android" aria-label="Android"><i class="bi bi-android2"></i></span>
-                                <span class="lg-support-icon" title="iOS" aria-label="iOS"><i class="bi bi-phone"></i></span>
+                                <span class="lg-support-icon" data-os="windows" title="Windows" aria-label="Windows"><i class="bi bi-windows"></i></span>
+                                <span class="lg-support-icon" data-os="macos" title="macOS" aria-label="macOS"><i class="bi bi-apple"></i></span>
+                                <span class="lg-support-icon" data-os="linux" title="Linux" aria-label="Linux"><i class="bi bi-ubuntu"></i></span>
+                                <span class="lg-support-icon" data-os="android" title="Android" aria-label="Android"><i class="bi bi-android2"></i></span>
+                                <span class="lg-support-icon" data-os="ios" title="iOS" aria-label="iOS"><i class="bi bi-phone"></i></span>
                             </div>
                         </div>
                     
@@ -590,6 +600,43 @@ document.getElementById('loginForm').addEventListener('submit', function () {
         document.head.appendChild(s);
     }
 });
+
+/* ── تمييز المتصفح ونظام التشغيل الحاليين ── */
+(function lgDetectSupportEnv() {
+    var ua = navigator.userAgent || '';
+    var platform = navigator.platform || '';
+
+    function detectBrowser() {
+        if (/Edg\//.test(ua) || /EdgiOS/.test(ua) || /Edge\//.test(ua)) return 'edge';
+        if (/OPR\//.test(ua) || /Opera/.test(ua)) return 'opera';
+        if (/Firefox\//.test(ua) || /FxiOS/.test(ua)) return 'firefox';
+        if (/CriOS/.test(ua) || (/Chrome\//.test(ua) && !/Edg/.test(ua))) return 'chrome';
+        if (/Safari\//.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua)) return 'safari';
+        return null;
+    }
+
+    function detectOS() {
+        if (/Android/i.test(ua)) return 'android';
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+        if (/Win/i.test(platform) || /Windows/i.test(ua)) return 'windows';
+        if (/Mac/i.test(platform) && !/iPhone|iPad|iPod/i.test(ua)) return 'macos';
+        if (/Linux/i.test(platform) || /Linux/i.test(ua)) return 'linux';
+        return null;
+    }
+
+    function markActive(attr, value) {
+        if (!value) return;
+        var el = document.querySelector('.lg-support-icon[data-' + attr + '="' + value + '"]');
+        if (!el) return;
+        el.classList.add('is-active');
+        var name = el.getAttribute('title') || '';
+        el.setAttribute('title', name + ' (المستخدم حالياً)');
+        el.setAttribute('aria-label', name + ' — المستخدم حالياً');
+    }
+
+    markActive('browser', detectBrowser());
+    markActive('os', detectOS());
+})();
 </script>
 </body>
 </html>

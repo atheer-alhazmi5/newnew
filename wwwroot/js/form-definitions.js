@@ -800,11 +800,29 @@ function fdBoundDdlOuFormatLabel(selected, emptyLab, multi) {
     return list.length + ' عناصر محددة';
 }
 
-function fdBoundDdlOuGetGroups(wrap) {
+function fdBoundDdlOuGetItems(wrap) {
     const listId = parseInt(wrap.getAttribute('data-fd-ddl-list-id') || '0', 10);
     if (!listId) return [];
     const entry = fdNormalizeDropdownCacheEntry(listId);
-    return fdBuildSublistGroupedRoots(entry.items || []);
+    const rawEmpty = (wrap.getAttribute('data-fd-ddl-empty') || '').trim();
+    return fdDdlFilterItemsByHint(entry.items || [], rawEmpty);
+}
+
+function fdBoundDdlOuGetPresentation(wrap) {
+    return wrap.getAttribute('data-fd-ddl-presentation') || 'sublist';
+}
+
+function fdSortDropdownItems(items) {
+    return (items || []).slice().sort(function (a, b) {
+        const oa = a.sortOrder ?? a.SortOrder ?? 0;
+        const ob = b.sortOrder ?? b.SortOrder ?? 0;
+        if (oa !== ob) return oa - ob;
+        return (a.id ?? a.Id ?? 0) - (b.id ?? b.Id ?? 0);
+    });
+}
+
+function fdBoundDdlOuGetGroups(wrap) {
+    return fdBuildSublistGroupedRoots(fdBoundDdlOuGetItems(wrap));
 }
 
 function fdBoundDdlOuExpandedMap(wrap) {
@@ -841,19 +859,105 @@ function fdRenderSublistOuTreeRows(groups, expandedMap, selectedSet) {
     return html;
 }
 
+function fdRenderFlatMultiOuRows(items, selectedSet) {
+    let html = '';
+    fdSortDropdownItems(items).forEach(function (item) {
+        const txt = String(item.itemText ?? item.ItemText ?? '').trim();
+        if (!txt) return;
+        const isSel = selectedSet.has(txt);
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + (isSel ? ' is-selected' : '') + '" data-selectable="1" data-text="' + fdEscAttr(txt) + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;cursor:pointer;gap:8px;">';
+        html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        html += '<div class="form-check m-0 flex-shrink-0"><input type="checkbox" class="form-check-input fd-bound-ddl-ou-cb"' + (isSel ? ' checked' : '') + ' tabindex="-1" aria-hidden="true"></div>';
+        html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(txt) + '</span></div>';
+    });
+    return html;
+}
+
+function fdHierarchicalSubtreeHasSelection(node, selectedSet) {
+    const txt = String(node.item.itemText ?? node.item.ItemText ?? '').trim();
+    if (txt && selectedSet.has(txt)) return true;
+    return (node.children || []).some(function (c) { return fdHierarchicalSubtreeHasSelection(c, selectedSet); });
+}
+
+function fdRenderHierarchicalOuRows(nodes, expandedMap, selectedSet, multi, depth) {
+    let html = '';
+    (nodes || []).forEach(function (node, idx) {
+        const item = node.item;
+        const id = item.id ?? item.Id ?? idx;
+        const txt = String(item.itemText ?? item.ItemText ?? '').trim();
+        if (!txt) return;
+        const kids = node.children || [];
+        const hasKids = kids.length > 0;
+        const nodeKey = 'n_' + id;
+        const expanded = !!expandedMap[nodeKey];
+        const pr = 12 + Math.max(0, depth || 0) * 22;
+        const isSel = selectedSet.has(txt);
+        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + (isSel ? ' is-selected' : '') + '" data-selectable="1" data-text="' + fdEscAttr(txt) + '" role="option" dir="rtl" style="padding:8px 10px;padding-right:' + pr + 'px;cursor:pointer;gap:8px;">';
+        if (hasKids) {
+            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + fdEscAttr(nodeKey) + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
+        } else {
+            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        if (multi) {
+            html += '<div class="form-check m-0 flex-shrink-0"><input type="checkbox" class="form-check-input fd-bound-ddl-ou-cb"' + (isSel ? ' checked' : '') + ' tabindex="-1" aria-hidden="true"></div>';
+        }
+        html += '<span class="bnf-ou-tree-name flex-grow-1' + (hasKids ? ' fw-semibold' : '') + '">' + esc(txt) + '</span></div>';
+        if (hasKids && expanded) {
+            html += fdRenderHierarchicalOuRows(kids, expandedMap, selectedSet, multi, (depth || 0) + 1);
+        }
+    });
+    return html;
+}
+
+function fdBoundDdlOuExpandHierarchicalPath(wrap, selectedSet) {
+    const items = fdBoundDdlOuGetItems(wrap);
+    const nodes = fdBuildDropdownTreeNodes(items);
+    const map = fdBoundDdlOuExpandedMap(wrap);
+    function walk(nodeList) {
+        (nodeList || []).forEach(function (node) {
+            const id = node.item.id ?? node.item.Id;
+            const nodeKey = 'n_' + id;
+            const kids = node.children || [];
+            if (kids.length && fdHierarchicalSubtreeHasSelection(node, selectedSet)) {
+                map[nodeKey] = true;
+                walk(kids);
+            }
+        });
+    }
+    walk(nodes);
+}
+
 function fdBoundDdlOuRenderPanel(wrap) {
     const panel = wrap.querySelector('.fd-bound-ddl-ou-panel');
     if (!panel) return;
-    const groups = fdBoundDdlOuGetGroups(wrap);
-    if (!groups.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد عناصر</div>';
-        return;
-    }
+    const presentation = fdBoundDdlOuGetPresentation(wrap);
+    const items = fdBoundDdlOuGetItems(wrap);
     const multi = wrap.getAttribute('data-fd-ddl-multi') === '1';
     const hid = wrap.querySelector('input[type="hidden"]');
     const selected = fdBoundDdlOuParseHidden(hid, multi);
     const selectedSet = new Set(Array.isArray(selected) ? selected : (selected ? [selected] : []));
-    const html = fdRenderSublistOuTreeRows(groups, fdBoundDdlOuExpandedMap(wrap), selectedSet);
+    let html = '';
+    if (presentation === 'flat-multi') {
+        if (!items.length) {
+            panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد عناصر</div>';
+            return;
+        }
+        html = fdRenderFlatMultiOuRows(items, selectedSet);
+    } else if (presentation === 'hierarchical') {
+        const nodes = fdBuildDropdownTreeNodes(items);
+        if (!nodes.length) {
+            panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد عناصر</div>';
+            return;
+        }
+        html = fdRenderHierarchicalOuRows(nodes, fdBoundDdlOuExpandedMap(wrap), selectedSet, multi, 0);
+    } else {
+        const groups = fdBoundDdlOuGetGroups(wrap);
+        if (!groups.length) {
+            panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد عناصر</div>';
+            return;
+        }
+        html = fdRenderSublistOuTreeRows(groups, fdBoundDdlOuExpandedMap(wrap), selectedSet);
+    }
     panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد عناصر</div>';
 }
 
@@ -887,6 +991,12 @@ function fdBoundDdlOuExpandForSelection(wrap) {
     const selected = fdBoundDdlOuParseHidden(hid, multi);
     const selectedSet = new Set(Array.isArray(selected) ? selected : (selected ? [selected] : []));
     if (!selectedSet.size) return;
+    const presentation = fdBoundDdlOuGetPresentation(wrap);
+    if (presentation === 'hierarchical') {
+        fdBoundDdlOuExpandHierarchicalPath(wrap, selectedSet);
+        return;
+    }
+    if (presentation !== 'sublist') return;
     const groups = fdBoundDdlOuGetGroups(wrap);
     const map = fdBoundDdlOuExpandedMap(wrap);
     groups.forEach(function (g, gi) {
@@ -989,17 +1099,47 @@ function fdInitBoundDdlOuPickers(root) {
     });
 }
 
-function fdBuildSublistOuPickerHtml(f, props, items, multi, emptyLab, def, defMulti, reqAttr, roSel, ttAttr, mk) {
+function fdDdlResolveEmptyLabel(props, rawHint) {
+    return String((props && props.emptyText) || rawHint || 'اختر...').trim() || 'اختر...';
+}
+
+function fdDdlEscLabelHtml(raw) {
+    return String(raw || '').replace(/</g, '&lt;');
+}
+
+function fdDdlPlaceholderOption(emptyLabHtml, isSelected) {
+    const sel = isSelected ? ' selected' : '';
+    return `<option value="" disabled hidden${sel}>${emptyLabHtml}</option>`;
+}
+
+function fdDdlFilterItemsByHint(items, rawEmpty) {
+    if (!rawEmpty) return items || [];
+    const block = String(rawEmpty).trim();
+    return (items || []).filter(it => {
+        const txt = String(it.itemText ?? it.ItemText ?? '').trim();
+        return txt && txt !== block;
+    });
+}
+
+function fdDdlFilterLabelsByHint(labels, rawEmpty) {
+    if (!rawEmpty) return labels || [];
+    const block = String(rawEmpty).trim();
+    return (labels || []).filter(l => String(l).trim() && String(l).trim() !== block);
+}
+
+function fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, presentation) {
+    presentation = presentation || 'sublist';
     const listId = props.dropdownListId;
     const uid = 'fd_ddl_' + String(f.id ?? 'x') + '_' + String(listId);
     const readonly = props.readOnly ? '1' : '0';
     const reqFlag = f.isRequired ? ' data-fd-required="1"' : '';
+    const emptyLabHtml = fdDdlEscLabelHtml(rawEmpty);
     let initVal = '';
-    let initLabel = emptyLab;
+    let initLabel = emptyLabHtml;
     if (multi) {
         const sel = Object.keys(defMulti).filter(function (k) { return defMulti[k]; });
         initVal = sel.length ? JSON.stringify(sel) : '';
-        initLabel = fdBoundDdlOuFormatLabel(sel, emptyLab, true);
+        initLabel = fdBoundDdlOuFormatLabel(sel, rawEmpty, true);
     } else if (def) {
         initVal = def;
         initLabel = def;
@@ -1009,14 +1149,20 @@ function fdBuildSublistOuPickerHtml(f, props, items, multi, emptyLab, def, defMu
     return '<div class="fd-bound-ddl-ou-wrap bnf-ou-tree-wrap position-relative"' + ttAttr + mk()
         + ' id="' + fdEscAttr(uid) + '" data-fd-ddl-uid="' + fdEscAttr(uid) + '" data-fd-ddl-list-id="' + fdEscAttr(String(listId)) + '"'
         + ' data-fd-ddl-multi="' + (multi ? '1' : '0') + '" data-fd-ddl-readonly="' + readonly + '"'
-        + ' data-fd-ddl-empty="' + fdEscAttr(emptyLab) + '"' + reqFlag + '>'
+        + ' data-fd-ddl-presentation="' + fdEscAttr(presentation) + '"'
+        + ' data-fd-ddl-empty="' + fdEscAttr(rawEmpty) + '"' + reqFlag + '>'
         + '<input type="hidden" class="fd-bound-ddl-ou-value"' + reqAttr + ' value="' + fdEscAttr(initVal) + '">'
         + '<button type="button" class="form-select bnf-ou-tree-trigger fd-bound-ddl-ou-trigger text-end w-100' + trigCls + '"' + disAttr
         + ' aria-expanded="false" aria-haspopup="listbox">'
-        + '<span class="bnf-ou-tree-label fd-bound-ddl-ou-label text-truncate d-block">' + esc(initLabel) + '</span></button>'
+        + '<span class="bnf-ou-tree-label fd-bound-ddl-ou-label text-truncate d-block">' + (initLabel === emptyLabHtml ? emptyLabHtml : esc(initLabel)) + '</span></button>'
         + '<div class="bnf-ou-tree-panel fd-bound-ddl-ou-panel d-none" role="listbox"'
         + ' style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>'
         + '</div>';
+}
+
+/** @deprecated alias — use fdBuildBoundDdlOuPickerHtml */
+function fdBuildSublistOuPickerHtml(f, props, items, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk) {
+    return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'sublist');
 }
 
 function fdRenderDropdownTreeLeaves(items, inputType, nameBase, disabled, defSingle, defMultiSet, depth) {
@@ -1079,57 +1225,53 @@ function fdRenderDropdownNestedNodes(nodes, inputType, nameBase, disabled, defSi
     return html;
 }
 
-function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph) {
+function fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawHint) {
     const listId = props.dropdownListId;
     const entry = fdNormalizeDropdownCacheEntry(listId);
     const { listType, selectionType, items } = entry;
     const multi = fdSelectionIsMulti(selectionType);
-    const emptyLab = (props.emptyText || ph || 'اختر...').replace(/</g, '&lt;');
+    const rawEmpty = fdDdlResolveEmptyLabel(props, rawHint);
+    const emptyLab = fdDdlEscLabelHtml(rawEmpty);
+    const filteredItems = fdDdlFilterItemsByHint(items, rawEmpty);
     const def = (props.defaultOption || '').trim();
     const defMulti = {};
     String(props.defaultOption || '').split(/,\s*/).forEach(d => { const t = d.trim(); if (t) defMulti[t] = true; });
-    const disabled = props.readOnly ? ' disabled' : '';
-    const nameBase = 'fd_dd_' + String(f.id ?? 'f') + '_' + String(listId);
-    const presentation = fdPlanDropdownFormPresentation(listType, items);
+    const presentation = fdPlanDropdownFormPresentation(listType, filteredItems);
 
-    if (!items.length) {
-        return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option><option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
+    if (!filteredItems.length) {
+        return `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}<option disabled>— لم تُحمَّل عناصر القائمة —</option></select>`;
     }
 
     if (listType === 'قائمة فرعية') {
-        return fdBuildSublistOuPickerHtml(f, props, items, multi, emptyLab, def, defMulti, reqAttr, roSel, ttAttr, mk);
+        return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'sublist');
     }
 
     if (presentation.mode === 'flat') {
-        const labels = items.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean);
         if (multi) {
-            fdDdlEnsureTreeExpandDelegation();
-            const leaves = fdRenderDropdownTreeLeaves(items, 'checkbox', nameBase, disabled, def, defMulti, 0);
-            return `<div class="fd-ddl-tree"${ttAttr}${mk()} data-fd-ddl-mode="multi"><div class="small text-muted mb-2 px-1">يمكنك تحديد أكثر من خيار</div><div class="fd-ddl-tree-panel">${leaves}</div></div>`;
+            return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'flat-multi');
         }
-        let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${emptyLab}</option>`;
+        const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean), rawEmpty);
+        let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
         labels.forEach(o => {
             inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`;
         });
         return inp + '</select>';
     }
 
-    const inputType = multi ? 'checkbox' : 'radio';
-    let innerUl = '';
     if (presentation.mode === 'nested') {
-        innerUl = fdRenderDropdownNestedNodes(presentation.nodes, inputType, nameBase, disabled, def, defMulti, 0);
-    } else if (presentation.mode === 'grouped') {
-        innerUl = presentation.groups.map(g => {
-            const header = g.parentText
-                ? `<div class="fd-ddl-tree-group-heading fw-semibold small text-muted">${esc(g.parentText)}</div>`
-                : '';
-            const leaves = fdRenderDropdownTreeLeaves(g.items, inputType, nameBase, disabled, def, defMulti, g.parentText ? 1 : 0);
-            return `<div class="fd-ddl-tree-group">${header}<div>${leaves}</div></div>`;
-        }).join('');
+        return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'hierarchical');
     }
 
-    const reqHint = f.isRequired && !multi ? ' <span class="text-danger">*</span>' : '';
-    return `<div class="fd-ddl-tree"${ttAttr}${mk()}><div class="small text-muted mb-2 px-1">${multi ? 'يمكنك تحديد أكثر من خيار' : emptyLab}${reqHint}</div><div class="fd-ddl-tree-panel">${innerUl}</div></div>`;
+    if (presentation.mode === 'grouped') {
+        return fdBuildBoundDdlOuPickerHtml(f, props, multi, rawEmpty, def, defMulti, reqAttr, roSel, ttAttr, mk, 'sublist');
+    }
+
+    const labels = fdDdlFilterLabelsByHint(filteredItems.map(it => String(it.itemText ?? it.ItemText ?? '').trim()).filter(Boolean), rawEmpty);
+    let inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
+    labels.forEach(o => {
+        inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`;
+    });
+    return inp + '</select>';
 }
 
 async function fdFetchReadyTableGridForField(tableId) {
@@ -1164,6 +1306,12 @@ function fdReadyTableCellPayload(f, rowIdx, colIdx) {
         id: fdSyntheticTableCellFieldId(f, rowIdx, colIdx),
         displayLayout: 'يمتد عبر كامل الصف (واحد من واحد)'
     });
+}
+
+function fdWrapCellInputWithValidation(f, inputHtml, opt) {
+    const readOnly = !!(opt && opt.forceReadOnly) || !!(f && f.isReadOnly);
+    if (readOnly || !f || !fdIvUsesInlineValidation(f)) return inputHtml;
+    return `<div class="fd-iv-wrap" data-fd-iv="1" data-fd-ft="${fdEscAttr(f.fieldType)}" data-fd-props="${fdEscAttr(f.propertiesJson || '{}')}"><div class="fd-iv-slot">${inputHtml}</div><p class="fd-iv-msg small text-danger mt-1 mb-0" style="display:none;" aria-live="polite"></p></div>`;
 }
 
 function fdBuildReadyTableGridHtml(g, opt, ttAttr) {
@@ -1216,6 +1364,7 @@ function fdBuildReadyTableGridHtml(g, opt, ttAttr) {
         fields.forEach(function (f, ci) {
             const cellF = fdReadyTableCellPayload(f, ri, ci);
             let cellHtml = fdBuildFieldInput(cellF, cellOpt);
+            cellHtml = fdWrapCellInputWithValidation(cellF, cellHtml, cellOpt);
             const sub = (f.subName || '').trim();
             if (sub) cellHtml += '<div class="rt-field-subname">' + esc(sub) + '</div>';
             html += '<td>' + cellHtml + '</td>';
@@ -1244,7 +1393,9 @@ function fdReadyTableAddRow(btn) {
     let rowHtml = '';
     fieldDefs.forEach(function (f, ci) {
         const cellF = fdReadyTableCellPayload(f, ri, ci);
-        let cellHtml = fdBuildFieldInput(cellF, {});
+        const cellOpt = {};
+        let cellHtml = fdBuildFieldInput(cellF, cellOpt);
+        cellHtml = fdWrapCellInputWithValidation(cellF, cellHtml, cellOpt);
         const sub = (f.subName || '').trim();
         if (sub) cellHtml += '<div class="rt-field-subname">' + esc(sub) + '</div>';
         rowHtml += '<td>' + cellHtml + '</td>';
@@ -3237,7 +3388,8 @@ function fdBuildFieldInput(f, opt) {
     let props = {};
     try { props = JSON.parse(f.propertiesJson||'{}'); } catch(e) {}
     const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (props.tooltipText || '')).trim();
-    const ph = ((f.placeholder||'') || tipMerged).replace(/"/g,'&quot;');
+    const rawHint = String((f.placeholder || '') || tipMerged).trim();
+    const ph = rawHint.replace(/"/g,'&quot;');
     if (opt && opt.forceReadOnly) props.readOnly = true;
     const defVal  = props.defaultValue != null ? String(props.defaultValue).replace(/"/g,'&quot;') : '';
     const roAttr  = props.readOnly ? ' readonly' : '';
@@ -3312,11 +3464,14 @@ function fdBuildFieldInput(f, opt) {
         inp = `<div class="input-group fd-spinner-group"${ttAttr}${wrapStyle}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinDec(this)" style="padding:4px 10px;">−</button><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="form-control text-center fd-spin-input" value="${spinVal}"${mn}${mx}${st}${reqAttr}${roAttr} style="text-align:center;direction:ltr"${spinClampEv}><button type="button" class="btn btn-outline-secondary" onclick="fdSpinInc(this)" style="padding:4px 10px;">+</button></div>`;
     } else if (f.fieldType === 'قائمة منسدلة') {
         if (props.dropdownListId) {
-            inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph);
+            inp = fdBuildBoundDropdownHtml(f, props, reqAttr, roSel, ttAttr, mk, ph, rawHint);
         } else {
             let opts = props.options ? String(props.options).split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : [];
+            const rawEmpty = fdDdlResolveEmptyLabel(props, rawHint);
+            const emptyLab = fdDdlEscLabelHtml(rawEmpty);
+            opts = fdDdlFilterLabelsByHint(opts, rawEmpty);
             const def = (props.defaultOption || '').trim();
-            inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}><option value="">${(props.emptyText || ph || 'اختر...').replace(/</g, '&lt;')}</option>`;
+            inp = `<select class="form-select"${reqAttr}${roSel}${ttAttr}${mk()}>${fdDdlPlaceholderOption(emptyLab, !def)}`;
             opts.forEach(o => { inp += `<option value="${fdEscAttr(o)}"${o === def ? ' selected' : ''}>${o.replace(/</g, '&lt;')}</option>`; });
             inp += '</select>';
         }
@@ -5881,6 +6036,10 @@ async function fdGoStep4() {
         fdCurrentTemplate = null;
     }
     await fdPrefetchBindingCachesForFields();
+    try {
+        const pr = await apiFetch('/Dashboard/GetProfile');
+        if (pr && pr.success && pr.profile) window.fdBeneficiaryFillProfile = pr.profile;
+    } catch {}
     fdStep = 4;
     fdRenderStep();
 }

@@ -45,6 +45,7 @@ let wpCurrentTab = 1;
 let wpOuExpandedOwner = {};
 let wpOuExpandedTarget = {};
 let wpFilterOuExpanded = {};
+let wpFilterOwnerOuExpanded = {};
 
 function esc(s) {
     if (s == null) return '';
@@ -83,6 +84,7 @@ function wpOuExpandAncestors(mapName, selectId) {
     let expanded;
     if (mapName === 'owner') expanded = wpOuExpandedOwner;
     else if (mapName === 'target') expanded = wpOuExpandedTarget;
+    else if (mapName === 'ownerFilter') expanded = wpFilterOwnerOuExpanded;
     else expanded = wpFilterOuExpanded;
     const units = wpLookups.organizationalUnits || [];
     const byParent = wpOuBuildTreeMap();
@@ -199,6 +201,75 @@ function wpToggleAllTargetOrgs() {
     wpRefreshConcernedBeneficiaries();
 }
 
+function wpFilterOwnerOuClosePanel() {
+    const panel = document.getElementById('wpFilterOwnerOuPanel');
+    const trig = document.getElementById('wpFilterOwnerOuTrigger');
+    if (panel) panel.classList.add('d-none');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function wpFilterOwnerOuTogglePanel() {
+    const panel = document.getElementById('wpFilterOwnerOuPanel');
+    const trig = document.getElementById('wpFilterOwnerOuTrigger');
+    if (!panel) return;
+    if (panel.classList.contains('d-none')) {
+        const cur = (document.getElementById('wpFilterOwnerOrg') || {}).value;
+        if (cur) {
+            const n = parseInt(cur, 10);
+            if (n) wpOuExpandAncestors('ownerFilter', n);
+        }
+        wpRenderFilterOwnerOuTreePanel();
+        panel.classList.remove('d-none');
+        if (trig) trig.setAttribute('aria-expanded', 'true');
+    } else {
+        wpFilterOwnerOuClosePanel();
+    }
+}
+
+function wpRenderFilterOwnerOuTreeRows(byParent, parentKey, depth, selectedId) {
+    const rows = byParent[parentKey] || [];
+    let html = '';
+    const sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
+    rows.forEach((u) => {
+        const uid = wpOuUnitId(u);
+        const idStr = String(uid);
+        const children = byParent[idStr] || [];
+        const hasChildren = children.length > 0;
+        const expanded = !!wpFilterOwnerOuExpanded[idStr];
+        const indent = depth * 22;
+        const rowSel = sel === idStr ? ' is-selected' : '';
+        html += `<div class="wp-filt-ou-tree-row d-flex align-items-center${rowSel}" data-id="${uid}" role="option" dir="rtl" style="padding:8px 10px;padding-right:${12 + indent}px;">`;
+        if (hasChildren) {
+            html += `<button type="button" class="wp-filt-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}">${expanded ? '−' : '+'}</button>`;
+        } else {
+            html += '<span class="wp-filt-ou-tree-exp-spacer" aria-hidden="true"></span>';
+        }
+        html += `<span class="wp-filt-ou-tree-name flex-grow-1">${esc(wpOuName(u))}</span></div>`;
+        if (hasChildren && expanded) {
+            html += wpRenderFilterOwnerOuTreeRows(byParent, idStr, depth + 1, selectedId);
+        }
+    });
+    return html;
+}
+
+function wpRenderFilterOwnerOuTreePanel() {
+    const panel = document.getElementById('wpFilterOwnerOuPanel');
+    if (!panel) return;
+    const units = wpLookups.organizationalUnits || [];
+    if (!units.length) {
+        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        return;
+    }
+    const byParent = wpOuBuildTreeMap();
+    const selectedId = (document.getElementById('wpFilterOwnerOrg') || {}).value;
+    const allSel = !selectedId ? ' is-selected' : '';
+    let html = `<div class="wp-filt-ou-tree-row d-flex align-items-center${allSel}" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">`;
+    html += '<span class="wp-filt-ou-tree-exp-spacer" aria-hidden="true"></span>';
+    html += '<span class="wp-filt-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
+    html += wpRenderFilterOwnerOuTreeRows(byParent, '', 0, selectedId);
+    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+}
+
 function wpFilterOuClosePanel() {
     const panel = document.getElementById('wpFilterOuPanel');
     const trig = document.getElementById('wpFilterOuTrigger');
@@ -281,11 +352,13 @@ async function wpLoad() {
     const validity = document.getElementById('wpFilterValidity')?.value || '';
     const formDefinitionId = document.getElementById('wpFilterFormDef')?.value || '';
     const targetOrgUnitId = document.getElementById('wpFilterTargetOrg')?.value || '';
+    const ownerOrgUnitId = document.getElementById('wpFilterOwnerOrg')?.value || '';
     const executorRoleId = document.getElementById('wpFilterExecutor')?.value || '';
     const isActive = document.getElementById('wpFilterActive')?.value || '';
     const p = new URLSearchParams({ search, status, validity, isActive });
     if (formDefinitionId) p.set('formDefinitionId', formDefinitionId);
     if (targetOrgUnitId) p.set('targetOrgUnitId', targetOrgUnitId);
+    if (ownerOrgUnitId) p.set('ownerOrgUnitId', ownerOrgUnitId);
     if (executorRoleId) p.set('executorRoleId', executorRoleId);
     try {
         const [lu, res] = await Promise.all([
@@ -348,6 +421,17 @@ function wpFillFilters(res) {
             filLab.textContent = 'الوحدات التنظيمية المستهدفة';
         }
     }
+    const ownerHid = document.getElementById('wpFilterOwnerOrg');
+    const ownerLab = document.getElementById('wpFilterOwnerOuLabel');
+    if (ownerHid && ownerLab && ownerHid.value) {
+        const uid = parseInt(ownerHid.value, 10);
+        const u = orgList.find((x) => (x.id ?? x.Id) === uid);
+        if (u) ownerLab.textContent = u.name ?? u.Name ?? ownerLab.textContent;
+        else {
+            ownerHid.value = '';
+            ownerLab.textContent = 'الوحدة التنظيمية المالكة';
+        }
+    }
 
     refill(
         document.getElementById('wpFilterExecutor'),
@@ -359,6 +443,10 @@ function wpFillFilters(res) {
 
     const th = document.getElementById('wpThActive');
     if (th) th.style.display = wpIsAdmin ? '' : 'none';
+    const thOwner = document.getElementById('wpThOwnerOrg');
+    if (thOwner) thOwner.style.display = wpIsAdmin ? '' : 'none';
+    const ownerWrap = document.getElementById('wpFilterOwnerWrap');
+    if (ownerWrap) ownerWrap.style.display = wpIsAdmin ? '' : 'none';
 }
 
 function wpClear() {
@@ -370,7 +458,12 @@ function wpClear() {
     if (fo) fo.value = '';
     const fl = document.getElementById('wpFilterOuLabel');
     if (fl) fl.textContent = 'الوحدات التنظيمية المستهدفة';
+    const ownerFo = document.getElementById('wpFilterOwnerOrg');
+    if (ownerFo) ownerFo.value = '';
+    const ownerFl = document.getElementById('wpFilterOwnerOuLabel');
+    if (ownerFl) ownerFl.textContent = 'الوحدة التنظيمية المالكة';
     wpFilterOuExpanded = {};
+    wpFilterOwnerOuExpanded = {};
     wpLoad();
 }
 
@@ -399,6 +492,7 @@ function wpRenderTable() {
     if (wpPage > totalPages) wpPage = totalPages;
     const pageStart = (wpPage - 1) * wpPerPage;
     const disp = wpIsAdmin ? '' : 'display:none;';
+    const dispOwner = wpIsAdmin ? '' : 'display:none;';
     tbody.innerHTML = list.slice(pageStart, wpPage * wpPerPage).map((f, i) => {
         const toggle = wpIsAdmin
             ? `<label class="fd-toggle" title="${f.status !== 'approved' ? 'يمكن التفعيل للإجراءات المعتمدة فقط' : ''}"><input type="checkbox" ${f.isActive ? 'checked' : ''} ${f.status !== 'approved' ? 'disabled' : ''} onchange="wpToggle(${f.id},this)"><span class="fd-slider"></span></label>`
@@ -411,7 +505,7 @@ function wpRenderTable() {
             <td style="font-weight:600;">${esc(f.code)}</td>
             <td>${esc(f.name)}</td>
             <td style="font-size:13px;">${patName === '—' ? '<span class="text-muted">—</span>' : esc(patName)}</td>
-            <td style="font-size:13px;">${esc(f.orgUnitName)}</td>
+            <td style="font-size:13px;${dispOwner}">${esc(f.orgUnitName)}</td>
             <td style="text-align:center;">${esc(f.validityType)}</td>
             <td style="font-size:13px;">${tplName === '—' ? '<span class="text-muted">—</span>' : esc(tplName)}</td>
             <td style="text-align:center;font-weight:700;color:var(--sa-700);">${esc(verLbl)}</td>
@@ -3710,8 +3804,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    const ownerTrig = document.getElementById('wpFilterOwnerOuTrigger');
+    const ownerPanel = document.getElementById('wpFilterOwnerOuPanel');
+    const ownerWrap = document.getElementById('wpFilterOwnerWrap');
+    if (ownerTrig && ownerPanel) {
+        ownerTrig.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            wpFilterOwnerOuTogglePanel();
+        });
+        ownerPanel.addEventListener('click', (ev) => {
+            const expBtn = ev.target.closest('.wp-filt-ou-tree-exp');
+            if (expBtn) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const eid = expBtn.getAttribute('data-exp');
+                if (eid) {
+                    wpFilterOwnerOuExpanded[eid] = !wpFilterOwnerOuExpanded[eid];
+                    wpRenderFilterOwnerOuTreePanel();
+                }
+                return;
+            }
+            const row = ev.target.closest('.wp-filt-ou-tree-row');
+            if (row && row.getAttribute('data-id') !== null) {
+                const rawId = row.getAttribute('data-id');
+                const hid = document.getElementById('wpFilterOwnerOrg');
+                const lab = document.getElementById('wpFilterOwnerOuLabel');
+                if (rawId === '') {
+                    if (hid) hid.value = '';
+                    if (lab) lab.textContent = 'الوحدة التنظيمية المالكة';
+                } else {
+                    const uid = parseInt(rawId, 10);
+                    const u = (wpLookups.organizationalUnits || []).find((x) => wpOuUnitId(x) === uid);
+                    if (u && hid) {
+                        hid.value = String(uid);
+                        if (lab) lab.textContent = wpOuName(u);
+                    }
+                }
+                wpFilterOwnerOuClosePanel();
+                wpRenderFilterOwnerOuTreePanel();
+                wpLoad();
+            }
+        });
+    }
     document.addEventListener('click', (e) => {
-        if (!wrap || !panel || panel.classList.contains('d-none')) return;
-        if (!wrap.contains(e.target)) wpFilterOuClosePanel();
+        if (wrap && panel && !panel.classList.contains('d-none') && !wrap.contains(e.target)) wpFilterOuClosePanel();
+        if (ownerWrap && ownerPanel && !ownerPanel.classList.contains('d-none') && !ownerWrap.contains(e.target)) wpFilterOwnerOuClosePanel();
     });
 });

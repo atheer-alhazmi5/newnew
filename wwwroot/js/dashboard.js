@@ -77,6 +77,7 @@ function dashEsc(s) {
 
 function dashResolveUrl(url) {
     if (!url) return '';
+    if (/^(data:|blob:|https?:)/i.test(url)) return url;
     if (typeof appResolveUrl === 'function') return appResolveUrl(url);
     return url.startsWith('/') ? url : '/' + url;
 }
@@ -274,7 +275,7 @@ async function dashLoadProfile() {
     var p = r.profile || {};
     var canEditSign = !!r.canEditEndorsementSignature;
     var photo = p.photoUrl
-        ? '<img src="' + dashEsc(dashResolveUrl(p.photoUrl)) + '" alt="">'
+        ? '<img src="' + dashEsc(dashResolveUrl(p.photoUrl)) + '" alt="الصورة الشخصية" decoding="async" onerror="this.onerror=null;this.outerHTML=\'<i class=&quot;bi bi-person-fill&quot;></i>\'">'
         : '<i class="bi bi-person-fill"></i>';
 
     function signHtml(type, file) {

@@ -68,6 +68,7 @@ public class WorkProceduresController : BaseController
         string? validity,
         int? formDefinitionId,
         int? targetOrgUnitId,
+        int? ownerOrgUnitId,
         int? executorBeneficiaryId,
         int? executorRoleId,
         string? isActive)
@@ -98,6 +99,8 @@ public class WorkProceduresController : BaseController
             all = all.Where(p => p.ValidityType == validity).ToList();
         if (targetOrgUnitId.HasValue && targetOrgUnitId.Value > 0)
             all = all.Where(p => ProcedureTargetsOrganizationalUnit(p, targetOrgUnitId.Value)).ToList();
+        if (ownerOrgUnitId.HasValue && ownerOrgUnitId.Value > 0)
+            all = all.Where(p => p.OrganizationalUnitId == ownerOrgUnitId.Value).ToList();
         if (executorRoleId.HasValue && executorRoleId.Value > 0)
         {
             var execRolesForRoleFilter = await ListExecutorRolesForUserAsync(isAdmin, allowedOrgIds);

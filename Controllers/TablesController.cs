@@ -80,11 +80,15 @@ public class TablesController : BaseController
             });
         }
 
+        var currentOrgUnitId = await GetCreatorOrgUnitIdAsync();
+        var currentOrgUnitName = units.FirstOrDefault(u => u.Id == currentOrgUnitId)?.Name ?? "";
+
         return Json(new
         {
             success = true, data = result,
             organizationalUnits = activeUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
-            currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin"
+            currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin",
+            currentOrgUnitId, currentOrgUnitName
         });
     }
 
@@ -122,15 +126,23 @@ public class TablesController : BaseController
 
     private async Task<int> GetCreatorOrgUnitIdAsync()
     {
-        var user = await _ds.GetUserByIdAsync(CurrentUserId);
-        if (user != null && !string.IsNullOrEmpty(user.Email))
-        {
-            var beneficiary = await _ds.GetBeneficiaryByEmailAsync(user.Email);
-            if (beneficiary != null && beneficiary.OrganizationalUnitId.HasValue)
-                return beneficiary.OrganizationalUnitId.Value;
-        }
         var units = await _ds.ListOrganizationalUnitsAsync();
-        return units.Count > 0 ? units.First().Id : 0;
+        if (IsAuthenticated && CurrentUserId > 0)
+        {
+            var user = await _ds.GetUserByIdAsync(CurrentUserId);
+            if (user != null)
+            {
+                var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+                if (beneficiary?.OrganizationalUnitId != null && beneficiary.OrganizationalUnitId.Value > 0)
+                {
+                    var ouId = beneficiary.OrganizationalUnitId.Value;
+                    var benUnit = units.FirstOrDefault(u => u.Id == ouId);
+                    if (benUnit != null) return benUnit.Id;
+                }
+            }
+        }
+        var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
+        return unit?.Id ?? CurrentDeptId;
     }
 
     private static bool IsTableCreator(ReadyTable t, string? currentUserFullName, string? currentUserName)

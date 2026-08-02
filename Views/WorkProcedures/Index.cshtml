@@ -520,6 +520,13 @@
         </button>
         <div class="wp-filt-ou-tree-panel d-none" id="wpFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;"></div>
     </div>
+    <div class="wp-filt-ou-wrap" id="wpFilterOwnerWrap" style="display:none;">
+        <input type="hidden" id="wpFilterOwnerOrg" value="">
+        <button type="button" class="form-select rt-filter-select text-end w-100 wp-filt-ou-tree-trigger" id="wpFilterOwnerOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية المالكة">
+            <span class="wp-filt-ou-tree-label text-truncate d-block" id="wpFilterOwnerOuLabel">الوحدة التنظيمية المالكة</span>
+        </button>
+        <div class="wp-filt-ou-tree-panel d-none" id="wpFilterOwnerOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;"></div>
+    </div>
     <select class="rt-filter-select form-select" id="wpFilterExecutor" onchange="wpLoad()" aria-label="المنفذ للإجراء">
         <option value="">المنفذ للإجراء</option>
     </select>
@@ -548,7 +555,7 @@
                         <th>ترميز الإجراء</th>
                         <th>اسم الإجراء</th>
                         <th>نوع الإجراء</th>
-                        <th>الوحدة التنظيمية المالكة</th>
+                        <th id="wpThOwnerOrg">الوحدة التنظيمية المالكة</th>
                         <th style="text-align:center;">صلاحية الإجراء</th>
                         <th>القالب المستخدم</th>
                         <th style="text-align:center;">رقم الإصدار</th>

@@ -550,6 +550,20 @@ public class FormDefinitionsController : BaseController
     private async Task<int> GetCreatorOrgUnitIdAsync()
     {
         var units = await _ds.ListOrganizationalUnitsAsync();
+        if (IsAuthenticated && CurrentUserId > 0)
+        {
+            var user = await _ds.GetUserByIdAsync(CurrentUserId);
+            if (user != null)
+            {
+                var beneficiary = await _ds.ResolveBeneficiaryForUserAsync(user);
+                if (beneficiary?.OrganizationalUnitId != null && beneficiary.OrganizationalUnitId.Value > 0)
+                {
+                    var ouId = beneficiary.OrganizationalUnitId.Value;
+                    var benUnit = units.FirstOrDefault(u => u.Id == ouId);
+                    if (benUnit != null) return benUnit.Id;
+                }
+            }
+        }
         var unit = units.FirstOrDefault(u => u.Id == CurrentDeptId);
         return unit?.Id ?? CurrentDeptId;
     }

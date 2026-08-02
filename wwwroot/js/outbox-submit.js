@@ -675,8 +675,11 @@ function obsRenderReview() {
             html += '<div class="obs-review-section-title"><i class="bi bi-collection"></i>' + esc(bucket.title) + '</div>';
             html += '<div class="obs-review-grid">';
             bucket.items.forEach(function (it) {
-                html += '<div class="lbl">' + esc(it.fieldName || '—') + (it.isRequired ? ' <span style="color:#ef4444;">*</span>' : '') + '</div>';
-                html += '<div class="' + (obsValueIsEmpty(it.value) ? 'val empty' : 'val') + '">' + obsFormatValueHtml(it) + '</div>';
+                var isTable = it.fieldType === 'جدول بيانات';
+                var lblCls = isTable ? 'lbl obs-review-table-lbl' : 'lbl';
+                var valCls = (obsValueIsEmpty(it.value) ? 'val empty' : 'val') + (isTable ? ' obs-review-table-val' : '');
+                html += '<div class="' + lblCls + '">' + esc(it.fieldName || '—') + (it.isRequired ? ' <span style="color:#ef4444;">*</span>' : '') + '</div>';
+                html += '<div class="' + valCls + '">' + obsFormatValueHtml(it) + '</div>';
             });
             html += '</div></div>';
         });
@@ -691,7 +694,15 @@ function obsRenderReview() {
 
 function obsValueIsEmpty(v) {
     if (v == null) return true;
-    if (Array.isArray(v)) return v.length === 0;
+    if (Array.isArray(v)) {
+        if (!v.length) return true;
+        if (obsIsReadyTableColumnData(v)) {
+            return v.every(function (col) {
+                return !(col.value || []).some(function (cell) { return String(cell != null ? cell : '').trim() !== ''; });
+            });
+        }
+        return false;
+    }
     if (typeof v === 'object') {
         var keys = Object.keys(v);
         if (!keys.length) return true;
@@ -699,6 +710,54 @@ function obsValueIsEmpty(v) {
     }
     if (typeof v === 'boolean') return false;
     return String(v).trim() === '';
+}
+
+function obsIsReadyTableColumnData(v) {
+    if (!Array.isArray(v) || !v.length) return false;
+    return v.every(function (col) {
+        return col && typeof col === 'object' && Object.prototype.hasOwnProperty.call(col, 'label') && Array.isArray(col.value);
+    });
+}
+
+function obsReadyTableHeaderColor(fieldDef) {
+    var headerColor = '#f3f4f6';
+    if (!fieldDef) return headerColor;
+    try {
+        var p = JSON.parse(fieldDef.propertiesJson || '{}');
+        var rtId = parseInt(p.readyTableId, 10) || 0;
+        if (rtId && typeof fdReadyTableGridCache !== 'undefined' && fdReadyTableGridCache[rtId]) {
+            var g = fdReadyTableGridCache[rtId];
+            headerColor = g.columnHeaderColor || g.ColumnHeaderColor || headerColor;
+        }
+    } catch (e) { /* ignore */ }
+    return headerColor;
+}
+
+function obsBuildReadyTableReviewHtml(columns, fieldDef) {
+    if (!obsIsReadyTableColumnData(columns)) return '—';
+    var numRows = 0;
+    columns.forEach(function (col) {
+        var len = (col.value && col.value.length) || 0;
+        if (len > numRows) numRows = len;
+    });
+    if (!numRows) return '—';
+
+    var headerColor = obsReadyTableHeaderColor(fieldDef);
+    var html = '<div class="table-responsive rt-preview-wrap obs-review-table-wrap"><table class="table rt-preview-form-table mb-0"><thead><tr class="rt-preview-thead-row">';
+    columns.forEach(function (col) {
+        html += '<th style="background:' + headerColor + ' !important;color:var(--gray-900) !important;">' + esc(col.label || '') + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    for (var ri = 0; ri < numRows; ri++) {
+        html += '<tr class="fd-ready-table-row">';
+        columns.forEach(function (col) {
+            var cellVal = (col.value && col.value[ri] != null) ? String(col.value[ri]) : '';
+            html += '<td>' + (cellVal.trim() ? esc(cellVal) : '<span style="color:var(--gray-400);">—</span>') + '</td>';
+        });
+        html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
 }
 
 function obsFormatValueHtml(item) {
@@ -724,6 +783,13 @@ function obsFormatValueHtml(item) {
         return v.map(function (r) { return '<div><b>' + esc(r.label) + ':</b> ' + esc((r.value || []).join(' • ') || '—') + '</div>'; }).join('');
     }
     if (t === 'جدول بيانات' && Array.isArray(v)) {
+        if (obsIsReadyTableColumnData(v)) {
+            var fieldDef = null;
+            if (obsFormDef && obsFormDef.fields) {
+                fieldDef = obsFormDef.fields.find(function (f) { return f.id === item.id; });
+            }
+            return obsBuildReadyTableReviewHtml(v, fieldDef);
+        }
         return v.map(function (r) { return '<div><b>' + esc(r.label) + ':</b> ' + esc((r.value || []).filter(Boolean).join(' | ') || '—') + '</div>'; }).join('');
     }
     if (t === 'رابط' && v) {

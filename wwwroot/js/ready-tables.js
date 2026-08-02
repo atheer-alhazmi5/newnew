@@ -1,5 +1,6 @@
 /* ===== Ready Tables JS (Index Page) ===== */
 var rtAllData = [], rtFilteredData = [], rtOrgUnits = [], rtCurrentUser = '', rtIsAdmin = false;
+var rtCurrentOrgUnitId = 0, rtCurrentOrgUnitName = '';
 var rtPage = 1, rtPerPage = 20, rtCurrentList = [];
 var RT_TABLE_NAME_DUP_MSG = 'اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var rtcFields = [], rtcEditingIndex = -1;
@@ -780,6 +781,9 @@ async function rtLoad() {
         rtOrgUnits = r.organizationalUnits || [];
         rtCurrentUser = r.currentUser || '';
         rtIsAdmin = r.isAdmin || false;
+        rtCurrentOrgUnitId = r.currentOrgUnitId || 0;
+        rtCurrentOrgUnitName = r.currentOrgUnitName || '';
+        rtSyncOwnerOrgUnitFields();
         rtSyncFilterOuTreeLabel();
         rtRenderTable();
         rtApplyAdminOwnershipLock();
@@ -881,6 +885,15 @@ function rtFilterOuClosePanel() {
     var trig = document.getElementById('rtFilterOuTrigger');
     if (panel) panel.classList.add('d-none');
     if (trig) trig.setAttribute('aria-expanded', 'false');
+}
+
+function rtSyncOwnerOrgUnitFields() {
+    var createEl = document.getElementById('rtcOwnerOrgUnit');
+    if (createEl) createEl.value = rtCurrentOrgUnitName || '—';
+    var editEl = document.getElementById('rtEditOwnerOrgUnit');
+    if (editEl && !editEl.getAttribute('data-rt-table-ou')) {
+        editEl.value = rtCurrentOrgUnitName || '—';
+    }
 }
 
 function rtSyncFilterOuTreeLabel() {
@@ -1043,6 +1056,7 @@ function rtShowCreateModal() {
     var pi = document.getElementById('rtcPreviewInline');
     if (pi) pi.classList.add('d-none');
     rtApplyAdminOwnershipLock();
+    rtSyncOwnerOrgUnitFields();
     new bootstrap.Modal(document.getElementById('rtCreateModal')).show();
 }
 
@@ -1580,6 +1594,12 @@ async function rtShowEditModal(id) {
         if (d.ownership === 'خاص') document.getElementById('rtEditOwnershipPrivate').checked = true;
         else document.getElementById('rtEditOwnershipPublic').checked = true;
         rtApplyAdminOwnershipLock();
+
+        var editOuEl = document.getElementById('rtEditOwnerOrgUnit');
+        if (editOuEl) {
+            editOuEl.setAttribute('data-rt-table-ou', '1');
+            editOuEl.value = d.organizationalUnitName || rtCurrentOrgUnitName || '—';
+        }
 
         rtEditApplyColumnHeaderColorFromValue(d.columnHeaderColor || '');
 
