@@ -1141,6 +1141,20 @@ public class DataService
         => Task.FromResult(_db.OrganizationalUnits.OrderBy(u => u.SortOrder).ToList());
 
     /// <summary>نفس منطق لوحة المعلومات &gt; البيانات الأساسية لعرض اسم الوحدة.</summary>
+    public static string ResolveOrganizationalUnitNameById(
+        int orgUnitId,
+        IEnumerable<Department> depts,
+        IEnumerable<OrganizationalUnit> orgUnits)
+    {
+        if (orgUnitId <= 0) return "";
+        var ou = orgUnits.FirstOrDefault(x => x.Id == orgUnitId);
+        if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+        var d = depts.FirstOrDefault(x => x.Id == orgUnitId);
+        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
+        return "";
+    }
+
+    /// <summary>نفس منطق لوحة المعلومات &gt; البيانات الأساسية لعرض اسم الوحدة للمستخدم.</summary>
     public static string ResolveOrganizationalUnitDisplayName(
         int? beneficiaryOuId,
         int? userDeptId,
@@ -1149,14 +1163,11 @@ public class DataService
     {
         if (beneficiaryOuId.HasValue && beneficiaryOuId.Value > 0)
         {
-            var ou = orgUnits.FirstOrDefault(x => x.Id == beneficiaryOuId.Value);
-            if (ou != null && !string.IsNullOrWhiteSpace(ou.Name)) return ou.Name.Trim();
+            var name = ResolveOrganizationalUnitNameById(beneficiaryOuId.Value, depts, orgUnits);
+            if (!string.IsNullOrEmpty(name)) return name;
         }
         if (!userDeptId.HasValue || userDeptId.Value <= 0) return "";
-        var d = depts.FirstOrDefault(x => x.Id == userDeptId.Value);
-        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
-        var ouFallback = orgUnits.FirstOrDefault(x => x.Id == userDeptId.Value);
-        return ouFallback?.Name?.Trim() ?? "";
+        return ResolveOrganizationalUnitNameById(userDeptId.Value, depts, orgUnits);
     }
 
     /// <summary>يحدّد معرّف الوحدة التنظيمية للمستخدم الحالي (مستفيد ثم القسم).</summary>

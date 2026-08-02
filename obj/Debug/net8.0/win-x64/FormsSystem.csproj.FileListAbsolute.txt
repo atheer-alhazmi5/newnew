@@ -731,3 +731,5 @@ C:/Users/iosam/AppData/Local/Temp/FormsSystemBuild3/FormsSystem.pdb
 /Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/obj/Debug/net8.0/win-x64/FormsSystem.pdb
 /Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/obj/Debug/net8.0/win-x64/FormsSystem.genruntimeconfig.cache
 /Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/obj/Debug/net8.0/win-x64/ref/FormsSystem.dll
+/Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/bin/Debug/net8.0/win-x64/Data/outbox_attachments.json
+/Users/atheernamaa/Downloads/es -lastversionNo8july/es/Forms/bin/Debug/net8.0/win-x64/Data/outbox_comments.json

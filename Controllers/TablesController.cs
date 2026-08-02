@@ -41,6 +41,7 @@ public class TablesController : BaseController
             all = all.Where(t => t.Ownership == "عام" || (t.Ownership == "خاص" && t.OrganizationalUnitId == currentOrgUnitId)).ToList();
         }
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
         var fields = await Task.WhenAll(all.Select(async t => (t.Id, Count: (await _ds.ListReadyTableFieldsByTableIdAsync(t.Id)).Count)));
         var fieldCounts = fields.ToDictionary(x => x.Id, x => x.Count);
 
@@ -69,7 +70,7 @@ public class TablesController : BaseController
                 t.Id, t.Name, t.Description, t.SortOrder,
                 FieldCount = fieldCounts.GetValueOrDefault(t.Id, 0),
                 t.RowCountMode, t.MaxRows, t.OrganizationalUnitId,
-                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == t.OrganizationalUnitId)?.Name ?? "",
+                OrganizationalUnitName = DataService.ResolveOrganizationalUnitNameById(t.OrganizationalUnitId, depts, units),
                 t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
                 CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),
@@ -103,6 +104,7 @@ public class TablesController : BaseController
             return Json(new { success = false, message = "الجدول غير موجود" });
 
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
         var fields = await _ds.ListReadyTableFieldsByTableIdAsync(id);
 
         return Json(new
@@ -112,7 +114,7 @@ public class TablesController : BaseController
             {
                 t.Id, t.Name, t.Description, t.SortOrder, t.RowCountMode, t.MaxRows,
                 t.OrganizationalUnitId,
-                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == t.OrganizationalUnitId)?.Name ?? "",
+                OrganizationalUnitName = DataService.ResolveOrganizationalUnitNameById(t.OrganizationalUnitId, depts, units),
                 t.Ownership, t.ColumnHeaderColor, t.IsActive, t.CreatedBy,
                 CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
                 t.UpdatedBy, UpdatedAt = t.UpdatedAt?.ToString("yyyy-MM-dd HH:mm"),

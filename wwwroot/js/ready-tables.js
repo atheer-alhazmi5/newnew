@@ -752,11 +752,11 @@ function rtBindFilterOuTree() {
         if (hid) hid.value = idAttr === null ? '' : String(idAttr);
         if (lab) {
             if (!idAttr) {
-                lab.textContent = 'قائمة بالوحدات التنظيمية';
+                lab.textContent = 'الوحدة التنظيمية المالكة';
             } else {
                 var uid = parseInt(idAttr, 10);
                 var u = rtOrgUnits.find(function (x) { return x.id === uid; });
-                lab.textContent = u ? u.name : 'قائمة بالوحدات التنظيمية';
+                lab.textContent = u ? u.name : 'الوحدة التنظيمية المالكة';
             }
         }
         rtFilterOuClosePanel();
@@ -900,7 +900,7 @@ function rtSyncFilterOuTreeLabel() {
     var hid = document.getElementById('rtFilterOrgUnit');
     var lab = document.getElementById('rtFilterOuLabel');
     if (!hid || !lab) return;
-    var defLabel = 'قائمة بالوحدات التنظيمية';
+    var defLabel = 'الوحدة التنظيمية المالكة';
     if (hid.value) {
         var u = rtOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
         lab.textContent = u ? u.name : defLabel;
@@ -934,7 +934,7 @@ function rtClearFilters() {
     var hid = document.getElementById('rtFilterOrgUnit');
     if (hid) hid.value = '';
     var lab = document.getElementById('rtFilterOuLabel');
-    if (lab) lab.textContent = 'قائمة بالوحدات التنظيمية';
+    if (lab) lab.textContent = 'الوحدة التنظيمية المالكة';
     rtFilterOuExpanded = {};
     rtFilterOuClosePanel();
     rtRenderFilterOrgUnitTreePanel();

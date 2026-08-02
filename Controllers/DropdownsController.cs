@@ -40,6 +40,7 @@ public class DropdownsController : BaseController
 
         var lists = await _ds.ListDropdownListsAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
         var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
 
         // لممثل الوحدة: اعرض العامة + خاصة وحدته فقط
@@ -79,7 +80,7 @@ public class DropdownsController : BaseController
                 l.SelectionType,
                 l.Ownership,
                 l.OrganizationalUnitId,
-                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == l.OrganizationalUnitId)?.Name ?? "",
+                OrganizationalUnitName = DataService.ResolveOrganizationalUnitNameById(l.OrganizationalUnitId, depts, units),
                 l.IsActive,
                 l.ParentListId,
                 l.LevelCount,
@@ -136,6 +137,7 @@ public class DropdownsController : BaseController
         }
 
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var depts = await _ds.ListDepartmentsAsync();
         var parentList = list.ParentListId.HasValue ? await _ds.GetDropdownListByIdAsync(list.ParentListId.Value) : null;
         var items = await _ds.ListDropdownItemsByListIdAsync(id);
         var (activeParentIds, activeParentItems) = await ResolveActiveParentItemsAsync(list);
@@ -154,7 +156,7 @@ public class DropdownsController : BaseController
                 list.SelectionType,
                 list.Ownership,
                 list.OrganizationalUnitId,
-                OrganizationalUnitName = units.FirstOrDefault(u => u.Id == list.OrganizationalUnitId)?.Name ?? "",
+                OrganizationalUnitName = DataService.ResolveOrganizationalUnitNameById(list.OrganizationalUnitId, depts, units),
                 list.IsActive,
                 list.ParentListId,
                 ParentListName = parentList?.Name ?? "",
