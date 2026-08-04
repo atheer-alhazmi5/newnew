@@ -1192,6 +1192,38 @@ public class DataService
         return (orgUnitId, orgUnitName);
     }
 
+    /// <summary>يُطبّع معرّف/اسم الوحدة التنظيمية لتذكرة دعم (قد تُخزَّن قديماً بمعرّف قسم).</summary>
+    public async Task<(int OrgUnitId, string OrgUnitName)> ResolveSupportTicketOrganizationalUnitAsync(SupportTicket ticket)
+    {
+        var units = await ListOrganizationalUnitsAsync();
+        var depts = await ListDepartmentsAsync();
+        var stored = ticket.OrganizationalUnitId ?? 0;
+
+        if (stored > 0 && units.Any(u => u.Id == stored))
+        {
+            var name = ResolveOrganizationalUnitNameById(stored, depts, units);
+            if (string.IsNullOrEmpty(name) && !string.IsNullOrWhiteSpace(ticket.OrganizationalUnitName))
+                name = ticket.OrganizationalUnitName.Trim();
+            return (stored, name);
+        }
+
+        if (ticket.SubmittedById > 0)
+        {
+            var user = await GetUserByIdAsync(ticket.SubmittedById);
+            if (user != null)
+            {
+                var resolved = await ResolveCurrentUserOrganizationalUnitAsync(user, user.DepartmentId ?? 0);
+                if (resolved.OrgUnitId > 0 && units.Any(u => u.Id == resolved.OrgUnitId))
+                    return resolved;
+            }
+        }
+
+        var fallbackName = !string.IsNullOrWhiteSpace(ticket.OrganizationalUnitName)
+            ? ticket.OrganizationalUnitName.Trim()
+            : ResolveOrganizationalUnitNameById(stored, depts, units);
+        return (stored, fallbackName);
+    }
+
     public Task<List<OrganizationalUnit>> ListActiveOrganizationalUnitsAsync()
         => Task.FromResult(FilterEffectivelyActiveOrganizationalUnits(_db.OrganizationalUnits));
 

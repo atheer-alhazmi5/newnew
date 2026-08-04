@@ -235,6 +235,7 @@ window.AppOuFilter = (function () {
         create: create,
         setUnits: setUnits,
         clear: clear,
+        hasInstance: function (id) { return !!instances[id]; },
         syncLabel: function (id) { syncLabel(instances[id]); },
         getValue: function (id) { return instances[id] ? instances[id].getValue() : ''; },
         loadFromFormDefinitions: loadFromFormDefinitions,

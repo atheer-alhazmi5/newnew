@@ -64,24 +64,31 @@ function spUpdateTotalCount(total) {
     if (txt) txt.textContent = String(total ?? 0);
 }
 
+function spOuFilterConfig() {
+    return {
+        id: 'sp',
+        hiddenId: 'spFilterOrgUnit',
+        triggerId: 'spFilterOuTrigger',
+        panelId: 'spFilterOuPanel',
+        labelId: 'spFilterOuLabel',
+        wrapSelector: '.sp-filter-ou-wrap',
+        defaultLabel: 'الوحدة التنظيمية',
+        onChange: function () { spApplyFilters(); }
+    };
+}
+
+function spEnsureOuFilter() {
+    if (!spIsAdmin || !window.AppOuFilter || !document.getElementById('spFilterOrgUnit')) return;
+    if (!AppOuFilter.hasInstance('sp')) AppOuFilter.create(spOuFilterConfig());
+}
+
 function spInit() {
     spIsAdmin = window.spIsAdmin === true || window.spIsAdmin === 'true';
     spCreateModal = document.getElementById('spCreateModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spCreateModal')) : null;
     spUpdateModal = document.getElementById('spUpdateModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spUpdateModal')) : null;
     spDetailModal = document.getElementById('spDetailModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spDetailModal')) : null;
     spDeleteModal = document.getElementById('spDeleteModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spDeleteModal')) : null;
-    if (spIsAdmin && window.AppOuFilter && document.getElementById('spFilterOrgUnit')) {
-        AppOuFilter.create({
-            id: 'sp',
-            hiddenId: 'spFilterOrgUnit',
-            triggerId: 'spFilterOuTrigger',
-            panelId: 'spFilterOuPanel',
-            labelId: 'spFilterOuLabel',
-            wrapSelector: '.sp-filter-ou-wrap',
-            defaultLabel: 'الوحدة التنظيمية',
-            onChange: function () { spApplyFilters(); }
-        });
-    }
+    spEnsureOuFilter();
     spLoad();
 }
 
@@ -99,8 +106,13 @@ async function spLoad() {
     spIsAdmin = r.isAdmin === true;
     spUpdateTotalCount(spAll.length);
 
+    spEnsureOuFilter();
     if (spIsAdmin && window.AppOuFilter) {
-        await AppOuFilter.loadFromFormDefinitions('sp');
+        if (r.orgUnitFilters) {
+            AppOuFilter.setUnits('sp', r.orgUnitFilters, r.isAdmin, r.orgUnitsForSelect);
+        } else {
+            await AppOuFilter.loadFromFormDefinitions('sp');
+        }
     }
 
     spApplyFilters();

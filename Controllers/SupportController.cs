@@ -45,6 +45,10 @@ public class SupportController : BaseController
         var (myUnitId, _) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
         var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitId);
 
+        var mapped = new List<object>();
+        foreach (var t in visible.OrderByDescending(x => x.CreatedAt))
+            mapped.Add(await MapTicketAsync(t));
+
         return Json(new
         {
             success = true,
@@ -54,7 +58,7 @@ public class SupportController : BaseController
             statusValues = DataService.SupportStatusValues,
             orgUnitFilters,
             orgUnitsForSelect,
-            data = visible.OrderByDescending(t => t.CreatedAt).Select(MapTicket)
+            data = mapped
         });
     }
 
@@ -65,7 +69,7 @@ public class SupportController : BaseController
         var t = await _ds.GetSupportTicketByIdAsync(id);
         if (t == null) return Json(new { success = false, message = "غير موجود" });
         if (!CanAccess(t)) return Json(new { success = false, message = "غير مصرح" });
-        return Json(new { success = true, data = MapTicket(t) });
+        return Json(new { success = true, data = await MapTicketAsync(t) });
     }
 
     [HttpPost]
@@ -79,9 +83,7 @@ public class SupportController : BaseController
         var user = await _ds.GetUserByIdAsync(CurrentUserId);
         if (user == null) return Json(new { success = false, message = "تعذّر تحديد المستخدم" });
 
-        var depts = await _ds.ListDepartmentsAsync();
-        var orgUnits = await _ds.ListOrganizationalUnitsAsync();
-        var ouName = ResolveUnitDisplayName(user.DepartmentId, depts, orgUnits);
+        var (ouId, ouName) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(user, user.DepartmentId ?? CurrentDeptId);
         if (string.IsNullOrEmpty(ouName)) ouName = CurrentDeptName;
 
         var ticket = new SupportTicket
@@ -89,7 +91,7 @@ public class SupportController : BaseController
             RequestNumber = await _ds.GenerateSupportTicketNumberAsync(),
             SubmittedById = CurrentUserId,
             SubmitterName = user.FullName,
-            OrganizationalUnitId = user.DepartmentId,
+            OrganizationalUnitId = ouId > 0 ? ouId : user.DepartmentId,
             OrganizationalUnitName = ouName,
             Category = DataService.NormalizeSupportCategory(req.Category),
             Importance = DataService.NormalizeSupportImportance(req.Importance),
@@ -102,7 +104,7 @@ public class SupportController : BaseController
 
         await _ds.AddSupportTicketAsync(ticket);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تقديم طلب دعم فني", "SupportTicket", ticket.Id.ToString(), ticket.RequestNumber));
-        return Json(new { success = true, message = "تم تقديم الطلب بنجاح", data = MapTicket(ticket) });
+        return Json(new { success = true, message = "تم تقديم الطلب بنجاح", data = await MapTicketAsync(ticket) });
     }
 
     [HttpPost]
@@ -127,7 +129,7 @@ public class SupportController : BaseController
 
         await _ds.UpdateSupportTicketAsync(t);
         await _ds.AddAuditLogAsync(BuildAuditEntry("تحديث طلب دعم فني", "SupportTicket", t.Id.ToString(), t.RequestNumber));
-        return Json(new { success = true, message = "تم إغلاق الطلب وإرسال الرد", data = MapTicket(t) });
+        return Json(new { success = true, message = "تم إغلاق الطلب وإرسال الرد", data = await MapTicketAsync(t) });
     }
 
     [HttpPost]
@@ -216,34 +218,29 @@ public class SupportController : BaseController
         catch { return new(); }
     }
 
-    private object MapTicket(SupportTicket t) => new
+    private async Task<object> MapTicketAsync(SupportTicket t)
     {
-        t.Id,
-        t.RequestNumber,
-        t.SubmittedById,
-        t.SubmitterName,
-        t.OrganizationalUnitId,
-        t.OrganizationalUnitName,
-        t.Category,
-        t.Importance,
-        t.Subject,
-        t.Content,
-        Attachments = ParseAttachments(t.AttachmentsJson),
-        t.Status,
-        t.Response,
-        t.RespondedById,
-        t.RespondedByName,
-        CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-        UpdatedAt = (t.UpdatedAt ?? t.CreatedAt).ToString("yyyy-MM-dd HH:mm")
-    };
-
-    private static string ResolveUnitDisplayName(int? departmentId, IEnumerable<Department> depts, IEnumerable<OrganizationalUnit> orgUnits)
-    {
-        if (!departmentId.HasValue || departmentId.Value <= 0) return "";
-        var d = depts.FirstOrDefault(x => x.Id == departmentId.Value);
-        if (d != null && !string.IsNullOrWhiteSpace(d.Name)) return d.Name.Trim();
-        var ou = orgUnits.FirstOrDefault(x => x.Id == departmentId.Value);
-        return ou?.Name?.Trim() ?? "";
+        var (ouId, ouName) = await _ds.ResolveSupportTicketOrganizationalUnitAsync(t);
+        return new
+        {
+            t.Id,
+            t.RequestNumber,
+            t.SubmittedById,
+            t.SubmitterName,
+            OrganizationalUnitId = ouId > 0 ? ouId : t.OrganizationalUnitId,
+            OrganizationalUnitName = !string.IsNullOrEmpty(ouName) ? ouName : t.OrganizationalUnitName,
+            t.Category,
+            t.Importance,
+            t.Subject,
+            t.Content,
+            Attachments = ParseAttachments(t.AttachmentsJson),
+            t.Status,
+            t.Response,
+            t.RespondedById,
+            t.RespondedByName,
+            CreatedAt = t.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            UpdatedAt = (t.UpdatedAt ?? t.CreatedAt).ToString("yyyy-MM-dd HH:mm")
+        };
     }
 }
 
