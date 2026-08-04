@@ -10,6 +10,9 @@ let fdVersionName   = '';    // اسم الإصدار للعرض في عنوان
 let fdData          = [];
 let fdLookups       = { formClasses:[], formTypes:[], templates:[], templateFilters:[], orgUnitFilters:[] };
 let fdOrgUnits      = [];
+let fdStep1OrgUnits = [];
+let fdCreatorOrgUnitId = 0;
+let fdCreatorOrgUnitName = '';
 let fdFilterOuExpanded = {};
 
 // ترقيم صفحات جدول النماذج (مستقل تماماً عن مُرقّم صفحات النموذج داخل المعالج)
@@ -4488,7 +4491,7 @@ function fdStep1OuClosePanel() {
 function fdStep1OuExpandAncestorsForSelection(selectId) {
     if (!selectId || isNaN(selectId)) return;
     const map = {};
-    fdOrgUnits.forEach(u => { map[u.id] = u; });
+    fdStep1OrgUnits.forEach(u => { map[u.id] = u; });
     let u = map[selectId];
     while (u && u.parentId != null && u.parentId !== '') {
         fdStep1OuExpanded[String(u.parentId)] = true;
@@ -4498,9 +4501,9 @@ function fdStep1OuExpandAncestorsForSelection(selectId) {
 
 function fdStep1OrgUnitByParent() {
     const ids = {};
-    fdOrgUnits.forEach(u => { ids[u.id] = true; });
+    fdStep1OrgUnits.forEach(u => { ids[u.id] = true; });
     const byParent = {};
-    fdOrgUnits.forEach(u => {
+    fdStep1OrgUnits.forEach(u => {
         let pk = '';
         if (u.parentId != null && u.parentId !== '' && ids[u.parentId]) pk = String(u.parentId);
         if (!byParent[pk]) byParent[pk] = [];
@@ -4543,7 +4546,7 @@ function fdRenderStep1OuTreeRows(byParent, parentKey, depth, selectedId, expande
 function fdRenderStep1OrgUnitTreePanel() {
     const panel = document.getElementById('fdStep1OuPanel');
     if (!panel) return;
-    if (!fdOrgUnits.length) {
+    if (!fdStep1OrgUnits.length) {
         panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
         return;
     }
@@ -4569,9 +4572,11 @@ function fdInitStep1OrgUnitTree() {
 
     // ممثل الوحدة التنظيمية: تعبئة تلقائية ومنع التعديل
     if (!fdIsAdmin) {
-        const currentOuId = parseInt(document.getElementById('fdStep1OuInput')?.value || '0', 10);
-        let myOu = currentOuId > 0 ? fdOrgUnits.find(u => u.id == currentOuId) : null;
-        if (!myOu && fdOrgUnits.length) myOu = fdOrgUnits[0];
+        const preferredId = fdCreatorOrgUnitId || parseInt(document.getElementById('fdStep1OuInput')?.value || '0', 10);
+        let myOu = preferredId > 0 ? fdStep1OrgUnits.find(u => u.id == preferredId) : null;
+        if (!myOu && fdCreatorOrgUnitId > 0 && fdCreatorOrgUnitName)
+            myOu = { id: fdCreatorOrgUnitId, name: fdCreatorOrgUnitName };
+        if (!myOu && fdStep1OrgUnits.length) myOu = fdStep1OrgUnits[0];
         if (myOu) fdStep1OuSetSelection(myOu.id, myOu.name);
         trig.disabled = true;
         trig.setAttribute('aria-disabled', 'true');
@@ -4621,7 +4626,7 @@ function fdInitStep1OrgUnitTree() {
         const row = e.target.closest('.bnf-ou-tree-row');
         if (row && row.getAttribute('data-id')) {
             const uid = parseInt(row.getAttribute('data-id'), 10);
-            const u = fdOrgUnits.find(x => x.id === uid);
+            const u = fdStep1OrgUnits.find(x => x.id === uid);
             if (u) fdStep1OuSetSelection(u.id, u.name);
         }
     };
@@ -4659,6 +4664,9 @@ async function fdLoad() {
         fdOrgUnits = fdIsAdmin
             ? fdMapOrgUnits(fdLookups.orgUnitFilters)
             : fdMapOrgUnits(res.orgUnitsForSelect);
+        fdStep1OrgUnits = fdMapOrgUnits(res.orgUnitsForSelect || []);
+        fdCreatorOrgUnitId = res.creatorOrgUnitId || 0;
+        fdCreatorOrgUnitName = res.creatorOrgUnitName || '';
         fdFillFilters(); fdRenderTable();
     } catch(e) { console.error('fdLoad',e); }
 }
@@ -4791,7 +4799,7 @@ function fdShowCreate() {
     fdReadyTableGridCache = {};
     fdResetSectionsState();
     fdStep1OuExpanded = {};
-    fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, ouId:0, tplId:0, titleAppearance: fdDefaultTitleAppearance() };
+    fdStep1State = { name:'', desc:'', ownership:'عام', formClassId:0, typeId:0, ouId:(!fdIsAdmin && fdCreatorOrgUnitId) ? fdCreatorOrgUnitId : 0, tplId:0, titleAppearance: fdDefaultTitleAppearance() };
     document.getElementById('fdWizardTitle').textContent = 'إنشاء نموذج جديد';
     document.getElementById('fdWizardSub').textContent = 'أدخل بيانات النموذج الجديد';
     document.getElementById('fdWizardHead').className = 'fd-modal-header create';
@@ -4808,7 +4816,7 @@ async function fdShowEdit(id) {
         fdReadyTableGridCache = {};
         const d = res.data;
         if (res.orgUnitsForSelect && res.orgUnitsForSelect.length)
-            fdOrgUnits = fdMapOrgUnits(res.orgUnitsForSelect);
+            fdStep1OrgUnits = fdMapOrgUnits(res.orgUnitsForSelect);
         // orgUnitFilters already populated above
         if (res.formClasses && res.formClasses.length)
             fdLookups.formClasses = res.formClasses;
@@ -4899,10 +4907,10 @@ function fdStep1Html(d) {
     const fcIdVal = d.formClassId != null && d.formClassId !== '' ? d.formClassId : (fdStep1State?.formClassId || 0);
     const typeIdVal = d.formTypeId != null ? d.formTypeId : d.typeId;
     const ouIdVal = d.organizationalUnitId != null && d.organizationalUnitId !== '' ? d.organizationalUnitId : (d.ouId || 0);
-    const ouFromList = fdOrgUnits.find(u => u.id == ouIdVal);
+    const ouFromList = fdStep1OrgUnits.find(u => u.id == ouIdVal);
     const ouLabel = (d.orgUnitName && String(d.orgUnitName).trim())
         ? d.orgUnitName
-        : (ouFromList?.name || (ouIdVal > 0 ? 'الوحدة التنظيمية' : '-- اختر --'));
+        : (ouFromList?.name || ((!fdIsAdmin && fdCreatorOrgUnitName) ? fdCreatorOrgUnitName : (ouIdVal > 0 ? 'الوحدة التنظيمية' : '-- اختر --')));
     const tplIdVal = d.templateId != null ? d.templateId : d.tplId;
     const fcs = fdLookups.formClasses || [];
     const fcOpts = fcs.map(c=>`<option value="${c.id}" ${c.id==fcIdVal?'selected':''}>${esc(c.name)}</option>`).join('');

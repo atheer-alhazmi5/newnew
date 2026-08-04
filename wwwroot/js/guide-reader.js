@@ -229,8 +229,7 @@ function grRenderMedia(item) {
 
     if (url) {
         panel.innerHTML = '<div class="system-screenshot" role="button" tabindex="0" aria-label="تكبير الصورة">'
-            + '<img src="' + grEsc(url) + '" alt="' + grEsc(item.name || item.Name) + '">'
-            + '<span class="gr-zoom-hint">(🔍 انقر للتكبير)</span></div>';
+            + '<img src="' + grEsc(url) + '" alt="' + grEsc(item.name || item.Name) + '">';
         panel.querySelector('.system-screenshot')?.addEventListener('click', function () {
             grOpenZoom(url, item.name || item.Name);
         });

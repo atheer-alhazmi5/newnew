@@ -1274,6 +1274,38 @@ public class DataService
         return (orgUnitFilters, orgUnitsForSelect);
     }
 
+    /// <summary>مصدر حقل «الوحدة التنظيمية المالكة» في إنشاء/تعديل النموذج (ليس فلتر الجدول).</summary>
+    public static List<object> BuildFormOwnerOrgUnitsForSelect(
+        bool isAdmin,
+        IEnumerable<OrganizationalUnit> allUnits,
+        int creatorOrgUnitId,
+        string creatorOrgUnitName)
+    {
+        if (isAdmin)
+            return MapOrganizationalUnitFilterItems(allUnits);
+
+        if (creatorOrgUnitId <= 0)
+            return new List<object>();
+
+        var list = allUnits.ToList();
+        var active = FilterEffectivelyActiveOrganizationalUnits(list);
+        var match = active.FirstOrDefault(u => u.Id == creatorOrgUnitId);
+        if (match != null)
+            return new List<object> { new { id = match.Id, name = match.Name, parentId = match.ParentId, sortOrder = match.SortOrder } };
+
+        var any = list.FirstOrDefault(u => u.Id == creatorOrgUnitId);
+        if (any != null)
+        {
+            var suffix = !any.IsActive ? " (غير مفعّل)" : "";
+            return new List<object> { new { id = any.Id, name = any.Name + suffix, parentId = any.ParentId, sortOrder = any.SortOrder } };
+        }
+
+        if (!string.IsNullOrWhiteSpace(creatorOrgUnitName))
+            return new List<object> { new { id = creatorOrgUnitId, name = creatorOrgUnitName.Trim(), parentId = (int?)null, sortOrder = 0 } };
+
+        return new List<object>();
+    }
+
     public Task CascadeDeactivateOrganizationalUnitDescendantsAsync(int unitId, string? updatedBy, DateTime updatedAt)
     {
         var list = _db.OrganizationalUnits.ToList();

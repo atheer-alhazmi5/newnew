@@ -2942,9 +2942,19 @@ p, li, span {
 }
 
 /* وصف النموذج — النماذج المستخدمة: المعالج + تفاصيل النموذج */
+#fdWizardModal .fd-form-title-block,
+#fdDetailsModal .fd-form-title-block {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 #fdWizardModal .fd-form-desc-preview,
 #fdDetailsModal .fd-form-desc-preview,
 #fdDetailsModal .fd-form-desc-val {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     text-align: justify;
     text-align-last: right;
     direction: rtl;
@@ -2955,6 +2965,8 @@ p, li, span {
 }
 
 #fdDetailsModal .fd-form-desc-val {
+    display: block;
+    min-width: 0;
     font-weight: 500;
     color: var(--gray-800);
 }

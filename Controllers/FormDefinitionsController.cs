@@ -86,9 +86,12 @@ public class FormDefinitionsController : BaseController
         var formTypes = await _ds.ListActiveFormSectionsAsync();
         var templates = await _ds.ListFormTemplatesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
+        var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
+        var (creatorOrgUnitId, creatorOrgUnitName) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
 
         var myUnitIdForFilters = isAdmin ? 0 : await GetCreatorOrgUnitIdAsync();
-        var (orgUnitFiltersList, orgUnitsForSelectList) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitIdForFilters);
+        var (orgUnitFiltersList, _) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitIdForFilters);
+        var orgUnitsForSelectList = DataService.BuildFormOwnerOrgUnitsForSelect(isAdmin, units, creatorOrgUnitId, creatorOrgUnitName);
 
         var allVersions = await _ds.ListFormDefinitionVersionsAsync(0); // returns empty (formId=0)
         // load full list of versions in one shot via per-form lookup is heavy; instead build map by iterating
@@ -140,6 +143,8 @@ public class FormDefinitionsController : BaseController
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
             templateFilters,
             orgUnitFilters = orgUnitFiltersList,
+            creatorOrgUnitId,
+            creatorOrgUnitName,
         });
     }
 
