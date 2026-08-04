@@ -331,7 +331,7 @@
 
 .gr-content-body img {
     max-width: 100%;
-    border-radius: 10px;
+    border-radius: 5px;
     cursor: zoom-in;
 }
 
@@ -381,8 +381,8 @@
     flex: 1;
     min-height: 350px;
     background: var(--gr-book-bg);
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -505,7 +505,7 @@
     left: 20px;
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: 8px;
     border: none;
     background: rgba(255, 255, 255, 0.15);
     color: #fff;

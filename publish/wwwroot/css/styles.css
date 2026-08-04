@@ -240,7 +240,7 @@ a:hover { color: var(--primary-dark); }
     min-width: 18px; height: 18px;
     border-radius: 50%; display: flex;
     align-items: center; justify-content: center;
-    border: 2px solid #fff;
+    border: 1px solid #fff;
 }
 .user-info { display: flex; align-items: center; gap: 10px; }
 .user-avatar-circle {
@@ -485,7 +485,7 @@ body.accessible-mode input:focus {
     padding: 10px 24px; font-size: 14px;
     transition: var(--transition); cursor: pointer;
     display: inline-flex; align-items: center;
-    gap: 8px; border: 2px solid transparent;
+    gap: 8px; border: 1px solid transparent;
 }
 .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
 .btn:active { transform: translateY(0); }
@@ -509,7 +509,7 @@ body.accessible-mode input:focus {
 .form-label { font-weight: 600; font-size: 14px; margin-bottom: 6px; color: var(--text); }
 .form-control, .form-select {
     font-family: 'Cairo', sans-serif;
-    border: 2px solid var(--gray-200); border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
     padding: 10px 14px; font-size: 14px;
     transition: var(--transition); color: var(--text);
 }
@@ -736,7 +736,7 @@ body.accessible-mode input:focus {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
 
 /* Form Builder Toolbar */
@@ -750,7 +750,7 @@ body.accessible-mode input:focus {
 /* Icon picker grid */
 .icon-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .icon-picker-item {
-    width: 48px; height: 48px; border: 2px solid var(--gray-200);
+    width: 48px; height: 48px; border: 1px solid var(--gray-200);
     border-radius: var(--radius-sm); display: flex;
     align-items: center; justify-content: center;
     cursor: pointer; transition: var(--transition);
@@ -770,7 +770,7 @@ body.accessible-mode input:focus {
 
 /* Role badge */
 .role-btn {
-    border: 2px solid var(--gray-200); border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
     padding: 10px 20px; font-weight: 600; font-size: 13px;
     cursor: pointer; transition: var(--transition);
     background: #fff; text-align: center;
@@ -1462,7 +1462,7 @@ p, li, span {
     height: 28px;
     border-radius: 8px;
     cursor: pointer;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     flex-shrink: 0;
     transition: border-color 0.15s ease, transform 0.12s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -1502,8 +1502,8 @@ p, li, span {
 
 .rt-search-box input {
     padding-right: 42px;
-    border-radius: 12px;
-    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
     font-size: 13px;
     height: 40px;
     width: 100%;
@@ -1528,8 +1528,8 @@ p, li, span {
     min-width: 140px;
     width: auto;
     max-width: 200px;
-    border-radius: 12px;
-    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
     font-size: 13px;
     height: 40px;
     padding: 8px 12px;
@@ -1545,8 +1545,8 @@ p, li, span {
 .rt-filter-select {
     min-width: 140px;
     width: auto;
-    border-radius: 10px;
-    border: 2px solid var(--gray-200);
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
     padding: 8px 12px;
     font-size: 13px;
     font-family: 'Cairo', sans-serif;
@@ -1554,12 +1554,12 @@ p, li, span {
 
 .rt-clear-btn {
     padding: 8px 16px;
-    border-radius: 10px;
+    border-radius: 5px;
     font-weight: 700;
     font-size: 13px;
     background: var(--gray-100);
     color: var(--gray-700);
-    border: 2px solid var(--gray-200);
+    border: 1px solid var(--gray-200);
     cursor: pointer;
     white-space: nowrap;
     font-family: 'Cairo', sans-serif;

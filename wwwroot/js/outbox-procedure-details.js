@@ -57,14 +57,14 @@
 + '.opd-modal-header .opd-x:hover { background:rgba(255,255,255,.22); }'
 + '.opd-modal-body { padding:20px 24px; max-height:78vh; overflow-y:auto; background:var(--surface-0); }'
 + '.opd-modal-footer { padding:14px 24px; display:flex; justify-content:flex-end; gap:10px; background:var(--gray-50); border-top:1px solid var(--gray-200); }'
-+ '.opd-btn-close { padding:9px 22px; border-radius:10px; font-weight:700; font-size:13px; font-family:"Cairo",sans-serif; border:2px solid var(--gray-200); background:var(--surface-0); color:var(--gray-700); cursor:pointer; transition:all .15s; }'
++ '.opd-btn-close { padding:9px 22px; border-radius: 5px; font-weight:700; font-size:13px; font-family:"Cairo",sans-serif; border: 1px solid var(--gray-200); background:var(--surface-0); color:var(--gray-700); cursor:pointer; transition:all .15s; }'
 + '.opd-btn-close:hover { background:var(--gray-100); border-color:var(--gray-300); }'
 
-+ '.opd-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius:12px; margin-bottom:16px; flex-wrap:wrap; }'
++ '.opd-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius: 8px; margin-bottom:16px; flex-wrap:wrap; }'
 + '.opd-head-ttl { font-weight:800; font-size:15px; color:var(--sa-800); display:inline-flex; align-items:center; gap:8px; }'
 + '.opd-head-ttl i { font-size:18px; color:var(--sa-600); }'
 + '.opd-head-meta { display:flex; align-items:center; gap:10px; }'
-+ '.opd-type-ic { width:38px !important; height:38px !important; border-radius:10px !important; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:16px; flex-shrink:0; }'
++ '.opd-type-ic { width:38px !important; height:38px !important; border-radius: 5px !important; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:16px; flex-shrink:0; }'
 + '.opd-head-info .opd-head-name { font-weight:800; font-size:14px; color:var(--gray-900); }'
 + '.opd-head-info .opd-head-sub { font-size:11.5px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:right; }'
 

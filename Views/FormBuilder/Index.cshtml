@@ -59,14 +59,14 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 }
 
 .btn-next {
-    background: var(--sa-600); color: #fff; border: none; border-radius: 10px;
+    background: var(--sa-600); color: #fff; border: none; border-radius: 5px;
     padding: 14px 48px; font-size: 16px; font-weight: 700; cursor: pointer;
     font-family: 'Cairo', sans-serif; transition: all .2s;
 }
 .btn-next:hover { background: var(--sa-800); transform: translateY(-1px); color: #fff; }
 .btn-back {
-    background: #fff; color: #404040; border: 2px solid #d4d4d4;
-    border-radius: 10px; padding: 14px 48px; font-size: 16px;
+    background: #fff; color: #404040; border: 1px solid #d4d4d4;
+    border-radius: 5px; padding: 14px 48px; font-size: 16px;
     font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
 }
 .btn-back:hover { background: #f5f5f5; }
@@ -84,7 +84,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 .section-body { padding: 0 24px 24px; }
 
 .q-card {
-    background: #fafafa; border: 1px solid #e5e5e5; border-radius: 12px;
+    background: #fafafa; border: 1px solid #e5e5e5; border-radius: 8px;
     padding: 20px; margin-bottom: 16px; transition: box-shadow .2s, border-color .2s;
 }
 .q-card:hover { border-color: #d4d4d4; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
@@ -134,14 +134,14 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 }
 .q-delete-btn:hover { opacity: 1; }
 .add-q-btn {
-    background: #fff; border: 2px dashed #d4d4d4; border-radius: 12px;
+    background: #fff; border: 1px dashed #d4d4d4; border-radius: 8px;
     padding: 16px; text-align: center; cursor: pointer;
     color: var(--sa-600); font-weight: 600; font-size: 14px;
     font-family: 'Cairo', sans-serif; display: flex;
     align-items: center; justify-content: center; gap: 8px;
 }
 .add-q-btn:hover { border-color: var(--sa-600); background: rgba(31,107,79,.03); }
-.preview-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.preview-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
 .preview-q-num {
     width: 28px; height: 28px; border-radius: 50%;
     background: var(--sa-600); color: #fff;
@@ -151,7 +151,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 
 .icon-picker { display: flex; flex-wrap: wrap; gap: 10px; }
 .icon-picker-item {
-    width: 48px; height: 48px; border: 2px solid #e5e5e5; border-radius: 12px;
+    width: 48px; height: 48px; border: 1px solid #e5e5e5; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: all .2s; color: #6c757d;
 }
@@ -161,7 +161,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 
 .targets-section { margin-top: 20px; padding-bottom: 8px; }
 .targets-section label.section-label { font-weight: 700; font-size: 15px; margin-bottom: 10px; display: block; }
-.target-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+.target-list { max-height: 200px; overflow-y: auto; border: 1px solid #e5e5e5; border-radius: 5px; padding: 12px; }
 .target-item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; }
 .target-item label { font-size: 14px; cursor: pointer; }
 
@@ -190,7 +190,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 .cat-modal-close:hover { color: #1a1a1a; }
 .cat-modal-body { padding: 24px 28px; }
 .cat-modal-input {
-    border: 2px solid #e5e5e5; border-radius: 12px; padding: 14px 16px;
+    border: 1px solid #e5e5e5; border-radius: 8px; padding: 14px 16px;
     font-size: 15px; font-family: 'Cairo', sans-serif; color: #1a1a1a;
     transition: border-color .2s;
 }
@@ -201,7 +201,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
     justify-content: flex-start;
 }
 .cat-modal-btn {
-    padding: 12px 32px; border-radius: 12px; font-size: 15px; font-weight: 700;
+    padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 700;
     font-family: 'Cairo', sans-serif; border: none; cursor: pointer; transition: all .2s;
 }
 .cat-btn-add { background: var(--sa-600); color: #fff; }
@@ -226,7 +226,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 .ms-dropdown { position: relative; margin-bottom: 12px; }
 .ms-trigger {
     display: flex; align-items: center; justify-content: space-between;
-    border: 1px solid #e5e5e5; border-radius: 10px; padding: 10px 14px;
+    border: 1px solid #e5e5e5; border-radius: 5px; padding: 10px 14px;
     background: #fff; cursor: pointer; font-size: 14px; color: #404040;
     font-family: 'Cairo', sans-serif; transition: border-color .2s; min-height: 44px;
 }
@@ -238,7 +238,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
 }
 .ms-panel {
     position: absolute; top: 100%; right: 0; left: 0; z-index: 20;
-    background: #fff; border: 1px solid #e5e5e5; border-radius: 10px;
+    background: #fff; border: 1px solid #e5e5e5; border-radius: 5px;
     margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.1);
     max-height: 380px; display: flex; flex-direction: column; overflow: hidden;
 }
@@ -354,7 +354,7 @@ body { background: #f5f5f5; margin: 0; font-family: 'Cairo', sans-serif; }
             </div>
             <div class="cat-modal-body">
                 <p style="font-size:15px;font-weight:600;color:#1a1a1a;margin:0 0 8px;">هل أنت متأكد من حذف هذا التصنيف؟</p>
-                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius: 8px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
                     <i class="bi bi-exclamation-triangle-fill" style="font-size:20px;color:#dc3545;flex-shrink:0;"></i>
                     <div>
                         <div id="deleteCatName" style="font-size:15px;font-weight:700;color:#1a1a1a;"></div>

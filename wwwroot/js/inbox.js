@@ -230,7 +230,7 @@ async function ibOpenRequest(assignmentId) {
 
     body.innerHTML =
         '<div class="d-flex align-items-center gap-3 mb-3">'
-        + '<span style="width:42px;height:42px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;background:' + ibEscAttr(typeColor) + '22;color:' + ibEscAttr(typeColor) + ';"><i class="' + ibEscAttr(typeIc) + '" style="font-size:18px;"></i></span>'
+        + '<span style="width:42px;height:42px;border-radius: 8px;display:inline-flex;align-items:center;justify-content:center;background:' + ibEscAttr(typeColor) + '22;color:' + ibEscAttr(typeColor) + ';"><i class="' + ibEscAttr(typeIc) + '" style="font-size:18px;"></i></span>'
         + '<div><div style="font-weight:800;font-size:15px;color:var(--gray-900);">' + esc(d.procedureName || '') + '</div>'
         +   '<div style="font-size:11.5px;color:var(--gray-500);direction:ltr;text-align:right;">' + esc(d.requestNumber || '') + ' • ' + esc(d.procedureCode || '') + '</div></div>'
         + '</div>'

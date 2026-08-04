@@ -26,7 +26,7 @@
 .dash-chart-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:10px; border-bottom:2px solid var(--sa-100); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
 .dash-chart-title i { color:var(--sa-600); font-size:16px; }
 .dash-chart-wrap { position:relative; min-height:280px; }
-.dash-future-card { display:flex; align-items:center; justify-content:center; min-height:280px; background:var(--gray-50); border:2px dashed var(--gray-200); border-radius:12px; color:var(--gray-400); font-weight:700; font-size:14px; flex-direction:column; gap:10px; }
+.dash-future-card { display:flex; align-items:center; justify-content:center; min-height:280px; background:var(--gray-50); border: 1px dashed var(--gray-200); border-radius: 8px; color:var(--gray-400); font-weight:700; font-size:14px; flex-direction:column; gap:10px; }
 .dash-future-card i { font-size:36px; color:var(--gray-300); }
 .dash-profile-grid { display:grid; grid-template-columns:220px 1fr; gap:28px; align-items:start; }
 .dash-avatar-wrap { text-align:center; }
@@ -41,13 +41,13 @@
     width:100%; height:100%; object-fit:cover; object-position:center center;
     display:block; border-radius:50%;
 }
-.dash-profile-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+.dash-profile-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius: 8px; padding:18px 20px; margin-bottom:16px; }
 .dash-profile-section:last-child { margin-bottom:0; }
 .dash-fields { display:grid; grid-template-columns:160px 1fr; gap:12px 18px; font-size:13.5px; }
 .dash-fields .lbl { font-weight:700; color:var(--gray-500); }
 .dash-fields .val { color:var(--gray-800); font-weight:600; word-break:break-word; }
 .dash-sign-box {
-    border:1px solid var(--gray-200); border-radius:12px; padding:14px;
+    border:1px solid var(--gray-200); border-radius: 8px; padding:14px;
     background:var(--gray-50); min-height:90px; display:flex; align-items:center; justify-content:center;
 }
 .dash-sign-box img { max-height:72px; max-width:100%; object-fit:contain; }
@@ -86,9 +86,9 @@
 .dash-al-op-badge-delete { background:#FEF3F2; color:#B42318; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
 .dash-al-op-badge-status { background:#F4F3FF; color:#5925DC; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
 .dash-al-op-badge-other { background:var(--gray-100); color:var(--gray-700); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
-.dash-al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius:10px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
+.dash-al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius: 5px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
 .dash-al-ip { direction:ltr; unicode-bidi:embed; font-family:'Consolas','Courier New',monospace; font-size:12px; color:var(--gray-600); }
-.dash-sign-canvas { border:2px dashed var(--gray-300); border-radius:12px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
+.dash-sign-canvas { border: 1px dashed var(--gray-300); border-radius: 8px; background:var(--gray-50); cursor:crosshair; touch-action:none; }
 .dash-sign-canvas-wrap { display:flex; flex-direction:column; gap:8px; }
 .dash-sign-canvas-wrap .btn-sm { padding:6px 14px; font-size:12px; }
 .dash-attach-preview { max-width:120px; max-height:100px; border-radius:8px; object-fit:contain; border:1px solid var(--gray-300); }
@@ -192,16 +192,20 @@
             <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
                 <div class="rt-search-box flex-grow-1" style="max-width:280px;position:relative;">
                     <i class="bi bi-search rt-search-icon"></i>
-                    <input type="text" class="form-control" id="dashDelSearch" placeholder="بحث بالاسم..." oninput="dashDelApplyFilters()" style="padding-right:42px;border-radius:12px;border:2px solid var(--gray-200);height:44px;">
+                    <input type="text" class="form-control" id="dashDelSearch" placeholder="بحث بالاسم..." oninput="dashDelApplyFilters()" style="padding-right:42px;border-radius: 8px;border: 1px solid var(--gray-200);height:44px;">
                 </div>
                 <select class="rt-filter-select form-select" id="dashDelType" onchange="dashDelApplyFilters()" style="max-width:180px;height:44px;">
                     <option value="">نوع التفويض</option>
                     <option value="delegator">مفوض (صادر)</option>
                     <option value="delegatee">مفوض له (وارد)</option>
                 </select>
-                <select class="rt-filter-select form-select" id="dashDelOrgUnit" onchange="dashDelApplyFilters()" style="max-width:200px;height:44px;">
-                    <option value="">الوحدة التنظيمية</option>
-                </select>
+                <div class="dash-del-ou-wrap bnf-filter-ou-wrap bnf-ou-tree-wrap" style="min-width:200px;max-width:280px;position:relative;">
+                    <input type="hidden" id="dashDelOrgUnit" value="">
+                    <button type="button" class="form-select rt-filter-select text-end w-100 bnf-ou-tree-trigger" id="dashDelOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية" style="height:44px;">
+                        <span class="bnf-ou-tree-label text-truncate d-block" id="dashDelOuLabel">الوحدة التنظيمية</span>
+                    </button>
+                    <div class="bnf-ou-tree-panel d-none" id="dashDelOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+                </div>
                 <select class="rt-filter-select form-select" id="dashDelStatus" onchange="dashDelApplyFilters()" style="max-width:160px;height:44px;">
                     <option value="">الحالة</option>
                     <option value="active">ساري</option>
@@ -272,7 +276,7 @@
                 <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:14px 22px;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 5px;font-weight:700;">إغلاق</button>
             </div>
         </div>
     </div>

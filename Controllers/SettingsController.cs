@@ -2691,6 +2691,10 @@ public class SettingsController : BaseController
         var unitById = units.ToDictionary(u => u.Id);
 
         var filtered = list.Where(d => d.DelegatorBeneficiaryId == me.Id || d.DelegateeBeneficiaryId == me.Id).ToList();
+        var isAdmin = CurrentUserRole == "Admin";
+        var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
+        var (myUnitId, _) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
+        var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitId);
 
         var data = filtered.Select(d =>
         {
@@ -2726,7 +2730,7 @@ public class SettingsController : BaseController
             };
         }).ToList();
 
-        return Json(new { success = true, myBeneficiaryId = me.Id, data });
+        return Json(new { success = true, myBeneficiaryId = me.Id, isAdmin, orgUnitFilters, orgUnitsForSelect, data });
     }
 
     [HttpPost]

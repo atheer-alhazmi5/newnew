@@ -77,7 +77,7 @@ public class AccountController : BaseController
                 Description = "مستخدم LDAP غير مسجل في النظام",
                 IpAddress = ip, Browser = browser, OperatingSystem = os
             });
-            model.ErrorMessage = "المستخدم غير موجود في النظام. يرجى التواصل مع المشرف.";
+            model.ErrorMessage = "المستخدم غير موجود في النظام. يرجى التواصل مع ادارة النظام.";
             return View(model);
         }
 
@@ -96,7 +96,7 @@ public class AccountController : BaseController
                 Description = "محاولة دخول بحساب معطل (غير مفعل)",
                 IpAddress = ip, Browser = browser, OperatingSystem = os
             });
-            model.ErrorMessage = "الحساب موقوف. يرجى التواصل مع المشرف.";
+            model.ErrorMessage = "الحساب موقوف. يرجى التواصل مع ادارة النظام .";
             return View(model);
         }
 

@@ -239,7 +239,7 @@ function grRenderMedia(item) {
 
     panel.innerHTML = '<div class="system-screenshot" role="button" tabindex="0" aria-label="تكبير المعاينة">'
         + '<div><strong>' + grEsc(caption) + '</strong>'
-        + '<span class="gr-zoom-hint">(🔍 انقر هنا للتكبير)</span></div></div>';
+;
     const shot = panel.querySelector('.system-screenshot');
     if (shot) {
         shot.addEventListener('click', function () {

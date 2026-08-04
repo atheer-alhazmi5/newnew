@@ -4,6 +4,7 @@ var dashStatusChart = null;
 var dashLoaded = { summary: false, profile: false, delegations: false, audit: false };
 var dashDelAll = [];
 var dashDelMeId = null;
+var dashDelIsAdmin = false;
 var dashAlAll = [];
 var dashAlDetailModal = null;
 
@@ -105,6 +106,18 @@ function dashSelectTab(name) {
 function dashInit() {
     var modalEl = document.getElementById('dashAlDetailModal');
     if (modalEl) dashAlDetailModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (window.AppOuFilter && document.getElementById('dashDelOrgUnit')) {
+        AppOuFilter.create({
+            id: 'dashDel',
+            hiddenId: 'dashDelOrgUnit',
+            triggerId: 'dashDelOuTrigger',
+            panelId: 'dashDelOuPanel',
+            labelId: 'dashDelOuLabel',
+            wrapSelector: '.dash-del-ou-wrap',
+            defaultLabel: 'الوحدة التنظيمية',
+            onChange: function () { dashDelApplyFilters(); }
+        });
+    }
     dashLoadSummary();
 }
 
@@ -665,15 +678,16 @@ function dashDelFiltered() {
         if (type === 'delegatee' && !isDelegatee) return false;
 
         if (org) {
-            var delegatorOu = d.delegatorOrgUnitName || d.DelegatorOrgUnitName || '';
-            var delegateeOu = d.delegateeOrgUnitName || d.DelegateeOrgUnitName || '';
+            var orgIdNum = parseInt(org, 10);
+            var delegatorOuId = Number(d.delegatorOrgUnitId || d.DelegatorOrgUnitId || 0);
+            var delegateeOuId = Number(d.delegateeOrgUnitId || d.DelegateeOrgUnitId || 0);
             var ouMatch = false;
             if (type === 'delegator') {
-                ouMatch = delegateeOu === org;
+                ouMatch = delegateeOuId === orgIdNum;
             } else if (type === 'delegatee') {
-                ouMatch = delegatorOu === org;
+                ouMatch = delegatorOuId === orgIdNum;
             } else {
-                ouMatch = (isDelegator && delegateeOu === org) || (isDelegatee && delegatorOu === org);
+                ouMatch = (isDelegator && delegateeOuId === orgIdNum) || (isDelegatee && delegatorOuId === orgIdNum);
             }
             if (!ouMatch) return false;
         }
@@ -735,10 +749,11 @@ function dashDelApplyFilters() {
 }
 
 function dashDelClearFilters() {
-    ['dashDelSearch', 'dashDelType', 'dashDelOrgUnit', 'dashDelStatus', 'dashDelDateFrom', 'dashDelDateTo'].forEach(function (id) {
+    ['dashDelSearch', 'dashDelType', 'dashDelStatus', 'dashDelDateFrom', 'dashDelDateTo'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.value = '';
     });
+    if (window.AppOuFilter) AppOuFilter.clear('dashDel');
     dashDelApplyFilters();
 }
 
@@ -752,23 +767,10 @@ async function dashLoadDelegations() {
     dashLoaded.delegations = true;
     dashDelAll = r.data || [];
     dashDelMeId = r.myBeneficiaryId || null;
+    dashDelIsAdmin = r.isAdmin === true;
 
-    var orgNames = {};
-    dashDelAll.forEach(function (d) {
-        var n1 = d.delegatorOrgUnitName || d.DelegatorOrgUnitName;
-        var n2 = d.delegateeOrgUnitName || d.DelegateeOrgUnitName;
-        if (n1) orgNames[n1] = true;
-        if (n2) orgNames[n2] = true;
-    });
-    var orgSel = document.getElementById('dashDelOrgUnit');
-    if (orgSel) {
-        orgSel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
-        Object.keys(orgNames).sort(function (a, b) { return a.localeCompare(b, 'ar'); }).forEach(function (n) {
-            var o = document.createElement('option');
-            o.value = n;
-            o.textContent = n;
-            orgSel.appendChild(o);
-        });
+    if (window.AppOuFilter) {
+        await AppOuFilter.loadFromFormDefinitions('dashDel');
     }
 
     dashDelApplyFilters();

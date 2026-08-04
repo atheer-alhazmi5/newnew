@@ -43,12 +43,12 @@ public class DropdownsController : BaseController
         var depts = await _ds.ListDepartmentsAsync();
         var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
 
-        // لممثل الوحدة: اعرض العامة + خاصة وحدته فقط
         var isAdmin = CurrentUserRole == "Admin";
         var myUnitId = 0;
         var myUnitName = "";
         if (currentUser != null)
             (myUnitId, myUnitName) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
+        var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitId);
         if (!isAdmin)
             lists = lists.Where(l => l.Ownership == "عام" || (l.Ownership == "خاص" && l.OrganizationalUnitId == myUnitId)).ToList();
 
@@ -96,6 +96,8 @@ public class DropdownsController : BaseController
             success = true,
             data = result,
             organizationalUnits = units.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
+            orgUnitFilters,
+            orgUnitsForSelect,
             currentUser = CurrentUserFullName,
             isAdmin,
             currentOrgUnitId = myUnitId,

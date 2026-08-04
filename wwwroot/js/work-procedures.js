@@ -571,7 +571,7 @@ function wpOwnerOrgFieldHtml(d) {
         ? (ownerName || (wpLookups.organizationalUnits || []).find(u => u.id === owner)?.name || '—')
         : (wpLookups.myOrgUnitName || (wpLookups.organizationalUnits || []).find(u => u.id === lockedId)?.name || '—');
     return `<input type="hidden" id="wpOrganizationalUnitId" value="${lockedId}">
-        <div class="form-control w-100" style="background:var(--gray-50);cursor:default;border:2px solid var(--gray-200);border-radius:10px;">${esc(lockedName)}</div>
+        <div class="form-control w-100" style="background:var(--gray-50);cursor:default;border: 1px solid var(--gray-200);border-radius: 5px;">${esc(lockedName)}</div>
         <span class="text-muted small">${wpEditId ? 'لا يمكن تغيير الوحدة المالكة.' : 'تُسجَّل الوحدة المالكة تلقائياً بوحدة عملك التنظيمية.'}</span>`;
 }
 
@@ -1281,7 +1281,7 @@ function wpTab2Html() {
     return `<div class="fd-section wp-wf-tab-panel" style="margin-bottom:0;">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div class="fd-section-title" style="margin:0;padding:0;border:none;"><i class="bi bi-diagram-3"></i> خطوات سير العمل</div>
-            <button type="button" class="btn btn-primary btn-sm" style="border-radius:10px;font-weight:700;" onclick="wpWfShowAddForm()"><i class="bi bi-plus-lg"></i> إضافة خطوة</button>
+            <button type="button" class="btn btn-primary btn-sm" style="border-radius: 5px;font-weight:700;" onclick="wpWfShowAddForm()"><i class="bi bi-plus-lg"></i> إضافة خطوة</button>
         </div>
         <div class="table-responsive wp-wf-table-wrap">
             <table class="table table-sm mb-0 ui-table">

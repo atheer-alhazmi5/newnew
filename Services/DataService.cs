@@ -1220,6 +1220,28 @@ public class DataService
             .ToList();
     }
 
+    /// <summary>مصدر فلتر الوحدة التنظيمية الموحّد (مطابق لصفحة النماذج المستخدمة).</summary>
+    public static List<object> MapOrganizationalUnitFilterItems(IEnumerable<OrganizationalUnit> units)
+        => FilterEffectivelyActiveOrganizationalUnits(units)
+            .Select(u => (object)new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
+            .ToList();
+
+    public async Task<(List<object> OrgUnitFilters, List<object> OrgUnitsForSelect)> GetOrganizationalUnitFilterLookupsAsync(bool isAdmin, int myUnitId)
+    {
+        var units = await ListOrganizationalUnitsAsync();
+        var active = FilterEffectivelyActiveOrganizationalUnits(units);
+        var orgUnitFilters = active
+            .Select(u => (object)new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
+            .ToList();
+        var forSelect = (!isAdmin && myUnitId > 0)
+            ? active.Where(u => u.Id == myUnitId)
+            : active;
+        var orgUnitsForSelect = forSelect
+            .Select(u => (object)new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
+            .ToList();
+        return (orgUnitFilters, orgUnitsForSelect);
+    }
+
     public Task CascadeDeactivateOrganizationalUnitDescendantsAsync(int unitId, string? updatedBy, DateTime updatedAt)
     {
         var list = _db.OrganizationalUnits.ToList();

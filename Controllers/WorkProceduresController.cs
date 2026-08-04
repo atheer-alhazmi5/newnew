@@ -1606,7 +1606,7 @@ public class WorkProceduresController : BaseController
         var all = await _ds.ListFormDefinitionsAsync();
         IEnumerable<FormDefinition> q = isAdmin
             ? FormDefinitionVisibility.FilterForAdmin(all, CurrentUserFullName)
-            : FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId);
+            : FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId, CurrentUserFullName);
         if (activeApprovedOnly)
             q = q.Where(FormDefinitionIsActiveApproved);
         return q.OrderByDescending(f => f.CreatedAt).ToList();

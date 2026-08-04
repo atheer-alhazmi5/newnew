@@ -83,12 +83,16 @@ public class TablesController : BaseController
 
         var currentOrgUnitIdResolved = currentOrgUnitId;
         var currentOrgUnitNameResolved = currentOrgUnitName;
+        var isAdmin = CurrentUserRole == "Admin";
+        var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, currentOrgUnitIdResolved);
 
         return Json(new
         {
             success = true, data = result,
             organizationalUnits = units.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }).ToList(),
-            currentUser = CurrentUserFullName, isAdmin = CurrentUserRole == "Admin",
+            orgUnitFilters,
+            orgUnitsForSelect,
+            currentUser = CurrentUserFullName, isAdmin,
             currentOrgUnitId = currentOrgUnitIdResolved, currentOrgUnitName = currentOrgUnitNameResolved
         });
     }

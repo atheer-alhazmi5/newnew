@@ -16,7 +16,7 @@
 
 /* أزرار الإجراءات أصبحت أيقونات مربّعة، لذا تُعرض في صف واحد */
 .pn-act { display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap; }
-.pn-action-btn { min-width:0;width:100%;border-radius:10px;font-weight:700;padding:7px 10px;font-size:12px;line-height:1.3;display:inline-flex;align-items:center;gap:5px;justify-content:center;cursor:pointer;transition:all .15s;border:2px solid transparent;font-family:'Cairo',sans-serif;white-space:nowrap;box-sizing:border-box;background:transparent; }
+.pn-action-btn { min-width:0;width:100%;border-radius: 5px;font-weight:700;padding:7px 10px;font-size:12px;line-height:1.3;display:inline-flex;align-items:center;gap:5px;justify-content:center;cursor:pointer;transition:all .15s;border: 1px solid transparent;font-family:'Cairo',sans-serif;white-space:nowrap;box-sizing:border-box;background:transparent; }
 .pn-action-btn-detail { border-color:var(--info-500);color:var(--info-500);background:var(--surface-0); }
 .pn-action-btn-detail:hover { background:var(--info-50); }
 .pn-action-btn-edit { border-color:var(--sa-600);color:var(--sa-600);background:var(--surface-0); }
@@ -33,8 +33,8 @@
 /* Modal */
 .pn-section-label { font-size:12px;font-weight:700;color:var(--sa-700);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
 .pn-section-label::after { content:'';flex:1;height:1px;background:var(--gray-200); }
-.pn-content-zone { border:1.5px dashed var(--gray-300);border-radius:12px;padding:16px;background:var(--gray-50); }
-.pn-target-list { max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:10px;padding:0;background:var(--surface-0); }
+.pn-content-zone { border:1.5px dashed var(--gray-300);border-radius: 8px;padding:16px;background:var(--gray-50); }
+.pn-target-list { max-height:280px;overflow-y:auto;border:1px solid var(--gray-200);border-radius: 5px;padding:0;background:var(--surface-0); }
 .pn-target-list label { display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--gray-700);cursor:pointer; }
 .pn-target-list label:hover { color:var(--sa-700); }
 .pn-user-row-manager { background:#ECFDF3;border-radius:8px;padding:6px 8px!important;margin:2px 0;align-items:center;flex-wrap:wrap; }
@@ -84,7 +84,7 @@
     <div class="d-flex align-items-center gap-3">
         <span class="al-record-count"><i class="bi bi-bell"></i> <span id="pnCountNum">0</span> إشعار</span>
         <button class="btn btn-primary" onclick="pnOpenModal()"
-                style="border-radius:12px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
+                style="border-radius: 8px;padding:10px 28px;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;">
             <i class="bi bi-plus-lg"></i> إضافة إشعار
         </button>
     </div>
@@ -159,7 +159,7 @@
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">التصنيف <span class="text-danger">*</span></label>
-                        <select class="form-select" id="pnCategory" style="border-radius:10px;font-size:13px;">
+                        <select class="form-select" id="pnCategory" style="border-radius: 5px;font-size:13px;">
                             <option value="">— اختر —</option>
                             <option value="إعلان">إعلان</option>
                             <option value="تنبيه">تنبيه</option>
@@ -169,7 +169,7 @@
                     </div>
                     <div class="col-6">
                         <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">نوع المحتوى <span class="text-danger">*</span></label>
-                        <select class="form-select" id="pnContentType" style="border-radius:10px;font-size:13px;" onchange="pnSyncContentType()">
+                        <select class="form-select" id="pnContentType" style="border-radius: 5px;font-size:13px;" onchange="pnSyncContentType()">
                             <option value="">— اختر —</option>
                             <option value="text">نص</option>
                             <option value="image">صورة</option>
@@ -184,7 +184,7 @@
                     <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">العنوان <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="pnTitle"
                            placeholder="اكتب عنوان الإشعار..."
-                           style="border-radius:10px;font-size:13px;margin-bottom:8px;" />
+                           style="border-radius: 5px;font-size:13px;margin-bottom:8px;" />
                     <div class="text-danger mt-1" id="pnTitleErr" style="font-size:12px;display:none;">مطلوب</div>
                     <div class="d-flex gap-3 align-items-center mt-2">
                         <div class="d-flex align-items-center gap-2">
@@ -220,7 +220,7 @@
                         <div id="pnZoneText" style="display:none;">
                             <textarea class="form-control" id="pnTextContent" rows="4"
                                       placeholder="اكتب نص الإشعار هنا..."
-                                      style="border-radius:10px;font-size:13px;resize:vertical;"></textarea>
+                                      style="border-radius: 5px;font-size:13px;resize:vertical;"></textarea>
                         </div>
                         <!-- IMAGE -->
                         <div id="pnZoneImage" style="display:none;">
@@ -228,7 +228,7 @@
                             <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">رفع صورة</label>
                             <input type="file" class="form-control" id="pnImageFile"
                                    accept="image/jpeg,image/png,image/gif,image/webp"
-                                   style="border-radius:10px;font-size:13px;"
+                                   style="border-radius: 5px;font-size:13px;"
                                    onchange="pnHandleFileUpload('image')" />
                             <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">الحد الأقصى: 20 MB | صيغ مدعومة: JPG, PNG, GIF, WebP</div>
                             <input type="hidden" id="pnAttachmentUrl" value="" />
@@ -240,7 +240,7 @@
                             <label class="form-label fw-bold" style="font-size:13px;color:var(--gray-700);">رفع فيديو</label>
                             <input type="file" class="form-control" id="pnVideoFile"
                                    accept="video/mp4,video/webm"
-                                   style="border-radius:10px;font-size:13px;"
+                                   style="border-radius: 5px;font-size:13px;"
                                    onchange="pnHandleFileUpload('video')" />
                             <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">الحد الأقصى: 20 MB | صيغ مدعومة: MP4, WebM</div>
                         </div>
@@ -270,11 +270,11 @@
                     <div id="pnDateRange" style="display:none;" class="row g-3">
                         <div class="col-6">
                             <label class="form-label" style="font-size:12px;color:var(--gray-600);font-weight:600;">تاريخ البداية</label>
-                            <input type="date" class="form-control" id="pnStartDate" style="border-radius:10px;font-size:13px;" />
+                            <input type="date" class="form-control" id="pnStartDate" style="border-radius: 5px;font-size:13px;" />
                         </div>
                         <div class="col-6">
                             <label class="form-label" style="font-size:12px;color:var(--gray-600);font-weight:600;">تاريخ النهاية</label>
-                            <input type="date" class="form-control" id="pnEndDate" style="border-radius:10px;font-size:13px;" />
+                            <input type="date" class="form-control" id="pnEndDate" style="border-radius: 5px;font-size:13px;" />
                         </div>
                     </div>
                     <div id="pnDateErr" class="alert alert-danger d-none mt-2" style="font-size:13px;"></div>
@@ -283,7 +283,7 @@
                 <!-- Display Location (بعد فترة الظهور) -->
                 <div class="mb-3">
                     <div class="pn-section-label"><i class="bi bi-display"></i> مكان الظهور</div>
-                    <select class="form-select" id="pnDisplayLocation" style="border-radius:10px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
+                    <select class="form-select" id="pnDisplayLocation" style="border-radius: 5px;font-size:13px;" onchange="pnOnDisplayLocationChange()">
                         <option value="landing">صفحة البداية (Landing)</option>
                         <option value="dashboard">لوحة المعلومات</option>
                         <option value="login">صفحة تسجيل الدخول</option>
@@ -331,13 +331,13 @@
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:16px 24px;gap:10px;justify-content:flex-end;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">إلغاء</button>
+                        style="border-radius: 5px;font-weight:700;font-size:13px;padding:9px 20px;">إلغاء</button>
                 <button type="button" class="btn btn-primary" id="pnSaveBtn" onclick="pnSave()"
-                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 20px;">
+                        style="border-radius: 5px;font-weight:700;font-size:13px;padding:9px 20px;">
                     <i class="bi bi-check2-circle"></i> حفظ
                 </button>
                 <button type="button" id="pnPublishBtn" onclick="pnSaveAndPublish()"
-                        style="background:#079455;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                        style="background:#079455;color:#fff;border:none;border-radius: 5px;padding:9px 20px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
                     <i class="bi bi-megaphone-fill"></i> نشر
                 </button>
             </div>
@@ -413,7 +413,7 @@
                 </div>
             </div>
             <div class="modal-footer" style="border:none;padding:12px 22px;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 5px;font-weight:700;">إغلاق</button>
             </div>
         </div>
     </div>
@@ -437,9 +437,9 @@
             </div>
             <div class="modal-footer" style="border:none;padding:0 22px 18px;gap:10px;justify-content:center;">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                        style="border-radius:10px;font-weight:700;font-size:13px;padding:9px 22px;">إلغاء</button>
+                        style="border-radius: 5px;font-weight:700;font-size:13px;padding:9px 22px;">إلغاء</button>
                 <button type="button" id="pnDeleteConfirmBtn" onclick="pnDeleteConfirm()" class="al-btn-pdf"
-                        style="border-radius:10px;padding:9px 22px;font-size:13px;">
+                        style="border-radius: 5px;padding:9px 22px;font-size:13px;">
                     <i class="bi bi-trash3"></i> حذف
                 </button>
             </div>

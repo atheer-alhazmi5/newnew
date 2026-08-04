@@ -8,7 +8,7 @@
 .sp-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
 /* عدّاد السجلات موحّد في styles.css (.ui-count-pill داخل .ui-header-actions) */
 .sp-subtitle { color:var(--gray-500); font-size:14px; margin:6px 0 0; }
-.sp-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.sp-add-btn { border-radius: 8px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
 /* تنسيق الجدول والشارات موحّد في styles.css (.ui-table / .ui-table-badge) */
 .sp-req-num { color:var(--info-600); font-weight:700; direction:ltr; }
 .sp-cat-inquiry { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
@@ -22,7 +22,7 @@
 .sp-imp-low { background:#d1fae5; color:#047857; border:1px solid #6ee7b7; }
 .sp-st-open { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
 .sp-st-closed { background:var(--error-100); color:var(--error-700); border:1px solid var(--error-200); }
-.sp-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
+.sp-act-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border: 1px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
 .sp-act-detail { border-color:var(--info-500); color:var(--info-500); }
 .sp-act-detail:hover { background:var(--info-50); }
 .sp-act-edit { border-color:var(--sa-600); color:var(--sa-600); }
@@ -40,25 +40,25 @@
 .sp-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
 .sp-modal-body { padding:28px; max-height:75vh; overflow-y:auto; }
 .sp-modal-footer { padding:20px 28px; display:flex; gap:12px; background:var(--gray-50); border-top:1px solid var(--gray-200); }
-.sp-modal-body .form-control, .sp-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; }
+.sp-modal-body .form-control, .sp-modal-body .form-select { border-radius: 5px; border: 1px solid var(--gray-200); padding:10px 14px; }
 .sp-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
-.sp-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; display:inline-flex; align-items:center; gap:8px; }
+.sp-save-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; display:inline-flex; align-items:center; gap:8px; }
 .sp-save-btn:hover { background:var(--sa-700); }
-.sp-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
+.sp-cancel-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; }
 .sp-detail-grid { display:grid; grid-template-columns:160px 1fr; gap:10px 16px; font-size:13px; }
 .sp-detail-grid .lbl { font-weight:700; color:var(--gray-500); }
 .sp-detail-grid .val { color:var(--gray-800); font-weight:500; word-break:break-word; }
-.sp-detail-content { padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; white-space:pre-wrap; line-height:1.8; max-height:200px; overflow-y:auto; }
+.sp-detail-content { padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius: 5px; white-space:pre-wrap; line-height:1.8; max-height:200px; overflow-y:auto; }
 .sp-attach-list { display:flex; flex-direction:column; gap:6px; }
 .sp-attach-item { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:var(--info-50); border:1px solid var(--info-100); border-radius:8px; font-size:12.5px; font-weight:700; color:var(--info-700); text-decoration:none; }
 .sp-attach-item:hover { background:var(--info-100); }
-.sp-attach-upload { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:10px; border:2px dashed var(--gray-300); background:var(--gray-50); cursor:pointer; font-weight:700; font-size:13px; color:var(--gray-600); }
+.sp-attach-upload { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius: 5px; border: 1px dashed var(--gray-300); background:var(--gray-50); cursor:pointer; font-weight:700; font-size:13px; color:var(--gray-600); }
 .sp-attach-upload:hover { border-color:var(--sa-400); color:var(--sa-700); background:var(--sa-25); }
 .sp-attach-pending { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
 .sp-attach-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--gray-100); border:1px solid var(--gray-200); font-size:12px; font-weight:700; }
 .sp-attach-chip button { border:none; background:none; color:var(--error-500); cursor:pointer; padding:0; line-height:1; }
 .required-star { color:#ef4444; margin-right:4px; }
-.sp-date-input { height:44px; border-radius:12px; border:2px solid var(--gray-200); font-size:13px; padding:8px 12px; font-family:'Cairo',sans-serif; }
+.sp-date-input { height:44px; border-radius: 8px; border: 1px solid var(--gray-200); font-size:13px; padding:8px 12px; font-family:'Cairo',sans-serif; }
 @@media (max-width:768px) { .sp-detail-grid { grid-template-columns:1fr; } }
 </style>
 
@@ -78,13 +78,17 @@
 <div class="d-flex gap-3 mb-4 flex-wrap align-items-center rt-filters">
     <div class="rt-search-box flex-grow-1" style="max-width:360px;position:relative;">
         <i class="bi bi-search rt-search-icon"></i>
-        <input type="text" class="form-control" id="spSearch" placeholder="بحث برقم الطلب أو مقدم الطلب أو الموضوع..." oninput="spApplyFilters()" style="padding-right:42px;border-radius:12px;border:2px solid var(--gray-200);height:44px;">
+        <input type="text" class="form-control" id="spSearch" placeholder="بحث برقم الطلب أو مقدم الطلب أو الموضوع..." oninput="spApplyFilters()" style="padding-right:42px;border-radius: 8px;border: 1px solid var(--gray-200);height:44px;">
     </div>
     @if (isAdmin)
     {
-        <select class="rt-filter-select form-select" id="spFilterOrgUnit" onchange="spApplyFilters()" style="max-width:200px;height:44px;">
-            <option value="">الوحدة التنظيمية</option>
-        </select>
+        <div class="sp-filter-ou-wrap bnf-filter-ou-wrap bnf-ou-tree-wrap" style="min-width:200px;max-width:280px;position:relative;">
+            <input type="hidden" id="spFilterOrgUnit" value="">
+            <button type="button" class="form-select rt-filter-select text-end w-100 bnf-ou-tree-trigger" id="spFilterOuTrigger" aria-expanded="false" aria-haspopup="listbox" title="تصفية حسب الوحدة التنظيمية" style="height:44px;">
+                <span class="bnf-ou-tree-label text-truncate d-block" id="spFilterOuLabel">الوحدة التنظيمية</span>
+            </button>
+            <div class="bnf-ou-tree-panel d-none" id="spFilterOuPanel" role="listbox" style="position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:1060;max-height:min(320px,70vh);"></div>
+        </div>
     }
     <select class="rt-filter-select form-select" id="spFilterCategory" onchange="spApplyFilters()" style="max-width:160px;height:44px;">
         <option value="">التصنيف</option>

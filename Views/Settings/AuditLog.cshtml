@@ -6,11 +6,11 @@
 <style>
 .al-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
 .al-export-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.al-btn-pdf { background:#D92D20; color:#fff; border:none; border-radius:10px; padding:8px 18px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; text-decoration:none; }
+.al-btn-pdf { background:#D92D20; color:#fff; border:none; border-radius: 5px; padding:8px 18px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; text-decoration:none; }
 .al-btn-pdf:hover { background:#b42318; transform:translateY(-1px); color:#fff; }
-.al-btn-excel { background:#079455; color:#fff; border:none; border-radius:10px; padding:8px 18px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; text-decoration:none; }
+.al-btn-excel { background:#079455; color:#fff; border:none; border-radius: 5px; padding:8px 18px; font-weight:700; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .15s; text-decoration:none; }
 .al-btn-excel:hover { background:#067647; transform:translateY(-1px); color:#fff; }
-.al-record-count { background:var(--gray-100); color:var(--gray-700); border-radius:10px; padding:6px 16px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
+.al-record-count { background:var(--gray-100); color:var(--gray-700); border-radius: 5px; padding:6px 16px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
 /* شكل الشارة من الأساس الموحّد في styles.css (.ui-table-badge) */
 .al-badge-login { background:#ECFDF3; color:#067647; }
 .al-badge-logout { background:#FEF3F2; color:#B42318; }
@@ -52,7 +52,7 @@
 .al-op-badge-delete { background:#FEF3F2; color:#B42318; }
 .al-op-badge-status { background:#F4F3FF; color:#5925DC; }
 .al-op-badge-other { background:var(--gray-100); color:var(--gray-700); }
-.al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius:10px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
+.al-detail-note { background:var(--warning-50); border:1px solid var(--warning-200); color:var(--warning-800); border-radius: 5px; padding:10px 12px; font-size:12px; margin-bottom:14px; }
 </style>
 
 <!-- Header -->
@@ -107,7 +107,7 @@
     <input type="date" class="form-control rt-filter-text" id="alFilterFrom" title="من تاريخ" style="min-width:150px;max-width:170px;">
     <input type="date" class="form-control rt-filter-text" id="alFilterTo" title="إلى تاريخ" style="min-width:150px;max-width:170px;">
     <div class="d-flex gap-2 align-items-center" style="flex-shrink:0;">
-        <button type="button" class="btn btn-primary" onclick="alApplyFilters()" style="border-radius:10px;padding:8px 24px;font-weight:700;font-size:13px;">
+        <button type="button" class="btn btn-primary" onclick="alApplyFilters()" style="border-radius: 5px;padding:8px 24px;font-weight:700;font-size:13px;">
             <i class="bi bi-funnel"></i> تطبيق
         </button>
         <button type="button" class="rt-clear-btn" onclick="alClearFilters()">
@@ -158,7 +158,7 @@
                 <div class="text-center py-4"><div class="spinner-border" style="color:var(--sa-600);"></div></div>
             </div>
             <div class="modal-footer" style="border-top:1px solid var(--gray-100);padding:14px 22px;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:700;">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 5px;font-weight:700;">إغلاق</button>
             </div>
         </div>
     </div>

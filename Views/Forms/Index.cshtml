@@ -7,19 +7,19 @@
 .forms-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
 .f-card { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:16px; padding:24px; display:flex; flex-direction:column; transition:box-shadow .2s,transform .2s; }
 .f-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.06); transform:translateY(-2px); }
-.f-icon { width:48px; height:48px; border-radius:12px; background:var(--sa-50); color:var(--sa-700); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:22px; }
+.f-icon { width:48px; height:48px; border-radius: 8px; background:var(--sa-50); color:var(--sa-700); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:22px; }
 .f-name { font-weight:700; font-size:15px; color:var(--gray-800); margin-bottom:4px; }
 .f-cat { font-size:12px; color:var(--gray-500); margin-bottom:10px; }
 .f-desc { font-size:13px; color:var(--gray-600); line-height:1.6; margin-bottom:14px; flex:1; }
 .f-actions { display:flex; gap:8px; align-items:center; }
-.f-btn { padding:10px 14px; border-radius:10px; border:none; font-family:'Cairo',sans-serif; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px; }
+.f-btn { padding:10px 14px; border-radius: 5px; border:none; font-family:'Cairo',sans-serif; font-weight:600; font-size:13px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px; }
 .f-btn-primary { background:var(--sa-800); color:#fff; flex:1; }
 .f-btn-primary:hover { background:var(--sa-900); }
 .f-btn-outline { background:var(--gray-100); color:var(--gray-700); width:40px; height:40px; padding:0; }
 .f-btn-outline:hover { background:var(--gray-200); }
 .f-btn-danger { background:var(--error-50,#fef2f2); color:var(--error-600,#dc3545); width:40px; height:40px; padding:0; }
 .f-btn-danger:hover { background:var(--error-100,#fee2e2); }
-.send-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; cursor:pointer; transition:background .15s; border:1px solid transparent; margin-bottom:4px; }
+.send-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius: 5px; cursor:pointer; transition:background .15s; border:1px solid transparent; margin-bottom:4px; }
 .send-item:hover { background:var(--gray-50); }
 .send-item.picked { background:var(--sa-50); border-color:var(--sa-300); }
 .send-avatar { width:34px; height:34px; border-radius:50%; background:var(--sa-100); color:var(--sa-700); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
@@ -32,7 +32,7 @@
 .del-modal-close:hover { color:var(--gray-900); }
 .del-modal-body { padding:24px 28px; }
 .del-modal-footer { padding:0 28px 24px; display:flex; gap:12px; border:none; }
-.del-modal-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; transition:all .2s; }
+.del-modal-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; transition:all .2s; }
 .del-btn-cancel { background:#6b7280; color:#fff; }
 .del-btn-cancel:hover { background:#4b5563; }
 .del-btn-delete { background:#dc3545; color:#fff; }
@@ -103,7 +103,7 @@
             </div>
             <div class="del-modal-body">
                 <p style="font-size:15px;font-weight:600;color:var(--gray-900);margin:0 0 8px;">هل أنت متأكد من حذف هذا النموذج؟</p>
-                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius: 8px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
                     <i class="bi bi-exclamation-triangle-fill" style="font-size:20px;color:#dc3545;flex-shrink:0;"></i>
                     <div>
                         <div id="deleteFormName" style="font-size:15px;font-weight:700;color:var(--gray-900);"></div>

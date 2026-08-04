@@ -54,7 +54,7 @@
         .lp-nav-brand-sub { font-size: 11px; color: #6C737F; font-weight: 600; }
         .lp-nav-links { display: flex; align-items: center; gap: 12px; }
         .lp-nav-link {
-            padding: 10px 22px; border-radius: 12px; font-weight: 700; font-size: 14px;
+            padding: 10px 22px; border-radius: 8px; font-weight: 700; font-size: 14px;
             text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
             transition: all .2s;
         }
@@ -109,7 +109,7 @@
         .lg-card-top-icon {
             width: 68px; height: 68px; border-radius: 50%;
             background: rgba(255,255,255,.7);
-            border: 2px solid var(--sa-200);
+            border: 1px solid var(--sa-200);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 18px; font-size: 30px; color: var(--sa-600);
             box-shadow: 0 4px 16px rgba(37,147,95,.1);
@@ -146,7 +146,7 @@
         .lg-field-wrap { position: relative; }
         .lg-field-input {
             width: 100%; padding: 13px 16px;
-            border: 1.5px solid #D1D5DB; border-radius: 12px;
+            border: 1.5px solid #D1D5DB; border-radius: 8px;
             font-size: 14px; font-family: 'Cairo', sans-serif;
             background: #fff; color: #1F2A37;
             transition: border-color .2s, box-shadow .2s;
@@ -172,7 +172,7 @@
         }
         .lg-remember-checkbox {
             width: 18px; height: 18px; appearance: none; cursor: pointer;
-            border: 2px solid #D1D5DB; border-radius: 5px;
+            border: 1px solid #D1D5DB; border-radius: 5px;
             background: #fff; position: relative; flex-shrink: 0;
             transition: all .15s;
         }
@@ -186,7 +186,7 @@
 
         /* Error */
         .lg-error {
-            background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
+            background: #FEF2F2; border: 1px solid #FECACA; border-radius: 5px;
             padding: 10px 14px; font-size: 13px; color: #DC2626;
             display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
         }
@@ -266,7 +266,7 @@
         .lg-demo-sep-text { font-size: 11px; font-weight: 700; color: #B0B3B8; white-space: nowrap; }
         .lg-demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .lg-demo-btn {
-            padding: 10px 14px; border-radius: 12px;
+            padding: 10px 14px; border-radius: 8px;
             border: 1.5px solid #E5E7EB; background: #FAFBFC;
             cursor: pointer; transition: all .15s;
             font-family: 'Cairo', sans-serif; text-align: right;
@@ -308,7 +308,7 @@
         .lp-footer-link:hover { color: var(--gold-400); }
         .lp-footer-social { display: flex; gap: 10px; margin-top: 8px; }
         .lp-footer-social a {
-            width: 36px; height: 36px; border-radius: 10px;
+            width: 36px; height: 36px; border-radius: 5px;
             background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
             display: flex; align-items: center; justify-content: center;
             color: rgba(255,255,255,.6); font-size: 16px; text-decoration: none;
@@ -538,10 +538,10 @@ document.addEventListener('DOMContentLoaded', async function initLoginPopups() {
             if (txt) bodyHtml = '<p style="color:#374151;font-size:14px;line-height:1.85;margin:0;word-break:break-word;white-space:pre-wrap;">' + escHtml(txt) + '</p>';
         } else if (p.contentType === 'image' && p.attachmentUrl) {
             var imgU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
-            bodyHtml = '<img src="' + imgU + '" alt="" style="width:100%;max-width:100%;height:auto;border-radius:10px;object-fit:contain;display:block;" />';
+            bodyHtml = '<img src="' + imgU + '" alt="" style="width:100%;max-width:100%;height:auto;border-radius: 5px;object-fit:contain;display:block;" />';
         } else if (p.contentType === 'video' && p.attachmentUrl) {
             var vidU = typeof appResolveUrl === 'function' ? appResolveUrl(p.attachmentUrl) : p.attachmentUrl;
-            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;max-width:100%;border-radius:10px;"></video>';
+            bodyHtml = '<video src="' + vidU + '" controls style="width:100%;max-width:100%;border-radius: 5px;"></video>';
         }
         el.innerHTML = '<div class="sys-popup-box" role="dialog" aria-modal="true">' +
             '<div class="' + headCls + '">' +

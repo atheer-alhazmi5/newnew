@@ -70,6 +70,18 @@ function spInit() {
     spUpdateModal = document.getElementById('spUpdateModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spUpdateModal')) : null;
     spDetailModal = document.getElementById('spDetailModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spDetailModal')) : null;
     spDeleteModal = document.getElementById('spDeleteModal') ? bootstrap.Modal.getOrCreateInstance(document.getElementById('spDeleteModal')) : null;
+    if (spIsAdmin && window.AppOuFilter && document.getElementById('spFilterOrgUnit')) {
+        AppOuFilter.create({
+            id: 'sp',
+            hiddenId: 'spFilterOrgUnit',
+            triggerId: 'spFilterOuTrigger',
+            panelId: 'spFilterOuPanel',
+            labelId: 'spFilterOuLabel',
+            wrapSelector: '.sp-filter-ou-wrap',
+            defaultLabel: 'الوحدة التنظيمية',
+            onChange: function () { spApplyFilters(); }
+        });
+    }
     spLoad();
 }
 
@@ -87,23 +99,8 @@ async function spLoad() {
     spIsAdmin = r.isAdmin === true;
     spUpdateTotalCount(spAll.length);
 
-    if (spIsAdmin) {
-        var orgSel = document.getElementById('spFilterOrgUnit');
-        if (orgSel) {
-            var cur = orgSel.value;
-            var names = {};
-            spAll.forEach(function (t) {
-                if (t.organizationalUnitName) names[t.organizationalUnitName] = true;
-            });
-            orgSel.innerHTML = '<option value="">الوحدة التنظيمية</option>';
-            Object.keys(names).sort(function (a, b) { return a.localeCompare(b, 'ar'); }).forEach(function (n) {
-                var o = document.createElement('option');
-                o.value = n;
-                o.textContent = n;
-                orgSel.appendChild(o);
-            });
-            if (cur) orgSel.value = cur;
-        }
+    if (spIsAdmin && window.AppOuFilter) {
+        await AppOuFilter.loadFromFormDefinitions('sp');
     }
 
     spApplyFilters();
@@ -138,7 +135,7 @@ function spApplyFilters() {
 
     var filtered = spAll.filter(function (item) {
         if (!spMatchSearch(item, q)) return false;
-        if (org && (item.organizationalUnitName || '') !== org) return false;
+        if (org && Number(item.organizationalUnitId || 0) !== parseInt(org, 10)) return false;
         if (cat && item.category !== cat) return false;
         if (imp && item.importance !== imp) return false;
         if (st && item.status !== st) return false;
@@ -150,10 +147,11 @@ function spApplyFilters() {
 }
 
 function spClearFilters() {
-    ['spSearch', 'spFilterOrgUnit', 'spFilterCategory', 'spFilterImportance', 'spFilterDateFrom', 'spFilterDateTo', 'spFilterStatus'].forEach(function (id) {
+    ['spSearch', 'spFilterCategory', 'spFilterImportance', 'spFilterDateFrom', 'spFilterDateTo', 'spFilterStatus'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.value = '';
     });
+    if (spIsAdmin && window.AppOuFilter) AppOuFilter.clear('sp');
     spApplyFilters();
 }
 
@@ -307,6 +305,10 @@ function spBuildDetailHtml(d, includeStatus) {
     var respondedBy = String(d.respondedByName || d.RespondedByName || '').trim();
     if (respondedBy) {
         html += '<div class="lbl">قام بالرد</div><div class="val">' + spEsc(respondedBy) + '</div>';
+    }
+    if (includeStatus && (d.status === 'مغلق' || String(d.response || '').trim())) {
+        var responseDate = d.updatedAt || d.UpdatedAt || '—';
+        html += '<div class="lbl">تاريخ الرد</div><div class="val" style="direction:ltr;">' + spEsc(responseDate) + '</div>';
     }
     html += '<div class="lbl">الرد</div><div class="val"><div class="sp-detail-content">' + spEsc(d.response || '—') + '</div></div>';
     html += '</div>';

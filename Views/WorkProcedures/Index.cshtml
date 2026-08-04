@@ -18,7 +18,7 @@
 .fd-modal-subtitle { color:rgba(255,255,255,.8); font-size:14px; margin-top:4px; }
 .fd-modal-body   { padding:28px; max-height:75vh; overflow-y:auto; }
 .fd-modal-footer { padding:20px 28px; display:flex; flex-wrap:wrap; gap:12px; border:none; justify-content:space-between; align-items:center; background:var(--gray-50); }
-.fd-section       { background:var(--surface-0); border-radius:12px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
+.fd-section       { background:var(--surface-0); border-radius: 8px; padding:18px 20px; margin-bottom:16px; border:1px solid var(--gray-200); }
 
 #wpEditBody .fd-section.wp-section-spaced { margin-top: 1.5rem; }
 .fd-section-title { font-weight:700; font-size:14px; color:var(--sa-800); margin:0 0 14px; padding-bottom:10px; border-bottom:2px solid var(--sa-100); display:flex; align-items:center; gap:8px; }
@@ -29,12 +29,12 @@
 .fd-form-group { display:flex; flex-direction:column; gap:4px; }
 .fd-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
 .fd-form-group .form-control,
-.fd-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.fd-form-group .form-select { font-size:13px; border-radius: 5px; border: 1px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
 .fd-form-group .form-control:focus,
 .fd-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
 .fd-form-group textarea.form-control { min-height:70px; resize:vertical; }
 .required-star { color:#ef4444; margin-right:4px; }
-.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
+.fd-action-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 10px; font-size:11px; display:inline-flex; align-items:center; gap:4px; justify-content:center; cursor:pointer; border: 1px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; }
 .fd-action-btn-detail { border-color:var(--info-500); color:var(--info-500); background:var(--surface-0); }
 .fd-action-btn-detail:hover { background:var(--info-50); }
 .fd-action-btn-edit   { border-color:var(--sa-600); color:var(--sa-600); background:var(--surface-0); }
@@ -67,7 +67,7 @@
 .fd-empty-state { text-align:center; padding:56px 16px; color:var(--gray-400) !important; font-style:normal !important; }
 .fd-empty-state i { font-size:52px; display:block; margin-bottom:14px; color:var(--gray-300) !important; font-style:normal !important; }
 .fd-empty-state p { font-size:14px; font-weight:600; margin:0; color:var(--gray-400) !important; font-style:normal !important; }
-.fd-save-btn        { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
+.fd-save-btn        { padding:11px 28px; border-radius: 8px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; color:#fff; transition:all .15s; }
 .fd-save-btn:hover  { transform:translateY(-1px); }
 .fd-save-btn.draft  { background:var(--gray-500); }
 .fd-save-btn.draft:hover { background:var(--gray-600); }
@@ -97,15 +97,15 @@
     background:var(--success-700) !important;
     transform:translateY(-1px);
 }
-.fd-cancel-btn      { padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
+.fd-cancel-btn      { padding:11px 28px; border-radius: 8px; font-size:14px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--gray-200); color:var(--gray-700); transition:all .15s; }
 .fd-cancel-btn:hover { background:var(--gray-300); }
 /* قوائم اختيار متعدد — نفس خط وحدود حقول form-select داخل النموذج */
 .wp-dd .dropdown-toggle.wp-dd-toggle {
     width:100%;
     text-align:start;
     font-size:13px;
-    border-radius:10px;
-    border:2px solid var(--gray-200);
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
     padding:8px 12px;
     padding-inline-end:2.25rem;
     font-family:'Cairo',sans-serif;
@@ -125,8 +125,8 @@
     background:var(--surface-0);
 }
 .wp-dd .dropdown-menu.wp-dd-menu {
-    border-radius:10px;
-    border:2px solid var(--gray-200);
+    border-radius: 5px;
+    border: 1px solid var(--gray-200);
     box-shadow:0 8px 24px rgba(0,0,0,.08);
     margin-top:4px;
     max-height:300px;
@@ -300,7 +300,7 @@
 .fd-step.active .fd-step-num { background:var(--sa-600); color:#fff; }
 .fd-step.done   .fd-step-num { background:var(--sa-100); color:var(--sa-600); }
 /* تنسيق جدول خطوات سير العمل موحّد في styles.css (.ui-table) */
-#wpEditBody #wpTab2Pane .wp-wf-tab-panel { padding:18px 20px; border:1px solid var(--gray-200); border-radius:12px; background:var(--surface-0); }
+#wpEditBody #wpTab2Pane .wp-wf-tab-panel { padding:18px 20px; border:1px solid var(--gray-200); border-radius: 8px; background:var(--surface-0); }
 
 /* ── مودال إضافة/تعديل خطوة سير العمل (#wpWorkflowStepModal) ── */
 #wpWorkflowStepModal .fd-modal-body { padding:28px; }
@@ -313,7 +313,7 @@
 
 #wpWorkflowStepModal .wp-wf-radio-row {
     display:grid; grid-template-columns:1fr 1fr; gap:0;
-    border:2px solid var(--gray-200); border-radius:10px; overflow:hidden;
+    border: 1px solid var(--gray-200); border-radius: 5px; overflow:hidden;
 }
 #wpWorkflowStepModal .wp-wf-radio {
     display:flex; align-items:center; justify-content:center; gap:8px;
@@ -332,7 +332,7 @@
 #wpWorkflowStepModal .wp-wf-stepper {
     display:grid; grid-template-columns:40px minmax(48px,1fr) 40px;
     direction:ltr; align-items:stretch;
-    border:2px solid var(--gray-200); border-radius:10px; overflow:hidden;
+    border: 1px solid var(--gray-200); border-radius: 5px; overflow:hidden;
     background:var(--surface-0); box-shadow:0 1px 2px rgba(0,0,0,.04);
 }
 #wpWorkflowStepModal .wp-wf-stepper-btn {
@@ -355,7 +355,7 @@
 #wpWorkflowStepModal .wp-wf-channel-list { display:flex; flex-wrap:wrap; gap:8px; }
 #wpWorkflowStepModal .wp-wf-channel-chip {
     display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;
-    padding:8px 12px; border:2px solid var(--gray-200); border-radius:10px;
+    padding:8px 12px; border: 1px solid var(--gray-200); border-radius: 5px;
     background:var(--surface-0); cursor:pointer; font-size:12px; font-weight:700;
     font-family:'Cairo',sans-serif; transition:border-color .15s, background .15s;
 }
@@ -377,7 +377,7 @@
 #wpWorkflowStepModal .wp-wf-action-chip {
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     width:100%; min-width:170px; max-width:240px;
-    padding:8px 12px; border:2px solid var(--gray-200); border-radius:10px;
+    padding:8px 12px; border: 1px solid var(--gray-200); border-radius: 5px;
     background:var(--surface-0); cursor:pointer; font-family:'Cairo',sans-serif;
     transition:border-color .15s, background .15s, box-shadow .15s;
 }
@@ -397,13 +397,13 @@
     border:1px dashed var(--gray-300); border-radius:8px; background:var(--gray-50);
 }
 #wpWorkflowStepModal .wp-wf-sub-label { font-size:12px; font-weight:700; color:var(--gray-700); white-space:nowrap; }
-#wpWorkflowStepModal .wp-wf-sub-select { flex:1; min-width:140px; max-width:220px; font-size:13px; border-radius:10px; border:2px solid var(--gray-200); }
+#wpWorkflowStepModal .wp-wf-sub-select { flex:1; min-width:140px; max-width:220px; font-size:13px; border-radius: 5px; border: 1px solid var(--gray-200); }
 
 #wpWorkflowStepModal .wp-wf-ou-tree-wrap { position:relative; width:100%; }
 #wpWorkflowStepModal .wp-wf-ou-tree-trigger.form-select {
     display:flex; align-items:center; text-align:right !important; cursor:pointer;
     width:100%; min-height:calc(1.5em + 16px + 4px);
-    font-size:13px; border-radius:10px; border:2px solid var(--gray-200) !important;
+    font-size:13px; border-radius: 5px; border: 1px solid var(--gray-200) !important;
     padding:8px 12px !important; font-family:'Cairo',sans-serif; background:var(--surface-0) !important;
     box-shadow:none !important;
 }
@@ -432,15 +432,15 @@
 #wpWorkflowStepModal .wp-wf-ou-tree-name { text-align:right; font-size:13px; line-height:1.4; min-width:0; }
 
 #wpWorkflowStepModal .fd-modal-footer .btn-primary {
-    border-radius:12px; padding:10px 28px; font-weight:700;
+    border-radius: 8px; padding:10px 28px; font-weight:700;
     background:var(--sa-600); border:none; font-family:'Cairo',sans-serif;
 }
 #wpWorkflowStepModal .fd-modal-footer .btn-primary:hover { background:var(--sa-700); }
-#wpWorkflowStepModal .fd-modal-footer .fd-cancel-btn { padding:10px 28px; border-radius:12px; }
+#wpWorkflowStepModal .fd-modal-footer .fd-cancel-btn { padding:10px 28px; border-radius: 8px; }
 
 #wpWorkflowStepModal .fd-form-group .form-control,
 #wpWorkflowStepModal .fd-form-group .form-select {
-    font-size:13px; border-radius:10px; border:2px solid var(--gray-200);
+    font-size:13px; border-radius: 5px; border: 1px solid var(--gray-200);
     padding:8px 12px; font-family:'Cairo',sans-serif;
 }
 #wpWorkflowStepModal .fd-form-group .form-control:focus,
@@ -460,11 +460,11 @@
 .wp-wf-step-row-drop-target td { box-shadow:inset 0 3px 0 var(--sa-500); }
 
 .wp-wf-det-wrap { display:flex; flex-direction:column; gap:14px; }
-.wp-wf-det-hero { display:flex; align-items:center; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius:12px; }
-.wp-wf-det-hero-icon { width:44px; height:44px; border-radius:12px; background:var(--sa-700); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.wp-wf-det-hero { display:flex; align-items:center; gap:14px; padding:14px 16px; background:linear-gradient(180deg,var(--sa-50),#fff); border:1px solid var(--sa-100); border-radius: 8px; }
+.wp-wf-det-hero-icon { width:44px; height:44px; border-radius: 8px; background:var(--sa-700); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
 .wp-wf-det-hero-title { font-weight:800; font-size:16px; color:var(--gray-900); }
 .wp-wf-det-hero-sub { font-size:12px; color:var(--gray-500); font-weight:600; margin-top:4px; }
-.wp-wf-det-card { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; background:var(--surface-0); }
+.wp-wf-det-card { border:1px solid var(--gray-200); border-radius: 8px; overflow:hidden; background:var(--surface-0); }
 .wp-wf-det-card-hd { padding:10px 14px; background:var(--gray-50); border-bottom:1px solid var(--gray-200); font-weight:800; font-size:13px; color:var(--sa-800); display:flex; align-items:center; gap:8px; }
 .wp-wf-det-card-hd i { color:var(--sa-600); }
 .wp-wf-det-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; padding:14px 16px; }
@@ -491,10 +491,10 @@
         <p style="color:var(--gray-500);font-size:14px;margin:6px 0 0;">إنشاء وإدارة إجراءات العمل في النظام</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-        <button type="button" class="btn btn-outline-primary" onclick="wpShowVersionMode()" style="border-radius:12px;padding:10px 24px;font-weight:700;">
+        <button type="button" class="btn btn-outline-primary" onclick="wpShowVersionMode()" style="border-radius: 8px;padding:10px 24px;font-weight:700;">
             <i class="bi bi-layers"></i> إصدار نسخة
         </button>
-        <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius:12px;padding:10px 28px;">
+        <button type="button" class="btn btn-primary" onclick="wpShowCreate()" style="border-radius: 8px;padding:10px 28px;">
             <i class="bi bi-plus-lg"></i> إنشاء إجراء عمل جديد
         </button>
     </div>

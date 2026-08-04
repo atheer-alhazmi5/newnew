@@ -1718,7 +1718,7 @@ function fdBuildAutoDataFieldHtml(f, props, opt) {
     if (!keys.length) {
         rows = '<p class="text-muted small mb-0" style="font-style:normal;">لم يُحدد أي عنصر للعرض.</p>';
     } else if (showPending) {
-        rows = '<div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius:10px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div>';
+        rows = '<div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius: 5px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div>';
         keys.forEach(k => {
             rows += `<div class="fd-auto-data-row fd-auto-data-row-pending" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);">${esc(fdAutoDataLabelForKey(group, k))}</span><span class="fd-auto-data-val text-muted">—</span></div>`;
         });
@@ -1728,7 +1728,7 @@ function fdBuildAutoDataFieldHtml(f, props, opt) {
             const val = values[k] || '';
             let valHtml;
             if (k === 'photo' && val && val.indexOf('data:image') === 0) {
-                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-photo" style="max-width:72px;max-height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gray-200);">`;
+                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-photo" style="max-width:72px;max-height:72px;border-radius:50%;object-fit:cover;border: 1px solid var(--gray-200);">`;
             } else if (k === 'signature' && val && val.indexOf('data:image') === 0) {
                 valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-signature" style="max-height:64px;max-width:180px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;background:#fff;padding:4px;">`;
             } else if (k === 'signature' && val.length > 40) {
@@ -2644,7 +2644,7 @@ function fdEnsureDateFieldStyles() {
   box-sizing: border-box;
   background: var(--surface-0);
   border: 1px solid rgba(15, 23, 42, 0.09);
-  border-radius: 10px;
+  border-radius: 5px;
   box-shadow:
     0 4px 18px rgba(15, 23, 42, 0.08),
     0 1px 3px rgba(15, 23, 42, 0.06);
@@ -3383,7 +3383,8 @@ function fdBuildFieldInput(f, opt) {
     let props = {};
     try { props = JSON.parse(f.propertiesJson||'{}'); } catch(e) {}
     const tipMerged = String((f.tooltipText != null && f.tooltipText !== '') ? f.tooltipText : (props.tooltipText || '')).trim();
-    const rawHint = String((f.placeholder || '') || tipMerged).trim();
+    const suppressTipPh = !!(opt && opt.suppressTooltipAsPlaceholder);
+    const rawHint = String((f.placeholder || '') || (suppressTipPh ? '' : tipMerged)).trim();
     const ph = rawHint.replace(/"/g,'&quot;');
     if (opt && opt.forceReadOnly) props.readOnly = true;
     const defVal  = props.defaultValue != null ? String(props.defaultValue).replace(/"/g,'&quot;') : '';
@@ -3712,7 +3713,7 @@ function fdBuildFieldInput(f, opt) {
             `</div>`;
     } else if (f.fieldType === 'فاصل صفحات') {
         const lbl = (props.pageLabel || '').trim();
-        inp = `<div class="fd-page-break" data-fd-pagebreak="1" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1.5px dashed var(--info-300,#93c5fd);background:var(--info-50,#eff6ff);color:var(--info-700);border-radius:10px;font-weight:700;font-size:12.5px;"${ttAttr}>` +
+        inp = `<div class="fd-page-break" data-fd-pagebreak="1" style="display:flex;align-items:center;gap:12px;padding:8px 12px;border:1.5px dashed var(--info-300,#93c5fd);background:var(--info-50,#eff6ff);color:var(--info-700);border-radius: 5px;font-weight:700;font-size:12.5px;"${ttAttr}>` +
             `<i class="bi bi-file-earmark-break" aria-hidden="true"></i>` +
             `<span>فاصل صفحات</span>` +
             (lbl ? `<span style="margin-inline-start:auto;font-weight:600;color:var(--info-600);">→ ${esc(lbl)}</span>` : '') +
@@ -3727,7 +3728,7 @@ function fdBuildFieldInput(f, opt) {
         if (imgUrl) {
             inp = `<div class="fd-image-display" style="display:flex;justify-content:${justify};"${ttAttr}><img src="${fdEscAttr(imgUrl)}" alt="${alt}" style="max-width:100%;width:${w};${h !== 'auto' ? 'height:'+h+';' : ''}border-radius:8px;object-fit:contain;border:1px solid var(--gray-200);background:#fff;padding:4px;"></div>`;
         } else {
-            inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border:2px dashed var(--gray-300);border-radius:10px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف صورة من خصائص الحقل (إرفاق من الجهاز)</div></div>`;
+            inp = `<div class="fd-image-display fd-image-placeholder" style="display:flex;justify-content:${justify};"${ttAttr}><div style="border: 1px dashed var(--gray-300);border-radius: 5px;padding:20px 24px;color:var(--gray-400);background:var(--gray-50);font-size:12.5px;text-align:center;min-width:160px;"><i class="bi bi-image" style="font-size:24px;display:block;margin-bottom:4px;"></i>أضف صورة من خصائص الحقل (إرفاق من الجهاز)</div></div>`;
         }
     } else if (f.fieldType === 'البيانات التلقائية للمستفيد' || f.fieldType === 'بيانات التصديق') {
         inp = fdBuildAutoDataFieldHtml(f, props, opt || {});
@@ -5003,7 +5004,7 @@ function fdStep2Html() {
         </div>
 
         <!-- Add/Edit field form -->
-        <div style="background:var(--gray-50);border:2px dashed var(--gray-200);border-radius:10px;padding:16px;">
+        <div style="background:var(--gray-50);border: 1px dashed var(--gray-200);border-radius: 5px;padding:16px;">
             <div style="font-size:13px;font-weight:700;color:var(--sa-700);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
                 <i class="bi bi-plus-circle-fill" style="color:var(--sa-500);"></i>
                 <span id="fdFieldFormLabel">إضافة حقل رقم</span> <span id="fdFieldNum" style="color:var(--sa-600);">1</span>
@@ -5480,7 +5481,7 @@ function fdBuildFormPreview(tplData, formName, formDesc, fields, interactive, se
         ? `<div style="display:grid;grid-template-columns:repeat(${fd.length},1fr);min-height:40px;align-items:center;padding:8px ${mr}px;${footerBgStyle};-webkit-print-color-adjust:exact;print-color-adjust:exact;">${fd.map(s => fdRenderTemplateSection(s)).join('')}</div>`
         : `<div style="padding:10px ${mr}px;${footerBgStyle};color:var(--gray-300);font-size:11px;text-align:center;font-style:normal;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(tplName)}</div>`;
 
-    return `<div style="border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
+    return `<div style="border:1px solid var(--gray-200);border-radius: 8px;overflow:hidden;font-style:normal;direction:rtl;background:#fff;">
         ${headerHtml}${headerLineHtml}
         <div style="background:#fff;padding:${mt}px ${mr}px ${mb}px ${ml}px;direction:${pageDir};font-style:normal;position:relative;overflow:hidden;">
             ${wmLayer}
@@ -5707,7 +5708,7 @@ function fdRuleCardHtml(r, n) {
     const actOpts = FD_RULE_ACTIONS.map(a => `<option value="${esc(a)}" ${a === r.action ? 'selected' : ''}>${esc(a)}</option>`).join('');
     const sourceOpts = fdRuleBuildSourceOptions(r.sourceRef || '');
     const targetOpts = fdRuleBuildUnifiedOptions(r.targetRef || '', r.sourceRef || '');
-    return `<div class="fd-rule-card" style="background:var(--surface-0);border:1.5px solid var(--gray-200);border-radius:12px;padding:16px 18px 14px;margin-top:14px;position:relative;">
+    return `<div class="fd-rule-card" style="background:var(--surface-0);border:1.5px solid var(--gray-200);border-radius: 8px;padding:16px 18px 14px;margin-top:14px;position:relative;">
         <div class="d-flex align-items-center justify-content-between" style="margin-bottom:14px;border-bottom:1px solid var(--gray-100);padding-bottom:10px;">
             <div style="font-weight:800;color:var(--sa-700);font-size:13.5px;display:flex;align-items:center;gap:8px;">
                 <span style="background:var(--sa-50);color:var(--sa-700);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">${n}</span>
@@ -6584,7 +6585,7 @@ async function fdShowDetails(id) {
             <div class="fd-detail-grid">
                 <span class="fd-detail-lbl">المعرف</span><span class="fd-detail-val">${publicIdVal}</span>
                 <span class="fd-detail-lbl">اسم النموذج</span><span class="fd-detail-val" style="font-weight:700;">${esc(d.name)}</span>
-                <span class="fd-detail-lbl">الوصف العام</span><span class="fd-detail-val">${d.description ? esc(d.description) : '<span style="color:var(--gray-400);">—</span>'}</span>
+                <span class="fd-detail-lbl">الوصف العام</span><span class="fd-detail-val fd-form-desc-val">${d.description ? esc(d.description) : '<span style="color:var(--gray-400);">—</span>'}</span>
                 <span class="fd-detail-lbl">الإصدار النشط</span><span class="fd-detail-val">${activeVerVal}</span>
                 <span class="fd-detail-lbl">الحالة</span><span class="fd-detail-val">${fdStatusBadge(d.status)}</span>
                 <span class="fd-detail-lbl">التفعيل</span><span class="fd-detail-val">${activeBadge}</span>

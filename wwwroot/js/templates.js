@@ -898,7 +898,7 @@ async function tpShowDetails(id) {
     const wmOpDet = TP_WATERMARK_OPACITY / 100;
     html += `<div class="tp-section">
         <div class="tp-section-title"><i class="bi bi-eye"></i> معاينة القالب</div>
-        <div style="border:2px solid var(--gray-200);border-radius:12px;overflow:hidden;background:#fff;">
+        <div style="border: 1px solid var(--gray-200);border-radius: 8px;overflow:hidden;background:#fff;">
             <div style="position:relative;direction:${t.pageDirection.toLowerCase()};padding:${t.marginTop}px ${t.marginRight}px ${t.marginBottom}px ${t.marginLeft}px;min-height:320px;">
                 ${wmUrlDet ? `<div class="tp-wm-bg"><img src="${escHtml(wmUrlDet)}" alt="watermark" style="opacity:${wmOpDet.toFixed(2)};"></div>` : ''}
                 <div style="position:relative;">

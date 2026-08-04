@@ -485,19 +485,19 @@ async function ugShowDetails(id) {
     var d = r.data || {};
     var color = d.color || '#25935F';
     var iconHeader = ugIsIconImage(d.icon)
-        ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:' + color + '11;"><img src="' + d.icon + '" alt="أيقونة"></span>'
+        ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius: 8px;background:' + color + '11;"><img src="' + d.icon + '" alt="أيقونة"></span>'
         : (d.icon
-            ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:' + color + '22;color:' + color + ';font-size:22px;"><i class="bi ' + d.icon + '"></i></span>'
-            : '<span class="ug-icon-display" style="width:48px;height:48px;border-radius:12px;background:var(--gray-100);color:var(--gray-400);font-size:22px;"><i class="bi bi-image"></i></span>');
+            ? '<span class="ug-icon-display" style="width:48px;height:48px;border-radius: 8px;background:' + color + '22;color:' + color + ';font-size:22px;"><i class="bi ' + d.icon + '"></i></span>'
+            : '<span class="ug-icon-display" style="width:48px;height:48px;border-radius: 8px;background:var(--gray-100);color:var(--gray-400);font-size:22px;"><i class="bi bi-image"></i></span>');
     var statusBadge = d.isActive
         ? '<span class="ug-status-pill active"><span class="ug-status-dot"></span>مفعل</span>'
         : '<span class="ug-status-pill inactive"><span class="ug-status-dot"></span>معطل</span>';
     var attach = d.attachmentUrl
-        ? '<div style="margin-top:6px;"><img src="' + d.attachmentUrl + '" alt="مرفق" style="max-width:240px;max-height:160px;border-radius:10px;border:1px solid var(--gray-200);"></div>'
+        ? '<div style="margin-top:6px;"><img src="' + d.attachmentUrl + '" alt="مرفق" style="max-width:240px;max-height:160px;border-radius: 5px;border:1px solid var(--gray-200);"></div>'
         : '<span style="color:var(--gray-400);">لا يوجد</span>';
 
     document.getElementById('ugDetailsBody').innerHTML =
-        '<div class="d-flex align-items-center gap-3 mb-3" style="padding:12px 14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:12px;">'
+        '<div class="d-flex align-items-center gap-3 mb-3" style="padding:12px 14px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius: 8px;">'
         + iconHeader
         + '<div><div style="font-weight:800;font-size:16px;color:var(--gray-900);">' + ugEsc(d.name || '') + '</div>'
         +   '<div style="font-size:12px;color:var(--gray-500);">' + (d.isRoot ? 'قائمة رئيسية (جذر)' : 'تابع لـ: <strong>' + ugEsc(d.parentPath || d.parentName || '—') + '</strong>') + '</div></div>'
@@ -505,7 +505,7 @@ async function ugShowDetails(id) {
         + '</div>'
         + '<div style="display:grid;grid-template-columns:160px 1fr;gap:10px 14px;font-size:13.5px;">'
         +   '<div style="font-weight:700;color:var(--gray-500);">الترتيب</div><div style="direction:ltr;unicode-bidi:plaintext;font-weight:800;">' + ugEsc(d.displayOrder || ugFormatDisplayOrder(d.orderPath) || String(d.sortOrder || 1)) + '</div>'
-        +   '<div style="font-weight:700;color:var(--gray-500);">الأيقونة</div><div>' + (ugIsIconImage(d.icon) ? '<img src="' + d.icon + '" alt="أيقونة" style="max-width:80px;max-height:80px;border-radius:10px;border:1px solid var(--gray-200);">' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
+        +   '<div style="font-weight:700;color:var(--gray-500);">الأيقونة</div><div>' + (ugIsIconImage(d.icon) ? '<img src="' + d.icon + '" alt="أيقونة" style="max-width:80px;max-height:80px;border-radius: 5px;border:1px solid var(--gray-200);">' : '<span style="color:var(--gray-400);">—</span>') + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">اللون</div><div><span class="ug-color-circle" style="background:' + color + '"></span> <span style="font-family:monospace;direction:ltr;display:inline-block;margin-inline-start:6px;">' + ugEsc(color) + '</span></div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">المرفق</div><div>' + attach + '</div>'
         +   '<div style="font-weight:700;color:var(--gray-500);">المحتوى</div><div>' + (d.content && !ugIsContentEmpty(d.content)

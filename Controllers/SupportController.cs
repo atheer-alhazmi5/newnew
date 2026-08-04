@@ -41,9 +41,9 @@ public class SupportController : BaseController
         var isAdmin = CurrentUserRole == "Admin";
         var all = await _ds.ListSupportTicketsAsync();
         var visible = isAdmin ? all : all.Where(t => t.SubmittedById == CurrentUserId).ToList();
-
-        var orgUnits = await _ds.ListActiveOrganizationalUnitsAsync();
-        orgUnits = orgUnits.OrderBy(u => u.SortOrder).ThenBy(u => u.Name).ToList();
+        var currentUser = await _ds.GetUserByIdAsync(CurrentUserId);
+        var (myUnitId, _) = await _ds.ResolveCurrentUserOrganizationalUnitAsync(currentUser, CurrentDeptId);
+        var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitId);
 
         return Json(new
         {
@@ -52,7 +52,8 @@ public class SupportController : BaseController
             categories = DataService.SupportCategories,
             importanceLevels = DataService.SupportImportanceLevels,
             statusValues = DataService.SupportStatusValues,
-            organizationalUnits = orgUnits.Select(u => new { u.Id, u.Name, u.ParentId, u.SortOrder }),
+            orgUnitFilters,
+            orgUnitsForSelect,
             data = visible.OrderByDescending(t => t.CreatedAt).Select(MapTicket)
         });
     }

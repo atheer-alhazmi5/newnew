@@ -9,7 +9,6 @@ var ddlCurrentUser = '';
 var ddlIsAdmin = false;
 var ddlCurrentOrgUnitId = 0;
 var ddlCurrentOrgUnitName = '';
-var ddlFilterOuExpanded = {};
 var ddlPage = 1, ddlPerPage = 20, ddlCurrentList = [];
 
 var DDL_LIST_NAME_DUP_MSG = 'اسم القائمة المنسدلة موجود مسبقًا، يرجى إدخال اسم مختلف.';
@@ -85,54 +84,21 @@ function ddlSetEditListTypeLocked(locked) {
 
 document.addEventListener('DOMContentLoaded', function () {
     ddlApplyOwnershipUi();
+    if (window.AppOuFilter && document.getElementById('ddlFilterOrgUnit')) {
+        AppOuFilter.create({
+            id: 'ddl',
+            hiddenId: 'ddlFilterOrgUnit',
+            triggerId: 'ddlFilterOuTrigger',
+            panelId: 'ddlFilterOuPanel',
+            labelId: 'ddlFilterOuLabel',
+            wrapSelector: '.ddl-filter-ou-wrap',
+            defaultLabel: 'الوحدة التنظيمية',
+            onChange: function () { ddlApplyFilters(); }
+        });
+    }
     ddlLoad();
     var em = document.getElementById('ddlEditModal');
     if (em) em.addEventListener('hidden.bs.modal', function () { ddlSetEditListTypeLocked(false); });
-
-    var ddlFilterOuTrigger = document.getElementById('ddlFilterOuTrigger');
-    var ddlFilterOuPanel = document.getElementById('ddlFilterOuPanel');
-    if (ddlFilterOuTrigger && ddlFilterOuPanel) {
-        ddlFilterOuTrigger.addEventListener('click', function (e) {
-            e.stopPropagation();
-            ddlFilterOuTogglePanel();
-        });
-        ddlFilterOuPanel.addEventListener('click', function (e) {
-            var expBtn = e.target.closest('.bnf-ou-tree-exp');
-            if (expBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                var eid = expBtn.getAttribute('data-exp');
-                if (eid) {
-                    ddlFilterOuExpanded[eid] = !ddlFilterOuExpanded[eid];
-                    ddlRenderFilterOrgUnitTreePanel();
-                }
-                return;
-            }
-            var row = e.target.closest('.bnf-ou-tree-row');
-            if (!row || !row.hasAttribute('data-id')) return;
-            var idAttr = row.getAttribute('data-id');
-            var hid = document.getElementById('ddlFilterOrgUnit');
-            var lab = document.getElementById('ddlFilterOuLabel');
-            if (hid) hid.value = idAttr === null ? '' : String(idAttr);
-            if (lab) {
-                if (!idAttr) lab.textContent = 'الوحدة التنظيمية المالكة';
-                else {
-                    var uid = parseInt(idAttr, 10);
-                    var u = ddlOrgUnits.find(function (x) { return x.id === uid; });
-                    lab.textContent = u ? u.name : 'الوحدة التنظيمية المالكة';
-                }
-            }
-            ddlFilterOuClosePanel();
-            ddlRenderFilterOrgUnitTreePanel();
-            ddlApplyFilters();
-        });
-        document.addEventListener('click', function (e) {
-            var wrap = document.querySelector('.ddl-filter-ou-wrap');
-            var panel = document.getElementById('ddlFilterOuPanel');
-            if (!wrap || !panel || panel.classList.contains('d-none')) return;
-            if (!wrap.contains(e.target)) ddlFilterOuClosePanel();
-        });
-    }
 });
 
 async function ddlLoad() {
@@ -145,8 +111,10 @@ async function ddlLoad() {
             ddlIsAdmin = r.isAdmin === true;
             ddlCurrentOrgUnitId = r.currentOrgUnitId || 0;
             ddlCurrentOrgUnitName = r.currentOrgUnitName || '';
+            if (window.AppOuFilter) {
+                await AppOuFilter.loadFromFormDefinitions('ddl');
+            }
             ddlApplyFilters();
-            ddlSyncFilterOuTreeLabel();
             ddlSyncOwnerOrgUnitFields();
             ddlApplyOwnershipUi();
         } else {
@@ -157,115 +125,6 @@ async function ddlLoad() {
         document.getElementById('ddlBody').innerHTML =
             '<tr><td colspan="8" class="text-center py-4 text-danger">خطأ في تحميل البيانات</td></tr>';
     }
-}
-
-function ddlOuBuildTreeMap() {
-    var ids = {};
-    ddlOrgUnits.forEach(function (u) { ids[u.id] = true; });
-    var byParent = {};
-    ddlOrgUnits.forEach(function (u) {
-        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
-        if (!byParent[pk]) byParent[pk] = [];
-        byParent[pk].push(u);
-    });
-    Object.keys(byParent).forEach(function (k) {
-        byParent[k].sort(function (a, b) {
-            var sa = a.sortOrder != null ? a.sortOrder : 0;
-            var sb = b.sortOrder != null ? b.sortOrder : 0;
-            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
-        });
-    });
-    return byParent;
-}
-
-function ddlRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
-    var rows = byParent[parentKey] || [];
-    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
-    var html = '';
-    rows.forEach(function (u) {
-        var idStr = String(u.id);
-        var children = byParent[idStr] || [];
-        var hasChildren = children.length > 0;
-        var expanded = !!expandedMap[idStr];
-        var indent = depth * 22;
-        var rowSel = String(sel) === idStr ? ' is-selected' : '';
-        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
-        if (hasChildren) {
-            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
-        } else {
-            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
-        }
-        html += '<span class="bnf-ou-tree-name flex-grow-1">' + esc(u.name) + '</span></div>';
-        if (hasChildren && expanded) {
-            html += ddlRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
-        }
-    });
-    return html;
-}
-
-function ddlFilterOuExpandAncestorsForSelection(selectId) {
-    if (!selectId || isNaN(selectId)) return;
-    var map = {};
-    ddlOrgUnits.forEach(function (u) { map[u.id] = u; });
-    var u = map[selectId];
-    while (u && u.parentId != null && u.parentId !== '') {
-        ddlFilterOuExpanded[String(u.parentId)] = true;
-        u = map[u.parentId];
-    }
-}
-
-function ddlRenderFilterOrgUnitTreePanel() {
-    var panel = document.getElementById('ddlFilterOuPanel');
-    if (!panel) return;
-    if (!ddlOrgUnits.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
-        return;
-    }
-    var byParent = ddlOuBuildTreeMap();
-    var selectedId = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
-    var allSel = !selectedId ? ' is-selected' : '';
-    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
-        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
-        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
-    html += ddlRenderOuFilterTreeRows(byParent, '', 0, selectedId, ddlFilterOuExpanded);
-    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
-}
-
-function ddlFilterOuTogglePanel() {
-    var panel = document.getElementById('ddlFilterOuPanel');
-    var trig = document.getElementById('ddlFilterOuTrigger');
-    if (!panel) return;
-    if (panel.classList.contains('d-none')) {
-        var cur = document.getElementById('ddlFilterOrgUnit') ? document.getElementById('ddlFilterOrgUnit').value : '';
-        if (cur) ddlFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
-        ddlRenderFilterOrgUnitTreePanel();
-        panel.classList.remove('d-none');
-        if (trig) trig.setAttribute('aria-expanded', 'true');
-    } else {
-        panel.classList.add('d-none');
-        if (trig) trig.setAttribute('aria-expanded', 'false');
-    }
-}
-
-function ddlFilterOuClosePanel() {
-    var panel = document.getElementById('ddlFilterOuPanel');
-    var trig = document.getElementById('ddlFilterOuTrigger');
-    if (panel) panel.classList.add('d-none');
-    if (trig) trig.setAttribute('aria-expanded', 'false');
-}
-
-function ddlSyncFilterOuTreeLabel() {
-    var hid = document.getElementById('ddlFilterOrgUnit');
-    var lab = document.getElementById('ddlFilterOuLabel');
-    if (!hid || !lab) return;
-    var defLabel = 'الوحدة التنظيمية المالكة';
-    if (hid.value) {
-        var u = ddlOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
-        lab.textContent = u ? u.name : defLabel;
-    } else {
-        lab.textContent = defLabel;
-    }
-    ddlRenderFilterOrgUnitTreePanel();
 }
 
 function ddlApplyFilters() {
@@ -294,12 +153,7 @@ function ddlClearFilters() {
     document.getElementById('ddlFilterListType').value = '';
     document.getElementById('ddlFilterSelectionType').value = '';
     document.getElementById('ddlFilterOwnership').value = '';
-    var ouHid = document.getElementById('ddlFilterOrgUnit');
-    if (ouHid) ouHid.value = '';
-    var flab = document.getElementById('ddlFilterOuLabel');
-    if (flab) flab.textContent = 'الوحدة التنظيمية المالكة';
-    ddlFilterOuExpanded = {};
-    ddlFilterOuClosePanel();
+    if (window.AppOuFilter) AppOuFilter.clear('ddl');
     ddlApplyFilters();
 }
 

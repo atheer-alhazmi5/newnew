@@ -22,7 +22,7 @@
 .se-rating-verylow { background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
 .se-notes-cell { max-width: 72px; text-align: center !important; color: var(--gray-400); }
 .se-notes-view-btn {
-    width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--info-500);
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--info-500);
     color: var(--info-600); background: var(--surface-0); display: inline-flex; align-items: center;
     justify-content: center; cursor: pointer; font-size: 16px; transition: all .15s;
 }
@@ -33,14 +33,14 @@
 }
 .se-publish-badge-on { background:var(--success-100); color:var(--success-700); border:1px solid var(--success-200); }
 .se-publish-badge-off { background:var(--warning-100); color:var(--warning-700); border:1px solid var(--warning-200); }
-.se-publish-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 12px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:var(--surface-0); }
+.se-publish-btn { min-width:auto; border-radius:8px; font-weight:700; padding:5px 12px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; border: 1px solid transparent; font-family:'Cairo',sans-serif; white-space:nowrap; transition:all .15s; background:var(--surface-0); }
 .se-publish-on { border-color:var(--success-500); color:var(--success-600); }
 .se-publish-on:hover { background:var(--success-50); }
 .se-publish-off { border-color:var(--gray-300); color:var(--gray-600); }
 .se-publish-off:hover { background:var(--gray-50); }
 .se-admin-actions { display:inline-flex; gap:6px; align-items:center; justify-content:center; }
 .se-action-icon {
-    width:34px; height:34px; border-radius:8px; border:2px solid transparent;
+    width:34px; height:34px; border-radius:8px; border: 1px solid transparent;
     display:inline-flex; align-items:center; justify-content:center;
     cursor:pointer; background:var(--surface-0); font-size:16px; transition:all .15s;
 }
@@ -68,8 +68,8 @@
 .se-choice-pill {
     flex:1 1 calc(20% - 10px); min-width:88px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-    padding:12px 8px; border-radius:12px;
-    background:var(--surface-0); border:2px solid var(--gray-200);
+    padding:12px 8px; border-radius: 8px;
+    background:var(--surface-0); border: 1px solid var(--gray-200);
     cursor:pointer; font-family:'Cairo',sans-serif;
     transition:border-color .15s, background .15s, box-shadow .15s;
 }
@@ -93,7 +93,7 @@
 /* التقييم التفصيلي */
 .se-detail-block {
     background:var(--gray-50); border:1px solid var(--gray-200);
-    border-radius:12px; padding:14px 16px; margin-bottom:12px;
+    border-radius: 8px; padding:14px 16px; margin-bottom:12px;
 }
 .se-detail-block:last-child { margin-bottom:0; }
 .se-detail-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
@@ -104,7 +104,7 @@
 .se-dim-btns { display:flex; gap:6px; flex-wrap:wrap; }
 .se-dim-btn {
     flex:1 1 auto; min-width:52px; padding:8px 6px;
-    border-radius:10px; border:2px solid var(--gray-200); background:var(--surface-0);
+    border-radius: 5px; border: 1px solid var(--gray-200); background:var(--surface-0);
     font-size:11.5px; font-weight:700; color:var(--gray-600);
     cursor:pointer; font-family:'Cairo',sans-serif; text-align:center;
     transition:border-color .15s, background .15s, color .15s;
@@ -113,15 +113,15 @@
 .se-dim-btn:hover { border-color:var(--sa-300); color:var(--sa-700); background:var(--sa-25); }
 .se-dim-btn.is-selected { border-color:var(--sa-600); background:var(--sa-600); color:#fff; }
 .se-notes-wrap textarea {
-    border-radius:12px; border:2px solid var(--gray-200); padding:12px 14px;
+    border-radius: 8px; border: 1px solid var(--gray-200); padding:12px 14px;
     font-size:13.5px; min-height:96px; resize:vertical; font-family:'Cairo',sans-serif;
     transition:border-color .15s, box-shadow .15s;
 }
 .se-notes-wrap textarea:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); outline:none; }
 .se-notes-wrap textarea::placeholder { color:var(--gray-400); }
 .se-submit-btn {
-    border-radius:12px; padding:11px 32px; font-weight:800; font-size:14px;
-    background:var(--sa-600); border:2px solid var(--sa-600); color:#fff;
+    border-radius: 8px; padding:11px 32px; font-weight:800; font-size:14px;
+    background:var(--sa-600); border: 1px solid var(--sa-600); color:#fff;
     display:inline-flex; align-items:center; gap:8px; font-family:'Cairo',sans-serif;
     cursor:pointer; transition:background .15s, border-color .15s, transform .1s;
 }
@@ -129,8 +129,8 @@
 .se-submit-btn:active:not(:disabled) { transform:translateY(1px); }
 .se-submit-btn:disabled { opacity:.6; cursor:not-allowed; }
 .se-cancel-btn {
-    border-radius:12px; padding:11px 28px; font-weight:700; font-size:14px;
-    background:var(--surface-0); border:2px solid var(--gray-300); color:var(--gray-700);
+    border-radius: 8px; padding:11px 28px; font-weight:700; font-size:14px;
+    background:var(--surface-0); border: 1px solid var(--gray-300); color:var(--gray-700);
     font-family:'Cairo',sans-serif; cursor:pointer; transition:background .15s;
 }
 .se-cancel-btn:hover { background:var(--gray-100); }
@@ -148,7 +148,7 @@
     </div>
     <div class="ui-header-actions">
         <span class="ui-count-pill" id="seTotalCountPill"><i class="bi bi-star-fill"></i><span id="seTotalCountTxt">0</span></span>
-        <button type="button" class="btn btn-primary se-evaluate-btn" id="seBtnEvaluate" style="border-radius:12px;padding:10px 28px;font-weight:700;" onclick="seOpenEvaluateModal()">
+        <button type="button" class="btn btn-primary se-evaluate-btn" id="seBtnEvaluate" style="border-radius: 8px;padding:10px 28px;font-weight:700;" onclick="seOpenEvaluateModal()">
             <i class="bi bi-star-fill"></i> تقييم النظام
         </button>
     </div>

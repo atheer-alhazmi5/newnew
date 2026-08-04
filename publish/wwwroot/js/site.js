@@ -39,7 +39,7 @@ function showToast(msg, type = 'success') {
     const colors = { success: '#079455', danger: '#D92D20', warning: '#DC6803', info: '#1570EF' };
 
     const toast = document.createElement('div');
-    toast.style.cssText = `background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 4px 16px rgba(0,0,0,.12);
+    toast.style.cssText = `background:#fff;border-radius: 8px;padding:14px 18px;box-shadow:0 4px 16px rgba(0,0,0,.12);
         display:flex;align-items:center;gap:12px;min-width:280px;max-width:400px;
         border-right:4px solid ${colors[type] || colors.success};
         animation:slideInLeft .25s ease-out;font-family:'Cairo',sans-serif;`;

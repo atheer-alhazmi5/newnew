@@ -277,7 +277,7 @@ function renderStep1() {
 
     var pinSection = '';
     if (USER_ROLE === 'Admin') {
-        pinSection = '<div style="background:var(--sa-50);border:1px solid var(--sa-200);border-radius:12px;padding:16px;margin-top:20px;">' +
+        pinSection = '<div style="background:var(--sa-50);border:1px solid var(--sa-200);border-radius: 8px;padding:16px;margin-top:20px;">' +
             '<div class="form-check">' +
             '<input class="form-check-input" type="checkbox" id="pinReady" onchange="togglePinReady()" ' + (formData.pinAsReady ? 'checked' : '') + '>' +
             '<label class="form-check-label" for="pinReady">' +
@@ -683,7 +683,7 @@ function renderStep3() {
         (formData.description ? '<div style="color:var(--gray-500);font-size:14px;margin-top:4px;">' + esc(formData.description) + '</div>' : '');
 
     if (formData.pinAsReady) {
-        topCard += '<div style="background:var(--sa-50);border:1px solid var(--sa-200);border-radius:12px;padding:16px;margin-top:20px;display:flex;align-items:center;gap:12px;justify-content:center;">' +
+        topCard += '<div style="background:var(--sa-50);border:1px solid var(--sa-200);border-radius: 8px;padding:16px;margin-top:20px;display:flex;align-items:center;gap:12px;justify-content:center;">' +
             '<i class="bi bi-pin-angle-fill" style="font-size:24px;color:var(--sa-700);"></i>' +
             '<div><strong>نموذج جاهز</strong> — متاح لجميع المستخدمين<br><small style="color:var(--gray-500);">' + totalQ + ' سؤال</small></div></div>';
     } else {

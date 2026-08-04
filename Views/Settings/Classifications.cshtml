@@ -12,9 +12,9 @@
 .cls-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:4px; }
 .cls-modal-body { padding:28px; }
 .cls-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; justify-content:flex-start; flex-wrap:wrap; }
-.cls-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+.cls-save-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
 .cls-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
-.cls-cancel-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
+.cls-cancel-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
 .cls-cancel-btn:hover { background:#4b5563; }
 .cls-section-title { font-weight:700; font-size:15px; color:var(--sa-800); margin-bottom:20px; display:flex; align-items:center; gap:8px; padding-bottom:12px; border-bottom:2px solid var(--sa-100); }
 .cls-section-title i { font-size:18px; }
@@ -25,22 +25,22 @@
 .cls-status-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
 .cls-status-pill.active .cls-status-dot { background:#0f9f5c; }
 .cls-status-pill.inactive .cls-status-dot { background:#ef4444; }
-.cls-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border:2px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.cls-color-circle { width:28px; height:28px; border-radius:50%; display:inline-block; border: 1px solid rgba(0,0,0,.1); vertical-align:middle; box-shadow:0 1px 4px rgba(0,0,0,.08); }
 /* تنسيق الجدول موحّد في styles.css (.ui-table) */
 .cls-color-picker-wrap { position:relative; display:inline-block; }
-.cls-color-picker-wrap input[type="color"] { width:52px; height:52px; border:2px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
+.cls-color-picker-wrap input[type="color"] { width:52px; height:52px; border: 1px solid var(--gray-200); border-radius:14px; cursor:pointer; padding:3px; background:var(--surface-0); transition:border-color .2s; }
 .cls-color-picker-wrap input[type="color"]:hover { border-color:var(--sa-400); }
 .cls-color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding:2px; }
-.cls-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius:10px; border:none; }
+.cls-color-picker-wrap input[type="color"]::-webkit-color-swatch { border-radius: 5px; border:none; }
 .cls-color-hex { font-size:13px; color:var(--gray-500); font-weight:600; direction:ltr; text-align:center; font-family:'Courier New',monospace; background:var(--gray-50); padding:4px 10px; border-radius:8px; border:1px solid var(--gray-200); }
 .cls-modal-body .form-control,
-.cls-modal-body .form-select { border-radius:10px; border:2px solid var(--gray-200); padding:10px 14px; transition:border-color .2s, box-shadow .2s; }
+.cls-modal-body .form-select { border-radius: 5px; border: 1px solid var(--gray-200); padding:10px 14px; transition:border-color .2s, box-shadow .2s; }
 .cls-modal-body .form-control:focus { border-color:var(--sa-400); box-shadow:0 0 0 3px rgba(37,147,95,.1); }
 .cls-modal-body .form-label { font-weight:700; font-size:14px; color:var(--gray-700); margin-bottom:8px; }
 .cls-modal-body .form-check-input:checked { background-color:var(--sa-600); border-color:var(--sa-600); }
 .cls-page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
-.cls-page-header .cls-add-btn { border-radius:12px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
-.cls-action-btn { padding:8px 14px; border-radius:10px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; }
+.cls-page-header .cls-add-btn { border-radius: 8px; padding:10px 28px; font-weight:700; font-size:14px; display:inline-flex; align-items:center; gap:8px; }
+.cls-action-btn { padding:8px 14px; border-radius: 5px; font-weight:700; font-size:12px; border:none; cursor:pointer; font-family:'Cairo',sans-serif; display:inline-flex; align-items:center; gap:6px; }
 .cls-action-btn-detail { background:var(--gray-100); color:var(--gray-700); }
 .cls-action-btn-detail:hover { background:var(--gray-200); color:var(--gray-800); }
 .cls-action-btn-edit { background:#198754; color:#fff; }
@@ -136,7 +136,7 @@
                 <div id="clsAddError" class="alert alert-danger d-none" style="font-size:14px;"></div>
             </div>
             <div class="cls-modal-footer">
-                <button type="button" class="btn btn-primary" style="padding:12px 32px;border-radius:12px;font-weight:700;font-size:15px;font-family:'Cairo',sans-serif;" onclick="clsSubmitAdd()">إضافة التصنيف</button>
+                <button type="button" class="btn btn-primary" style="padding:12px 32px;border-radius: 8px;font-weight:700;font-size:15px;font-family:'Cairo',sans-serif;" onclick="clsSubmitAdd()">إضافة التصنيف</button>
                 <button type="button" class="cls-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>
@@ -231,7 +231,7 @@
                 <div id="clsDeleteError" class="alert alert-danger d-none" style="font-size:14px;text-align:right;"></div>
             </div>
             <div class="cls-modal-footer" style="justify-content:center;">
-                <button type="button" class="btn btn-danger" style="padding:12px 28px;border-radius:12px;font-weight:700;" onclick="clsSubmitDelete()">نعم، حذف</button>
+                <button type="button" class="btn btn-danger" style="padding:12px 28px;border-radius: 8px;font-weight:700;" onclick="clsSubmitDelete()">نعم، حذف</button>
                 <button type="button" class="cls-cancel-btn" data-bs-dismiss="modal">إلغاء</button>
             </div>
         </div>

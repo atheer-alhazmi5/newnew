@@ -4,7 +4,6 @@ var rtCurrentOrgUnitId = 0, rtCurrentOrgUnitName = '';
 var rtPage = 1, rtPerPage = 20, rtCurrentList = [];
 var RT_TABLE_NAME_DUP_MSG = 'اسم الجدول موجود مسبقًا، يرجى إدخال اسم مختلف.';
 var rtcFields = [], rtcEditingIndex = -1;
-var rtFilterOuExpanded = {};
 
 function rtEscHtml(s) {
     if (s == null) return '';
@@ -718,59 +717,20 @@ function rtBuildSinglePropHtml(p, idPrefix) {
 
 /* ===== Page Load ===== */
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.AppOuFilter && document.getElementById('rtFilterOrgUnit')) {
+        AppOuFilter.create({
+            id: 'rt',
+            hiddenId: 'rtFilterOrgUnit',
+            triggerId: 'rtFilterOuTrigger',
+            panelId: 'rtFilterOuPanel',
+            labelId: 'rtFilterOuLabel',
+            wrapSelector: '.rt-filter-ou-wrap',
+            defaultLabel: 'الوحدة التنظيمية',
+            onChange: function () { rtApplyFilters(); }
+        });
+    }
     rtLoad();
-    rtBindFilterOuTree();
 });
-
-function rtBindFilterOuTree() {
-    var trigger = document.getElementById('rtFilterOuTrigger');
-    var panel = document.getElementById('rtFilterOuPanel');
-    if (!trigger || !panel) return;
-
-    trigger.addEventListener('click', function (e) {
-        e.stopPropagation();
-        rtFilterOuTogglePanel();
-    });
-
-    panel.addEventListener('click', function (e) {
-        var expBtn = e.target.closest('.bnf-ou-tree-exp');
-        if (expBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            var eid = expBtn.getAttribute('data-exp');
-            if (eid) {
-                rtFilterOuExpanded[eid] = !rtFilterOuExpanded[eid];
-                rtRenderFilterOrgUnitTreePanel();
-            }
-            return;
-        }
-        var row = e.target.closest('.bnf-ou-tree-row');
-        if (!row || !row.hasAttribute('data-id')) return;
-        var idAttr = row.getAttribute('data-id');
-        var hid = document.getElementById('rtFilterOrgUnit');
-        var lab = document.getElementById('rtFilterOuLabel');
-        if (hid) hid.value = idAttr === null ? '' : String(idAttr);
-        if (lab) {
-            if (!idAttr) {
-                lab.textContent = 'الوحدة التنظيمية المالكة';
-            } else {
-                var uid = parseInt(idAttr, 10);
-                var u = rtOrgUnits.find(function (x) { return x.id === uid; });
-                lab.textContent = u ? u.name : 'الوحدة التنظيمية المالكة';
-            }
-        }
-        rtFilterOuClosePanel();
-        rtRenderFilterOrgUnitTreePanel();
-        rtApplyFilters();
-    });
-
-    document.addEventListener('click', function (e) {
-        var wrap = document.querySelector('.bnf-ou-tree-wrap');
-        var pnl = document.getElementById('rtFilterOuPanel');
-        if (!wrap || !pnl || pnl.classList.contains('d-none')) return;
-        if (!wrap.contains(e.target)) rtFilterOuClosePanel();
-    });
-}
 
 async function rtLoad() {
     try {
@@ -783,108 +743,13 @@ async function rtLoad() {
         rtIsAdmin = r.isAdmin || false;
         rtCurrentOrgUnitId = r.currentOrgUnitId || 0;
         rtCurrentOrgUnitName = r.currentOrgUnitName || '';
+        if (window.AppOuFilter) {
+            await AppOuFilter.loadFromFormDefinitions('rt');
+        }
         rtSyncOwnerOrgUnitFields();
-        rtSyncFilterOuTreeLabel();
         rtRenderTable();
         rtApplyAdminOwnershipLock();
     } catch(e) { console.error('rtLoad error:', e); }
-}
-
-function rtOuBuildTreeMap() {
-    var ids = {};
-    rtOrgUnits.forEach(function (u) { ids[u.id] = true; });
-    var byParent = {};
-    rtOrgUnits.forEach(function (u) {
-        var pk = (u.parentId != null && u.parentId !== '' && ids[u.parentId]) ? String(u.parentId) : '';
-        if (!byParent[pk]) byParent[pk] = [];
-        byParent[pk].push(u);
-    });
-    Object.keys(byParent).forEach(function (k) {
-        byParent[k].sort(function (a, b) {
-            var sa = a.sortOrder != null ? a.sortOrder : 0;
-            var sb = b.sortOrder != null ? b.sortOrder : 0;
-            return sa !== sb ? sa - sb : (a.name || '').localeCompare(b.name || '', 'ar');
-        });
-    });
-    return byParent;
-}
-
-function rtRenderOuFilterTreeRows(byParent, parentKey, depth, selectedId, expandedMap) {
-    var rows = byParent[parentKey] || [];
-    var sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
-    var html = '';
-    rows.forEach(function (u) {
-        var idStr = String(u.id);
-        var children = byParent[idStr] || [];
-        var hasChildren = children.length > 0;
-        var expanded = !!expandedMap[idStr];
-        var indent = depth * 22;
-        var rowSel = String(sel) === idStr ? ' is-selected' : '';
-        html += '<div class="bnf-ou-tree-row d-flex align-items-center' + rowSel + '" data-id="' + u.id + '" role="option" dir="rtl" style="padding:8px 10px; padding-right:' + (12 + indent) + 'px;">';
-        if (hasChildren) {
-            html += '<button type="button" class="bnf-ou-tree-exp" data-exp="' + idStr + '" aria-expanded="' + expanded + '" title="' + (expanded ? 'طي' : 'توسيع') + '">' + (expanded ? '−' : '+') + '</button>';
-        } else {
-            html += '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>';
-        }
-        html += '<span class="bnf-ou-tree-name flex-grow-1">' + rtEscHtml(u.name) + '</span></div>';
-        if (hasChildren && expanded) {
-            html += rtRenderOuFilterTreeRows(byParent, idStr, depth + 1, sel, expandedMap);
-        }
-    });
-    return html;
-}
-
-function rtFilterOuExpandAncestorsForSelection(selectId) {
-    if (!selectId || isNaN(selectId)) return;
-    var map = {};
-    rtOrgUnits.forEach(function (u) { map[u.id] = u; });
-    var u = map[selectId];
-    while (u && u.parentId != null && u.parentId !== '') {
-        rtFilterOuExpanded[String(u.parentId)] = true;
-        u = map[u.parentId];
-    }
-}
-
-function rtRenderFilterOrgUnitTreePanel() {
-    var panel = document.getElementById('rtFilterOuPanel');
-    if (!panel) return;
-    if (!rtOrgUnits.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
-        return;
-    }
-    var byParent = rtOuBuildTreeMap();
-    var hid = document.getElementById('rtFilterOrgUnit');
-    var selectedId = hid ? hid.value : '';
-    var allSel = !selectedId ? ' is-selected' : '';
-    var html = '<div class="bnf-ou-tree-row d-flex align-items-center' + allSel + '" data-id="" role="option" dir="rtl" style="padding:8px 10px;padding-right:12px;">' +
-        '<span class="bnf-ou-tree-exp-spacer" aria-hidden="true"></span>' +
-        '<span class="bnf-ou-tree-name flex-grow-1" style="font-weight:700;color:var(--gray-700);">كل الوحدات</span></div>';
-    html += rtRenderOuFilterTreeRows(byParent, '', 0, selectedId, rtFilterOuExpanded);
-    panel.innerHTML = html || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
-}
-
-function rtFilterOuTogglePanel() {
-    var panel = document.getElementById('rtFilterOuPanel');
-    var trig = document.getElementById('rtFilterOuTrigger');
-    if (!panel) return;
-    if (panel.classList.contains('d-none')) {
-        var hid = document.getElementById('rtFilterOrgUnit');
-        var cur = hid ? hid.value : '';
-        if (cur) rtFilterOuExpandAncestorsForSelection(parseInt(cur, 10));
-        rtRenderFilterOrgUnitTreePanel();
-        panel.classList.remove('d-none');
-        if (trig) trig.setAttribute('aria-expanded', 'true');
-    } else {
-        panel.classList.add('d-none');
-        if (trig) trig.setAttribute('aria-expanded', 'false');
-    }
-}
-
-function rtFilterOuClosePanel() {
-    var panel = document.getElementById('rtFilterOuPanel');
-    var trig = document.getElementById('rtFilterOuTrigger');
-    if (panel) panel.classList.add('d-none');
-    if (trig) trig.setAttribute('aria-expanded', 'false');
 }
 
 function rtSyncOwnerOrgUnitFields() {
@@ -894,20 +759,6 @@ function rtSyncOwnerOrgUnitFields() {
     if (editEl && !editEl.getAttribute('data-rt-table-ou')) {
         editEl.value = rtCurrentOrgUnitName || '—';
     }
-}
-
-function rtSyncFilterOuTreeLabel() {
-    var hid = document.getElementById('rtFilterOrgUnit');
-    var lab = document.getElementById('rtFilterOuLabel');
-    if (!hid || !lab) return;
-    var defLabel = 'الوحدة التنظيمية المالكة';
-    if (hid.value) {
-        var u = rtOrgUnits.find(function (x) { return String(x.id) === String(hid.value); });
-        lab.textContent = u ? u.name : defLabel;
-    } else {
-        lab.textContent = defLabel;
-    }
-    rtRenderFilterOrgUnitTreePanel();
 }
 
 function rtApplyFilters() {
@@ -931,13 +782,7 @@ function rtClearFilters() {
     document.getElementById('rtSearchInput').value = '';
     document.getElementById('rtFilterRowCount').value = '';
     document.getElementById('rtFilterOwnership').value = '';
-    var hid = document.getElementById('rtFilterOrgUnit');
-    if (hid) hid.value = '';
-    var lab = document.getElementById('rtFilterOuLabel');
-    if (lab) lab.textContent = 'الوحدة التنظيمية المالكة';
-    rtFilterOuExpanded = {};
-    rtFilterOuClosePanel();
-    rtRenderFilterOrgUnitTreePanel();
+    if (window.AppOuFilter) AppOuFilter.clear('rt');
     rtFilteredData = rtAllData.slice();
     rtRenderTable();
 }
@@ -1295,8 +1140,10 @@ async function rtcSubmitTable() {
 }
 
 function rtpFieldPlaceholder(f) {
-    var ph = ((f.placeholder != null && f.placeholder !== '') ? f.placeholder : (f.tooltipText || '')).replace(/"/g, '&quot;');
-    return ph;
+    var props = {};
+    try { props = JSON.parse((f && f.propertiesJson) || '{}'); } catch (e) {}
+    var ph = String(((f && f.placeholder) || props.placeholder || '')).trim();
+    return ph.replace(/"/g, '&quot;');
 }
 
 function rtpFileAcceptFromProps(p) {
@@ -1353,7 +1200,8 @@ function rtpBuildFieldInput(f, opt) {
     var html = '';
     if (typeof fdBuildFieldInput === 'function') {
         try {
-            html = fdBuildFieldInput(rtpFdFieldPayload(f, opt), opt || {});
+            var fdOpt = Object.assign({}, opt || {}, { suppressTooltipAsPlaceholder: true });
+            html = fdBuildFieldInput(rtpFdFieldPayload(f, opt), fdOpt);
         } catch (e) {
             console.warn('rtpBuildFieldInput', e);
             html = '';

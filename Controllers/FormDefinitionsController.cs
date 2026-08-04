@@ -50,7 +50,7 @@ public class FormDefinitionsController : BaseController
         else
         {
             var myOrgUnitId = await GetCreatorOrgUnitIdAsync();
-            all = FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId).ToList();
+            all = FormDefinitionVisibility.FilterForEmployee(all, myOrgUnitId, CurrentUserFullName).ToList();
         }
 
         // Search filters
@@ -87,12 +87,8 @@ public class FormDefinitionsController : BaseController
         var templates = await _ds.ListFormTemplatesAsync();
         var units = await _ds.ListOrganizationalUnitsAsync();
 
-        var orgUnitsForSelect = DataService.FilterEffectivelyActiveOrganizationalUnits(units).ToList();
-        if (!isAdmin)
-        {
-            var myUnitId = await GetCreatorOrgUnitIdAsync();
-            orgUnitsForSelect = orgUnitsForSelect.Where(u => u.Id == myUnitId).ToList();
-        }
+        var myUnitIdForFilters = isAdmin ? 0 : await GetCreatorOrgUnitIdAsync();
+        var (orgUnitFiltersList, orgUnitsForSelectList) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitIdForFilters);
 
         var allVersions = await _ds.ListFormDefinitionVersionsAsync(0); // returns empty (formId=0)
         // load full list of versions in one shot via per-form lookup is heavy; instead build map by iterating
@@ -132,10 +128,6 @@ public class FormDefinitionsController : BaseController
             .OrderBy(t => t.Name)
             .Select(t => new { id = t.Id, name = t.Name })
             .ToList();
-        var orgUnitFilters = DataService.FilterEffectivelyActiveOrganizationalUnits(units)
-            .Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder })
-            .ToList();
-
         return Json(new
         {
             success = true, data,
@@ -144,11 +136,23 @@ public class FormDefinitionsController : BaseController
             currentUser = CurrentUserFullName,
             formClasses = formClasses.Select(c => new { c.Id, c.Name }),
             formTypes = formTypes.Select(t => new { t.Id, t.Name }),
-            orgUnitsForSelect = orgUnitsForSelect.Select(u => new { id = u.Id, name = u.Name, parentId = u.ParentId, sortOrder = u.SortOrder }),
+            orgUnitsForSelect = orgUnitsForSelectList,
             templates = templates.Where(t => t.IsActive).Select(t => new { t.Id, t.Name }),
             templateFilters,
-            orgUnitFilters,
+            orgUnitFilters = orgUnitFiltersList,
         });
+    }
+
+    /// <summary>مصدر فلتر الوحدة التنظيمية الموحّد لبقية صفحات النظام.</summary>
+    [HttpGet]
+    public async Task<IActionResult> GetOrganizationalUnitFilters()
+    {
+        if (!IsAuthenticated) return Json(new { success = false, message = "غير مصرح" });
+
+        var isAdmin = CurrentUserRole == "Admin";
+        var myUnitId = isAdmin ? 0 : await GetCreatorOrgUnitIdAsync();
+        var (orgUnitFilters, orgUnitsForSelect) = await _ds.GetOrganizationalUnitFilterLookupsAsync(isAdmin, myUnitId);
+        return Json(new { success = true, isAdmin, orgUnitFilters, orgUnitsForSelect });
     }
 
     // ── GET SINGLE ───────────────────────────────────────────────────────────

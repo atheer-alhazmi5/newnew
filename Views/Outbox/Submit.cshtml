@@ -8,8 +8,8 @@
 .obs-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
 .obs-back-btn {
     display:inline-flex; align-items:center; gap:6px;
-    background:var(--surface-0); border:2px solid var(--gray-200); color:var(--gray-700);
-    padding:8px 16px; border-radius:10px; font-weight:700; font-size:13px;
+    background:var(--surface-0); border: 1px solid var(--gray-200); color:var(--gray-700);
+    padding:8px 16px; border-radius: 5px; font-weight:700; font-size:13px;
     font-family:'Cairo',sans-serif; text-decoration:none; transition:all .15s;
 }
 .obs-back-btn:hover { border-color:var(--sa-400); color:var(--sa-700); }
@@ -20,7 +20,7 @@
 .obs-step-circle {
     width:44px; height:44px; border-radius:50%;
     background:var(--gray-100); color:var(--gray-500);
-    border:2px solid var(--gray-200);
+    border: 1px solid var(--gray-200);
     display:inline-flex; align-items:center; justify-content:center;
     font-weight:800; font-size:15px; transition:all .2s;
 }
@@ -53,7 +53,7 @@
 .obs-card-head { display:flex; align-items:center; gap:12px; }
 .obs-card-icon {
     width:44px; height:44px; flex-shrink:0;
-    border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+    border-radius: 8px; display:inline-flex; align-items:center; justify-content:center;
     color:#fff; font-size:20px;
 }
 .obs-card-name { font-weight:800; font-size:15px; color:var(--gray-900); flex:1; min-width:0; }
@@ -76,7 +76,7 @@
 .obs-card.is-selected .obs-card-selected-mark { display:inline-flex; }
 
 /* الأزرار داخل البطاقات */
-.obs-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 12px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; border:2px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
+.obs-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 12px; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; border: 1px solid transparent; font-family:'Cairo',sans-serif; background:var(--surface-0); transition:all .15s; }
 .obs-btn-detail { border-color:var(--info-500); color:var(--info-500); }
 .obs-btn-detail:hover { background:var(--info-50); }
 .obs-btn-pick { border-color:var(--sa-600); color:var(--sa-600); }
@@ -87,7 +87,7 @@
 .obs-foot { display:flex; justify-content:space-between; gap:12px; margin-top:18px; }
 .obs-foot .left { display:flex; gap:10px; }
 .obs-next, .obs-prev, .obs-submit {
-    padding:11px 28px; border-radius:12px; font-size:14px; font-weight:700;
+    padding:11px 28px; border-radius: 8px; font-size:14px; font-weight:700;
     font-family:'Cairo',sans-serif; border:none; cursor:pointer; transition:all .15s;
 }
 .obs-next, .obs-submit { background:var(--sa-600); color:#fff; }
@@ -102,24 +102,24 @@
 .obs-form-group { display:flex; flex-direction:column; gap:4px; }
 .obs-form-group label { font-weight:700; font-size:13px; color:var(--gray-700); }
 .obs-form-group .form-control,
-.obs-form-group .form-select { font-size:13px; border-radius:10px; border:2px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
+.obs-form-group .form-select { font-size:13px; border-radius: 5px; border: 1px solid var(--gray-200); padding:8px 12px; font-family:'Cairo',sans-serif; }
 .obs-form-group .form-control:focus,
 .obs-form-group .form-select:focus { border-color:var(--sa-400); box-shadow:none; }
 .obs-form-group textarea.form-control { min-height:90px; resize:vertical; }
 
 /* Step 2 — meta row + dynamic form host */
-.obs-meta-row { display:flex; flex-wrap:wrap; gap:14px; padding:14px 16px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; margin-bottom:16px; }
+.obs-meta-row { display:flex; flex-wrap:wrap; gap:14px; padding:14px 16px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius: 8px; margin-bottom:16px; }
 .obs-meta-cell { display:flex; flex-direction:column; gap:4px; min-width:200px; flex:1 1 220px; }
 .obs-meta-lbl { font-size:12px; font-weight:700; color:var(--gray-500); }
 .obs-meta-val { font-size:14px; font-weight:700; color:var(--gray-900); padding:6px 10px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:8px; }
 
-.obs-form-host { border:1px solid var(--gray-200); border-radius:12px; padding:6px; background:var(--gray-25,#fcfcfd); min-height:160px; }
+.obs-form-host { border:1px solid var(--gray-200); border-radius: 8px; padding:6px; background:var(--gray-25,#fcfcfd); min-height:160px; }
 .obs-form-host .row.g-3 { margin-inline:0; }
 .obs-form-host > * { font-family:'Cairo',sans-serif; }
 
 /* Step 3 — مراجعة (مجموعات حسب أقسام النموذج) */
 .obs-review { display:flex; flex-direction:column; gap:14px; }
-.obs-review-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius:12px; padding:14px 16px; }
+.obs-review-section { background:var(--surface-0); border:1px solid var(--gray-200); border-radius: 8px; padding:14px 16px; }
 .obs-review-section-title { font-weight:800; font-size:14px; color:var(--sa-800); padding-bottom:8px; border-bottom:2px solid var(--sa-100); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
 .obs-review-section-title i { color:var(--sa-600); font-size:15px; }
 .obs-review-grid { display:grid; grid-template-columns:200px 1fr; gap:8px 14px; font-size:13px; }
@@ -132,7 +132,7 @@
 .obs-review-files { display:flex; flex-wrap:wrap; gap:6px; }
 .obs-review-files .file-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--info-50); color:var(--info-700); border:1px solid var(--info-100); font-size:12px; font-weight:700; }
 
-.obs-review-meta { display:flex; flex-wrap:wrap; gap:10px; padding:12px 14px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; }
+.obs-review-meta { display:flex; flex-wrap:wrap; gap:10px; padding:12px 14px; background:var(--sa-50); border:1px solid var(--sa-100); border-radius: 8px; }
 .obs-review-meta .mtch { display:flex; flex-direction:column; gap:2px; min-width:150px; flex:1 1 180px; }
 .obs-review-meta .mtch .l { font-size:11.5px; font-weight:700; color:var(--gray-500); }
 .obs-review-meta .mtch .v { font-size:13px; font-weight:700; color:var(--gray-900); }
@@ -141,15 +141,15 @@
 .obs-confirm { text-align:center; padding:32px 20px; }
 .obs-confirm i.bi-check-circle-fill { font-size:64px; color:var(--success-600); }
 .obs-confirm h3 { margin-top:14px; font-weight:800; color:var(--gray-900); }
-.obs-confirm .obs-req-num { display:inline-block; direction:ltr; font-family:'Courier New',monospace; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:10px; padding:8px 14px; margin-top:8px; font-weight:800; color:var(--info-700); }
+.obs-confirm .obs-req-num { display:inline-block; direction:ltr; font-family:'Courier New',monospace; background:var(--gray-50); border:1px solid var(--gray-200); border-radius: 5px; padding:8px 14px; margin-top:8px; font-weight:800; color:var(--info-700); }
 .obs-confirm .obs-confirm-msg { color:var(--gray-700); margin-top:14px; font-size:14px; max-width:760px; margin-inline:auto; line-height:1.85; }
-.obs-confirm-notes { margin-top:18px; max-width:760px; margin-inline:auto; padding:16px 18px; text-align:right; background:var(--sa-50); border:1px solid var(--sa-100); border-radius:12px; }
+.obs-confirm-notes { margin-top:18px; max-width:760px; margin-inline:auto; padding:16px 18px; text-align:right; background:var(--sa-50); border:1px solid var(--sa-100); border-radius: 8px; }
 .obs-confirm-notes h6 { color:var(--sa-800); font-weight:800; font-size:14px; margin:0 0 10px; display:flex; align-items:center; gap:6px; }
 .obs-confirm-notes ul { margin:0; padding-inline-start:22px; }
 .obs-confirm-notes li { color:var(--gray-700); font-size:13.5px; line-height:1.9; }
 .obs-confirm-notes li strong { color:var(--sa-800); }
 .obs-confirm-routing { margin-top:14px; display:flex; flex-direction:column; gap:8px; max-width:760px; margin-inline:auto; text-align:right; }
-.obs-routing-card { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius:10px; font-size:13px; color:var(--gray-700); }
+.obs-routing-card { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:var(--surface-0); border:1px solid var(--gray-200); border-radius: 5px; font-size:13px; color:var(--gray-700); }
 .obs-routing-card i { color:var(--sa-600); font-size:18px; margin-top:2px; flex-shrink:0; }
 .obs-routing-card b { color:var(--gray-900); display:block; margin-bottom:2px; font-size:13px; }
 .obs-routing-card .chips { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
@@ -278,7 +278,7 @@
         </div>
 
         <div class="d-flex justify-content-center gap-2 mt-4">
-            <a href="/Outbox/Index" class="btn btn-primary" style="border-radius:10px;padding:10px 28px;font-weight:700;">
+            <a href="/Outbox/Index" class="btn btn-primary" style="border-radius: 5px;padding:10px 28px;font-weight:700;">
                 <i class="bi bi-list-ul"></i> عرض الصادر
             </a>
             <button class="obs-prev" onclick="obsResetAndStart()"><i class="bi bi-plus-lg"></i> تقديم طلب آخر</button>

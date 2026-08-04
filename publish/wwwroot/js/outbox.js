@@ -32,7 +32,7 @@ function renderTable() {
 
         return '<tr>' +
             '<td><div class="d-flex align-items-center gap-2">' +
-                '<div style="width:36px;height:36px;border-radius:10px;background:var(--sa-50);display:flex;align-items:center;justify-content:center;">' +
+                '<div style="width:36px;height:36px;border-radius: 5px;background:var(--sa-50);display:flex;align-items:center;justify-content:center;">' +
                     getFormIcon(item.formIcon, 18) +
                 '</div>' +
                 '<span style="font-weight:600">' + esc(item.formName) + '</span>' +

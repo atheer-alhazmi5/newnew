@@ -10,22 +10,22 @@
 .edit-modal-header .btn-close-x:hover { color:#fff; }
 .edit-modal-title { color:#fff; font-weight:800; font-size:18px; margin:0; }
 .edit-modal-subtitle { color:rgba(255,255,255,.7); font-size:14px; margin-top:2px; }
-.edit-user-info { background:var(--sa-50); border-radius:12px; padding:16px 20px; margin-bottom:20px; text-align:center; }
+.edit-user-info { background:var(--sa-50); border-radius: 8px; padding:16px 20px; margin-bottom:20px; text-align:center; }
 .edit-user-info .info-line { font-size:14px; color:var(--gray-700); margin-bottom:2px; }
 .edit-user-info .info-line strong { color:var(--gray-800); }
 .role-selector { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
-.role-btn { padding:10px 20px; border-radius:12px; border:2px solid #e5e5e5; background:var(--surface-0); font-family:'Cairo',sans-serif; font-weight:600; font-size:14px; color:var(--gray-600); cursor:pointer; transition:all .2s; flex:1; min-width:120px; text-align:center; }
+.role-btn { padding:10px 20px; border-radius: 8px; border: 1px solid #e5e5e5; background:var(--surface-0); font-family:'Cairo',sans-serif; font-weight:600; font-size:14px; color:var(--gray-600); cursor:pointer; transition:all .2s; flex:1; min-width:120px; text-align:center; }
 .role-btn:hover { border-color:var(--sa-300); color:var(--sa-700); }
 .role-btn.active { border-color:var(--sa-600); color:var(--sa-700); background:var(--sa-50); box-shadow:0 0 0 1px var(--sa-600); }
 .edit-modal-footer { padding:20px 28px; display:flex; gap:12px; border:none; }
-.edit-save-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; }
+.edit-save-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:var(--sa-600); color:#fff; transition:all .2s; }
 .edit-save-btn:hover { background:var(--sa-700); transform:translateY(-1px); }
-.edit-close-btn { padding:12px 32px; border-radius:12px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
+.edit-close-btn { padding:12px 32px; border-radius: 8px; font-size:15px; font-weight:700; font-family:'Cairo',sans-serif; border:none; cursor:pointer; background:#6b7280; color:#fff; transition:all .2s; }
 .edit-close-btn:hover { background:#4b5563; }
-.action-btn { min-width:78px; border-radius:12px; font-weight:700; padding:6px 12px; font-size:12px; line-height:1.2; }
-.action-btn-edit { border:2px solid #0f6b4a; color:#0f6b4a; background:var(--surface-0); }
+.action-btn { min-width:78px; border-radius: 8px; font-weight:700; padding:6px 12px; font-size:12px; line-height:1.2; }
+.action-btn-edit { border: 1px solid #0f6b4a; color:#0f6b4a; background:var(--surface-0); }
 .action-btn-edit:hover { background:#f0faf5; }
-.action-btn-stop { border:2px solid var(--gray-300); color:var(--gray-700); background:var(--surface-0); }
+.action-btn-stop { border: 1px solid var(--gray-300); color:var(--gray-700); background:var(--surface-0); }
 .action-btn-stop:hover { background:#f8fafc; }
 .action-btn-activate { border:none; color:#fff; background:#0f6b4a; }
 .action-btn-activate:hover { background:#0a583c; }
@@ -42,10 +42,10 @@
 .add-modal-subtitle { color:rgba(255,255,255,.75); font-size:14px; margin-top:4px; }
 .add-close { position:absolute; top:14px; left:14px; background:none; border:none; color:rgba(255,255,255,.75); font-size:24px; }
 .identity-row { display:flex; gap:10px; align-items:center; }
-.identity-search-btn { min-width:100px; border:none; border-radius:12px; background:#0f6b4a; color:#fff; font-weight:700; padding:10px 12px; }
-.profile-box { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px dashed #d1d5db; border-radius:12px; padding:12px; margin-bottom:12px; }
-.profile-img { width:54px; height:54px; border-radius:50%; object-fit:cover; border:2px solid #d1d5db; background:var(--surface-0); }
-.upload-btn { border:1px solid #d1d5db; background:var(--surface-0); border-radius:10px; font-weight:600; padding:7px 10px; font-size:12px; cursor:pointer; }
+.identity-search-btn { min-width:100px; border:none; border-radius: 8px; background:#0f6b4a; color:#fff; font-weight:700; padding:10px 12px; }
+.profile-box { display:flex; align-items:center; gap:12px; background:#f8fafc; border:1px dashed #d1d5db; border-radius: 8px; padding:12px; margin-bottom:12px; }
+.profile-img { width:54px; height:54px; border-radius:50%; object-fit:cover; border: 1px solid #d1d5db; background:var(--surface-0); }
+.upload-btn { border:1px solid #d1d5db; background:var(--surface-0); border-radius: 5px; font-weight:600; padding:7px 10px; font-size:12px; cursor:pointer; }
 .required-star { color:#ef4444; margin-right:4px; font-weight:700; }
 .lookup-result-section { display:none; margin-top:14px; border-top:1px solid #eceff3; padding-top:14px; }
 </style>
@@ -172,10 +172,10 @@
                 <div id="addUserError" class="alert alert-danger d-none"></div>
             </div>
             <div class="modal-footer" style="padding:20px 28px;border:none;justify-content:flex-start;">
-                <button class="btn btn-primary" style="border-radius:12px;padding:10px 24px;font-weight:700;" onclick="submitAddUser()">
+                <button class="btn btn-primary" style="border-radius: 8px;padding:10px 24px;font-weight:700;" onclick="submitAddUser()">
                     إضافة المستخدم للنظام
                 </button>
-                <button class="btn btn-secondary" style="border-radius:12px;padding:10px 24px;font-weight:700;" data-bs-dismiss="modal">إغلاق</button>
+                <button class="btn btn-secondary" style="border-radius: 8px;padding:10px 24px;font-weight:700;" data-bs-dismiss="modal">إغلاق</button>
             </div>
         </div>
     </div>
