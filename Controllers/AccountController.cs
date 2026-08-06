@@ -40,14 +40,14 @@ public class AccountController : BaseController
         if (!ModelState.IsValid)
             return View(model);
 
-        var username = model.Username.Trim().ToLower();
+        var username = model.Username.Trim();
         var password = model.Password;
         var ip = GetClientIp();
         var browser = GetBrowserName();
         var os = GetClientOS();
 
-        bool ldapOk = _ldap.IsEnabled && _ldap.Authenticate(username, password);
-        var user = await _ds.GetUserByUsernameAsync(username);
+        bool ldapOk = _ldap.IsEnabled && _ldap.Authenticate(username.ToLowerInvariant(), password);
+        var user = await _ds.GetUserByUsernameForLoginAsync(username);
 
         if (user == null && !ldapOk)
         {

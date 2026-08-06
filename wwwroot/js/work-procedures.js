@@ -350,6 +350,7 @@ async function wpLoad() {
     const search = document.getElementById('wpSearch')?.value || '';
     const status = document.getElementById('wpFilterStatus')?.value || '';
     const validity = document.getElementById('wpFilterValidity')?.value || '';
+    const procedureActionTypeId = document.getElementById('wpFilterActionType')?.value || '';
     const formDefinitionId = document.getElementById('wpFilterFormDef')?.value || '';
     const targetOrgUnitId = document.getElementById('wpFilterTargetOrg')?.value || '';
     const ownerOrgUnitId = document.getElementById('wpFilterOwnerOrg')?.value || '';
@@ -357,6 +358,7 @@ async function wpLoad() {
     const isActive = document.getElementById('wpFilterActive')?.value || '';
     const p = new URLSearchParams({ search, status, validity, isActive });
     if (formDefinitionId) p.set('formDefinitionId', formDefinitionId);
+    if (procedureActionTypeId) p.set('procedureActionTypeId', procedureActionTypeId);
     if (targetOrgUnitId) p.set('targetOrgUnitId', targetOrgUnitId);
     if (ownerOrgUnitId) p.set('ownerOrgUnitId', ownerOrgUnitId);
     if (executorRoleId) p.set('executorRoleId', executorRoleId);
@@ -410,6 +412,13 @@ function wpFillFilters(res) {
         (f) => f.name ?? f.Name ?? '',
         (f) => f.id ?? f.Id
     );
+    refill(
+        document.getElementById('wpFilterActionType'),
+        'نوع الإجراء',
+        wpLookups.procedureActionTypes || [],
+        (t) => t.name ?? t.Name ?? '',
+        (t) => t.id ?? t.Id
+    );
     const filHid = document.getElementById('wpFilterTargetOrg');
     const filLab = document.getElementById('wpFilterOuLabel');
     if (filHid && filLab && filHid.value) {
@@ -450,7 +459,7 @@ function wpFillFilters(res) {
 }
 
 function wpClear() {
-    ['wpSearch', 'wpFilterFormDef', 'wpFilterValidity', 'wpFilterExecutor', 'wpFilterStatus', 'wpFilterActive'].forEach(id => {
+    ['wpSearch', 'wpFilterFormDef', 'wpFilterActionType', 'wpFilterValidity', 'wpFilterExecutor', 'wpFilterStatus', 'wpFilterActive'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -478,10 +487,33 @@ function wpStatusBadge(status) {
     return `<span class="fd-badge ${cls}"><i class="bi ${icon}"></i>${lbl}</span>`;
 }
 
+/** ترتيب صفوف الجدول: إصدارات الإجراء الواحد متتالية (نفس wpBuildVersionSourceGroups). */
+function wpGroupProcedureRows(list) {
+    const rows = list || [];
+    if (!rows.length) return [];
+    const byId = new Map(rows.map((p) => [(p.id ?? p.Id), p]));
+    const items = rows.map((p) => {
+        const id = p.id ?? p.Id;
+        const rootRaw = p.versionRootProcedureId ?? p.VersionRootProcedureId;
+        const rootId = (rootRaw != null && rootRaw > 0) ? rootRaw : id;
+        return {
+            id,
+            rootId,
+            name: p.name ?? p.Name ?? '',
+            code: p.code ?? p.Code ?? '',
+            versionLabel: p.versionLabel ?? p.VersionLabel ?? 'V1.0',
+            status: p.status ?? p.Status ?? ''
+        };
+    });
+    return wpBuildVersionSourceGroups(items).flatMap((g) =>
+        g.items.map((it) => byId.get(it.id)).filter(Boolean)
+    );
+}
+
 function wpRenderTable() {
     const tbody = document.getElementById('wpBody');
     if (!tbody) return;
-    const list = wpData || [];
+    const list = wpGroupProcedureRows(wpData || []);
     wpCurrentList = list;
     if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="11"><div class="fd-empty-state"><i class="bi bi-diagram-3"></i><p>لا توجد إجراءات بعد</p></div></td></tr>`;
@@ -2417,6 +2449,58 @@ function wpWfCloseSection() {
     wpWfHideForm();
 }
 
+function wpWfBuildSaveStepsPayload(steps) {
+    return (steps || []).map((s) => ({
+        id: s.id,
+        sortOrder: s.sortOrder || 0,
+        isDecision: s.isDecision,
+        stepLabel: s.stepLabel || '',
+        executorRoleId: s.executorRoleId,
+        expectedDurationDays: s.expectedDurationDays || '',
+        expectedDurationHours: s.expectedDurationHours || '',
+        isConcurrentStep: !!s.isConcurrentStep,
+        escalationSyncFlags: s.escalationSyncFlags || null,
+        returnStepId: s.returnStepId,
+        progressStepId: s.progressStepId,
+        formDefinitionId: (s.formDefinitionId != null && s.formDefinitionId > 0) ? s.formDefinitionId : null,
+        formSectionId: (s.formSectionId != null && s.formSectionId > 0) ? s.formSectionId : null,
+        formStatusId: s.formStatusId,
+        notificationChannel: s.notificationChannel || '',
+        notificationChannels: Array.isArray(s.notificationChannels) && s.notificationChannels.length ? s.notificationChannels : null,
+        overdueNotificationText: s.overdueNotificationText || '',
+        executionNotificationText: s.executionNotificationText || '',
+        notes: s.notes || null,
+        assigneeMode: s.assigneeMode === 'fixed' ? 'fixed' : 'specific',
+        assigneeFixedType: s.assigneeFixedType || '',
+        assigneeOrgUnitId: (s.assigneeOrgUnitId != null && s.assigneeOrgUnitId > 0) ? s.assigneeOrgUnitId : null,
+        assigneeOrgUnitIds: (() => {
+            const ids = wpWfResolveAssigneeOrgUnitIds(s);
+            return ids.length ? ids : null;
+        })(),
+        allowedActions: Array.isArray(s.allowedActions) && s.allowedActions.length ? s.allowedActions : null,
+        concurrentStepId: (s.concurrentStepId != null && s.concurrentStepId > 0) ? s.concurrentStepId : null
+    }));
+}
+
+/** عند إصدار نسخة: إن كانت مسودة النسخة بلا خطوات، تُنسَخ من الإجراء المصدر. */
+async function wpWfTrySeedStepsFromVersionSource() {
+    if (wpModeKind !== 'version' || !wpVersionSourceId || !wpWfProcedureId) return false;
+    if (wpVersionSourceId === wpWfProcedureId) return false;
+    try {
+        const src = await apiFetch(`/WorkProcedures/GetWorkflowContext?workProcedureId=${wpVersionSourceId}`);
+        if (!src.success || !src.steps || !src.steps.length) return false;
+        const steps = src.steps.map(wpWfNormalizeStep);
+        const res = await apiFetch('/WorkProcedures/SaveWorkflowSteps', 'POST', {
+            workProcedureId: wpWfProcedureId,
+            steps: wpWfBuildSaveStepsPayload(steps)
+        });
+        return !!(res && res.success);
+    } catch (e) {
+        console.error('wpWfTrySeedStepsFromVersionSource', e);
+        return false;
+    }
+}
+
 async function wpWfLoad() {
     const id = wpWfProcedureId;
     if (!id) return;
@@ -2429,6 +2513,13 @@ async function wpWfLoad() {
         }
         wpWfCtx = res;
         wpWfSteps = (res.steps || []).map(wpWfNormalizeStep);
+        if (!wpWfSteps.length && wpModeKind === 'version' && wpVersionSourceId) {
+            const seeded = await wpWfTrySeedStepsFromVersionSource();
+            if (seeded) {
+                await wpWfLoad();
+                return;
+            }
+        }
         const sub = document.getElementById('wpWfSub');
         if (sub) sub.textContent = `${res.procedureCode || ''} — ${res.procedureName || ''}`;
         wpWfRenderTable();
@@ -2477,6 +2568,7 @@ function wpWfNormalizeStep(s) {
             const n = typeof v === 'number' ? v : parseInt(String(v || '0'), 10);
             return n > 0 ? n : null;
         })(),
+        assigneeOrgUnitIds: wpWfResolveAssigneeOrgUnitIds(s),
         allowedActions: actionsList,
         concurrentStepId: (() => {
             const v = s.concurrentStepId != null ? s.concurrentStepId : s.ConcurrentStepId;
@@ -2613,6 +2705,18 @@ function wpWfGoPage(p) {
     appPaginationScrollTop();
 }
 
+/** وحدات المنفذ الثابت (مدير/ممثل وحدة): قائمة أو مفرد للتوافق. */
+function wpWfResolveAssigneeOrgUnitIds(st) {
+    if (!st) return [];
+    const raw = st.assigneeOrgUnitIds != null ? st.assigneeOrgUnitIds : st.AssigneeOrgUnitIds;
+    if (Array.isArray(raw) && raw.length) {
+        return raw.map((x) => parseInt(x, 10)).filter((n) => n > 0);
+    }
+    const single = st.assigneeOrgUnitId != null ? st.assigneeOrgUnitId : st.AssigneeOrgUnitId;
+    const n = parseInt(String(single || '0'), 10);
+    return n > 0 ? [n] : [];
+}
+
 /** عرض اسم المنفذ (محدد=دور، أو ثابت=نوع + وحدة عند اللزوم). */
 function wpWfAssigneeLabel(s) {
     if (!s) return '—';
@@ -2621,10 +2725,18 @@ function wpWfAssigneeLabel(s) {
         const list = (wpWfCtx && wpWfCtx.fixedAssigneeTypes) || [];
         const t = list.find((x) => (x.code != null ? x.code : x.Code) === code);
         const tn = t ? esc(t.name != null ? t.name : t.Name) : esc(code || '—');
-        if (s.assigneeOrgUnitId) {
-            const ou = ((wpWfCtx && wpWfCtx.organizationalUnits) || []).find((u) => (u.id != null ? u.id : u.Id) === s.assigneeOrgUnitId);
-            const oun = ou ? esc(ou.name != null ? ou.name : ou.Name) : '';
-            return oun ? `${tn} <span class="text-muted">— ${oun}</span>` : tn;
+        if (wpWfFixedTypeNeedsOrgUnit(code)) {
+            const ids = wpWfResolveAssigneeOrgUnitIds(s);
+            if (ids.length) {
+                const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+                const names = ids.map((id) => {
+                    const ou = units.find((u) => (u.id != null ? u.id : u.Id) === id);
+                    return ou ? esc(ou.name != null ? ou.name : ou.Name) : '';
+                }).filter(Boolean);
+                if (!names.length) return tn;
+                if (names.length <= 2) return `${tn} <span class="text-muted">— ${names.join('، ')}</span>`;
+                return `${tn} <span class="text-muted">— ${names[0]}، ${names[1]} (+${names.length - 2})</span>`;
+            }
         }
         return tn;
     }
@@ -2690,6 +2802,16 @@ function wpWfShowEditForm(stepId) {
     wpWfRenderForm(stepId);
 }
 
+/** الخطوة الأولى في مسار سير العمل (إضافة بدون خطوات سابقة، أو تعديل أول خطوة). */
+function wpWfIsFirstStepForm(editId) {
+    const steps = (wpWfSteps || []).filter((s) => !s.isDecision).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    if (editId != null && editId > 0) {
+        const first = steps[0];
+        return !!(first && first.id === editId);
+    }
+    return steps.length === 0;
+}
+
 function wpWfRenderForm(editId) {
     const w = document.getElementById('wpWfFormWrap');
     if (!w) return;
@@ -2700,13 +2822,15 @@ function wpWfRenderForm(editId) {
     // عند التعديل: نلتزم بالقيمة المحفوظة (specific/fixed).
     const initialAssigneeMode = st ? (st.assigneeMode === 'fixed' ? 'fixed' : 'specific') : '';
     const initialFixedType = st ? (st.assigneeFixedType || '') : '';
-    const initialOrgUnitId = st ? (st.assigneeOrgUnitId || 0) : 0;
+    const initialOrgUnitIds = st ? wpWfResolveAssigneeOrgUnitIds(st) : [];
     const initialActions = (st && Array.isArray(st.allowedActions)) ? st.allowedActions.slice() : [];
     const initialChannels = wpWfResolveInitialChannels(st);
     const initialReturnId = st ? (st.returnStepId || 0) : 0;
     const initialConcurrentStepId = st ? (st.concurrentStepId || 0) : 0;
     const initialDays = st ? (st.expectedDurationDays || '') : '';
     const initialFormSectionId = st ? (st.formSectionId || st.FormSectionId || 0) : 0;
+    const isFirstStep = wpWfIsFirstStepForm(editId != null ? editId : null);
+    const laterFieldsHidden = isFirstStep ? 'display:none;' : '';
 
     const ttl = document.getElementById('wpWfStepModalTitle');
     const sub = document.getElementById('wpWfStepModalSub');
@@ -2763,7 +2887,7 @@ function wpWfRenderForm(editId) {
       <label><span class="required-star">*</span> الحالة</label>
       <select class="form-select" id="wpWfFormStatus"><option value="">—</option></select>
     </div>
-    <div class="fd-form-group wp-wf-duration-block">
+    <div class="fd-form-group wp-wf-duration-block" id="wpWfDurationGroup" style="${laterFieldsHidden}">
       <span class="wp-wf-duration-section-label">المدة المتوقعة للإنجاز</span>
       <div class="wp-wf-duration-pair">
         <div class="wp-wf-duration-unit">
@@ -2780,6 +2904,7 @@ function wpWfRenderForm(editId) {
     </div>
   </div>
 
+  <div id="wpWfLaterStepFields" style="${laterFieldsHidden}">
   <div class="fd-form-row cols-1">
     <div class="fd-form-group">
       <label>إشعار تجاوز المدة</label>
@@ -2825,6 +2950,7 @@ function wpWfRenderForm(editId) {
       </template>
     </div>
   </div>
+  </div>
 
   <div class="fd-form-row cols-1">
     <div class="fd-form-group">
@@ -2854,19 +2980,19 @@ function wpWfRenderForm(editId) {
         };
     }
 
-    // قنوات الإشعار + الإجراءات المسموحة
-    wpWfRenderChannels(initialChannels);
-    wpWfRenderAllowedActions(initialActions);
-
-    // قوائم الخطوات الفرعية (الرجوع/التزامن)
-    wpWfFillStepSelect('wpWfReturnStep', editId, initialReturnId);
-    wpWfFillStepSelect('wpWfConcurrentStep', editId, initialConcurrentStepId);
+    // قنوات الإشعار + الإجراءات المسموحة (الخطوة الأولى فقط — بدون هذه الحقول)
+    if (!isFirstStep) {
+        wpWfRenderChannels(initialChannels);
+        wpWfRenderAllowedActions(initialActions);
+        wpWfFillStepSelect('wpWfReturnStep', editId, initialReturnId);
+        wpWfFillStepSelect('wpWfConcurrentStep', editId, initialConcurrentStepId);
+    }
 
     // المكلف
     wpWfRenderAssigneeBlock(initialAssigneeMode, {
         roleId: st ? (st.executorRoleId || 0) : 0,
         fixedType: initialFixedType,
-        orgUnitId: initialOrgUnitId
+        orgUnitIds: initialOrgUnitIds
     });
 
     // ربط الأحداث
@@ -2874,16 +3000,18 @@ function wpWfRenderForm(editId) {
         r.addEventListener('change', () => {
             if (!r.checked) return;
             const mode = r.value;
-            wpWfRenderAssigneeBlock(mode, { roleId: 0, fixedType: '', orgUnitId: 0 });
+            wpWfRenderAssigneeBlock(mode, { roleId: 0, fixedType: '', orgUnitIds: [] });
             const sec = document.querySelector('.wp-wf-step-form');
             if (sec) sec.setAttribute('data-mode', mode);
         });
     });
 
-    wpWfUpdateReturnStepVisibility();
-    wpWfUpdateConcurrentStepVisibility();
-    wpWfUpdateChannelHint();
-    wpWfUpdateExecNoteState();
+    if (!isFirstStep) {
+        wpWfUpdateReturnStepVisibility();
+        wpWfUpdateConcurrentStepVisibility();
+        wpWfUpdateChannelHint();
+        wpWfUpdateExecNoteState();
+    }
 
     try {
         wpWfStepFormModal().show();
@@ -3022,19 +3150,6 @@ function wpWfFixedTypeNeedsOrgUnit(code) {
     return m ? !!(m.needsOrgUnit != null ? m.needsOrgUnit : m.NeedsOrgUnit) : false;
 }
 
-function wpWfOrgUnitOptionsHtml(selectedId) {
-    const list = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
-    return list.map((u) => {
-        const id = u.id != null ? u.id : u.Id;
-        const nm = u.name != null ? u.name : (u.Name || '');
-        const sel = selectedId && id === selectedId ? 'selected' : '';
-        return `<option value="${id}" ${sel}>${esc(nm)}</option>`;
-    }).join('');
-}
-
-/* ─── شجرة الوحدة التنظيمية للمنفذ (مطابقة لشكل قائمة المستفيد) ─────────── */
-let wpWfFixedOrgExpanded = {};
-
 function wpWfOuItemId(u)        { return u.id != null ? u.id : u.Id; }
 function wpWfOuItemParentId(u)  { return u.parentId != null ? u.parentId : u.ParentId; }
 function wpWfOuItemSortOrder(u) { return u.sortOrder != null ? u.sortOrder : (u.SortOrder != null ? u.SortOrder : 0); }
@@ -3062,7 +3177,10 @@ function wpWfOuBuildTreeMap() {
     return byParent;
 }
 
-function wpWfFixedOrgExpandAncestors(selectId) {
+/* ─── قائمة CheckBox للوحدات التنظيمية (مدير/ممثل وحدة — منفذ ثابت) ─────── */
+let wpWfFixedOrgCbExpanded = {};
+
+function wpWfFixedOrgCbExpandAncestors(selectId) {
     const sid = parseInt(selectId, 10) || 0;
     if (!sid) return;
     const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
@@ -3071,126 +3189,104 @@ function wpWfFixedOrgExpandAncestors(selectId) {
     while (cur) {
         const pid = wpWfOuItemParentId(cur);
         if (pid == null || pid === '' || !byParent[String(pid)]) break;
-        wpWfFixedOrgExpanded[String(pid)] = true;
+        wpWfFixedOrgCbExpanded[String(pid)] = true;
         cur = units.find((x) => wpWfOuItemId(x) === pid);
     }
 }
 
-function wpWfFixedOrgRenderRows(byParent, parentKey, depth, selectedId) {
+function wpWfOuRenderFixedCbRows(byParent, parentKey, depth, selSet) {
     const rows = byParent[parentKey] || [];
-    const sel = selectedId !== undefined && selectedId !== null ? String(selectedId) : '';
     let html = '';
     rows.forEach((u) => {
         const uid = wpWfOuItemId(u);
         const idStr = String(uid);
         const children = byParent[idStr] || [];
         const hasChildren = children.length > 0;
-        const expanded = !!wpWfFixedOrgExpanded[idStr];
-        const indent = depth * 22;
-        const rowSel = sel === idStr ? ' is-selected' : '';
-        const nmEsc = esc(wpWfOuItemName(u));
-        html += `<div class="wp-wf-ou-tree-row d-flex align-items-center${rowSel}" data-id="${uid}" data-name="${nmEsc}" role="option" dir="rtl" style="padding:8px 10px; padding-right:${12 + indent}px;">`;
+        const expanded = !!wpWfFixedOrgCbExpanded[idStr];
+        const pr = 10 + depth * 18;
+        const checked = selSet.has(uid);
+        const eid = `wpwfou_${uid}`;
+        html += `<div class="wp-dd-check-row wp-ou-tree-dd-row" style="padding-right:${pr}px;">`;
         if (hasChildren) {
-            html += `<button type="button" class="wp-wf-ou-tree-exp" data-exp="${idStr}" aria-expanded="${expanded}" title="${expanded ? 'طي' : 'توسيع'}">${expanded ? '−' : '+'}</button>`;
+            html += `<button type="button" class="wp-ou-tree-exp" onclick="event.preventDefault();event.stopPropagation();wpWfFixedOrgCbToggleExp('${idStr}')">${expanded ? '−' : '+'}</button>`;
         } else {
-            html += '<span class="wp-wf-ou-tree-exp-spacer" aria-hidden="true"></span>';
+            html += '<span class="wp-ou-tree-exp-spacer"></span>';
         }
-        html += `<span class="wp-wf-ou-tree-name flex-grow-1">${nmEsc}</span></div>`;
+        html += `<input type="checkbox" class="wp-dd-check-row-cb wp-wf-fixed-ou-cb" value="${uid}" id="${eid}" ${checked ? 'checked' : ''} onclick="event.stopPropagation()">`;
+        html += `<label class="wp-dd-check-row-label" for="${eid}">${esc(wpWfOuItemName(u))}</label></div>`;
         if (hasChildren && expanded) {
-            html += wpWfFixedOrgRenderRows(byParent, idStr, depth + 1, selectedId);
+            html += wpWfOuRenderFixedCbRows(byParent, idStr, depth + 1, selSet);
         }
     });
     return html;
 }
 
-function wpWfRenderFixedOrgPanel() {
-    const panel = document.getElementById('wpWfFixedOrgPanel');
-    if (!panel) return;
+function wpWfRenderFixedOrgCb(selectedIds) {
+    const host = document.getElementById('wpWfFixedOrgCbHost');
+    if (!host) return;
+    const sel = new Set(
+        (selectedIds || [])
+            .map((x) => (typeof x === 'number' ? x : parseInt(x, 10)))
+            .filter((n) => n > 0)
+    );
     const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
     if (!units.length) {
-        panel.innerHTML = '<div class="text-muted text-center py-3 px-2" style="font-size:13px;">لا توجد وحدات تنظيمية</div>';
+        host.innerHTML = '<div class="px-3 py-2 text-muted small">لا توجد وحدات تنظيمية.</div>';
+        wpWfUpdateFixedOrgAllLabel();
         return;
     }
+    sel.forEach((id) => wpWfFixedOrgCbExpandAncestors(id));
     const byParent = wpWfOuBuildTreeMap();
-    const hid = document.getElementById('wpWfFixedOrgUnit');
-    const selectedId = hid ? hid.value : '';
-    panel.innerHTML = wpWfFixedOrgRenderRows(byParent, '', 0, selectedId)
+    host.innerHTML = wpWfOuRenderFixedCbRows(byParent, '', 0, sel)
         || '<div class="text-muted text-center py-3">لا توجد وحدات</div>';
+    wpWireCbLabel('wpWfFixedOrgCbHost', 'wp-wf-fixed-ou-cb', 'wpWfFixedOrgDdLbl', 'اختر الوحدات التنظيمية...', 'محدد:');
+    host.querySelectorAll('.wp-wf-fixed-ou-cb').forEach((cb) => {
+        cb.addEventListener('change', () => wpWfUpdateFixedOrgAllLabel());
+    });
+    wpWfUpdateFixedOrgAllLabel();
 }
 
-function wpWfFixedOrgSyncLabel() {
-    const lbl = document.getElementById('wpWfFixedOrgLabel');
-    const hid = document.getElementById('wpWfFixedOrgUnit');
-    if (!lbl || !hid) return;
-    const sid = parseInt(hid.value, 10) || 0;
-    if (!sid) { lbl.textContent = '-- اختر --'; return; }
+function wpWfFixedOrgCbToggleExp(idStr) {
+    wpWfFixedOrgCbExpanded[idStr] = !wpWfFixedOrgCbExpanded[idStr];
+    const sel = wpCollectCheckedIds('wpWfFixedOrgCbHost', 'wp-wf-fixed-ou-cb');
+    wpWfRenderFixedOrgCb(sel);
+}
+
+function wpWfExpandAllFixedOrgBranches() {
+    const byParent = wpWfOuBuildTreeMap();
+    Object.keys(byParent).forEach((pk) => {
+        if (!pk) return;
+        if ((byParent[pk] || []).length) wpWfFixedOrgCbExpanded[pk] = true;
+    });
+}
+
+function wpWfAllFixedOrgIdsSelected() {
     const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
-    const u = units.find((x) => wpWfOuItemId(x) === sid);
-    lbl.textContent = u ? wpWfOuItemName(u) : '-- اختر --';
+    if (!units.length) return false;
+    const allIds = units.map((u) => wpWfOuItemId(u));
+    const sel = wpCollectCheckedIds('wpWfFixedOrgCbHost', 'wp-wf-fixed-ou-cb');
+    if (allIds.length !== sel.length) return false;
+    const set = new Set(sel);
+    return allIds.every((id) => set.has(id));
 }
 
-function wpWfFixedOrgTogglePanel() {
-    const panel = document.getElementById('wpWfFixedOrgPanel');
-    const trig = document.getElementById('wpWfFixedOrgTrigger');
-    if (!panel) return;
-    if (panel.classList.contains('d-none')) {
-        const hid = document.getElementById('wpWfFixedOrgUnit');
-        if (hid && hid.value) wpWfFixedOrgExpandAncestors(hid.value);
-        wpWfRenderFixedOrgPanel();
-        panel.classList.remove('d-none');
-        if (trig) trig.setAttribute('aria-expanded', 'true');
+function wpWfUpdateFixedOrgAllLabel() {
+    const span = document.getElementById('wpWfFixedOrgAllLabel');
+    if (!span) return;
+    span.textContent = wpWfAllFixedOrgIdsSelected() ? 'إلغاء الكل' : 'تحديد الكل';
+}
+
+function wpWfToggleAllFixedOrgs() {
+    const units = (wpWfCtx && wpWfCtx.organizationalUnits) || [];
+    if (!units.length) return;
+    const allIds = units.map((u) => wpWfOuItemId(u));
+    if (wpWfAllFixedOrgIdsSelected()) {
+        wpWfFixedOrgCbExpanded = {};
+        wpWfRenderFixedOrgCb([]);
     } else {
-        wpWfFixedOrgClosePanel();
+        wpWfExpandAllFixedOrgBranches();
+        wpWfRenderFixedOrgCb(allIds);
     }
-}
-
-function wpWfFixedOrgClosePanel() {
-    const panel = document.getElementById('wpWfFixedOrgPanel');
-    const trig = document.getElementById('wpWfFixedOrgTrigger');
-    if (panel) panel.classList.add('d-none');
-    if (trig) trig.setAttribute('aria-expanded', 'false');
-}
-
-function wpWfFixedOrgToggleExp(idStr) {
-    wpWfFixedOrgExpanded[idStr] = !wpWfFixedOrgExpanded[idStr];
-    wpWfRenderFixedOrgPanel();
-}
-
-function wpWfFixedOrgSelect(uid, name) {
-    const hid = document.getElementById('wpWfFixedOrgUnit');
-    const lbl = document.getElementById('wpWfFixedOrgLabel');
-    if (hid) hid.value = String(uid);
-    if (lbl) lbl.textContent = name || '— اختر —';
-    wpWfFixedOrgClosePanel();
-}
-
-/** ربط أحداث الشجرة (التوسيع/الاختيار + الإغلاق عند النقر خارجها). يُستدعى مرة واحدة. */
-function wpWfFixedOrgWireEvents() {
-    if (wpWfFixedOrgWireEvents._wired) return;
-    wpWfFixedOrgWireEvents._wired = true;
-    document.addEventListener('click', function (e) {
-        const panel = document.getElementById('wpWfFixedOrgPanel');
-        if (!panel || panel.classList.contains('d-none')) return;
-        const wrap = e.target.closest('.wp-wf-ou-tree-wrap');
-        if (wrap && wrap.contains(panel)) {
-            const expBtn = e.target.closest('.wp-wf-ou-tree-exp');
-            if (expBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                const eid = expBtn.getAttribute('data-exp');
-                if (eid) wpWfFixedOrgToggleExp(eid);
-                return;
-            }
-            const row = e.target.closest('.wp-wf-ou-tree-row');
-            if (row && row.getAttribute('data-id')) {
-                const uid = parseInt(row.getAttribute('data-id'), 10);
-                const nm = row.getAttribute('data-name') || '';
-                if (uid) wpWfFixedOrgSelect(uid, nm);
-            }
-            return;
-        }
-        wpWfFixedOrgClosePanel();
-    }, true);
 }
 
 /** يرسم قسم «المنفذ» حسب نوع المكلف (محدد / ثابت). الوضع الفارغ يخفي الكتلة. */
@@ -3206,7 +3302,7 @@ function wpWfRenderAssigneeBlock(mode, init) {
     host.style.display = '';
     if (mode === 'fixed') {
         const showOrg = wpWfFixedTypeNeedsOrgUnit(init.fixedType);
-        const initOrgId = (init && init.orgUnitId) ? String(init.orgUnitId) : '';
+        const initOrgIds = init.orgUnitIds || (init.orgUnitId ? [init.orgUnitId] : []);
         host.innerHTML = `
             <div class="fd-form-group">
                 <label><span class="required-star">*</span> المنفذ</label>
@@ -3215,19 +3311,25 @@ function wpWfRenderAssigneeBlock(mode, init) {
                     ${wpWfFixedTypeOptionsHtml(init.fixedType)}
                 </select>
             </div>
-            <div class="fd-form-group" id="wpWfFixedOrgGroup" style="display:${showOrg ? '' : 'none'};">
-                <label><span class="required-star">*</span> الوحدة التنظيمية للمنفذ</label>
-                <div class="wp-wf-ou-tree-wrap">
-                    <input type="hidden" id="wpWfFixedOrgUnit" value="${initOrgId}">
-                    <button type="button" class="form-select wp-wf-ou-tree-trigger text-end w-100" id="wpWfFixedOrgTrigger" onclick="event.preventDefault();wpWfFixedOrgTogglePanel();" aria-expanded="false" aria-haspopup="listbox">
-                        <span class="wp-wf-ou-tree-label text-truncate d-block" id="wpWfFixedOrgLabel">-- اختر --</span>
+            <div class="fd-form-group fd-form-group--wp-dd" id="wpWfFixedOrgGroup" style="display:${showOrg ? '' : 'none'};">
+                <label><span class="required-star">*</span> الوحدات التنظيمية للمنفذ</label>
+                <div class="dropdown wp-dd w-100">
+                    <button class="dropdown-toggle wp-dd-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <span id="wpWfFixedOrgDdLbl">اختر الوحدات التنظيمية...</span>
                     </button>
-                    <div class="wp-wf-ou-tree-panel d-none" id="wpWfFixedOrgPanel" role="listbox"></div>
+                    <div class="dropdown-menu wp-dd-menu w-100 p-0">
+                        <div class="wp-target-ou-toolbar d-flex align-items-center justify-content-between gap-2 px-2 py-2 border-bottom" style="border-color:var(--gray-200)!important;background:var(--gray-50);">
+                            <span class="text-muted mb-0" style="font-size:11px;font-weight:700;">اختيار سريع</span>
+                            <button type="button" class="wp-select-all-btn" onclick="event.preventDefault();event.stopPropagation();wpWfToggleAllFixedOrgs();">
+                                <i class="bi bi-check2-all"></i> <span id="wpWfFixedOrgAllLabel">تحديد الكل</span>
+                            </button>
+                        </div>
+                        <div id="wpWfFixedOrgCbHost"></div>
+                    </div>
                 </div>
             </div>`;
-        wpWfFixedOrgExpanded = {};
-        wpWfFixedOrgSyncLabel();
-        wpWfFixedOrgWireEvents();
+        wpWfFixedOrgCbExpanded = {};
+        if (showOrg) wpWfRenderFixedOrgCb(initOrgIds);
     } else {
         host.innerHTML = `
             <div class="fd-form-group" style="grid-column:1 / -1;">
@@ -3243,7 +3345,13 @@ function wpWfRenderAssigneeBlock(mode, init) {
 function wpWfOnFixedTypeChange() {
     const v = (document.getElementById('wpWfFixedType') || {}).value || '';
     const grp = document.getElementById('wpWfFixedOrgGroup');
-    if (grp) grp.style.display = wpWfFixedTypeNeedsOrgUnit(v) ? '' : 'none';
+    const needs = wpWfFixedTypeNeedsOrgUnit(v);
+    if (grp) grp.style.display = needs ? '' : 'none';
+    if (needs) {
+        const prev = wpCollectCheckedIds('wpWfFixedOrgCbHost', 'wp-wf-fixed-ou-cb');
+        wpWfFixedOrgCbExpanded = {};
+        wpWfRenderFixedOrgCb(prev);
+    }
 }
 
 /** يحدد القنوات الابتدائية مع التوافق مع التخزين القديم (channel مفرد). */
@@ -3309,7 +3417,10 @@ function wpWfUpdateChannelHint() {
 function wpWfRenderAllowedActions(selected) {
     const host = document.getElementById('wpWfActionsHost');
     if (!host) return;
-    const list = (wpWfCtx && wpWfCtx.allowedStepActions) || [];
+    const list = ((wpWfCtx && wpWfCtx.allowedStepActions) || []).filter((a) => {
+        const code = a.code != null ? a.code : a.Code;
+        return code !== 'request_clarification';
+    });
     const sel = new Set((selected || []).map(String));
     let html = '';
     list.forEach((a) => {
@@ -3446,6 +3557,7 @@ async function wpWfSubmitForm() {
     let executorRoleId = 0;
     let assigneeFixedType = '';
     let assigneeOrgUnitId = null;
+    let assigneeOrgUnitIds = null;
     if (assigneeMode === 'specific') {
         executorRoleId = parseInt(document.getElementById('wpWfExecutorRoleN')?.value || '0', 10);
         if (executorRoleId <= 0) return showToast('اختر المنفذ', 'error');
@@ -3453,42 +3565,51 @@ async function wpWfSubmitForm() {
         assigneeFixedType = (document.getElementById('wpWfFixedType')?.value || '').trim();
         if (!assigneeFixedType) return showToast('اختر نوع المنفذ', 'error');
         if (wpWfFixedTypeNeedsOrgUnit(assigneeFixedType)) {
-            assigneeOrgUnitId = parseInt(document.getElementById('wpWfFixedOrgUnit')?.value || '0', 10);
-            if (!assigneeOrgUnitId || assigneeOrgUnitId <= 0)
-                return showToast('الوحدة التنظيمية للمنفذ مطلوبة', 'error');
+            const ids = wpCollectCheckedIds('wpWfFixedOrgCbHost', 'wp-wf-fixed-ou-cb');
+            if (!ids.length) return showToast('الوحدات التنظيمية للمنفذ مطلوبة', 'error');
+            assigneeOrgUnitIds = ids;
+            assigneeOrgUnitId = ids.length === 1 ? ids[0] : null;
         }
     }
 
     const fs = parseInt(document.getElementById('wpWfFormStatus')?.value || '0', 10);
     if (fs <= 0) return showToast('الحالة مطلوبة', 'error');
 
-    const daysRaw = (document.getElementById('wpWfDays')?.value || '').trim();
+    const isFirstStep = wpWfIsFirstStepForm(editId || null);
+
     let daysStr = '';
-    if (daysRaw !== '') {
-        const daysNum = parseInt(daysRaw, 10);
-        if (isNaN(daysNum) || daysNum < 0) return showToast('المدة المتوقعة للإنجاز يجب أن تكون رقماً موجباً أو صفراً', 'error');
-        daysStr = String(daysNum);
+    let channels = [];
+    let execNote = '';
+    let allowed = [];
+    let returnStepId = null;
+    let concurrentStepId = null;
+    let overdueText = '';
+
+    if (!isFirstStep) {
+        const daysRaw = (document.getElementById('wpWfDays')?.value || '').trim();
+        if (daysRaw !== '') {
+            const daysNum = parseInt(daysRaw, 10);
+            if (isNaN(daysNum) || daysNum < 0) return showToast('المدة المتوقعة للإنجاز يجب أن تكون رقماً موجباً أو صفراً', 'error');
+            daysStr = String(daysNum);
+        }
+        channels = Array.from(document.querySelectorAll('.wp-wf-channel-cb:checked')).map((cb) => cb.value);
+        execNote = channels.length ? (document.getElementById('wpWfExecNote')?.value?.trim() || '') : '';
+        allowed = Array.from(document.querySelectorAll('.wp-wf-action-cb:checked')).map((cb) => cb.value);
+        overdueText = document.getElementById('wpWfOverdue')?.value?.trim() || '';
+        if (allowed.includes('return')) {
+            returnStepId = parseInt(document.getElementById('wpWfReturnStep')?.value || '0', 10) || null;
+            if (!returnStepId) return showToast('خطوة الرجوع مطلوبة', 'error');
+        }
+        if (allowed.includes('concurrent_approvals')) {
+            concurrentStepId = parseInt(document.getElementById('wpWfConcurrentStep')?.value || '0', 10) || null;
+            if (!concurrentStepId) return showToast('خطوة التزامن مطلوبة', 'error');
+        }
     }
 
     const binding = wpWfResolveStepFormBinding();
     if (binding.error) return showToast(binding.error, 'error');
     const fd = binding.formDefinitionId || 0;
     const formSectionId = binding.formSectionId;
-    const channels = Array.from(document.querySelectorAll('.wp-wf-channel-cb:checked')).map((cb) => cb.value);
-    const execNote = channels.length ? (document.getElementById('wpWfExecNote')?.value?.trim() || '') : '';
-
-    const allowed = Array.from(document.querySelectorAll('.wp-wf-action-cb:checked')).map((cb) => cb.value);
-
-    let returnStepId = null;
-    if (allowed.includes('return')) {
-        returnStepId = parseInt(document.getElementById('wpWfReturnStep')?.value || '0', 10) || null;
-        if (!returnStepId) return showToast('خطوة الرجوع مطلوبة', 'error');
-    }
-    let concurrentStepId = null;
-    if (allowed.includes('concurrent_approvals')) {
-        concurrentStepId = parseInt(document.getElementById('wpWfConcurrentStep')?.value || '0', 10) || null;
-        if (!concurrentStepId) return showToast('خطوة التزامن مطلوبة', 'error');
-    }
 
     const step = {
         id: editId || wpWfNextStepId(),
@@ -3499,6 +3620,7 @@ async function wpWfSubmitForm() {
         assigneeMode,
         assigneeFixedType,
         assigneeOrgUnitId,
+        assigneeOrgUnitIds,
         expectedDurationDays: daysStr,
         expectedDurationHours: '',
         isConcurrentStep: false,
@@ -3510,10 +3632,10 @@ async function wpWfSubmitForm() {
         formStatusId: fs,
         notificationChannel: channels.length ? (channels.includes('in_app') ? 'in_app' : channels[0]) : '',
         notificationChannels: channels.length ? channels : null,
-        overdueNotificationText: document.getElementById('wpWfOverdue')?.value?.trim() || '',
+        overdueNotificationText: overdueText,
         executionNotificationText: execNote,
         notes: document.getElementById('wpWfNotes')?.value?.trim() || null,
-        allowedActions: allowed,
+        allowedActions: allowed.length ? allowed : null,
         concurrentStepId
     };
 
@@ -3546,32 +3668,7 @@ async function wpWfSaveAll() {
     if (!wpWfProcedureId) return;
     const payload = {
         workProcedureId: wpWfProcedureId,
-        steps: wpWfSteps.map((s) => ({
-            id: s.id,
-            sortOrder: s.sortOrder || 0,
-            isDecision: s.isDecision,
-            stepLabel: s.stepLabel || '',
-            executorRoleId: s.executorRoleId,
-            expectedDurationDays: s.expectedDurationDays || '',
-            expectedDurationHours: s.expectedDurationHours || '',
-            isConcurrentStep: !!s.isConcurrentStep,
-            escalationSyncFlags: s.escalationSyncFlags || null,
-            returnStepId: s.returnStepId,
-            progressStepId: s.progressStepId,
-            formDefinitionId: (s.formDefinitionId != null && s.formDefinitionId > 0) ? s.formDefinitionId : null,
-            formSectionId: (s.formSectionId != null && s.formSectionId > 0) ? s.formSectionId : null,
-            formStatusId: s.formStatusId,
-            notificationChannel: s.notificationChannel || '',
-            notificationChannels: Array.isArray(s.notificationChannels) && s.notificationChannels.length ? s.notificationChannels : null,
-            overdueNotificationText: s.overdueNotificationText || '',
-            executionNotificationText: s.executionNotificationText || '',
-            notes: s.notes || null,
-            assigneeMode: s.assigneeMode === 'fixed' ? 'fixed' : 'specific',
-            assigneeFixedType: s.assigneeFixedType || '',
-            assigneeOrgUnitId: (s.assigneeOrgUnitId != null && s.assigneeOrgUnitId > 0) ? s.assigneeOrgUnitId : null,
-            allowedActions: Array.isArray(s.allowedActions) && s.allowedActions.length ? s.allowedActions : null,
-            concurrentStepId: (s.concurrentStepId != null && s.concurrentStepId > 0) ? s.concurrentStepId : null
-        }))
+        steps: wpWfBuildSaveStepsPayload(wpWfSteps)
     };
     try {
         const res = await apiFetch('/WorkProcedures/SaveWorkflowSteps', 'POST', payload);

@@ -1223,10 +1223,16 @@ public class OutboxController : BaseController
             var ft = (st.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
             if (ft == "unit_manager" || ft == "unit_representative")
             {
-                if (st.AssigneeOrgUnitId.HasValue && st.AssigneeOrgUnitId.Value > 0)
+                var ouIds = WorkflowExecutionHelper.ResolveAssigneeScopeUnitIds(st.AssigneeOrgUnitId, st.AssigneeOrgUnitIds, Array.Empty<int>());
+                if (ouIds.Count > 0)
                 {
-                    var u = units.FirstOrDefault(x => x.Id == st.AssigneeOrgUnitId.Value);
-                    return u != null ? $"({u.Name})" : "—";
+                    var names = ouIds
+                        .Select(id => units.FirstOrDefault(x => x.Id == id)?.Name)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .ToList();
+                    if (names.Count == 0) return "—";
+                    if (names.Count <= 2) return $"({string.Join("، ", names)})";
+                    return $"({names[0]}، {names[1]} (+{names.Count - 2}))";
                 }
                 return "(حسب الوحدات المستهدفة)";
             }
@@ -1271,6 +1277,7 @@ public class OutboxController : BaseController
         public string AssigneeMode { get; set; } = "specific";
         public string AssigneeFixedType { get; set; } = "";
         public int? AssigneeOrgUnitId { get; set; }
+        public List<int>? AssigneeOrgUnitIds { get; set; }
         public List<string>? AllowedActions { get; set; }
         public string NotificationChannel { get; set; } = "in_app";
         public List<string>? NotificationChannels { get; set; }
@@ -1381,6 +1388,7 @@ public class OutboxController : BaseController
         public string AssigneeMode { get; set; } = "specific";
         public string AssigneeFixedType { get; set; } = "";
         public int? AssigneeOrgUnitId { get; set; }
+        public List<int>? AssigneeOrgUnitIds { get; set; }
     }
 
     /// <summary>
@@ -1430,12 +1438,8 @@ public class OutboxController : BaseController
         {
             var ft = (firstStep.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
 
-            // الوحدات المستهدفة للبحث: AssigneeOrgUnitId إن وُجد، وإلا الوحدات المستهدفة في الإجراء
-            var scopeUnitIds = new List<int>();
-            if (firstStep.AssigneeOrgUnitId.HasValue && firstStep.AssigneeOrgUnitId.Value > 0)
-                scopeUnitIds.Add(firstStep.AssigneeOrgUnitId.Value);
-            else
-                scopeUnitIds.AddRange(targetOrgIds);
+            var scopeUnitIds = WorkflowExecutionHelper.ResolveAssigneeScopeUnitIds(
+                firstStep.AssigneeOrgUnitId, firstStep.AssigneeOrgUnitIds, targetOrgIds);
 
             if (ft == "unit_manager")
             {

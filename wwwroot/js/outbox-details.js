@@ -326,12 +326,18 @@ function obdAutoDataHtml(fieldType, v) {
         var cell;
         if (val && String(val).indexOf('data:image') === 0) {
             cell = '<img src="' + obEscAttr(String(val)) + '" alt="" style="max-height:52px;max-width:140px;object-fit:contain;">';
+        } else if (k === 'signature' && val && String(val).length > 40) {
+            cell = '<span class="badge bg-success" style="font-size:11px;"><i class="bi bi-patch-check-fill"></i> توقيع معتمد</span>';
         } else {
             cell = val ? esc(String(val)) : '<span class="text-muted">—</span>';
         }
         return { label: label, cell: cell };
     });
     if (!rows.length) return '<div class="obd-ro-value empty">—</div>';
+    if (fieldType === 'بيانات التصديق' && typeof fdAutoDataCertGridWrap === 'function' && typeof fdAutoDataCertCellHtml === 'function') {
+        var grid = rows.map(function (r) { return fdAutoDataCertCellHtml(r.label, r.cell, false); }).join('');
+        return fdAutoDataCertGridWrap(grid);
+    }
     var body = rows.map(function (r) {
         return '<tr><th scope="row" style="background:var(--gray-50);width:40%;">' + esc(r.label) + '</th><td>' + r.cell + '</td></tr>';
     }).join('');

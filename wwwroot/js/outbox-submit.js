@@ -796,6 +796,24 @@ function obsFormatValueHtml(item) {
         return '<a href="' + obsEscAttr(String(v)) + '" target="_blank" rel="noopener" style="color:var(--info-700);direction:ltr;">' + esc(String(v)) + '</a>';
     }
     if ((t === 'البيانات التلقائية للمستفيد' || t === 'بيانات التصديق') && v && typeof v === 'object' && !Array.isArray(v)) {
+        if (t === 'بيانات التصديق' && typeof fdAutoDataCertGridWrap === 'function' && typeof fdAutoDataCertCellHtml === 'function' && typeof fdAutoDataLabelForKey === 'function') {
+            var certGrid = Object.keys(v).map(function (k) {
+                var lbl = fdAutoDataLabelForKey('certification', k);
+                var val = v[k];
+                var cell;
+                if (k === 'photo' && val && String(val).indexOf('data:image') === 0) {
+                    cell = '<img src="' + obsEscAttr(String(val)) + '" alt="" style="max-width:56px;max-height:56px;border-radius:50%;object-fit:cover;">';
+                } else if (k === 'signature' && val && String(val).indexOf('data:image') === 0) {
+                    cell = '<img src="' + obsEscAttr(String(val)) + '" alt="" style="max-height:48px;max-width:140px;object-fit:contain;">';
+                } else if (k === 'signature' && val && String(val).length > 40) {
+                    cell = '<span class="badge bg-success" style="font-size:11px;"><i class="bi bi-patch-check-fill"></i> توقيع معتمد</span>';
+                } else {
+                    cell = val ? esc(String(val)) : '<span class="text-muted">—</span>';
+                }
+                return fdAutoDataCertCellHtml(lbl, cell, false);
+            }).join('');
+            return fdAutoDataCertGridWrap(certGrid);
+        }
         return Object.keys(v).map(function (k) {
             var lbl = k;
             if (typeof fdAutoDataLabelForKey === 'function') {

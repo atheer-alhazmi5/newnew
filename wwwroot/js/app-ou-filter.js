@@ -210,7 +210,8 @@ window.AppOuFilter = (function () {
     function setUnits(id, orgUnitFilters, isAdmin, orgUnitsForSelect) {
         var inst = instances[id];
         if (!inst) return;
-        var src = isAdmin ? orgUnitFilters : (orgUnitsForSelect || orgUnitFilters);
+        // فلتر الجدول: orgUnitFilters = كل الوحدات الفعّالة (مصدر موحّد — مطابق لمدير النظام).
+        var src = (orgUnitFilters && orgUnitFilters.length) ? orgUnitFilters : (orgUnitsForSelect || []);
         inst.units = mapOrgUnits(src);
         inst.expanded = {};
         renderPanel(inst);

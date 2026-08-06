@@ -69,6 +69,13 @@
 .pn-prev-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:16px 20px; }
 .pn-preview-img   { width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px; }
 .pn-preview-video { width:100%;border-radius:8px;margin-top:10px; }
+/* محرر المحتوى — نفس تنسيق دليل المستخدم */
+.ug-rich-editor { border: 1px solid var(--gray-200); border-radius: 5px; background:var(--surface-0); }
+.ug-rich-editor .ql-toolbar { border:none; border-bottom:2px solid var(--gray-100); border-radius: 5px 10px 0 0; font-family:'Cairo',sans-serif; }
+.ug-rich-editor .ql-container { border:none; font-family:'Cairo',sans-serif; font-size:14px; min-height:180px; border-radius:0 0 10px 10px; }
+.ug-rich-editor .ql-editor { min-height:160px; direction:rtl; text-align:right; }
+.ug-rich-content { line-height:1.85; font-size:14px; color:var(--gray-800); padding:12px 14px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius: 5px; max-height:320px; overflow-y:auto; direction:rtl; text-align:right; }
+.ug-rich-content img { max-width:100%; height:auto; border-radius:8px; }
 .pn-action-btn-viewers { border-color:var(--gray-500);color:var(--gray-700);background:var(--surface-0); }
 .pn-action-btn-viewers:hover { background:var(--gray-50); }
 .pn-viewers-table thead th { background:var(--gray-50)!important;font-size:12px;font-weight:700;text-align:center; }
@@ -218,9 +225,7 @@
                         </div>
                         <!-- TEXT -->
                         <div id="pnZoneText" style="display:none;">
-                            <textarea class="form-control" id="pnTextContent" rows="4"
-                                      placeholder="اكتب نص الإشعار هنا..."
-                                      style="border-radius: 5px;font-size:13px;resize:vertical;"></textarea>
+                            <div id="pnContentEditor" class="ug-rich-editor"></div>
                         </div>
                         <!-- IMAGE -->
                         <div id="pnZoneImage" style="display:none;">
@@ -372,7 +377,7 @@
 
 <!-- ═══ DETAILS MODAL ═══ -->
 <div class="modal fade" id="pnDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
             <div class="modal-header" style="background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:16px 22px;">
                 <h5 class="modal-title fw-bold" style="font-size:15px;margin:0;">
@@ -392,7 +397,7 @@
             <div class="modal-header" style="background:var(--gray-50);border-bottom:1px solid var(--gray-200);padding:16px 22px;">
                 <h5 class="modal-title fw-bold" style="font-size:15px;margin:0;">
                     <i class="bi bi-people" style="color:var(--sa-600);margin-left:6px;"></i>
-                    المراجعون — <span id="pnViewersTitle"></span>
+                    المطلعون — <span id="pnViewersTitle"></span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -447,7 +452,12 @@
     </div>
 </div>
 
+@section Styles {
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+}
+
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
 /* ── State ── */
 let pnAllData = [], pnFiltered = [], pnPage = 1;
@@ -456,6 +466,44 @@ let pnDeleteId = null, pnAllUsers = [], pnAllDepts = [];
 let pnModal, pnPreviewModal, pnDetailsModal, pnDeleteModal, pnViewersModal;
 let pnPublishAfterSave = false;
 let pnLastDisplayLocation = 'landing';
+let pnQuill = null;
+const pnQuillToolbar = [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ align: [] }],
+    ['link'],
+    ['clean']
+];
+
+function pnInitQuillEditor() {
+    if (typeof Quill === 'undefined') return;
+    const el = document.getElementById('pnContentEditor');
+    if (!el || pnQuill) return;
+    pnQuill = new Quill(el, {
+        theme: 'snow',
+        modules: { toolbar: pnQuillToolbar },
+        placeholder: 'اكتب نص الإشعار هنا...'
+    });
+}
+
+function pnGetEditorHtml() {
+    if (!pnQuill) return '';
+    return pnQuill.root.innerHTML.trim();
+}
+
+function pnSetEditorHtml(html) {
+    if (!pnQuill) return;
+    if (!html || html === '<p><br></p>') pnQuill.setText('');
+    else pnQuill.root.innerHTML = html;
+}
+
+function pnRenderRichContentHtml(html) {
+    const s = (html || '').trim();
+    if (!s) return '<span class="text-muted">—</span>';
+    if (/<[a-z][\s\S]*>/i.test(s)) return '<div class="ug-rich-content">' + s + '</div>';
+    return '<div class="ug-rich-content"><p style="margin:0;">' + esc(s) + '</p></div>';
+}
 
 function pnIsPublicDisplayLocation(loc) {
     return loc === 'landing' || loc === 'login';
@@ -669,7 +717,7 @@ function pnRender() {
                     <button type="button" class="pn-action-btn ui-act-btn pn-action-btn-viewers" onclick="pnShowViewers(${d.id})" title="المراجعون${(d.viewerCount||0) > 0 ? ' (' + d.viewerCount + ')' : ''}"><i class="bi bi-people"></i></button>
                     <button type="button" class="pn-action-btn ui-act-btn pn-action-btn-edit" title="تعديل" onclick="pnOpenEditModal(${d.id})"><i class="bi bi-pencil"></i></button>
                     ${pubBtn}
-                    <button type="button" class="pn-action-btn ui-act-btn pn-action-btn-delete" title="حذف" onclick="pnOpenDeleteModal(${d.id},'${esc(d.title).replace(/'/g, "\\'")}')"><i class="bi bi-trash3"></i></button>
+                    <button type="button" class="pn-action-btn ui-act-btn pn-action-btn-delete" title="حذف" onclick="pnOpenDeleteModal(${d.id})"><i class="bi bi-trash3"></i></button>
                 </div>
             </td>
         </tr>`;
@@ -691,9 +739,10 @@ function pnGoPage(p) {
 function pnResetModal() {
     document.getElementById('pnEditId').value = '0';
     document.getElementById('pnModalTitle').textContent = 'إضافة إشعار منبثق';
-    ['pnCategory','pnContentType','pnTitle','pnTextContent'].forEach(id => {
+    ['pnCategory','pnContentType','pnTitle'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
+    pnSetEditorHtml('');
     document.getElementById('pnTitleFontSize').value = '18';
     document.getElementById('pnTitleColor').value = '#1F2A37';
     document.getElementById('pnAttachmentUrl').value = '';
@@ -725,7 +774,7 @@ function pnOpenModal() {
     pnPublishAfterSave = false;
     pnResetModal();
     pnModal.show();
-    setTimeout(() => document.getElementById('pnTitle').focus(), 300);
+    setTimeout(() => { pnInitQuillEditor(); pnSetEditorHtml(''); document.getElementById('pnTitle').focus(); }, 300);
 }
 
 async function pnOpenEditModal(id) {
@@ -741,7 +790,8 @@ async function pnOpenEditModal(id) {
     document.getElementById('pnTitle').value = d.title;
     document.getElementById('pnTitleFontSize').value = d.titleFontSize || '18';
     document.getElementById('pnTitleColor').value = d.titleColor || '#1F2A37';
-    document.getElementById('pnTextContent').value = d.textContent || '';
+    pnInitQuillEditor();
+    pnSetEditorHtml(d.textContent || '');
     if (d.attachmentUrl) {
         document.getElementById('pnAttachmentUrl').value  = d.attachmentUrl;
         document.getElementById('pnAttachmentMime').value = d.attachmentMime;
@@ -764,6 +814,7 @@ function pnSyncContentType() {
     document.getElementById('pnZoneText').style.display  = ct === 'text'  ? 'block' : 'none';
     document.getElementById('pnZoneImage').style.display = ct === 'image' ? 'block' : 'none';
     document.getElementById('pnZoneVideo').style.display = ct === 'video' ? 'block' : 'none';
+    if (ct === 'text') pnInitQuillEditor();
 }
 function pnSyncPeriod() {
     const val = document.querySelector('input[name="pnPeriod"]:checked')?.value;
@@ -977,8 +1028,8 @@ function pnOpenPreview() {
     const body = document.getElementById('pnPreviewBody');
     let bodyHtml = '';
     if (ct === 'text') {
-        const txt = document.getElementById('pnTextContent').value;
-        bodyHtml = `<p style="color:var(--gray-700);font-size:14px;line-height:1.7;margin:0;">${esc(txt)||'(لا يوجد نص)'}</p>`;
+        const txt = pnGetEditorHtml();
+        bodyHtml = txt ? pnRenderRichContentHtml(txt) : '<p style="color:var(--gray-400);font-size:13px;margin:0;">(لا يوجد نص)</p>';
     } else if (ct === 'image') {
         const url = document.getElementById('pnAttachmentUrl').value;
         bodyHtml = url
@@ -1026,7 +1077,7 @@ async function pnDoSave(publish) {
         category, contentType, title,
         titleFontSize: document.getElementById('pnTitleFontSize').value,
         titleColor:    document.getElementById('pnTitleColor').value,
-        textContent:   contentType === 'text' ? document.getElementById('pnTextContent').value : '',
+        textContent:   contentType === 'text' ? pnGetEditorHtml() : '',
         attachmentUrl:  document.getElementById('pnAttachmentUrl').value,
         attachmentMime: document.getElementById('pnAttachmentMime').value,
         externalUrl:    '',
@@ -1069,7 +1120,12 @@ async function pnTogglePublish(id, publish) {
 }
 
 /* ── Delete ── */
-function pnOpenDeleteModal(id, title) { pnDeleteId = id; document.getElementById('pnDeleteTitle').textContent = title; pnDeleteModal.show(); }
+function pnOpenDeleteModal(id) {
+    pnDeleteId = id;
+    const item = pnAllData.find(x => x.id === id);
+    document.getElementById('pnDeleteTitle').textContent = item ? item.title : '';
+    pnDeleteModal.show();
+}
 async function pnDeleteConfirm() {
     if (!pnDeleteId) return;
     const btn = document.getElementById('pnDeleteConfirmBtn');
@@ -1112,36 +1168,59 @@ async function pnShowViewers(id) {
 }
 
 /* ── Details ── */
+function pnDetailRow(label, innerHtml) {
+    return '<div class="d-flex flex-wrap py-2 border-bottom border-light" style="gap:8px;"><div class="text-muted fw-bold" style="min-width:170px;">' + esc(label) + '</div><div class="flex-grow-1">' + innerHtml + '</div></div>';
+}
+function pnDetailTargetTable(colTitle, names, emptyMsg) {
+    const list = Array.isArray(names) ? names : [];
+    let tbody;
+    if (!list.length) {
+        tbody = '<tr><td colspan="2" class="text-muted text-center py-3 small">' + esc(emptyMsg) + '</td></tr>';
+    } else {
+        tbody = list.map(function (name, idx) {
+            return '<tr><td style="text-align:center;font-weight:700;color:var(--gray-500);">' + (idx + 1) + '</td><td>' + esc(String(name)) + '</td></tr>';
+        }).join('');
+    }
+    return '<div class="h-100">' +
+        '<div class="text-muted fw-bold mb-2" style="font-size:12px;">' + esc(colTitle) + '</div>' +
+        '<div class="table-responsive rounded border" style="max-height:280px;overflow-y:auto;">' +
+        '<table class="table table-sm table-striped mb-0" style="font-size:13px;">' +
+        '<thead class="table-light"><tr><th scope="col" style="width:44px;text-align:center;">ت</th><th scope="col">الاسم الكامل</th></tr></thead>' +
+        '<tbody>' + tbody + '</tbody></table></div></div>';
+}
+function pnDetailTargetsBlock(d) {
+    if (pnIsPublicDisplayLocation(d.displayLocation || '')) {
+        return pnDetailRow('المستهدفون', '<span class="text-muted">جميع الموظفين وجميع الوحدات التنظيمية (تلقائي لهذا المكان)</span>');
+    }
+    const usersCol = pnDetailTargetTable('المستفيدون', d.targetUserNames || [], '—');
+    const deptsCol = pnDetailTargetTable('الوحدات التنظيمية', d.targetDeptNames || [], '—');
+    return '<div class="py-2 border-bottom border-light"><div class="row g-3">' +
+        '<div class="col-md-6">' + usersCol + '</div>' +
+        '<div class="col-md-6">' + deptsCol + '</div></div></div>';
+}
 async function pnShowDetails(id) {
     const d = pnAllData.find(x => x.id === id);
     if (!d) return;
     const body = document.getElementById('pnDetailsBody');
-    const row = (label, val) => `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-        <div style="font-size:12px;font-weight:700;color:var(--gray-500);min-width:130px;">${label}</div>
-        <div style="font-size:13px;color:var(--gray-800);flex:1;">${val}</div></div>`;
-    body.innerHTML = [
-        row('العنوان',`<span style="font-size:${d.titleFontSize}px;color:${d.titleColor};font-weight:700;">${esc(d.title)}</span>`),
-        row('التصنيف', esc(d.category)),
-        row('نوع المحتوى', `<span class="pn-badge ${CT_CLS[d.contentType]||'pn-b-text'}"><i class="bi ${CT_ICONS[d.contentType]||'bi-file-text'}"></i> ${CT_LABELS[d.contentType]||d.contentType}</span>`),
-        row('فترة الظهور', d.displayPeriod==='specific' ? `${d.startDate||'—'} إلى ${d.endDate||'—'}` : PER_LABELS[d.displayPeriod]||'—'),
-        row('مكان الظهور', LOC_LABELS[d.displayLocation]||'—'),
-        row('الحالة', d.status==='published'
+    body.innerHTML =
+        pnDetailRow('العنوان', '<span style="font-size:' + esc(d.titleFontSize) + 'px;color:' + esc(d.titleColor) + ';font-weight:700;">' + esc(d.title) + '</span>') +
+        pnDetailRow('التصنيف', esc(d.category)) +
+        pnDetailRow('نوع المحتوى', '<span class="pn-badge ' + (CT_CLS[d.contentType] || 'pn-b-text') + '"><i class="bi ' + (CT_ICONS[d.contentType] || 'bi-file-text') + '"></i> ' + esc(CT_LABELS[d.contentType] || d.contentType) + '</span>') +
+        pnDetailRow('فترة الظهور', d.displayPeriod === 'specific' ? esc((d.startDate || '—') + ' إلى ' + (d.endDate || '—')) : esc(PER_LABELS[d.displayPeriod] || '—')) +
+        pnDetailRow('مكان الظهور', esc(LOC_LABELS[d.displayLocation] || '—')) +
+        pnDetailRow('الحالة', d.status === 'published'
             ? '<span class="pn-badge pn-b-published"><i class="bi bi-check-circle-fill"></i> منشور</span>'
-            : '<span class="pn-badge pn-b-draft"><i class="bi bi-pencil-square"></i> مسودة</span>'),
-        row('الموظفون', pnIsPublicDisplayLocation(d.displayLocation||'')
-            ? 'جميع الموظفين (تلقائي لهذا المكان)'
-            : ((d.targetUserNames||[]).join('، ')||'—')),
-        row('الوحدات', pnIsPublicDisplayLocation(d.displayLocation||'')
-            ? 'جميع الوحدات التنظيمية (تلقائي لهذا المكان)'
-            : ((d.targetDeptNames||[]).join('، ')||'—')),
-        row('أُنشئ بواسطة', esc(d.createdBy||'—')),
-        row('تاريخ الإنشاء', esc(d.createdAt||'—')),
-        row('تاريخ النشر',   esc(d.publishedAt||'—')),
-        d.textContent ? row('المحتوى',`<div style="background:var(--gray-50);padding:10px;border-radius:8px;font-size:13px;">${esc(d.textContent)}</div>`) : '',
-        d.attachmentUrl ? row('المرفق', d.attachmentMime==='video'
-            ? `<video src="${d.attachmentUrl}" controls style="max-width:100%;border-radius:8px;"></video>`
-            : `<img src="${d.attachmentUrl}" style="max-width:100%;border-radius:8px;" />`) : ''
-    ].join('');
+            : '<span class="pn-badge pn-b-draft"><i class="bi bi-pencil-square"></i> مسودة</span>') +
+        pnDetailTargetsBlock(d) +
+        pnDetailRow('أُنشئ بواسطة', esc(d.createdBy || '—')) +
+        pnDetailRow('تاريخ الإنشاء', esc(d.createdAt || '—')) +
+        pnDetailRow('آخر تحديث بواسطة', esc(d.updatedBy || '—')) +
+        pnDetailRow('تاريخ التحديث', esc(d.updatedAt || '—')) +
+        pnDetailRow('تاريخ النشر', esc(d.publishedAt || '—')) +
+        (d.textContent ? pnDetailRow('المحتوى', pnRenderRichContentHtml(d.textContent)) : '') +
+        (d.attachmentUrl ? pnDetailRow('المرفق', d.attachmentMime === 'video'
+            ? '<video src="' + String(d.attachmentUrl).replace(/"/g, '&quot;') + '" controls style="max-width:100%;border-radius:8px;"></video>'
+            : '<img src="' + String(d.attachmentUrl).replace(/"/g, '&quot;') + '" style="max-width:100%;border-radius:8px;" alt="" />') : '');
     pnDetailsModal.show();
 }
 

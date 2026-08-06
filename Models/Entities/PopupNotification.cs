@@ -25,5 +25,7 @@ public class PopupNotification
     public string Status          { get; set; } = "draft";     
     public string CreatedBy       { get; set; } = "";
     public DateTime CreatedAt     { get; set; } = DateTime.Now;
+    public string? UpdatedBy      { get; set; }
+    public DateTime? UpdatedAt    { get; set; }
     public DateTime? PublishedAt  { get; set; }
 }

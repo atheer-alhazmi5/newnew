@@ -250,6 +250,8 @@
 .sys-popup-head-warning { background:linear-gradient(135deg,#B42318,#DC2626);padding:18px 22px;color:#fff;flex-shrink:0; }
 .sys-popup-body { background:var(--surface-0);padding:20px 22px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:80px;max-height:calc(90vh - 200px);-webkit-overflow-scrolling:touch; }
 .sys-popup-body p { word-break:break-word; }
+.sys-popup-body .ug-rich-content { line-height:1.85;font-size:14px;color:var(--gray-800);direction:rtl;text-align:right;word-break:break-word; }
+.sys-popup-body .ug-rich-content img { max-width:100%;height:auto;border-radius:8px; }
 .sys-popup-footer { background:var(--surface-0);padding:0 22px 18px;display:flex;justify-content:center;flex-shrink:0;border-top:1px solid var(--gray-100); }
 .sys-popup-close { background:var(--surface-0);border:1.5px solid var(--gray-200);border-radius:20px;padding:7px 30px;font-weight:700;font-size:13px;color:var(--gray-700);cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s; }
 .sys-popup-close:hover { background:var(--gray-50); }
@@ -299,9 +301,11 @@ document.addEventListener('DOMContentLoaded', async function initSysPopups() {
         let bodyHtml = '';
         if (p.contentType === 'text') {
             const txt = (p.textContent || '').trim();
-            bodyHtml = txt
-                ? `<p style="color:var(--gray-700);font-size:14px;line-height:1.85;margin:0;white-space:pre-wrap;word-break:break-word;">${escHtml(txt)}</p>`
-                : '';
+            if (txt) {
+                bodyHtml = /<[a-z][\s\S]*>/i.test(txt)
+                    ? `<div class="ug-rich-content">${txt}</div>`
+                    : `<p style="color:var(--gray-700);font-size:14px;line-height:1.85;margin:0;white-space:pre-wrap;word-break:break-word;">${escHtml(txt)}</p>`;
+            }
         } else if (p.contentType === 'image' && mediaUrl) {
             bodyHtml = `<img src="${mediaUrl}" alt="" style="width:100%;max-width:100%;height:auto;border-radius: 5px;object-fit:contain;display:block;" />`;
         } else if (p.contentType === 'video' && mediaUrl) {

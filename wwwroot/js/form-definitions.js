@@ -13,6 +13,7 @@ let fdOrgUnits      = [];
 let fdStep1OrgUnits = [];
 let fdCreatorOrgUnitId = 0;
 let fdCreatorOrgUnitName = '';
+let fdCurrentUser = '';
 let fdFilterOuExpanded = {};
 
 // ترقيم صفحات جدول النماذج (مستقل تماماً عن مُرقّم صفحات النموذج داخل المعالج)
@@ -1635,7 +1636,10 @@ function fdMergeSpecialProps(type, pfx, result) {
         if (p.perOptionOther && o.choiceOtherMarks != null) result.choiceOtherMarks = o.choiceOtherMarks;
     });
     if (def.props.some(p => p.type === 'fileTypesPick')) result.fileTypes = fdCollectFileTypesPick(pfx);
-    if (def.props.some(p => p.type === 'autoDataPick')) result.selectedKeys = fdCollectAutoDataPick(pfx);
+    if (def.props.some(p => p.type === 'autoDataPick')) {
+        result.selectedKeys = fdCollectAutoDataPick(pfx);
+        if (type === 'بيانات التصديق' && !result.selectedKeys.includes('todayDate')) result.selectedKeys.push('todayDate');
+    }
     return result;
 }
 
@@ -1648,10 +1652,17 @@ function fdCollectAutoDataPick(pfx) {
 function fdApplyAutoDataPickFromProps(pfx, po) {
     const wrap = document.getElementById(pfx + '_autoData_pick');
     if (!wrap) return;
-    const set = {};
+    const group = wrap.getAttribute('data-fd-pick-group') || 'beneficiary';
     const raw = po && po.selectedKeys;
+    const hasKeys = Array.isArray(raw) ? raw.length > 0 : !!(raw != null && String(raw).trim());
+    if (group === 'certification' && !hasKeys) {
+        wrap.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = true; });
+        return;
+    }
+    const set = {};
     if (Array.isArray(raw)) raw.forEach(k => { if (k) set[String(k)] = true; });
     else if (raw != null && String(raw).trim()) String(raw).split(/[,\s]+/).forEach(k => { if (k) set[k.trim()] = true; });
+    if (group === 'certification') set.todayDate = true;
     wrap.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = !!set[c.value]; });
 }
 
@@ -1661,6 +1672,13 @@ function fdParseSelectedAutoKeys(props) {
     if (Array.isArray(keys)) return keys.map(String).filter(Boolean);
     if (keys != null && String(keys).trim()) return String(keys).split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
     return [];
+}
+
+/** مفاتيح بيانات التصديق المعروضة — يُضمَّن «تاريخ اليوم» دائماً. */
+function fdResolveAutoDataKeys(props, fieldType) {
+    const keys = fdParseSelectedAutoKeys(props);
+    if (fieldType === 'بيانات التصديق' && !keys.includes('todayDate')) keys.push('todayDate');
+    return keys;
 }
 
 function fdMapProfileToAutoValues(profile, keys) {
@@ -1704,15 +1722,38 @@ function fdAutoDataLabelForKey(group, key) {
     return hit ? hit.label : key;
 }
 
+function fdAutoDataValueHtml(k, val) {
+    if (k === 'photo' && val && val.indexOf('data:image') === 0) {
+        return `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-photo" style="max-width:72px;max-height:72px;border-radius:50%;object-fit:cover;border: 1px solid var(--gray-200);">`;
+    }
+    if (k === 'signature' && val && val.indexOf('data:image') === 0) {
+        return `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-signature" style="max-height:64px;max-width:180px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;background:#fff;padding:4px;">`;
+    }
+    if (k === 'signature' && val.length > 40) {
+        return '<span class="badge bg-success" style="font-size:11px;"><i class="bi bi-patch-check-fill"></i> توقيع معتمد</span>';
+    }
+    return val ? esc(val) : '<span class="text-muted">—</span>';
+}
+
+function fdAutoDataCertCellHtml(lbl, valHtml, pending) {
+    const pendingCls = pending ? ' fd-auto-data-row-pending' : '';
+    const valMuted = pending ? ' text-muted' : '';
+    return `<div class="col"><div class="fd-auto-data-row fd-auto-data-cert-cell${pendingCls}" style="display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;height:100%;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);font-size:12px;line-height:1.35;">${esc(lbl)}</span><span class="fd-auto-data-val${valMuted}" style="font-weight:600;color:var(--gray-800);word-break:break-word;line-height:1.4;">${valHtml}</span></div></div>`;
+}
+
+function fdAutoDataCertGridWrap(innerHtml) {
+    return `<div class="fd-auto-data-rows row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-2 fd-auto-data-grid-cert">${innerHtml}</div>`;
+}
+
 function fdBuildAutoDataFieldHtml(f, props, opt) {
     opt = opt || {};
     const isCert = f.fieldType === 'بيانات التصديق';
     const group = isCert ? 'certification' : 'beneficiary';
-    const keys = fdParseSelectedAutoKeys(props);
+    const keys = fdResolveAutoDataKeys(props, f.fieldType);
     const uid = `fdAuto_${String(f.id ?? 'x')}_${String(f.fieldName || 'f').replace(/\s+/g, '_')}`.replace(/[^\w\-]/g, '');
     const fillPhase = opt.fillPhase || 'submit';
     const profile = opt.beneficiaryProfile || (typeof window !== 'undefined' ? window.fdBeneficiaryFillProfile : null) || null;
-    const showPending = isCert && fillPhase !== 'certification';
+    const showPending = isCert && fillPhase !== 'certification' && fillPhase !== 'approve';
     let values = {};
     if (!showPending && profile) values = fdMapProfileToAutoValues(profile, keys);
     else if (showPending) keys.forEach(k => { values[k] = ''; });
@@ -1721,31 +1762,30 @@ function fdBuildAutoDataFieldHtml(f, props, opt) {
     if (!keys.length) {
         rows = '<p class="text-muted small mb-0" style="font-style:normal;">لم يُحدد أي عنصر للعرض.</p>';
     } else if (showPending) {
-        rows = '<div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius: 5px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div>';
+        rows = '<div class="col-12"><div class="fd-auto-data-pending alert alert-light border mb-0 py-2 px-3" style="font-size:12.5px;font-weight:600;color:var(--gray-600);border-radius: 5px;"><i class="bi bi-hourglass-split"></i> تُعبَّأ تلقائياً عند التصديق</div></div>';
         keys.forEach(k => {
-            rows += `<div class="fd-auto-data-row fd-auto-data-row-pending" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);">${esc(fdAutoDataLabelForKey(group, k))}</span><span class="fd-auto-data-val text-muted">—</span></div>`;
+            rows += fdAutoDataCertCellHtml(fdAutoDataLabelForKey(group, k), '<span class="text-muted">—</span>', true);
+        });
+    } else if (isCert) {
+        keys.forEach(k => {
+            const lbl = fdAutoDataLabelForKey(group, k);
+            const val = values[k] || '';
+            rows += fdAutoDataCertCellHtml(lbl, fdAutoDataValueHtml(k, val), false);
         });
     } else {
         keys.forEach(k => {
             const lbl = fdAutoDataLabelForKey(group, k);
             const val = values[k] || '';
-            let valHtml;
-            if (k === 'photo' && val && val.indexOf('data:image') === 0) {
-                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-photo" style="max-width:72px;max-height:72px;border-radius:50%;object-fit:cover;border: 1px solid var(--gray-200);">`;
-            } else if (k === 'signature' && val && val.indexOf('data:image') === 0) {
-                valHtml = `<img src="${fdEscAttr(val)}" alt="" class="fd-auto-data-signature" style="max-height:64px;max-width:180px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;background:#fff;padding:4px;">`;
-            } else if (k === 'signature' && val.length > 40) {
-                valHtml = '<span class="badge bg-success" style="font-size:11px;"><i class="bi bi-patch-check-fill"></i> توقيع معتمد</span>';
-            } else {
-                valHtml = val ? esc(val) : '<span class="text-muted">—</span>';
-            }
-            rows += `<div class="fd-auto-data-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);min-width:38%;">${esc(lbl)}</span><span class="fd-auto-data-val" style="flex:1;text-align:end;font-weight:600;color:var(--gray-800);">${valHtml}</span></div>`;
+            rows += `<div class="fd-auto-data-row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--surface-0);border:1px solid var(--gray-100);border-radius:8px;font-size:13px;"><span class="fd-auto-data-lbl" style="font-weight:700;color:var(--gray-600);min-width:38%;">${esc(lbl)}</span><span class="fd-auto-data-val" style="flex:1;text-align:end;font-weight:600;color:var(--gray-800);">${fdAutoDataValueHtml(k, val)}</span></div>`;
         });
     }
 
+    const rowsWrap = isCert
+        ? (keys.length ? fdAutoDataCertGridWrap(rows) : `<div class="fd-auto-data-rows">${rows}</div>`)
+        : `<div class="fd-auto-data-rows d-flex flex-column gap-2">${rows}</div>`;
     const storeJson = fdEscAttr(JSON.stringify(values));
     return `<div class="fd-auto-data-block border rounded-3 p-3" style="background:var(--gray-50);border-color:var(--gray-200)!important;" data-fd-auto-type="${fdEscAttr(f.fieldType)}">
-        <div class="fd-auto-data-rows d-flex flex-column gap-2">${rows}</div>
+        ${rowsWrap}
         <input type="hidden" class="fd-auto-data-store" id="${fdEscAttr(uid)}" value="${storeJson}" data-fd-auto-readonly="1">
     </div>`;
 }
@@ -2205,7 +2245,42 @@ let fdCalOpenPanel = null;
 
 const FD_CAL_POP_PANEL_WIDTH = 256;
 
-/** تموضع اللوحة بجانب المجموعة (نفس العرض الهجري/الميلادي). */
+/** إرجاع اللوحة إلى غلاف الحقل الأصلي بعد الإغلاق. */
+function fdCalRestorePanelToWrap(panel) {
+    if (!panel) return;
+    const home = panel._fdHomeWrap;
+    if (home && panel.parentElement !== home) home.appendChild(panel);
+}
+
+/** نقل اللوحة إلى body لتفادي انزياح position:fixed داخل modal (transform). */
+function fdCalAttachPanelToBody(panel, wrap) {
+    if (!panel || !wrap) return;
+    if (!panel._fdHomeWrap) panel._fdHomeWrap = wrap;
+    panel._fdAttachedWrap = wrap;
+    if (panel.parentElement !== document.body) document.body.appendChild(panel);
+}
+
+function fdCalClosePanel(panel) {
+    if (!panel) return;
+    panel.style.display = 'none';
+    fdCalRestorePanelToWrap(panel);
+    panel._fdAttachedWrap = null;
+    if (fdCalOpenPanel === panel) fdCalOpenPanel = null;
+}
+
+function fdCalSchedulePosition(panel, wrap) {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+    });
+}
+
+function fdCalShowPanel(panel, wrap) {
+    fdCalAttachPanelToBody(panel, wrap);
+    panel.style.display = 'block';
+    fdCalOpenPanel = panel;
+}
+
+/** تموضع اللوحة أسفل حقل التاريخ مباشرة مع البقاء داخل نطاق العرض. */
 function fdCalPositionPanel(panel, wrap) {
     if (!panel || !wrap) return;
     const anchor = wrap.querySelector('.fd-date-input-group') || wrap;
@@ -2245,17 +2320,14 @@ if (typeof document !== 'undefined') {
     document.addEventListener('click', e => {
         const t = e.target;
         if (!fdCalOpenPanel) return;
-        const host = fdCalOpenPanel.closest && fdCalOpenPanel.closest('.fd-date-field-wrap');
-        if (host && host.contains(t)) return;
-        fdCalOpenPanel.style.display = 'none';
-        try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
-        fdCalOpenPanel = null;
+        const wrap = fdCalOpenPanel._fdAttachedWrap;
+        if (wrap && wrap.contains(t)) return;
+        if (fdCalOpenPanel.contains(t)) return;
+        fdCalClosePanel(fdCalOpenPanel);
     });
     document.addEventListener('keydown', e => {
         if ((e.key === 'Escape' || e.code === 'Escape') && fdCalOpenPanel) {
-            fdCalOpenPanel.style.display = 'none';
-            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
-            fdCalOpenPanel = null;
+            fdCalClosePanel(fdCalOpenPanel);
         }
     });
 }
@@ -2372,9 +2444,7 @@ function fdGregorianRenderMonth(panel, wrap) {
             if (!fdHijriInRange(g, minG, maxG)) return;
             const iso = `${gy}-${String(gm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
             if (face) face.value = iso;
-            panel.style.display = 'none';
-            try { panel._fdAttachedWrap = null; } catch (_) {}
-            if (fdCalOpenPanel === panel) fdCalOpenPanel = null;
+            fdCalClosePanel(panel);
         };
     });
 }
@@ -2426,9 +2496,7 @@ function fdHijriRenderMonth(panel, wrap) {
             const face = wrap.querySelector('.fd-hijri-face');
             if (store) store.value = stor;
             if (face) face.value = stor;
-            panel.style.display = 'none';
-            try { panel._fdAttachedWrap = null; } catch (_) {}
-            if (fdCalOpenPanel === panel) fdCalOpenPanel = null;
+            fdCalClosePanel(panel);
         };
     });
 }
@@ -2477,7 +2545,7 @@ function fdHijriBindWrap(wrap) {
         wrap.setAttribute('data-fd-hy', String(hy));
         wrap.setAttribute('data-fd-hm', String(hm));
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     });
     panel.querySelector('.fd-cal-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
     panel.querySelector('.fd-cal-next')?.addEventListener('click', ev => {
@@ -2488,7 +2556,7 @@ function fdHijriBindWrap(wrap) {
         wrap.setAttribute('data-fd-hy', String(hy));
         wrap.setAttribute('data-fd-hm', String(hm));
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     });
     panel.querySelector('.fd-cal-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
     panel.querySelector('.fd-cal-clear')?.addEventListener('click', ev => {
@@ -2496,35 +2564,23 @@ function fdHijriBindWrap(wrap) {
         ev.stopPropagation();
         if (store) store.value = '';
         if (face) face.value = '';
-        if (fdCalOpenPanel === panel) {
-            panel.style.display = 'none';
-            panel._fdAttachedWrap = null;
-            fdCalOpenPanel = null;
-        }
+        if (fdCalOpenPanel === panel) fdCalClosePanel(panel);
     });
 
     function togglePop(e) {
         e.preventDefault();
         e.stopPropagation();
         const wasOpen = (fdCalOpenPanel === panel && panel.style.display !== 'none');
-        if (fdCalOpenPanel && fdCalOpenPanel !== panel) {
-            fdCalOpenPanel.style.display = 'none';
-            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
-            fdCalOpenPanel = null;
-        }
+        if (fdCalOpenPanel && fdCalOpenPanel !== panel) fdCalClosePanel(fdCalOpenPanel);
         if (wasOpen) {
-            panel.style.display = 'none';
-            fdCalOpenPanel = null;
-            panel._fdAttachedWrap = null;
+            fdCalClosePanel(panel);
             return;
         }
         if (btn?.disabled || face?.readOnly) return;
         fdHijriNormalizeFaceAndStore(wrap);
-        fdCalOpenPanel = panel;
-        panel._fdAttachedWrap = wrap;
-        panel.style.display = 'block';
+        fdCalShowPanel(panel, wrap);
         fdHijriRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     }
     btn?.addEventListener('click', togglePop);
     face?.addEventListener('click', togglePop);
@@ -2855,7 +2911,7 @@ function fdGregorianCalBindWrap(wrap) {
         wrap.setAttribute('data-fd-gy', String(gy));
         wrap.setAttribute('data-fd-gm', String(gm));
         fdGregorianRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     });
     panel.querySelector('.fd-cal-next')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
     panel.querySelector('.fd-cal-next')?.addEventListener('click', ev => {
@@ -2866,33 +2922,23 @@ function fdGregorianCalBindWrap(wrap) {
         wrap.setAttribute('data-fd-gy', String(gy));
         wrap.setAttribute('data-fd-gm', String(gm));
         fdGregorianRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     });
     panel.querySelector('.fd-cal-clear')?.addEventListener('mousedown', ev => { ev.preventDefault(); });
     panel.querySelector('.fd-cal-clear')?.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
         face.value = '';
-        if (fdCalOpenPanel === panel) {
-            panel.style.display = 'none';
-            panel._fdAttachedWrap = null;
-            fdCalOpenPanel = null;
-        }
+        if (fdCalOpenPanel === panel) fdCalClosePanel(panel);
     });
 
     function togglePop(e) {
         e.preventDefault();
         e.stopPropagation();
         const wasOpen = (fdCalOpenPanel === panel && panel.style.display !== 'none');
-        if (fdCalOpenPanel && fdCalOpenPanel !== panel) {
-            fdCalOpenPanel.style.display = 'none';
-            try { fdCalOpenPanel._fdAttachedWrap = null; } catch (_) {}
-            fdCalOpenPanel = null;
-        }
+        if (fdCalOpenPanel && fdCalOpenPanel !== panel) fdCalClosePanel(fdCalOpenPanel);
         if (wasOpen) {
-            panel.style.display = 'none';
-            fdCalOpenPanel = null;
-            panel._fdAttachedWrap = null;
+            fdCalClosePanel(panel);
             return;
         }
         if (btn.disabled || face.readOnly) return;
@@ -2902,11 +2948,9 @@ function fdGregorianCalBindWrap(wrap) {
             wrap.setAttribute('data-fd-gy', String(p.y));
             wrap.setAttribute('data-fd-gm', String(p.m));
         }
-        fdCalOpenPanel = panel;
-        panel._fdAttachedWrap = wrap;
-        panel.style.display = 'block';
+        fdCalShowPanel(panel, wrap);
         fdGregorianRenderMonth(panel, wrap);
-        requestAnimationFrame(() => fdCalPositionPanel(panel, wrap));
+        fdCalSchedulePosition(panel, wrap);
     }
     btn.addEventListener('click', togglePop);
     face.addEventListener('click', togglePop);
@@ -3106,6 +3150,25 @@ function fdIvParseOptionalFloat(v) {
     return Number.isFinite(n) ? n : null;
 }
 
+function fdIvParseFieldDecimals(props, ft) {
+    const raw = props && props.decimals != null && props.decimals !== '' ? parseInt(String(props.decimals), 10) : NaN;
+    if (Number.isFinite(raw) && raw >= 0) return raw;
+    return ft === 'عملة' ? 2 : 0;
+}
+
+function fdNumDecPlacesInValue(s) {
+    const t = String(s != null ? s : '').trim().replace(/,/g, '.');
+    if (!t || t === '-' || t === '-.') return 0;
+    const ix = t.indexOf('.');
+    if (ix < 0) return 0;
+    return t.length - ix - 1;
+}
+
+function fdNumDecMsg(dec) {
+    if (dec <= 0) return 'يُسمح بإدخال أعداد صحيحة فقط (بدون خانات عشرية)';
+    return `عدد الخانات العشرية المسموح: ${dec}`;
+}
+
 function fdIvUsesInlineValidation(f) {
     const t = f.fieldType;
     return t === 'الاسم الكامل' || t === 'نص قصير' || t === 'رقم الهاتف' || t === 'البريد الإلكتروني'
@@ -3189,9 +3252,12 @@ function fdIvValidateWrap(wrap) {
         if (!s) return '';
         const num = parseFloat(s.replace(/,/g, '').replace(/\s+/g, ''));
         if (!Number.isFinite(num)) return '';
+        if (ft === 'رقم' || ft === 'عملة') {
+            const dec = fdIvParseFieldDecimals(props, ft);
+            if (fdNumDecPlacesInValue(s) > dec) return fdNumDecMsg(dec);
+        }
         const mn = fdIvParseOptionalFloat(props.minValue);
         const mx = fdIvParseOptionalFloat(props.maxValue);
-        if (mn === null && mx === null) return '';
         if (mn !== null && num < mn) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
         if (mx !== null && num > mx) return fdIvRangeMsg(loLbl(mn), hiLbl(mx));
         return '';
@@ -3218,6 +3284,9 @@ function fdValidateInteractivePreview(root) {
 
     scope.querySelectorAll('input.fd-spin-input').forEach(el => {
         if (!el.readOnly && !el.disabled) fdSpinClamp(el);
+    });
+    scope.querySelectorAll('input.fd-num-dec-input').forEach(el => {
+        if (!el.readOnly && !el.disabled) fdNumDecClamp(el, true);
     });
 
     scope.querySelectorAll('.fd-file-upload-wrap').forEach(w => fdFileUploadSetErr(w, ''));
@@ -3253,6 +3322,11 @@ function fdIvBindLive(root) {
             && scope.contains(target) && !target.readOnly && !target.disabled
             && (ev.type === 'input' || ev.type === 'change' || ev.type === 'blur')) {
             fdSpinClamp(target);
+        }
+        if (target && target.matches && target.matches('input.fd-num-dec-input')
+            && scope.contains(target) && !target.readOnly && !target.disabled
+            && (ev.type === 'input' || ev.type === 'change' || ev.type === 'blur')) {
+            fdNumDecClamp(target, ev.type === 'blur' || ev.type === 'change');
         }
         const wrapIv = target && target.closest ? target.closest('.fd-iv-wrap[data-fd-iv="1"]') : null;
         if (wrapIv && scope.contains(wrapIv)) {
@@ -3439,10 +3513,10 @@ function fdBuildFieldInput(f, opt) {
     } else if (f.fieldType==='رقم') {
         const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
-        let dec = (props.decimals != null && props.decimals !== '') ? parseInt(props.decimals, 10) : 0;
-        if (isNaN(dec) || dec < 0) dec = 0;
+        let dec = fdIvParseFieldDecimals(props, 'رقم');
         const stepVal = dec > 0 ? (1 / Math.pow(10, dec)) : 1;
-        inp = `<input type="number" class="form-control" placeholder="${ph}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk('text-align:left;direction:ltr;')}>`;
+        const numDecEv = props.readOnly ? '' : ' oninput="fdNumDecClamp(this)" onblur="fdNumDecClamp(this,true)"';
+        inp = `<input type="number" class="form-control fd-num-dec-input" placeholder="${ph}" value="${defVal}" step="${stepVal}" data-fd-decimals="${dec}"${numDecEv}${mn}${mx}${reqAttr}${roAttr}${ttAttr}${mk('text-align:left;direction:ltr;')}>`;
     } else if (f.fieldType==='دوار رقمي') {
         const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
@@ -3681,11 +3755,12 @@ function fdBuildFieldInput(f, opt) {
         inp = `<hr style="border:none;border-top:${lt}px ${ls} ${lc};margin:8px 0;"${ttAttr}>`;
     } else if (f.fieldType==='عملة') {
         const cur = props.currency || 'ر.س';
-        const dec = (props.decimals != null && props.decimals !== '') ? parseInt(props.decimals,10) : 2;
+        const dec = fdIvParseFieldDecimals(props, 'عملة');
         const stepVal = dec > 0 ? (1 / Math.pow(10, dec)) : 1;
         const mn = props.minValue!=null&&props.minValue!==''?` min="${props.minValue}"`:'';
         const mx = props.maxValue!=null&&props.maxValue!==''?` max="${props.maxValue}"`:'';
-        inp = `<div class="input-group"${ttAttr}${wStyle?` style="${wStyle}"`:''}><input type="number" class="form-control" placeholder="${ph||'0'}" value="${defVal}" step="${stepVal}"${mn}${mx}${reqAttr}${roAttr} style="text-align:left;direction:ltr;${roStyle}"><span class="input-group-text fw-bold" style="background:var(--sa-50);color:var(--sa-700);">${esc(cur)}</span></div>`;
+        const numDecEv = props.readOnly ? '' : ' oninput="fdNumDecClamp(this)" onblur="fdNumDecClamp(this,true)"';
+        inp = `<div class="input-group"${ttAttr}${wStyle?` style="${wStyle}"`:''}><input type="number" class="form-control fd-num-dec-input" placeholder="${ph||'0'}" value="${defVal}" step="${stepVal}" data-fd-decimals="${dec}"${numDecEv}${mn}${mx}${reqAttr}${roAttr} style="text-align:left;direction:ltr;${roStyle}"><span class="input-group-text fw-bold" style="background:var(--sa-50);color:var(--sa-700);">${esc(cur)}</span></div>`;
     } else if (f.fieldType === 'تأشير' || f.fieldType === 'توقيع') {
         inp = fdBuildSignatureFieldHtml(f, props, reqAttr, roAttr, roSel, ttAttr, opt || {});
     } else if (f.fieldType === 'تاريخ ووقت') {
@@ -3870,6 +3945,76 @@ function fdSpinClamp(el) {
     if (x > hi) x = hi;
     el.value = fdSpinFormatForInput(x, el);
 }
+
+function fdNumDecGetDecimals(el) {
+    if (!el) return 0;
+    const d = parseInt(String(el.getAttribute('data-fd-decimals') || ''), 10);
+    return (Number.isFinite(d) && d >= 0) ? d : 0;
+}
+
+function fdNumDecRound(num, dec) {
+    if (!Number.isFinite(num)) return NaN;
+    if (dec <= 0) return Math.round(num);
+    const factor = Math.pow(10, dec);
+    return Math.round(num * factor) / factor;
+}
+
+function fdNumDecFormatValue(num, dec) {
+    if (!Number.isFinite(num)) return '';
+    if (dec <= 0) return String(Math.round(num));
+    let s = fdNumDecRound(num, dec).toFixed(dec);
+    s = s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    return s;
+}
+
+/** فرض عدد الخانات العشرية على حقول رقم/عملة أثناء الإدخال وعند الإرسال. */
+function fdNumDecClamp(el, finalize) {
+    if (!el || !el.classList.contains('fd-num-dec-input')) return;
+    if (el.readOnly || el.disabled) return;
+    const dec = fdNumDecGetDecimals(el);
+    const allowNeg = fdSpinAllowsNegative(el);
+    let cleaned = fdSpinCleanRaw(el.value, dec > 0, allowNeg);
+
+    if (dec <= 0) {
+        const ixDot = cleaned.indexOf('.');
+        if (ixDot >= 0) cleaned = cleaned.slice(0, ixDot);
+    } else {
+        const ixDot = cleaned.indexOf('.');
+        if (ixDot >= 0) {
+            const intPart = cleaned.slice(0, ixDot);
+            let fracPart = cleaned.slice(ixDot + 1);
+            if (fracPart.length > dec) fracPart = fracPart.slice(0, dec);
+            cleaned = intPart + '.' + fracPart;
+        }
+    }
+
+    el.value = cleaned;
+    if (!finalize) return;
+
+    const t = cleaned.trim();
+    if (!t || t === '-' || t === '.' || t === '-.') {
+        if (t === '-' || t === '.' || t === '-.') el.value = '';
+        return;
+    }
+    if (/^-?\d+\.$/.test(cleaned)) {
+        el.value = cleaned.slice(0, -1);
+        return;
+    }
+
+    const v = parseFloat(cleaned.replace(/,/g, '.'));
+    if (!Number.isFinite(v)) {
+        el.value = '';
+        return;
+    }
+
+    let x = v;
+    const lo = fdSpinGetMin(el);
+    const hi = fdSpinGetMax(el);
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    el.value = fdNumDecFormatValue(x, dec);
+}
+
 function fdSpinInc(btn) {
     const i = btn.parentElement && btn.parentElement.querySelector('input.fd-spin-input');
     if (!i || i.readOnly || i.disabled) return;
@@ -3900,6 +4045,7 @@ if (typeof window !== 'undefined') {
     window.fdSpinClamp = fdSpinClamp;
     window.fdSpinInc = fdSpinInc;
     window.fdSpinDec = fdSpinDec;
+    window.fdNumDecClamp = fdNumDecClamp;
 }
 
 // ─── SIGNATURE / APPROVAL FIELD (mirrors Beneficiary endorsement/signature) ──
@@ -4667,6 +4813,7 @@ async function fdLoad() {
         fdStep1OrgUnits = fdMapOrgUnits(res.orgUnitsForSelect || []);
         fdCreatorOrgUnitId = res.creatorOrgUnitId || 0;
         fdCreatorOrgUnitName = res.creatorOrgUnitName || '';
+        fdCurrentUser = res.currentUser || '';
         fdFillFilters(); fdRenderTable();
     } catch(e) { console.error('fdLoad',e); }
 }
@@ -4758,20 +4905,41 @@ function fdOwnershipBadge(ownership) {
     return `<span class="fd-owner-badge fd-owner-none">—</span>`;
 }
 
+/** مطابق لـ ddlCanModifyList / GetReadyTableActions — النماذج العامة: التعديل للمنشئ (أو الأدمن) فقط. */
+function fdNormCreatorName(s) {
+    return String(s || '').trim().replace(/\s+/g, ' ');
+}
+
+function fdIsFormCreator(f) {
+    var createdBy = fdNormCreatorName(f.createdBy || f.CreatedBy);
+    var user = fdNormCreatorName(fdCurrentUser);
+    if (!createdBy || !user) return false;
+    if (createdBy.toLowerCase() === user.toLowerCase()) return true;
+    return createdBy.replace(/\s/g, '').toLowerCase() === user.replace(/\s/g, '').toLowerCase();
+}
+
+function fdCanModifyForm(f) {
+    if (!f) return false;
+    if (fdIsAdmin) return true;
+    if (f.ownership === 'عام' && !fdIsFormCreator(f)) return false;
+    return true;
+}
+
 function fdActions(f) {
     let h = '<div class="fd-actions-wrap d-flex gap-1 justify-content-center flex-wrap align-items-center">';
     h += `<button class="fd-action-btn ui-act-btn fd-action-btn-detail" title="تفاصيل" onclick="fdShowDetails(${f.id})"><i class="bi bi-eye"></i></button>`;
     const isApproved = f.status === 'approved';
-    if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
+    const canModify = fdCanModifyForm(f);
+    if (!isApproved && canModify && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn ui-act-btn fd-action-btn-edit" title="تعديل" onclick="fdShowEdit(${f.id})"><i class="bi bi-pencil-square"></i></button>`;
 
-    if (isApproved)
+    if (isApproved && canModify)
         h += `<button class="fd-action-btn ui-act-btn fd-action-btn-version" onclick="fdGoToVersions(${f.id})" title="إصدار نسخة"><i class="bi bi-layers"></i></button>`;
 
     if (fdIsAdmin && f.status === 'pending') {
         h += `<button class="fd-action-btn ui-act-btn fd-action-btn-reject" title="رفض" onclick="fdShowReject(${f.id},'${esc(f.name)}')"><i class="bi bi-x-lg"></i></button>`;
     }
-    if (!isApproved && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
+    if (!isApproved && canModify && (fdIsAdmin || f.status === 'draft' || f.status === 'rejected'))
         h += `<button class="fd-action-btn ui-act-btn fd-action-btn-delete" title="حذف" onclick="fdShowDelete(${f.id},'${esc(f.name)}')"><i class="bi bi-trash3"></i></button>`;
     return h + '</div>';
 }

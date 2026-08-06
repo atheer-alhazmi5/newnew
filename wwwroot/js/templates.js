@@ -555,13 +555,16 @@ function tpBuildSectionBody(zone, idx, sec) {
     }
 
     const secColor = sec.color || '#111827';
+    const maxLines = zone === 'header' ? 6 : 4;
+    const linesOptions = Array.from({ length: maxLines }, (_, i) => {
+        const n = i + 1;
+        const lbl = n === 1 ? 'سطر 1' : `${n} أسطر`;
+        return `<option value="${n}" ${linesCount === n ? 'selected' : ''}>${lbl}</option>`;
+    }).join('');
     return `
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <select class="form-select tp-mini-select" id="tp_lines_${pfx}" onchange="tpOnLinesChange('${zone}',${idx})">
-                <option value="1" ${linesCount === 1 ? 'selected' : ''}>سطر 1</option>
-                <option value="2" ${linesCount === 2 ? 'selected' : ''}>2 أسطر</option>
-                <option value="3" ${linesCount === 3 ? 'selected' : ''}>3 أسطر</option>
-                <option value="4" ${linesCount === 4 ? 'selected' : ''}>4 أسطر</option>
+                ${linesOptions}
             </select>
             <select class="form-select tp-mini-select" id="tp_align_${pfx}" onchange="tpCollectAndPreview('${zone}')">
                 <option value="right" ${sec.align === 'right' ? 'selected' : ''}>يمين</option>

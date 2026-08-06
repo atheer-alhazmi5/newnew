@@ -1174,9 +1174,84 @@ function bnfSubmit() {
     }
 }
 
+function bnfDetailRow(lbl, val) {
+    var v = (val == null ? '' : String(val)).trim();
+    if (!v) return '';
+    return '<div class="row mb-3"><div class="col-md-2"><strong>' + lbl + ':</strong></div><div class="col-md-10">' + esc(v) + '</div></div>';
+}
+
+function bnfDetailRowRaw(lbl, inner) {
+    if (!inner || !String(inner).trim()) return '';
+    return '<div class="row mb-3"><div class="col-md-2"><strong>' + lbl + ':</strong></div><div class="col-md-10">' + inner + '</div></div>';
+}
+
+function bnfDetailSection(title, icon, body) {
+    if (!body || !String(body).trim()) return '';
+    return '<div class="bnf-section"><div class="bnf-section-title"><i class="bi ' + icon + '"></i>' + title + '</div>' + body + '</div>';
+}
+
+function bnfBuildSysAdminDetailsHtml(b) {
+    var photoHtml = b.photoUrl ? '<img src="' + esc(b.photoUrl) + '" class="bnf-photo-preview">' : '';
+
+    var endorsementHtml = (b.endorsementType || '').trim();
+    if (b.endorsementFile) endorsementHtml += (endorsementHtml ? ' ' : '') + '<small class="text-success">✓</small>';
+    if (b.endorsementFile && b.endorsementFile.indexOf('data:image') === 0)
+        endorsementHtml += '<div class="mt-2"><img src="' + esc(b.endorsementFile) + '" class="bnf-attach-preview"></div>';
+
+    var signatureHtml = (b.signatureType || '').trim();
+    if (b.signatureFile) signatureHtml += (signatureHtml ? ' ' : '') + '<small class="text-success">✓</small>';
+    if (b.signatureFile && b.signatureFile.indexOf('data:image') === 0)
+        signatureHtml += '<div class="mt-2"><img src="' + esc(b.signatureFile) + '" class="bnf-attach-preview"></div>';
+
+    var identityBody = bnfDetailRowRaw('الصورة', photoHtml)
+        + bnfDetailRow('الهوية الوطنية', b.nationalId)
+        + bnfDetailRowRaw('التأشير', endorsementHtml)
+        + bnfDetailRowRaw('التوقيع', signatureHtml);
+
+    var personalBody = bnfDetailRow('الجنس', b.gender)
+        + bnfDetailRow('الحالة الاجتماعية', b.maritalStatus)
+        + bnfDetailRow('تاريخ الميلاد', b.dateOfBirth)
+        + bnfDetailRow('الرقم الوظيفي', b.employeeNumber)
+        + bnfDetailRow('المرتبة', b.rank)
+        + bnfDetailRow('المسمى الوظيفي', b.jobTitle)
+        + bnfDetailRow('رقم الوظيفة', b.jobNumber)
+        + bnfDetailRow('المؤهل التعليمي', b.educationQualification)
+        + bnfDetailRow('اللقب', b.honorific);
+
+    var unitBody = bnfDetailRow('الوحدة التنظيمية', b.organizationalUnitName)
+        + bnfDetailRow('الجوال', b.phone)
+        + bnfDetailRow('البريد الإلكتروني', b.email)
+        + '<div class="row mb-3"><div class="col-md-2"><strong>التفعيل:</strong></div><div class="col-md-10">' + (b.isActive ? 'مفعل' : 'معطل') + '</div></div>'
+        + (b.isActive === false && String(b.deactivateReason || '').trim()
+            ? bnfDetailRow('سبب التعطيل', String(b.deactivateReason).trim()) : '');
+
+    var usernameInner = (b.username || '').trim()
+        ? '<span dir="ltr">' + esc(String(b.username).trim()) + '</span>' : '';
+    var rolesBody = bnfDetailRowRaw('اسم المستخدم', usernameInner)
+        + bnfDetailRow('الدور', b.roleDisplay);
+
+    var auditBody = bnfDetailRow('اسم المنشئ', b.createdBy)
+        + bnfDetailRow('تاريخ الإنشاء', b.createdAt)
+        + bnfDetailRow('آخر تحديث بواسطة', b.updatedBy)
+        + bnfDetailRow('تاريخ التحديث', b.updatedAt);
+
+    return bnfDetailSection('الصورة والهوية', 'bi-person-badge', identityBody)
+        + bnfDetailSection('الأسماء', 'bi-person-lines-fill', bnfDetailRow('الاسم الكامل', b.fullName))
+        + bnfDetailSection('البيانات الشخصية والوظيفية', 'bi-card-list', personalBody)
+        + bnfDetailSection('الوحدة والاتصال', 'bi-building', unitBody)
+        + bnfDetailSection('الأدوار وبيانات الدخول', 'bi-person-badge', rolesBody)
+        + bnfDetailSection('معلومات التدقيق', 'bi-clock-history', auditBody);
+}
+
 function bnfShowDetails(id) {
     var b = bnfAll.find(function (x) { return x.id === id; });
     if (!b) return;
+
+    if ((b.subRole || '').trim() === 'مدير النظام') {
+        document.getElementById('bnfDetailsBody').innerHTML = bnfBuildSysAdminDetailsHtml(b);
+        new bootstrap.Modal(document.getElementById('bnfDetailsModal')).show();
+        return;
+    }
 
     var photoHtml = b.photoUrl ? '<img src="' + esc(b.photoUrl) + '" class="bnf-photo-preview">' : '<span class="text-muted">—</span>';
     var endorsementHtml = (b.endorsementType || '—') + (b.endorsementFile ? ' <small class="text-success">✓</small>' : '');

@@ -203,6 +203,15 @@ public class DataService
         return Task.FromResult(u);
     }
 
+    public Task<User?> GetUserByUsernameForLoginAsync(string username)
+    {
+        var users = _db.Users;
+        var u = users.FirstOrDefault(u =>
+            string.Equals(u.Username, username, StringComparison.Ordinal));
+        HydrateUserDepartment(u);
+        return Task.FromResult(u);
+    }
+
     public Task<DirectoryLookupResult?> LookupDirectoryByNationalIdAsync(string nationalId)
     {
         if (string.IsNullOrWhiteSpace(nationalId))

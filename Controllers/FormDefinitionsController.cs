@@ -395,10 +395,11 @@ public class FormDefinitionsController : BaseController
                 f.ApprovedBy = CurrentUserFullName;
                 f.ApprovedAt = DateTime.Now;
             }
-            else if (f.Status == "draft")
+            else if (f.Status is "draft" or "rejected")
             {
                 f.Status = "pending";
                 f.IsActive = false;
+                f.RejectionReason = "";
             }
         }
 

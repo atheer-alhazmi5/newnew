@@ -67,6 +67,7 @@ public class WorkProceduresController : BaseController
         string? status,
         string? validity,
         int? formDefinitionId,
+        int? procedureActionTypeId,
         int? targetOrgUnitId,
         int? ownerOrgUnitId,
         int? executorBeneficiaryId,
@@ -95,6 +96,8 @@ public class WorkProceduresController : BaseController
         }
         if (formDefinitionId.HasValue && formDefinitionId.Value > 0)
             all = all.Where(p => ProcedureUsesFormDefinition(p, formDefinitionId.Value)).ToList();
+        if (procedureActionTypeId.HasValue && procedureActionTypeId.Value > 0)
+            all = all.Where(p => p.ProcedureActionTypeId == procedureActionTypeId.Value).ToList();
         if (!string.IsNullOrWhiteSpace(validity))
             all = all.Where(p => p.ValidityType == validity).ToList();
         if (targetOrgUnitId.HasValue && targetOrgUnitId.Value > 0)
@@ -129,7 +132,9 @@ public class WorkProceduresController : BaseController
             p.Id,
             p.Code,
             p.Name,
+            p.ProcedureActionTypeId,
             ProcedureActionTypeName = procTypesAll.FirstOrDefault(t => t.Id == p.ProcedureActionTypeId)?.Name ?? "",
+            VersionRootProcedureId = p.VersionRootProcedureId > 0 ? p.VersionRootProcedureId : p.Id,
             p.UsageFrequency,
             p.ConfidentialityLevel,
             ProcedureClassification = p.ProcedureClassification,
@@ -535,6 +540,16 @@ public class WorkProceduresController : BaseController
         return result;
     }
 
+    private static List<int> ResolveAssigneeOrgUnitIdsFromDto(WorkflowStepSaveDto st)
+    {
+        var list = new List<int>();
+        if (st.AssigneeOrgUnitIds != null && st.AssigneeOrgUnitIds.Count > 0)
+            list.AddRange(st.AssigneeOrgUnitIds.Where(x => x > 0));
+        else if (st.AssigneeOrgUnitId.HasValue && st.AssigneeOrgUnitId.Value > 0)
+            list.Add(st.AssigneeOrgUnitId.Value);
+        return list.Distinct().ToList();
+    }
+
     private static readonly HashSet<string> AllowedFixedAssigneeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "employee", "direct_manager", "managers_chain", "unit_manager", "unit_representative", "system_admin"
@@ -599,8 +614,8 @@ public class WorkProceduresController : BaseController
                         return "نوع المنفذ الثابت غير صالح";
                     if (ft is "unit_manager" or "unit_representative")
                     {
-                        if (!st.AssigneeOrgUnitId.HasValue || st.AssigneeOrgUnitId.Value <= 0
-                            || !orgUnitIds.Contains(st.AssigneeOrgUnitId.Value))
+                        var ouIds = ResolveAssigneeOrgUnitIdsFromDto(st);
+                        if (ouIds.Count == 0 || ouIds.Any(id => !orgUnitIds.Contains(id)))
                             return "الوحدة التنظيمية للمنفذ مطلوبة";
                     }
                 }
@@ -761,7 +776,10 @@ public class WorkProceduresController : BaseController
                 AssigneeMode = assigneeMode,
                 AssigneeFixedType = assigneeMode == "fixed" ? fixedType : "",
                 AssigneeOrgUnitId = (assigneeMode == "fixed" && (fixedType is "unit_manager" or "unit_representative"))
-                    ? st.AssigneeOrgUnitId
+                    ? ResolveAssigneeOrgUnitIdsFromDto(st) switch { var ids when ids.Count == 1 => ids[0], _ => null }
+                    : null,
+                AssigneeOrgUnitIds = (assigneeMode == "fixed" && (fixedType is "unit_manager" or "unit_representative"))
+                    ? ResolveAssigneeOrgUnitIdsFromDto(st) switch { var ids when ids.Count > 0 => ids, _ => null }
                     : null,
                 AllowedActions = normalizedActions,
                 ConcurrentStepId = (normalizedActions != null && normalizedActions.Contains("concurrent_approvals"))
@@ -883,6 +901,8 @@ public class WorkProceduresController : BaseController
             w.VersionLabel = await ComputeNextWorkProcedureVersionLabelAsync(rootId);
             // ترميز ثابت: نلتزم بترميز الإجراء المصدر لتسلسل الإصدارات
             w.Code = versionSource.Code;
+            // نسخ خطوات سير العمل من الإجراء المصدر إلى النسخة الجديدة (دون تعديل الأصل).
+            w.WorkflowStepsJson = string.IsNullOrWhiteSpace(versionSource.WorkflowStepsJson) ? "[]" : versionSource.WorkflowStepsJson;
         }
 
         var created = await _ds.AddWorkProcedureAsync(w);
@@ -1757,8 +1777,10 @@ public class WorkProceduresController : BaseController
         public string AssigneeMode { get; set; } = "specific";
         /// <summary>عند AssigneeMode = "fixed": employee | direct_manager | managers_chain | unit_manager | unit_representative | system_admin</summary>
         public string AssigneeFixedType { get; set; } = "";
-        /// <summary>الوحدة التنظيمية المصاحبة عند fixed-type = unit_manager / unit_representative.</summary>
+        /// <summary>الوحدة التنظيمية المصاحبة عند fixed-type = unit_manager / unit_representative (مفرد — للتوافق).</summary>
         public int? AssigneeOrgUnitId { get; set; }
+        /// <summary>وحدات تنظيمية متعددة للمنفذ الثابت (مدير/ممثل وحدة).</summary>
+        public List<int>? AssigneeOrgUnitIds { get; set; }
         /// <summary>الإجراءات المسموحة للخطوة: approve|reject|return|concurrent_approvals|reassign|request_clarification</summary>
         public List<string>? AllowedActions { get; set; }
         /// <summary>خطوة التزامن — تظهر فقط إذا AllowedActions تحتوي concurrent_approvals.</summary>

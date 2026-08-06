@@ -189,7 +189,9 @@ public static class FormAutoDataHelper
 
     private static Dictionary<string, string> ResolveSelectedValues(string? propertiesJson, Dictionary<string, string> profileMap, string fieldType)
     {
-        var keys = ParseSelectedKeys(propertiesJson);
+        var keys = fieldType == CertificationType
+            ? ParseCertificationSelectedKeys(propertiesJson)
+            : ParseSelectedKeys(propertiesJson);
         var allowed = fieldType == CertificationType ? CertificationKeys : BeneficiaryKeys;
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var key in keys)
@@ -202,7 +204,7 @@ public static class FormAutoDataHelper
 
     private static Dictionary<string, string> ResolveEmptyCertificationValues(string? propertiesJson)
     {
-        var keys = ParseSelectedKeys(propertiesJson);
+        var keys = ParseCertificationSelectedKeys(propertiesJson);
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var key in keys)
         {
@@ -210,6 +212,14 @@ public static class FormAutoDataHelper
                 result[key] = "";
         }
         return result;
+    }
+
+    private static List<string> ParseCertificationSelectedKeys(string? propertiesJson)
+    {
+        var keys = ParseSelectedKeys(propertiesJson);
+        if (!keys.Contains("todayDate", StringComparer.Ordinal))
+            keys.Add("todayDate");
+        return keys;
     }
 
     private static List<string> ParseSelectedKeys(string? propertiesJson)

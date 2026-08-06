@@ -29,6 +29,7 @@ public static class WorkflowExecutionHelper
         public string AssigneeMode { get; set; } = "specific";
         public string AssigneeFixedType { get; set; } = "";
         public int? AssigneeOrgUnitId { get; set; }
+        public List<int>? AssigneeOrgUnitIds { get; set; }
         public List<string>? AllowedActions { get; set; }
         public int? ReturnStepId { get; set; }
         public int? ConcurrentStepId { get; set; }
@@ -42,6 +43,18 @@ public static class WorkflowExecutionHelper
         public string Dept { get; set; } = "";
         public int BeneficiaryId { get; set; }
         public string AssignedVia { get; set; } = "specific";
+    }
+
+    public static List<int> ResolveAssigneeScopeUnitIds(int? assigneeOrgUnitId, List<int>? assigneeOrgUnitIds, IEnumerable<int> fallbackTargetOrgIds)
+    {
+        var scope = new List<int>();
+        if (assigneeOrgUnitIds != null && assigneeOrgUnitIds.Count > 0)
+            scope.AddRange(assigneeOrgUnitIds.Where(id => id > 0).Distinct());
+        else if (assigneeOrgUnitId.HasValue && assigneeOrgUnitId.Value > 0)
+            scope.Add(assigneeOrgUnitId.Value);
+        else
+            scope.AddRange(fallbackTargetOrgIds);
+        return scope;
     }
 
     public static List<WorkflowStepRuntime> ParseSteps(WorkProcedure? proc)
@@ -189,11 +202,7 @@ public static class WorkflowExecutionHelper
         else if (mode == "fixed")
         {
             var ft = (step.AssigneeFixedType ?? "").Trim().ToLowerInvariant();
-            var scopeUnitIds = new List<int>();
-            if (step.AssigneeOrgUnitId.HasValue && step.AssigneeOrgUnitId.Value > 0)
-                scopeUnitIds.Add(step.AssigneeOrgUnitId.Value);
-            else
-                scopeUnitIds.AddRange(targetOrgIds);
+            var scopeUnitIds = ResolveAssigneeScopeUnitIds(step.AssigneeOrgUnitId, step.AssigneeOrgUnitIds, targetOrgIds);
 
             if (ft == "employee" && contextUserId.HasValue && contextUserId.Value > 0)
             {

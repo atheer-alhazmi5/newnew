@@ -387,6 +387,8 @@ public class SettingsController : BaseController
             p.DisplayLocation, p.Status,
             p.CreatedBy,
             CreatedAt   = p.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            p.UpdatedBy,
+            UpdatedAt   = p.UpdatedAt.HasValue ? p.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm") : "",
             PublishedAt = p.PublishedAt?.ToString("yyyy-MM-dd HH:mm"),
             TargetUserNames = p.TargetUserIds.Any()
                 ? users.Where(u => p.TargetUserIds.Contains(u.Id)).Select(u => u.FullName).ToList()
@@ -467,9 +469,12 @@ public class SettingsController : BaseController
             var existing = await _ds.GetPopupNotificationAsync(req.Id);
             if (existing == null) return Json(new { success = false, message = "الإشعار غير موجود" });
             req.CreatedAt   = existing.CreatedAt;
+            req.CreatedBy   = existing.CreatedBy;
             req.PublishedAt = existing.PublishedAt;
             req.DismissedByUserIds = existing.DismissedByUserIds;
             req.ViewedBy = existing.ViewedBy;
+            req.UpdatedBy = CurrentUserFullName ?? CurrentUserName ?? "";
+            req.UpdatedAt = DateTime.Now;
             await _ds.UpdatePopupNotificationAsync(req);
             await _ds.AddAuditLogAsync(BuildAuditEntry(
                 $"تعديل إشعار منبثق: {req.Title}", "إشعارات", req.Id.ToString()));
@@ -485,6 +490,8 @@ public class SettingsController : BaseController
         if (p == null) return Json(new { success = false, message = "الإشعار غير موجود" });
         p.Status      = req.Publish ? "published" : "draft";
         p.PublishedAt = req.Publish ? DateTime.Now : null;
+        p.UpdatedBy   = CurrentUserFullName ?? CurrentUserName ?? "";
+        p.UpdatedAt   = DateTime.Now;
         await _ds.UpdatePopupNotificationAsync(p);
         await _ds.AddAuditLogAsync(BuildAuditEntry(
             $"{(req.Publish ? "نشر" : "إلغاء نشر")} إشعار: {p.Title}", "إشعارات", id.ToString()));
